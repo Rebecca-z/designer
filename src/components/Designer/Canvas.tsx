@@ -1,0 +1,453 @@
+import { Button, Input, Popover } from 'antd';
+import React, { useEffect, useRef } from 'react';
+import { useDrag, useDrop } from 'react-dnd';
+import type { CanvasNode } from '../../types';
+
+type CanvasProps = {
+  data: CanvasNode[];
+  setData: (data: CanvasNode[]) => void;
+  selected: string | null;
+  setSelected: (id: string | null) => void;
+  device: string;
+};
+
+const genId = () => Math.random().toString(36).slice(2, 10);
+
+const moveNode = (list: CanvasNode[], from: number, to: number) => {
+  const arr = [...list];
+  const [removed] = arr.splice(from, 1);
+  arr.splice(to, 0, removed);
+  return arr;
+};
+
+const RenderNode: React.FC<{
+  node: CanvasNode;
+  onSelect: (id: string) => void;
+  selected: string | null;
+  onCopy: (id: string) => void;
+  onDelete: (id: string) => void;
+  setData: (data: CanvasNode[]) => void;
+  parent: CanvasNode[];
+  parentType?: string;
+  index: number;
+  moveChild: (from: number, to: number, parent: CanvasNode[]) => void;
+  addChild: (node: CanvasNode, to: number, parent: CanvasNode[]) => void;
+}> = ({
+  node,
+  onSelect,
+  selected,
+  onCopy,
+  onDelete,
+  setData,
+  parent,
+  parentType,
+  index,
+  moveChild,
+  addChild,
+}) => {
+  // 拖拽排序
+  const [{ isDragging }, drag] = useDrag({
+    type: 'canvas-node',
+    item: { id: node.id, index, parent, parentType, nodeType: node.type, node },
+    collect: (monitor) => ({ isDragging: monitor.isDragging() }),
+  });
+
+  // 画布内拖拽排序和左侧拖入
+  const [, drop] = useDrop({
+    accept: ['canvas-node', 'component', 'layout'],
+    canDrop: (item: any) => {
+      // 分栏不能嵌套分栏
+      if (
+        node.type === 'layout-columns' &&
+        (item.nodeType === 'layout-columns' ||
+          item.componentType === 'layout-columns')
+      )
+        return false;
+      // 分栏内部只允许普通组件
+      if (parentType === 'layout-columns' && node.type === 'layout-columns')
+        return false;
+      // 分栏只能在顶层排序
+      if (
+        (item.nodeType === 'layout-columns' ||
+          item.componentType === 'layout-columns') &&
+        parentType === 'layout-columns'
+      )
+        return false;
+      return true;
+    },
+    drop: (item: any) => {
+      // 拖拽排序（画布内）
+      if (
+        item.type === 'canvas-node' &&
+        item.parent === parent &&
+        item.index !== index
+      ) {
+        moveChild(item.index, index, parent);
+      }
+      // 左侧拖入
+      if (item.type === 'component' || item.type === 'layout') {
+        // 分栏不能嵌套分栏
+        if (
+          node.type === 'layout-columns' &&
+          item.componentType === 'layout-columns'
+        )
+          return;
+        // 分栏内部只允许普通组件
+        if (
+          parentType === 'layout-columns' &&
+          item.componentType === 'layout-columns'
+        )
+          return;
+        // 分栏只能在顶层
+        if (
+          item.componentType === 'layout-columns' &&
+          parentType === 'layout-columns'
+        )
+          return;
+        const newNode: CanvasNode = {
+          id: genId(),
+          type: item.componentType,
+          props: {},
+          children: item.type === 'layout' ? [] : undefined,
+        };
+        addChild(newNode, index, parent);
+      }
+    },
+  });
+
+  // 分栏内部允许普通组件拖入
+  const [{ isOverCol, canDropCol }, dropCol] = useDrop({
+    accept: ['component'],
+    canDrop: (item: any) => {
+      return (
+        parentType === 'layout-columns' &&
+        item.componentType !== 'layout-columns'
+      );
+    },
+    drop: (item: any) => {
+      if (
+        parentType === 'layout-columns' &&
+        item.componentType !== 'layout-columns'
+      ) {
+        parent.splice(index + 1, 0, {
+          id: genId(),
+          type: item.componentType,
+          props: {},
+        });
+        setData([...parent]);
+      }
+    },
+    collect: (monitor) => ({
+      isOverCol: monitor.isOver(),
+      canDropCol: monitor.canDrop(),
+    }),
+  });
+
+  const actions = (
+    <div>
+      <Button
+        size="small"
+        onClick={(e) => {
+          e.stopPropagation();
+          onCopy(node.id);
+        }}
+      >
+        复制
+      </Button>
+      <Button
+        size="small"
+        danger
+        style={{ marginLeft: 8 }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(node.id);
+        }}
+      >
+        删除
+      </Button>
+    </div>
+  );
+
+  let content: React.ReactNode = null;
+  switch (node.type) {
+    case 'input':
+      content = (
+        <Input
+          placeholder={node.props.placeholder || '请输入'}
+          disabled={node.props.disabled}
+          style={{ width: 200 }}
+        />
+      );
+      break;
+    case 'button':
+      content = <Button>{node.props.text || '按钮'}</Button>;
+      break;
+    case 'layout-columns':
+      content = (
+        <div
+          style={{
+            display: 'flex',
+            gap: 8,
+            minHeight: 60,
+            background: isOverCol && canDropCol ? '#e6f7ff' : '#fafafa',
+            padding: 8,
+          }}
+        >
+          {[0, 1].map((colIdx) => (
+            <div
+              key={colIdx}
+              style={{
+                flex: 1,
+                minHeight: 60,
+                border: '1px dashed #bbb',
+                background: '#fff',
+                padding: 8,
+              }}
+            >
+              {node.children
+                ?.filter((_, i) => i % 2 === colIdx)
+                .map((child, idx) => (
+                  <RenderNode
+                    key={child.id}
+                    node={child}
+                    onSelect={onSelect}
+                    selected={selected}
+                    onCopy={onCopy}
+                    onDelete={onDelete}
+                    setData={setData}
+                    parent={node.children!}
+                    parentType={node.type}
+                    index={idx}
+                    moveChild={moveChild}
+                    addChild={addChild}
+                  />
+                ))}
+              <div
+                ref={dropCol}
+                style={{
+                  minHeight: 10,
+                  background: isOverCol && canDropCol ? '#e6f7ff' : undefined,
+                }}
+              />
+            </div>
+          ))}
+        </div>
+      );
+      break;
+    default:
+      content = <span>{node.props.text || node.type}</span>;
+  }
+
+  return (
+    <Popover
+      content={actions}
+      trigger="click"
+      open={selected === node.id}
+      placement="topRight"
+    >
+      <div
+        ref={(el) => {
+          drag(el);
+          drop(el);
+        }}
+        style={{
+          border: selected === node.id ? '2px solid #1890ff' : '1px solid #eee',
+          margin: 8,
+          padding: 8,
+          background: isOverCol && canDropCol ? '#e6f7ff' : '#fafafa',
+          position: 'relative',
+          minWidth: 60,
+          minHeight: 32,
+          cursor: 'pointer',
+          opacity: isDragging ? 0.5 : 1,
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect(node.id);
+        }}
+      >
+        {content}
+      </div>
+    </Popover>
+  );
+};
+
+const Canvas: React.FC<CanvasProps> = ({
+  data,
+  setData,
+  selected,
+  setSelected,
+  device,
+}) => {
+  const canvasRef = useRef<HTMLDivElement | null>(null);
+
+  // 画布顶层拖拽排序和左侧拖入
+  const [, drop] = useDrop({
+    accept: ['canvas-node', 'component', 'layout'],
+    canDrop: (item: any) => {
+      if (
+        item.nodeType === 'layout-columns' ||
+        item.componentType === 'layout-columns'
+      )
+        return true;
+      return true;
+    },
+    drop: (item: any, monitor) => {
+      // 拖拽排序（画布内）
+      if (item.type === 'canvas-node' && item.parent === data) {
+        const dragIndex = item.index;
+        const hoverIndex = monitor.getItem().hoverIndex ?? dragIndex;
+        if (dragIndex !== hoverIndex) {
+          setData(moveNode(data, dragIndex, hoverIndex));
+        }
+      }
+      // 左侧拖入
+      if (item.type === 'component' || item.type === 'layout') {
+        if (item.componentType === 'layout-columns') {
+          setData([
+            ...data,
+            { id: genId(), type: 'layout-columns', props: {}, children: [] },
+          ]);
+        } else {
+          setData([
+            ...data,
+            { id: genId(), type: item.componentType, props: {} },
+          ]);
+        }
+      }
+    },
+  });
+
+  // 复制节点
+  const handleCopy = (id: string) => {
+    const findAndCopy = (nodes: CanvasNode[]): CanvasNode[] => {
+      return nodes.flatMap((node) => {
+        if (node.id === id) {
+          const copy = JSON.parse(JSON.stringify(node));
+          copy.id = genId();
+          return [node, copy];
+        }
+        if (node.children) {
+          node.children = findAndCopy(node.children);
+        }
+        return [node];
+      });
+    };
+    setData(findAndCopy(data));
+  };
+
+  // 删除节点
+  const handleDelete = (id: string) => {
+    const remove = (nodes: CanvasNode[]): CanvasNode[] =>
+      nodes.filter((node) => {
+        if (node.id === id) return false;
+        if (node.children) node.children = remove(node.children);
+        return true;
+      });
+    setData(remove(data));
+    setSelected(null);
+  };
+
+  // delete键快捷删除
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selected) {
+        handleDelete(selected);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selected, data]);
+
+  const deviceWidth = { web: 800, phone: 375, pad: 600 }[device] || 800;
+
+  useEffect(() => {
+    if (canvasRef.current) {
+      drop(canvasRef.current);
+    }
+  }, [canvasRef.current]);
+
+  // 画布顶层排序和拖入
+  const moveChild = (from: number, to: number, parent: CanvasNode[]) => {
+    if (parent === data) {
+      setData(moveNode(data, from, to));
+    } else {
+      const newArr = moveNode(parent, from, to);
+      const update = (nodes: CanvasNode[]): CanvasNode[] =>
+        nodes.map((n) => {
+          if (n.children === parent) {
+            return { ...n, children: newArr };
+          } else if (n.children) {
+            return { ...n, children: update(n.children) };
+          }
+          return n;
+        });
+      setData(update(data));
+    }
+  };
+
+  // 画布顶层插入
+  const addChild = (node: CanvasNode, to: number, parent: CanvasNode[]) => {
+    if (parent === data) {
+      const arr = [...data];
+      arr.splice(to, 0, node);
+      setData(arr);
+    } else {
+      const arr = [...parent];
+      arr.splice(to, 0, node);
+      const update = (nodes: CanvasNode[]): CanvasNode[] =>
+        nodes.map((n) => {
+          if (n.children === parent) {
+            return { ...n, children: arr };
+          } else if (n.children) {
+            return { ...n, children: update(n.children) };
+          }
+          return n;
+        });
+      setData(update(data));
+    }
+  };
+
+  return (
+    <div
+      ref={canvasRef}
+      style={{
+        minHeight: 400,
+        background: '#f5f5f5',
+        border: '1px solid #ddd',
+        width: deviceWidth,
+        margin: '0 auto',
+        padding: 16,
+      }}
+      onClick={() => setSelected(null)}
+      tabIndex={0}
+    >
+      {data.length === 0 ? (
+        <div style={{ color: '#bbb', textAlign: 'center', marginTop: 100 }}>
+          拖拽组件或布局到此处
+        </div>
+      ) : (
+        data.map((node, idx) => (
+          <RenderNode
+            key={node.id}
+            node={node}
+            onSelect={setSelected}
+            selected={selected}
+            onCopy={handleCopy}
+            onDelete={handleDelete}
+            setData={setData}
+            parent={data}
+            parentType={undefined}
+            index={idx}
+            moveChild={moveChild}
+            addChild={addChild}
+          />
+        ))
+      )}
+    </div>
+  );
+};
+
+export default Canvas;
