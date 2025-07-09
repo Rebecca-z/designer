@@ -1,7 +1,7 @@
 // src/components/PreviewModal.tsx
 import { Button, Modal } from 'antd';
 import React from 'react';
-import type { CanvasNode } from '../types';
+import type { CanvasNode } from '../../types';
 
 type PreviewModalProps = {
   visible: boolean;

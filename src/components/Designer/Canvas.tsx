@@ -32,6 +32,102 @@ const moveNode = (list: CanvasNode[], from: number, to: number) => {
 //   />
 // );
 
+// 空分栏时，整个区域可drop
+const DropColAll: React.FC<{
+  node: CanvasNode;
+  colIdx: number;
+  setData: (data: CanvasNode[]) => void;
+  data: CanvasNode[];
+}> = ({ node, colIdx, setData, data }) => {
+  const [, drop] = useDrop({
+    accept: ['component', 'layout'],
+    canDrop: (item: any) => item.componentType !== 'layout-columns',
+    drop: (item: any) => {
+      if (!node.children) node.children = [];
+      // 计算插入到children的哪个位置
+      let insertIdx = 0;
+      for (let i = 0; i < node.children.length; i++) {
+        if (i % 2 === colIdx) insertIdx++;
+      }
+      const newNode: CanvasNode = {
+        id: genId(),
+        type: item.componentType,
+        props: {},
+        children: item.type === 'layout' ? [] : undefined,
+      };
+      // 插入到children的合适位置
+      let realIdx = 0;
+      for (let i = 0, cnt = 0; i < node.children.length + 1; i++) {
+        if (i === node.children.length || i % 2 === colIdx) {
+          if (cnt === insertIdx) {
+            realIdx = i;
+            break;
+          }
+          cnt++;
+        }
+      }
+      node.children.splice(realIdx, 0, newNode);
+      setData([...data]);
+      return true; // 阻止冒泡到画布
+    },
+  });
+  return (
+    <div
+      ref={drop}
+      style={{
+        minHeight: 48,
+        background: '#f0f0f0',
+        border: '1px dashed #bbb',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#bbb',
+      }}
+    >
+      拖拽组件到此处
+    </div>
+  );
+};
+
+// 分栏有内容时，子元素前后都可drop
+const DropColPos: React.FC<{
+  node: CanvasNode;
+  colIdx: number;
+  pos: number;
+  setData: (data: CanvasNode[]) => void;
+  data: CanvasNode[];
+}> = ({ node, colIdx, pos, setData, data }) => {
+  const [, drop] = useDrop({
+    accept: ['component', 'layout'],
+    canDrop: (item: any) => item.componentType !== 'layout-columns',
+    drop: (item: any) => {
+      if (!node.children) node.children = [];
+      // 计算插入到children的哪个位置
+      let insertIdx = 0;
+      let cnt = 0;
+      for (let i = 0; i < node.children.length + 1; i++) {
+        if (i === node.children.length || i % 2 === colIdx) {
+          if (cnt === pos) {
+            insertIdx = i;
+            break;
+          }
+          cnt++;
+        }
+      }
+      const newNode: CanvasNode = {
+        id: genId(),
+        type: item.componentType,
+        props: {},
+        children: item.type === 'layout' ? [] : undefined,
+      };
+      node.children.splice(insertIdx, 0, newNode);
+      setData([...data]);
+      return true; // 阻止冒泡到画布
+    },
+  });
+  return <div ref={drop} style={{ minHeight: 8, background: '#f0f0f0' }} />;
+};
+
 const Canvas: React.FC<CanvasProps> = ({
   data,
   setData,
@@ -111,6 +207,23 @@ const Canvas: React.FC<CanvasProps> = ({
     collect: (monitor) => ({ isOver: monitor.isOver() }),
   });
 
+  // 画布 drop 区（仅处理左侧组件拖入，且只在空白处释放时才添加）
+  const [, dropCanvas] = useDrop({
+    accept: ['component', 'layout'],
+    drop: (item: any, monitor: any) => {
+      // 只在画布空白处（shallow）释放且未被子区域处理时才添加
+      if (monitor.didDrop()) return;
+      if (!monitor.isOver({ shallow: true })) return;
+      const newNode: CanvasNode = {
+        id: genId(),
+        type: item.componentType,
+        props: {},
+        children: item.type === 'layout' ? [] : undefined,
+      };
+      setData([...data, newNode]);
+    },
+  });
+
   // 复制节点
   const handleCopy = (id: string) => {
     const findAndCopy = (nodes: CanvasNode[]): CanvasNode[] => {
@@ -162,6 +275,7 @@ const Canvas: React.FC<CanvasProps> = ({
     }
   }, [canvasRef.current]);
 
+  // 渲染节点
   const RenderNode: React.FC<{
     node: CanvasNode;
     onSelect: (id: string) => void;
@@ -205,24 +319,26 @@ const Canvas: React.FC<CanvasProps> = ({
     // const [{ isOver: isOverTop }, dropTop] = useDrop({
     const [] = useDrop({
       accept: ['canvas-node', 'component', 'layout'],
-      canDrop: (item: any) => {
-        if (
-          node.type === 'layout-columns' &&
-          (item.nodeType === 'layout-columns' ||
-            item.componentType === 'layout-columns')
-        )
-          return false;
-        if (parentType === 'layout-columns' && node.type === 'layout-columns')
-          return false;
-        if (
-          (item.nodeType === 'layout-columns' ||
-            item.componentType === 'layout-columns') &&
-          parentType === 'layout-columns'
-        )
-          return false;
-        return true;
-      },
-      drop: (item: any) => {
+      // canDrop: (item: any) => {
+      //   if (
+      //     node.type === 'layout-columns' &&
+      //     (item.nodeType === 'layout-columns' ||
+      //       item.componentType === 'layout-columns')
+      //   )
+      //     return false;
+      //   if (parentType === 'layout-columns' && node.type === 'layout-columns')
+      //     return false;
+      //   if (
+      //     (item.nodeType === 'layout-columns' ||
+      //       item.componentType === 'layout-columns') &&
+      //     parentType === 'layout-columns'
+      //   )
+      //     return false;
+      //   return true;
+      // },
+      drop: (item: any, monitor: any) => {
+        if (monitor.didDrop()) return;
+
         // 拖拽排序（画布内）
         if (
           item.type === 'canvas-node' &&
@@ -317,34 +433,6 @@ const Canvas: React.FC<CanvasProps> = ({
       },
     });
 
-    // 分栏内部允许普通组件拖入
-    // 修复 useDrop 条件调用问题：始终调用 useDrop，只在需要时使用其返回值
-    const [{ isOverCol: overcol, canDropCol: dropcol }, dropCol] = useDrop({
-      accept: ['component'],
-      canDrop: (item: any) => item.componentType !== 'layout-columns',
-      drop: (item: any) => {
-        parent.splice(index + 1, 0, {
-          id: genId(),
-          type: item.componentType,
-          props: {},
-        });
-        setData([...parent]);
-      },
-      collect: (monitor) => ({
-        isOverCol: monitor.isOver(),
-        canDropCol: monitor.canDrop(),
-      }),
-    });
-
-    let isOverCol = false,
-      canDropCol = false;
-    let dropColRef = undefined;
-    if (parentType === 'layout-columns') {
-      isOverCol = overcol;
-      canDropCol = dropcol;
-      dropColRef = dropCol;
-    }
-
     const actions = (
       <div>
         <Button
@@ -391,48 +479,78 @@ const Canvas: React.FC<CanvasProps> = ({
               display: 'flex',
               gap: 8,
               minHeight: 60,
-              background: isOverCol && canDropCol ? '#e6f7ff' : '#fafafa',
+              background: '#fafafa',
               padding: 8,
             }}
           >
-            {[0, 1].map((colIdx) => (
-              <div
-                key={colIdx}
-                style={{
-                  flex: 1,
-                  minHeight: 60,
-                  border: '1px dashed #bbb',
-                  background: '#fff',
-                  padding: 8,
-                }}
-              >
-                {node.children
-                  ?.filter((_, i) => i % 2 === colIdx)
-                  .map((child, idx) => (
-                    <RenderNode
-                      key={child.id}
-                      node={child}
-                      onSelect={onSelect}
-                      selected={selected}
-                      onCopy={onCopy}
-                      onDelete={onDelete}
-                      setData={setData}
-                      parent={node.children!}
-                      parentType={node.type}
-                      index={idx}
-                      moveChild={moveChild}
-                      addChild={addChild}
-                    />
-                  ))}
+            {[0, 1].map((colIdx) => {
+              // 该分栏的children
+              const colChildren =
+                node.children?.filter((_, i) => i % 2 === colIdx) || [];
+              return (
                 <div
-                  ref={dropColRef}
+                  key={colIdx}
                   style={{
-                    minHeight: 10,
-                    background: isOverCol && canDropCol ? '#e6f7ff' : undefined,
+                    flex: 1,
+                    minHeight: 60,
+                    border: '1px dashed #bbb',
+                    background: '#fff',
+                    padding: 8,
+                    position: 'relative',
                   }}
-                />
-              </div>
-            ))}
+                >
+                  {colChildren.length === 0 ? (
+                    // 空分栏时，整个区域可drop
+                    <DropColAll
+                      node={node}
+                      colIdx={colIdx}
+                      setData={setData}
+                      data={data}
+                    />
+                  ) : (
+                    colChildren
+                      .map((child, idx) => (
+                        <React.Fragment key={child.id}>
+                          {/* 上方drop区 */}
+                          <DropColPos
+                            node={node}
+                            colIdx={colIdx}
+                            pos={idx}
+                            setData={setData}
+                            data={data}
+                          />
+                          <RenderNode
+                            node={child}
+                            onSelect={onSelect}
+                            selected={selected}
+                            onCopy={onCopy}
+                            onDelete={onDelete}
+                            setData={setData}
+                            parent={node.children!}
+                            parentType={node.type}
+                            index={node.children!.findIndex(
+                              (c) => c.id === child.id,
+                            )}
+                            moveChild={moveChild}
+                            addChild={addChild}
+                          />
+                        </React.Fragment>
+                      ))
+                      .concat([
+                        // 末尾drop区
+                        <DropColPos
+                          key="end"
+                          node={node}
+                          colIdx={colIdx}
+                          pos={colChildren.length}
+                          setData={setData}
+                          data={data}
+                        />,
+                      ])
+                  )}
+                </div>
+              );
+            })}
           </div>
         );
         break;
@@ -458,7 +576,7 @@ const Canvas: React.FC<CanvasProps> = ({
                 selected === node.id ? '2px solid #1890ff' : '1px solid #eee',
               margin: 8,
               padding: 8,
-              background: isOverCol && canDropCol ? '#e6f7ff' : '#fafafa',
+              background: '#fafafa',
               position: 'relative',
               minWidth: 60,
               minHeight: 32,
@@ -479,7 +597,7 @@ const Canvas: React.FC<CanvasProps> = ({
 
   return (
     <div
-      ref={canvasRef}
+      ref={dropCanvas}
       style={{
         minHeight: 400,
         background: '#f5f5f5',
