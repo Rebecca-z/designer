@@ -20,18 +20,6 @@ const moveNode = (list: CanvasNode[], from: number, to: number) => {
   return arr;
 };
 
-// const DropIndicator: React.FC<{ isOver: boolean }> = ({ isOver }) => (
-//   <div
-//     style={{
-//       height: 8,
-//       margin: '2px 0',
-//       background: isOver ? '#1890ff' : 'transparent',
-//       borderTop: isOver ? '2px solid #1890ff' : '2px dashed #e0e0e0',
-//       transition: 'background 0.2s',
-//     }}
-//   />
-// );
-
 // 空分栏时，整个区域可drop
 const DropColAll: React.FC<{
   node: CanvasNode;
