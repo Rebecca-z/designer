@@ -129,7 +129,7 @@ const ComponentLibrary: React.FC = () => {
         }}
       >
         <Text style={{ fontSize: '12px', color: '#0369a1' }}>
-          💡 拖拽组件到右侧画布中使用
+          💡 拖拽组件到右侧画布中使用123
         </Text>
       </div>
 

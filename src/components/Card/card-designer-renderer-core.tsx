@@ -305,6 +305,13 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         </div>
       );
 
+    case 'title':
+      return (
+        <div>
+          <h1>标题</h1>
+          <h2>副标题</h2>
+        </div>
+      );
     case 'input':
       return (
         <Input

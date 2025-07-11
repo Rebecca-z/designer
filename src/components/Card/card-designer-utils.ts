@@ -286,11 +286,67 @@ const multiSelectHtml = (comp: any) => {
         </div>
       `;
 };
+// 标题组件的样式主题
+const getTitleThemeStyle = (theme: string) => {
+  const themes = {
+    blue: {
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      color: '#fff',
+    },
+    wethet: {
+      background: 'linear-gradient(135deg, #74b9ff 0%, #0984e3 100%)',
+      color: '#fff',
+    },
+    green: {
+      background: 'linear-gradient(135deg, #00b894 0%, #00a085 100%)',
+      color: '#fff',
+    },
+    red: {
+      background: 'linear-gradient(135deg, #fd79a8 0%, #e84393 100%)',
+      color: '#fff',
+    },
+  };
+  return themes[theme as keyof typeof themes] || themes.blue;
+};
+
 // 组件渲染工具函数
 export const renderComponentToHTML = (component: ComponentType): string => {
   const comp = component as any;
 
   switch (component.tag) {
+    case 'title': {
+      const themeStyle = getTitleThemeStyle(comp.style || 'blue');
+      return `
+        <div style="
+          ${
+            themeStyle.background ? `background: ${themeStyle.background};` : ''
+          }
+          color: ${themeStyle.color};
+          padding: 24px 16px;
+          border-radius: 8px;
+          text-align: center;
+          margin: 0 0 16px 0;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        ">
+          <h1 style="
+            margin: 0 0 8px 0;
+            font-size: 24px;
+            font-weight: bold;
+            color: ${themeStyle.color};
+          ">
+            ${comp.title || '主标题'}
+          </h1>
+          <p style="
+            margin: 0;
+            font-size: 14px;
+            opacity: 0.9;
+            color: ${themeStyle.color};
+          ">
+            ${comp.subtitle || '副标题'}
+          </p>
+        </div>
+      `;
+    }
     case 'form':
       return `
         <form style="
@@ -496,6 +552,15 @@ export const generateId = (): string => {
 // 创建默认组件 - 遵循新的数据结构
 export const createDefaultComponent = (type: string): ComponentType => {
   switch (type) {
+    case 'title':
+      return {
+        id: generateId(),
+        tag: 'title',
+        title: '主标题',
+        subtitle: '副标题',
+        style: 'blue',
+      } as ComponentType;
+
     case 'form':
       return {
         tag: 'form',

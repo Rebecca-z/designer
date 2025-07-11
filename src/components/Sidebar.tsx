@@ -2,6 +2,7 @@ import {
   AppstoreAddOutlined,
   BarsOutlined,
   BorderOutlined,
+  CrownOutlined,
   DownSquareOutlined,
   EditOutlined,
   FolderOutlined,
@@ -21,6 +22,7 @@ const iconMap: Record<string, React.ReactNode> = {
     <AppstoreAddOutlined style={{ fontSize: 18, color: '#1890ff' }} />
   ),
   // 展示
+  title: <CrownOutlined style={{ fontSize: 18, color: '#52c41a' }} />,
   text: <FontSizeOutlined style={{ fontSize: 18, color: '#52c41a' }} />,
   richtext: <EditOutlined style={{ fontSize: 18, color: '#52c41a' }} />,
   divider: <BorderOutlined style={{ fontSize: 18, color: '#52c41a' }} />,
@@ -64,6 +66,7 @@ const containerList = [
   },
 ];
 const displayList = [
+  { type: 'component' as const, componentType: 'title', label: '标题' },
   { type: 'component' as const, componentType: 'text', label: '文本' },
   { type: 'component' as const, componentType: 'richtext', label: '富文本' },
   { type: 'component' as const, componentType: 'divider', label: '分割线' },

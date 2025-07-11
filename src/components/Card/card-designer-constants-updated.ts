@@ -5,6 +5,7 @@ import {
   BlockOutlined,
   CheckSquareOutlined,
   ColumnHeightOutlined,
+  CrownOutlined,
   DesktopOutlined,
   EditOutlined,
   FileImageOutlined,
@@ -39,6 +40,7 @@ export const COMPONENT_TYPES: Record<string, ComponentConfig> = {
   },
 
   // 展示组件
+  title: { name: '标题', icon: CrownOutlined, category: 'display' },
   plain_text: { name: '文本', icon: FontSizeOutlined, category: 'display' },
   rich_text: { name: '富文本', icon: EditOutlined, category: 'display' },
   hr: { name: '分割线', icon: LineOutlined, category: 'display' },
