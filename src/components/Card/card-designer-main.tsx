@@ -1,15 +1,17 @@
-// card-designer-main.tsx - 完整的主设计器组件
+// card-designer-main.tsx - 更新的主设计器组件
 
 import {
   CodeOutlined,
   CopyOutlined,
   EyeOutlined,
   FolderOpenOutlined,
+  ImportOutlined,
   PlusOutlined,
   QuestionCircleOutlined,
   RedoOutlined,
   SaveOutlined,
   UndoOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import {
   Button,
@@ -19,6 +21,7 @@ import {
   Space,
   Tooltip,
   Typography,
+  Upload,
 } from 'antd';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { DndProvider } from 'react-dnd';
@@ -29,6 +32,7 @@ import { DEFAULT_DESIGN_DATA, DEVICE_SIZES } from './card-designer-constants';
 import { ComponentPanel, PropertyPanel } from './card-designer-panels';
 import { ComponentType, DesignData, Variable } from './card-designer-types';
 import {
+  convertToTargetFormat,
   exportToJSON,
   generateId,
   generatePreviewHTML,
@@ -123,7 +127,11 @@ const CardDesigner: React.FC = () => {
   const [previewVisible, setPreviewVisible] = useState<boolean>(false);
   const [variables, setVariables] = useState<Variable[]>([]);
   const [clipboard, setClipboard] = useState<ComponentType | null>(null);
-  // const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  // 新增状态
+  const [exportModalVisible, setExportModalVisible] = useState<boolean>(false);
+  const [importModalVisible, setImportModalVisible] = useState<boolean>(false);
+  const [exportData, setExportData] = useState<string>('');
 
   // 焦点状态管理
   const [canvasFocused, setCanvasFocused] = useState<boolean>(false);
@@ -298,46 +306,60 @@ const CardDesigner: React.FC = () => {
     }
   }, [data, selectedPath, selectedComponent?.id]);
 
-  // 导出配置
+  // 导出配置 - 修改为使用新的数据结构
   const exportConfig = useCallback(() => {
-    const config = exportToJSON(data);
-    const blob = new Blob([config], { type: 'application/json' });
+    try {
+      const targetFormat = convertToTargetFormat(data);
+      const exportJson = JSON.stringify(targetFormat, null, 2);
+      setExportData(exportJson);
+      setExportModalVisible(true);
+    } catch (error) {
+      message.error('导出配置失败');
+      console.error('Export error:', error);
+    }
+  }, [data]);
+
+  // 下载配置文件
+  const downloadConfig = useCallback(() => {
+    const blob = new Blob([exportData], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `card-config-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    message.success('配置已导出');
-  }, [data]);
+    message.success('配置已下载');
+  }, [exportData]);
 
   // 导入配置
   const importConfig = useCallback(() => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          try {
-            const jsonData = importFromJSON(e.target?.result as string);
-            if (jsonData) {
-              updateData(jsonData);
-              message.success('配置已导入');
-            } else {
-              message.error('配置文件格式错误');
-            }
-          } catch (error) {
-            message.error('配置文件解析失败');
+    setImportModalVisible(true);
+  }, []);
+
+  // 处理文件上传
+  const handleFileUpload = useCallback(
+    (file: File) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const jsonData = importFromJSON(e.target?.result as string);
+          if (jsonData) {
+            updateData(jsonData);
+            setImportModalVisible(false);
+            message.success('配置导入成功');
+          } else {
+            message.error('配置文件格式错误');
           }
-        };
-        reader.readAsText(file);
-      }
-    };
-    input.click();
-  }, [updateData]);
+        } catch (error) {
+          message.error('配置文件解析失败');
+          console.error('Import error:', error);
+        }
+      };
+      reader.readAsText(file);
+      return false; // 阻止自动上传
+    },
+    [updateData],
+  );
 
   // 保存配置到本地存储
   const saveConfig = useCallback(() => {
@@ -601,6 +623,15 @@ const CardDesigner: React.FC = () => {
 
             <Divider type="vertical" />
 
+            {/* 导入按钮 */}
+            <Button
+              icon={<ImportOutlined />}
+              onClick={importConfig}
+              size="small"
+            >
+              导入
+            </Button>
+
             <Button
               icon={<EyeOutlined />}
               onClick={() => setPreviewVisible(true)}
@@ -702,6 +733,187 @@ const CardDesigner: React.FC = () => {
           </div>
         </div>
 
+        {/* 导出配置模态框 */}
+        <Modal
+          title={
+            <Space>
+              <CodeOutlined />
+              导出配置
+              <Text type="secondary">(目标数据结构)</Text>
+            </Space>
+          }
+          open={exportModalVisible}
+          onCancel={() => setExportModalVisible(false)}
+          width="80%"
+          footer={[
+            <Button
+              key="copy"
+              onClick={() => {
+                navigator.clipboard.writeText(exportData);
+                message.success('配置已复制到剪贴板');
+              }}
+            >
+              复制到剪贴板
+            </Button>,
+            <Button key="download" type="primary" onClick={downloadConfig}>
+              下载JSON文件
+            </Button>,
+            <Button key="close" onClick={() => setExportModalVisible(false)}>
+              关闭
+            </Button>,
+          ]}
+          centered
+        >
+          <div style={{ marginBottom: '16px' }}>
+            <div
+              style={{
+                padding: '12px',
+                backgroundColor: '#f0f9ff',
+                border: '1px solid #bae6fd',
+                borderRadius: '6px',
+                marginBottom: '16px',
+              }}
+            >
+              <h4 style={{ margin: '0 0 8px 0', color: '#0369a1' }}>
+                数据结构说明
+              </h4>
+              <div style={{ fontSize: '12px', color: '#0c4a6e' }}>
+                <p style={{ margin: '4px 0' }}>
+                  • direction: vertical - 垂直布局（固定值，不可修改）
+                </p>
+                <p style={{ margin: '4px 0' }}>
+                  • vertical_spacing: 5 - 组件间垂直间距
+                </p>
+                <p style={{ margin: '4px 0' }}>
+                  • elements: [] - 主要组件列表，只能包含表单容器和分栏组件
+                </p>
+                <p style={{ margin: '4px 0' }}>
+                  • 表单容器支持嵌套：输入框、按钮、选择器等交互组件
+                </p>
+                <p style={{ margin: '4px 0' }}>
+                  • 分栏组件支持嵌套：文本、图片、分割线等展示组件
+                </p>
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: '8px 12px',
+                backgroundColor: '#fef3c7',
+                border: '1px solid #fcd34d',
+                borderRadius: '4px',
+                marginBottom: '12px',
+              }}
+            >
+              <Text style={{ fontSize: '12px', color: '#92400e' }}>
+                💡
+                提示：此数据结构已移除内部字段（如id等），只保留目标API所需的字段
+              </Text>
+            </div>
+          </div>
+
+          <pre
+            style={{
+              backgroundColor: '#f5f5f5',
+              padding: '16px',
+              borderRadius: '6px',
+              maxHeight: '60vh',
+              overflow: 'auto',
+              fontSize: '12px',
+              lineHeight: '1.4',
+              fontFamily: 'Monaco, Consolas, "Courier New", monospace',
+            }}
+          >
+            {exportData}
+          </pre>
+        </Modal>
+
+        {/* 导入配置模态框 */}
+        <Modal
+          title={
+            <Space>
+              <ImportOutlined />
+              导入配置
+            </Space>
+          }
+          open={importModalVisible}
+          onCancel={() => setImportModalVisible(false)}
+          footer={[
+            <Button key="cancel" onClick={() => setImportModalVisible(false)}>
+              取消
+            </Button>,
+          ]}
+          centered
+        >
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <Upload
+              accept=".json"
+              showUploadList={false}
+              beforeUpload={handleFileUpload}
+              style={{ width: '100%' }}
+            >
+              <div
+                style={{
+                  border: '2px dashed #d9d9d9',
+                  borderRadius: '6px',
+                  padding: '40px 20px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#1890ff';
+                  e.currentTarget.style.backgroundColor = '#f0f9ff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#d9d9d9';
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                <UploadOutlined
+                  style={{
+                    fontSize: '48px',
+                    color: '#1890ff',
+                    marginBottom: '16px',
+                  }}
+                />
+                <div style={{ fontSize: '16px', marginBottom: '8px' }}>
+                  点击或拖拽JSON文件到此处
+                </div>
+                <div style={{ fontSize: '12px', color: '#666' }}>
+                  支持标准的卡片配置JSON文件
+                </div>
+              </div>
+            </Upload>
+
+            <div
+              style={{
+                marginTop: '20px',
+                padding: '12px',
+                backgroundColor: '#f6ffed',
+                border: '1px solid #b7eb8f',
+                borderRadius: '4px',
+                textAlign: 'left',
+              }}
+            >
+              <h4 style={{ margin: '0 0 8px 0', color: '#389e0d' }}>
+                支持的文件格式
+              </h4>
+              <div style={{ fontSize: '12px', color: '#52c41a' }}>
+                <p style={{ margin: '4px 0' }}>• 标准JSON配置文件（.json）</p>
+                <p style={{ margin: '4px 0' }}>
+                  • 包含direction、vertical_spacing、elements字段
+                </p>
+                <p style={{ margin: '4px 0' }}>
+                  • 支持表单容器和分栏组件的嵌套结构
+                </p>
+                <p style={{ margin: '4px 0' }}>
+                  • 自动验证数据格式并转换为内部结构
+                </p>
+              </div>
+            </div>
+          </div>
+        </Modal>
+
         {/* 预览模态框 */}
         <Modal
           title={
@@ -711,7 +923,7 @@ const CardDesigner: React.FC = () => {
               <Text type="secondary">({DEVICE_SIZES[device].name})</Text>
             </Space>
           }
-          visible={previewVisible}
+          open={previewVisible}
           onCancel={() => setPreviewVisible(false)}
           width={
             device === 'desktop'
@@ -873,39 +1085,6 @@ const CardDesigner: React.FC = () => {
             </div>
           </div>
         </Modal>
-
-        {/* 全局加载状态 */}
-        {false && (
-          <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(255,255,255,0.8)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 9999,
-            }}
-          >
-            <div
-              style={{
-                textAlign: 'center',
-                padding: '20px',
-                backgroundColor: '#fff',
-                borderRadius: '8px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-              }}
-            >
-              <div style={{ fontSize: '14px', marginBottom: '8px' }}>
-                处理中...
-              </div>
-              <div style={{ fontSize: '12px', color: '#666' }}>请稍候</div>
-            </div>
-          </div>
-        )}
       </div>
     </DndProvider>
   );

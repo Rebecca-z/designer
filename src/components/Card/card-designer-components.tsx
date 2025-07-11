@@ -234,6 +234,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
     );
   }
 
+  console.warn('component', component.tag, component.id);
   // 检查组件是否有基本属性
   if (!component.tag || !component.id) {
     console.warn('ComponentRenderer: component missing required properties', {
@@ -263,21 +264,21 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
 
   const handleClick = (e: React.MouseEvent) => {
     if (isPreview) return;
-    e.stopPropagation();
+    e?.stopPropagation();
     onSelect(component, path);
     onCanvasFocus?.(); // 通知画布获得焦点
   };
 
   const handleDelete = (e: React.MouseEvent) => {
     if (isPreview) return;
-    e.stopPropagation();
+    e?.stopPropagation();
     onDelete(path);
     message.success('组件已删除');
   };
 
   const handleCopy = (e: React.MouseEvent) => {
     if (isPreview) return;
-    e.stopPropagation();
+    e?.stopPropagation();
     onCopy(component);
     message.success('组件已复制');
   };

@@ -134,9 +134,11 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
     );
   }
 
-  return (
-    <Tabs defaultActiveKey="property">
-      <Tabs.TabPane tab="属性" key="property">
+  const TabItems = [
+    {
+      key: 'property',
+      label: '属性',
+      children: (
         <Form
           form={form}
           layout="vertical"
@@ -156,8 +158,12 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
             </Form.Item>
           ))}
         </Form>
-      </Tabs.TabPane>
-      <Tabs.TabPane tab="事件" key="event">
+      ),
+    },
+    {
+      key: 'event',
+      label: '事件',
+      children: (
         <Form
           layout="vertical"
           onValuesChange={handleValuesChange}
@@ -169,9 +175,11 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
             </Form.Item>
           ))}
         </Form>
-      </Tabs.TabPane>
-    </Tabs>
-  );
+      ),
+    },
+  ];
+
+  return <Tabs defaultActiveKey="property" items={TabItems}></Tabs>;
 };
 
 export default PropertyPanel;

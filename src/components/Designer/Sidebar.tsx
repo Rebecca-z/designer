@@ -110,10 +110,11 @@ const renderDraggable = (item: {
     </div>
   </DraggableItem>
 );
-
-const Sidebar: React.FC = () => (
-  <Tabs defaultActiveKey="components" style={{ height: '100%' }}>
-    <Tabs.TabPane tab="组件" key="components">
+const TabItems = [
+  {
+    key: 'components',
+    label: '组件',
+    children: (
       <div style={{ padding: '8px 0' }}>
         <div
           style={{ fontWeight: 500, color: '#888', padding: '4px 16px 2px' }}
@@ -136,11 +137,21 @@ const Sidebar: React.FC = () => (
         </div>
         {interactiveList.map(renderDraggable)}
       </div>
-    </Tabs.TabPane>
-    <Tabs.TabPane tab="布局" key="layout">
-      {layoutList.map(renderDraggable)}
-    </Tabs.TabPane>
-  </Tabs>
+    ),
+  },
+  {
+    key: 'layout',
+    label: '布局',
+    children: layoutList.map(renderDraggable),
+  },
+];
+
+const Sidebar: React.FC = () => (
+  <Tabs
+    defaultActiveKey="components"
+    style={{ height: '100%' }}
+    items={TabItems}
+  ></Tabs>
 );
 
 export default Sidebar;

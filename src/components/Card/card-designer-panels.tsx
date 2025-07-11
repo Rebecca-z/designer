@@ -1,4 +1,4 @@
-// Panels.tsx - 面板组件文件
+// card-designer-panels.tsx - 更新的面板组件文件
 
 import {
   AppstoreOutlined,
@@ -8,15 +8,12 @@ import {
   FormatPainterOutlined,
   PlusOutlined,
   SettingOutlined,
-  UploadOutlined,
 } from '@ant-design/icons';
 import {
   Button,
   Card,
   Col,
   Collapse,
-  ColorPicker,
-  Divider,
   Form,
   Input,
   InputNumber,
@@ -26,9 +23,7 @@ import {
   Switch,
   Tabs,
   Typography,
-  Upload,
 } from 'antd';
-import type { Color } from 'antd/es/color-picker';
 import React, { useState } from 'react';
 import { useDrag } from 'react-dnd';
 import {
@@ -37,7 +32,6 @@ import {
 } from './card-designer-constants';
 import { ComponentType, DragItem, Variable } from './card-designer-types';
 
-const { TabPane } = Tabs;
 const { Option } = Select;
 const { Text, Title } = Typography;
 const { Panel } = Collapse;
@@ -100,12 +94,6 @@ export const ComponentPanel: React.FC = () => {
           key={category.key}
           size="small"
           style={{ marginBottom: '16px' }}
-          // headStyle={{
-          //   backgroundColor: category.color,
-          //   color: 'white',
-          //   borderRadius: '6px 6px 0 0',
-          // }}
-          // bodyStyle={{ padding: '12px' }}
           title={
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div
@@ -113,7 +101,7 @@ export const ComponentPanel: React.FC = () => {
                   width: '8px',
                   height: '8px',
                   borderRadius: '50%',
-                  backgroundColor: 'white',
+                  backgroundColor: category.color,
                 }}
               />
               {category.title}
@@ -170,6 +158,23 @@ export const PropertyPanel: React.FC<{
     }
   };
 
+  const handleNestedValueChange = (
+    parentField: string,
+    field: string,
+    value: any,
+  ) => {
+    if (selectedComponent) {
+      const updated = {
+        ...selectedComponent,
+        [parentField]: {
+          ...(selectedComponent as any)[parentField],
+          [field]: value,
+        },
+      };
+      onUpdateComponent(updated);
+    }
+  };
+
   const handleAddVariable = () => {
     const newVariable: Variable = {
       name: `var_${Date.now()}`,
@@ -216,10 +221,60 @@ export const PropertyPanel: React.FC<{
     const comp = selectedComponent as any;
 
     switch (tag) {
+      case 'form':
+        return (
+          <div style={{ padding: '16px' }}>
+            <Collapse defaultActiveKey={['basic']} ghost>
+              <Panel header="⚙️ 基础设置" key="basic">
+                <Form form={form} layout="vertical">
+                  <Form.Item label="表单名称">
+                    <Input
+                      value={comp.name || ''}
+                      onChange={(e) =>
+                        handleValueChange('name', e.target.value)
+                      }
+                      placeholder="请输入表单名称"
+                    />
+                  </Form.Item>
+                </Form>
+              </Panel>
+            </Collapse>
+          </div>
+        );
+
+      case 'column_set':
+        return (
+          <div style={{ padding: '16px' }}>
+            <Collapse defaultActiveKey={['layout']} ghost>
+              <Panel header="🏗️ 布局设置" key="layout">
+                <Form form={form} layout="vertical">
+                  <Form.Item label="列数">
+                    <InputNumber
+                      value={comp.columns?.length || 2}
+                      onChange={(value) => {
+                        const newColumns = Array(value)
+                          .fill(null)
+                          .map((_, index) => ({
+                            tag: 'column',
+                            elements: comp.columns?.[index]?.elements || [],
+                          }));
+                        handleValueChange('columns', newColumns);
+                      }}
+                      min={1}
+                      max={6}
+                      style={{ width: '100%' }}
+                    />
+                  </Form.Item>
+                </Form>
+              </Panel>
+            </Collapse>
+          </div>
+        );
+
       case 'plain_text':
         return (
           <div style={{ padding: '16px' }}>
-            <Collapse defaultActiveKey={['content', 'style']} ghost>
+            <Collapse defaultActiveKey={['content']} ghost>
               <Panel header="📝 内容设置" key="content">
                 <Form form={form} layout="vertical">
                   <Form.Item label="文本内容">
@@ -234,59 +289,195 @@ export const PropertyPanel: React.FC<{
                       maxLength={500}
                     />
                   </Form.Item>
+                  <Form.Item label="英文内容">
+                    <Input.TextArea
+                      value={comp.i18n_content?.['en-US'] || ''}
+                      onChange={(e) => {
+                        const updated = {
+                          ...comp.i18n_content,
+                          'en-US': e.target.value,
+                        };
+                        handleValueChange('i18n_content', updated);
+                      }}
+                      placeholder="请输入英文内容"
+                      rows={2}
+                    />
+                  </Form.Item>
                 </Form>
               </Panel>
-              <Panel header="🎨 样式设置" key="style">
+            </Collapse>
+          </div>
+        );
+
+      case 'rich_text':
+        return (
+          <div style={{ padding: '16px' }}>
+            <Collapse defaultActiveKey={['content']} ghost>
+              <Panel header="📝 富文本设置" key="content">
                 <Form form={form} layout="vertical">
-                  <Form.Item label="文本颜色">
-                    <ColorPicker
-                      value={comp.textColor || '#000000'}
-                      onChange={(color: Color) =>
-                        handleValueChange('textColor', color.toHexString())
+                  <Form.Item label="富文本内容">
+                    <Input.TextArea
+                      value={
+                        comp.content?.content?.[0]?.content?.[0]?.text || ''
                       }
-                      showText
-                      size="small"
+                      onChange={(e) => {
+                        const newContent = {
+                          type: 'doc',
+                          content: [
+                            {
+                              type: 'paragraph',
+                              content: [
+                                {
+                                  type: 'text',
+                                  text: e.target.value,
+                                },
+                              ],
+                            },
+                          ],
+                        };
+                        handleValueChange('content', newContent);
+                      }}
+                      placeholder="请输入富文本内容"
+                      rows={4}
+                      showCount
+                      maxLength={1000}
                     />
-                  </Form.Item>
-                  <Form.Item label="字体大小">
-                    <InputNumber
-                      value={comp.fontSize || 14}
-                      onChange={(value) => handleValueChange('fontSize', value)}
-                      min={12}
-                      max={48}
-                      addonAfter="px"
-                      style={{ width: '100%' }}
-                    />
-                  </Form.Item>
-                  <Form.Item label="字体粗细">
-                    <Select
-                      value={comp.fontWeight || 'normal'}
-                      onChange={(value) =>
-                        handleValueChange('fontWeight', value)
-                      }
-                      style={{ width: '100%' }}
-                    >
-                      <Option value="lighter">较细</Option>
-                      <Option value="normal">正常</Option>
-                      <Option value="bold">加粗</Option>
-                      <Option value="bolder">更粗</Option>
-                    </Select>
-                  </Form.Item>
-                  <Form.Item label="文本对齐">
-                    <Select
-                      value={comp.textAlign || 'left'}
-                      onChange={(value) =>
-                        handleValueChange('textAlign', value)
-                      }
-                      style={{ width: '100%' }}
-                    >
-                      <Option value="left">左对齐</Option>
-                      <Option value="center">居中</Option>
-                      <Option value="right">右对齐</Option>
-                      <Option value="justify">两端对齐</Option>
-                    </Select>
                   </Form.Item>
                 </Form>
+              </Panel>
+            </Collapse>
+          </div>
+        );
+
+      case 'img':
+        return (
+          <div style={{ padding: '16px' }}>
+            <Collapse defaultActiveKey={['content']} ghost>
+              <Panel header="🖼️ 图片设置" key="content">
+                <Form form={form} layout="vertical">
+                  <Form.Item label="图片地址">
+                    <Input
+                      value={comp.img_url || ''}
+                      onChange={(e) =>
+                        handleValueChange('img_url', e.target.value)
+                      }
+                      placeholder="请输入图片地址"
+                    />
+                  </Form.Item>
+                  <Form.Item label="英文图片地址">
+                    <Input
+                      value={comp.i18n_img_url?.['en-US'] || ''}
+                      onChange={(e) => {
+                        const updated = {
+                          ...comp.i18n_img_url,
+                          'en-US': e.target.value,
+                        };
+                        handleValueChange('i18n_img_url', updated);
+                      }}
+                      placeholder="请输入英文图片地址"
+                    />
+                  </Form.Item>
+                </Form>
+              </Panel>
+            </Collapse>
+          </div>
+        );
+
+      case 'img_combination':
+        return (
+          <div style={{ padding: '16px' }}>
+            <Collapse defaultActiveKey={['layout', 'images']} ghost>
+              <Panel header="🏗️ 布局设置" key="layout">
+                <Form form={form} layout="vertical">
+                  <Form.Item label="组合模式">
+                    <Select
+                      value={comp.combination_mode || 'trisect'}
+                      onChange={(value) =>
+                        handleValueChange('combination_mode', value)
+                      }
+                      style={{ width: '100%' }}
+                    >
+                      <Option value="bisect">二分组合</Option>
+                      <Option value="trisect">三分组合</Option>
+                      <Option value="quad">四分组合</Option>
+                    </Select>
+                  </Form.Item>
+                  <Form.Item label="透明背景">
+                    <Switch
+                      checked={comp.combination_transparent || false}
+                      onChange={(checked) =>
+                        handleValueChange('combination_transparent', checked)
+                      }
+                      checkedChildren="透明"
+                      unCheckedChildren="不透明"
+                    />
+                  </Form.Item>
+                </Form>
+              </Panel>
+              <Panel header="🖼️ 图片设置" key="images">
+                <div>
+                  {comp.img_list?.map((img: any, index: number) => (
+                    <Card
+                      key={index}
+                      size="small"
+                      style={{ marginBottom: '8px' }}
+                    >
+                      <Row gutter={8}>
+                        <Col span={20}>
+                          <Input
+                            placeholder="图片地址"
+                            value={img.img_url || ''}
+                            onChange={(e) => {
+                              const newImgList = [...(comp.img_list || [])];
+                              newImgList[index] = {
+                                ...newImgList[index],
+                                img_url: e.target.value,
+                              };
+                              handleValueChange('img_list', newImgList);
+                            }}
+                            size="small"
+                          />
+                        </Col>
+                        <Col span={4}>
+                          <Button
+                            type="text"
+                            danger
+                            icon={<DeleteOutlined />}
+                            size="small"
+                            onClick={() => {
+                              const newImgList = (comp.img_list || []).filter(
+                                (_: any, i: number) => i !== index,
+                              );
+                              handleValueChange('img_list', newImgList);
+                            }}
+                          />
+                        </Col>
+                      </Row>
+                    </Card>
+                  ))}
+                  <Button
+                    type="dashed"
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      const newImgList = [
+                        ...(comp.img_list || []),
+                        {
+                          img_url:
+                            'img_v2_9dd98485-2900-4d65-ada9-e31d1408dcfg',
+                          i18n_img_url: {
+                            'en-US':
+                              'img_v2_9dd98485-2900-4d65-ada9-e31d1408dcfg',
+                          },
+                        },
+                      ];
+                      handleValueChange('img_list', newImgList);
+                    }}
+                    style={{ width: '100%' }}
+                    size="small"
+                  >
+                    添加图片
+                  </Button>
+                </div>
               </Panel>
             </Collapse>
           </div>
@@ -311,42 +502,59 @@ export const PropertyPanel: React.FC<{
                     <Input
                       value={comp.placeholder?.content || ''}
                       onChange={(e) =>
-                        handleValueChange('placeholder', {
-                          ...comp.placeholder,
-                          content: e.target.value,
-                        })
+                        handleNestedValueChange(
+                          'placeholder',
+                          'content',
+                          e.target.value,
+                        )
                       }
                       placeholder="请输入占位符"
+                    />
+                  </Form.Item>
+                  <Form.Item label="占位符(英文)">
+                    <Input
+                      value={comp.placeholder?.i18n_content?.['en-US'] || ''}
+                      onChange={(e) => {
+                        const updated = {
+                          ...comp.placeholder,
+                          i18n_content: {
+                            ...comp.placeholder?.i18n_content,
+                            'en-US': e.target.value,
+                          },
+                        };
+                        handleValueChange('placeholder', updated);
+                      }}
+                      placeholder="请输入英文占位符"
                     />
                   </Form.Item>
                   <Form.Item label="默认值">
                     <Input
                       value={comp.default_value?.content || ''}
                       onChange={(e) =>
-                        handleValueChange('default_value', {
-                          ...comp.default_value,
-                          content: e.target.value,
-                        })
+                        handleNestedValueChange(
+                          'default_value',
+                          'content',
+                          e.target.value,
+                        )
                       }
                       placeholder="请输入默认值"
                     />
                   </Form.Item>
-                  <Form.Item label="输入框类型">
-                    <Select
-                      value={comp.inputType || 'text'}
-                      onChange={(value) =>
-                        handleValueChange('inputType', value)
-                      }
-                      style={{ width: '100%' }}
-                    >
-                      <Option value="text">文本</Option>
-                      <Option value="password">密码</Option>
-                      <Option value="number">数字</Option>
-                      <Option value="email">邮箱</Option>
-                      <Option value="tel">电话</Option>
-                      <Option value="url">网址</Option>
-                      <Option value="search">搜索</Option>
-                    </Select>
+                  <Form.Item label="默认值(英文)">
+                    <Input
+                      value={comp.default_value?.i18n_content?.['en-US'] || ''}
+                      onChange={(e) => {
+                        const updated = {
+                          ...comp.default_value,
+                          i18n_content: {
+                            ...comp.default_value?.i18n_content,
+                            'en-US': e.target.value,
+                          },
+                        };
+                        handleValueChange('default_value', updated);
+                      }}
+                      placeholder="请输入英文默认值"
+                    />
                   </Form.Item>
                 </Form>
               </Panel>
@@ -371,57 +579,45 @@ export const PropertyPanel: React.FC<{
       case 'button':
         return (
           <div style={{ padding: '16px' }}>
-            <Collapse defaultActiveKey={['content', 'style', 'behavior']} ghost>
+            <Collapse defaultActiveKey={['content', 'behavior']} ghost>
               <Panel header="📝 内容设置" key="content">
                 <Form form={form} layout="vertical">
+                  <Form.Item label="组件名称">
+                    <Input
+                      value={comp.name || ''}
+                      onChange={(e) =>
+                        handleValueChange('name', e.target.value)
+                      }
+                      placeholder="请输入组件名称"
+                    />
+                  </Form.Item>
                   <Form.Item label="按钮文本">
                     <Input
                       value={comp.text?.content || ''}
-                      onChange={(e) =>
-                        handleValueChange('text', {
+                      onChange={(e) => {
+                        const updated = {
                           ...comp.text,
                           content: e.target.value,
-                        })
-                      }
+                        };
+                        handleValueChange('text', updated);
+                      }}
                       placeholder="请输入按钮文本"
                     />
                   </Form.Item>
-                </Form>
-              </Panel>
-              <Panel header="🎨 样式设置" key="style">
-                <Form form={form} layout="vertical">
-                  <Form.Item label="按钮类型">
-                    <Select
-                      value={comp.type || 'primary'}
-                      onChange={(value) => handleValueChange('type', value)}
-                      style={{ width: '100%' }}
-                    >
-                      <Option value="primary">主要按钮</Option>
-                      <Option value="default">默认按钮</Option>
-                      <Option value="dashed">虚线按钮</Option>
-                      <Option value="text">文本按钮</Option>
-                      <Option value="link">链接按钮</Option>
-                    </Select>
-                  </Form.Item>
-                  <Form.Item label="按钮尺寸">
-                    <Select
-                      value={comp.size || 'middle'}
-                      onChange={(value) => handleValueChange('size', value)}
-                      style={{ width: '100%' }}
-                    >
-                      <Option value="small">小尺寸</Option>
-                      <Option value="middle">中尺寸</Option>
-                      <Option value="large">大尺寸</Option>
-                    </Select>
-                  </Form.Item>
-                  <Form.Item label="危险按钮">
-                    <Switch
-                      checked={comp.danger || false}
-                      onChange={(checked) =>
-                        handleValueChange('danger', checked)
-                      }
-                      checkedChildren="危险"
-                      unCheckedChildren="普通"
+                  <Form.Item label="按钮文本(英文)">
+                    <Input
+                      value={comp.text?.i18n_content?.['en-US'] || ''}
+                      onChange={(e) => {
+                        const updated = {
+                          ...comp.text,
+                          i18n_content: {
+                            ...comp.text?.i18n_content,
+                            'en-US': e.target.value,
+                          },
+                        };
+                        handleValueChange('text', updated);
+                      }}
+                      placeholder="请输入英文按钮文本"
                     />
                   </Form.Item>
                 </Form>
@@ -431,9 +627,21 @@ export const PropertyPanel: React.FC<{
                   <Form.Item label="表单行为类型">
                     <Select
                       value={comp.form_action_type || ''}
-                      onChange={(value) =>
-                        handleValueChange('form_action_type', value)
-                      }
+                      onChange={(value) => {
+                        if (value) {
+                          handleValueChange('form_action_type', value);
+                          // 如果设置了表单行为，清除 behaviors
+                          if (comp.behaviors) {
+                            const updated = { ...comp };
+                            delete updated.behaviors;
+                            onUpdateComponent(updated);
+                          }
+                        } else {
+                          const updated = { ...comp };
+                          delete updated.form_action_type;
+                          onUpdateComponent(updated);
+                        }
+                      }}
                       style={{ width: '100%' }}
                       placeholder="请选择表单行为类型"
                       allowClear
@@ -442,6 +650,78 @@ export const PropertyPanel: React.FC<{
                       <Option value="reset">重置表单</Option>
                     </Select>
                   </Form.Item>
+
+                  {!comp.form_action_type && (
+                    <Form.Item label="自定义行为">
+                      <div style={{ marginBottom: '8px' }}>
+                        <Text type="secondary" style={{ fontSize: '12px' }}>
+                          当前行为类型: {comp.behaviors?.[0]?.type || '无'}
+                        </Text>
+                      </div>
+                      <Select
+                        value={comp.behaviors?.[0]?.type || ''}
+                        onChange={(value) => {
+                          if (value === 'callback') {
+                            handleValueChange('behaviors', [
+                              {
+                                type: 'callback',
+                                callback: {
+                                  action: 'click',
+                                },
+                              },
+                            ]);
+                          } else if (value === 'open_url') {
+                            handleValueChange('behaviors', [
+                              {
+                                type: 'open_url',
+                                open_url: {
+                                  multi_url: {
+                                    url: 'http://www.example.com',
+                                    android_url: '',
+                                    ios_url: '',
+                                    pc_url: '',
+                                  },
+                                },
+                              },
+                            ]);
+                          }
+                        }}
+                        style={{ width: '100%' }}
+                        placeholder="请选择行为类型"
+                        allowClear
+                      >
+                        <Option value="callback">回调</Option>
+                        <Option value="open_url">打开链接</Option>
+                      </Select>
+                    </Form.Item>
+                  )}
+
+                  {comp.behaviors?.[0]?.type === 'open_url' && (
+                    <div>
+                      <Form.Item label="默认链接">
+                        <Input
+                          value={
+                            comp.behaviors[0].open_url?.multi_url?.url || ''
+                          }
+                          onChange={(e) => {
+                            const updated = [...(comp.behaviors || [])];
+                            updated[0] = {
+                              ...updated[0],
+                              open_url: {
+                                ...updated[0].open_url,
+                                multi_url: {
+                                  ...updated[0].open_url?.multi_url,
+                                  url: e.target.value,
+                                },
+                              },
+                            };
+                            handleValueChange('behaviors', updated);
+                          }}
+                          placeholder="请输入默认链接"
+                        />
+                      </Form.Item>
+                    </div>
+                  )}
                 </Form>
               </Panel>
             </Collapse>
@@ -533,6 +813,29 @@ export const PropertyPanel: React.FC<{
                           />
                         </Col>
                       </Row>
+                      <Row gutter={8} style={{ marginTop: '4px' }}>
+                        <Col span={20}>
+                          <Input
+                            placeholder="英文选项文本"
+                            value={option.text?.i18n_content?.['en-US'] || ''}
+                            onChange={(e) => {
+                              const newOptions = [...(comp.options || [])];
+                              newOptions[index] = {
+                                ...newOptions[index],
+                                text: {
+                                  ...newOptions[index].text,
+                                  i18n_content: {
+                                    ...newOptions[index].text?.i18n_content,
+                                    'en-US': e.target.value,
+                                  },
+                                },
+                              };
+                              handleValueChange('options', newOptions);
+                            }}
+                            size="small"
+                          />
+                        </Col>
+                      </Row>
                     </Card>
                   ))}
                   <Button
@@ -557,279 +860,6 @@ export const PropertyPanel: React.FC<{
                     添加选项
                   </Button>
                 </div>
-              </Panel>
-            </Collapse>
-          </div>
-        );
-
-      case 'img':
-        return (
-          <div style={{ padding: '16px' }}>
-            <Collapse defaultActiveKey={['content', 'style']} ghost>
-              <Panel header="🖼️ 图片设置" key="content">
-                <Form form={form} layout="vertical">
-                  <Form.Item label="图片地址">
-                    <Input
-                      value={comp.img_url || ''}
-                      onChange={(e) =>
-                        handleValueChange('img_url', e.target.value)
-                      }
-                      placeholder="请输入图片地址"
-                    />
-                  </Form.Item>
-                  <Form.Item label="上传图片">
-                    <Upload
-                      showUploadList={false}
-                      beforeUpload={() => false}
-                      onChange={(info) => {
-                        const file = info.file;
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onload = (e) => {
-                            handleValueChange('img_url', e.target?.result);
-                          };
-                          reader.readAsDataURL(file as any);
-                        }
-                      }}
-                    >
-                      <Button icon={<UploadOutlined />} size="small">
-                        选择图片
-                      </Button>
-                    </Upload>
-                  </Form.Item>
-                </Form>
-              </Panel>
-              <Panel header="📐 尺寸设置" key="style">
-                <Form form={form} layout="vertical">
-                  <Form.Item label="图片宽度">
-                    <InputNumber
-                      value={comp.width || 300}
-                      onChange={(value) => handleValueChange('width', value)}
-                      min={50}
-                      max={1000}
-                      addonAfter="px"
-                      style={{ width: '100%' }}
-                    />
-                  </Form.Item>
-                  <Form.Item label="图片高度">
-                    <InputNumber
-                      value={comp.height || 200}
-                      onChange={(value) => handleValueChange('height', value)}
-                      min={50}
-                      max={1000}
-                      addonAfter="px"
-                      style={{ width: '100%' }}
-                    />
-                  </Form.Item>
-                </Form>
-              </Panel>
-            </Collapse>
-          </div>
-        );
-
-      case 'img_combination':
-        return (
-          <div style={{ padding: '16px' }}>
-            <Collapse defaultActiveKey={['layout', 'images']} ghost>
-              <Panel header="🏗️ 布局设置" key="layout">
-                <Form form={form} layout="vertical">
-                  <Form.Item label="组合模式">
-                    <Select
-                      value={comp.combination_mode || 'trisect'}
-                      onChange={(value) =>
-                        handleValueChange('combination_mode', value)
-                      }
-                      style={{ width: '100%' }}
-                    >
-                      <Option value="bisect">二分组合</Option>
-                      <Option value="trisect">三分组合</Option>
-                      <Option value="quad">四分组合</Option>
-                    </Select>
-                  </Form.Item>
-                  <Form.Item label="透明背景">
-                    <Switch
-                      checked={comp.combination_transparent || false}
-                      onChange={(checked) =>
-                        handleValueChange('combination_transparent', checked)
-                      }
-                      checkedChildren="透明"
-                      unCheckedChildren="不透明"
-                    />
-                  </Form.Item>
-                </Form>
-              </Panel>
-              <Panel header="🖼️ 图片设置" key="images">
-                <div>
-                  {comp.img_list?.map((img: any, index: number) => (
-                    <Card
-                      key={index}
-                      size="small"
-                      style={{ marginBottom: '8px' }}
-                    >
-                      <Row gutter={8}>
-                        <Col span={20}>
-                          <Input
-                            placeholder="图片地址"
-                            value={img.img_url || ''}
-                            onChange={(e) => {
-                              const newImgList = [...(comp.img_list || [])];
-                              newImgList[index] = {
-                                ...newImgList[index],
-                                img_url: e.target.value,
-                              };
-                              handleValueChange('img_list', newImgList);
-                            }}
-                            size="small"
-                          />
-                        </Col>
-                        <Col span={4}>
-                          <Button
-                            type="text"
-                            danger
-                            icon={<DeleteOutlined />}
-                            size="small"
-                            onClick={() => {
-                              const newImgList = (comp.img_list || []).filter(
-                                (_: any, i: number) => i !== index,
-                              );
-                              handleValueChange('img_list', newImgList);
-                            }}
-                          />
-                        </Col>
-                      </Row>
-                    </Card>
-                  ))}
-                  <Button
-                    type="dashed"
-                    icon={<PlusOutlined />}
-                    onClick={() => {
-                      const newImgList = [
-                        ...(comp.img_list || []),
-                        {
-                          img_url: 'https://via.placeholder.com/150x150',
-                          i18n_img_url: {
-                            'en-US': 'https://via.placeholder.com/150x150',
-                          },
-                        },
-                      ];
-                      handleValueChange('img_list', newImgList);
-                    }}
-                    style={{ width: '100%' }}
-                    size="small"
-                  >
-                    添加图片
-                  </Button>
-                </div>
-              </Panel>
-            </Collapse>
-          </div>
-        );
-
-      case 'column_set':
-        return (
-          <div style={{ padding: '16px' }}>
-            <Collapse defaultActiveKey={['layout']} ghost>
-              <Panel header="🏗️ 布局设置" key="layout">
-                <Form form={form} layout="vertical">
-                  <Form.Item label="列数">
-                    <InputNumber
-                      value={comp.columns?.length || 2}
-                      onChange={(value) => {
-                        const newColumns = Array(value)
-                          .fill(null)
-                          .map((_, index) => ({
-                            tag: 'column',
-                            elements: comp.columns?.[index]?.elements || [],
-                          }));
-                        handleValueChange('columns', newColumns);
-                      }}
-                      min={1}
-                      max={6}
-                      style={{ width: '100%' }}
-                    />
-                  </Form.Item>
-                  <Form.Item label="列间距">
-                    <InputNumber
-                      value={comp.gap || 8}
-                      onChange={(value) => handleValueChange('gap', value)}
-                      min={0}
-                      max={50}
-                      addonAfter="px"
-                      style={{ width: '100%' }}
-                    />
-                  </Form.Item>
-                </Form>
-              </Panel>
-            </Collapse>
-          </div>
-        );
-
-      case 'form':
-        return (
-          <div style={{ padding: '16px' }}>
-            <Collapse defaultActiveKey={['basic']} ghost>
-              <Panel header="⚙️ 基础设置" key="basic">
-                <Form form={form} layout="vertical">
-                  <Form.Item label="表单名称">
-                    <Input
-                      value={comp.name || ''}
-                      onChange={(e) =>
-                        handleValueChange('name', e.target.value)
-                      }
-                      placeholder="请输入表单名称"
-                    />
-                  </Form.Item>
-                  <Form.Item label="表单说明">
-                    <Input.TextArea
-                      value={comp.description || ''}
-                      onChange={(e) =>
-                        handleValueChange('description', e.target.value)
-                      }
-                      placeholder="请输入表单说明"
-                      rows={2}
-                    />
-                  </Form.Item>
-                </Form>
-              </Panel>
-            </Collapse>
-          </div>
-        );
-
-      case 'rich_text':
-        return (
-          <div style={{ padding: '16px' }}>
-            <Collapse defaultActiveKey={['content']} ghost>
-              <Panel header="📝 内容设置" key="content">
-                <Form form={form} layout="vertical">
-                  <Form.Item label="富文本内容">
-                    <Input.TextArea
-                      value={
-                        comp.content?.content?.[0]?.content?.[0]?.text || ''
-                      }
-                      onChange={(e) => {
-                        const newContent = {
-                          type: 'doc',
-                          content: [
-                            {
-                              type: 'paragraph',
-                              content: [
-                                {
-                                  type: 'text',
-                                  text: e.target.value,
-                                },
-                              ],
-                            },
-                          ],
-                        };
-                        handleValueChange('content', newContent);
-                      }}
-                      placeholder="请输入富文本内容"
-                      rows={4}
-                      showCount
-                      maxLength={1000}
-                    />
-                  </Form.Item>
-                </Form>
               </Panel>
             </Collapse>
           </div>
@@ -964,64 +994,6 @@ export const PropertyPanel: React.FC<{
           )}
         </Card>
 
-        <Card title={<span>⚡ 事件配置</span>} style={{ marginBottom: '16px' }}>
-          <Collapse ghost>
-            <Panel header="🖱️ 点击事件" key="click">
-              <div
-                style={{ color: '#666', fontSize: '12px', lineHeight: '1.6' }}
-              >
-                <p style={{ margin: '4px 0' }}>• 按钮点击事件</p>
-                <p style={{ margin: '4px 0' }}>• 表单提交事件</p>
-                <p style={{ margin: '4px 0' }}>• 自定义回调事件</p>
-                <p style={{ margin: '4px 0' }}>• 页面跳转事件</p>
-              </div>
-            </Panel>
-            <Panel header="📝 数据变化事件" key="change">
-              <div
-                style={{ color: '#666', fontSize: '12px', lineHeight: '1.6' }}
-              >
-                <p style={{ margin: '4px 0' }}>• 输入框值变化</p>
-                <p style={{ margin: '4px 0' }}>• 选择器选项变化</p>
-                <p style={{ margin: '4px 0' }}>• 表单数据变化</p>
-                <p style={{ margin: '4px 0' }}>• 文件上传事件</p>
-              </div>
-            </Panel>
-            <Panel header="🔄 生命周期事件" key="lifecycle">
-              <div
-                style={{ color: '#666', fontSize: '12px', lineHeight: '1.6' }}
-              >
-                <p style={{ margin: '4px 0' }}>• 组件加载完成</p>
-                <p style={{ margin: '4px 0' }}>• 组件卸载前</p>
-                <p style={{ margin: '4px 0' }}>• 数据更新后</p>
-                <p style={{ margin: '4px 0' }}>• 错误处理事件</p>
-              </div>
-            </Panel>
-            <Panel header="🌐 网络事件" key="network">
-              <div
-                style={{ color: '#666', fontSize: '12px', lineHeight: '1.6' }}
-              >
-                <p style={{ margin: '4px 0' }}>• API 请求事件</p>
-                <p style={{ margin: '4px 0' }}>• 数据提交事件</p>
-                <p style={{ margin: '4px 0' }}>• 文件下载事件</p>
-                <p style={{ margin: '4px 0' }}>• WebSocket 连接</p>
-              </div>
-            </Panel>
-          </Collapse>
-          <Divider />
-          <div
-            style={{
-              textAlign: 'center',
-              padding: '16px',
-              backgroundColor: '#f9f9f9',
-              borderRadius: '6px',
-            }}
-          >
-            <Text type="secondary" style={{ fontSize: '12px' }}>
-              🚧 事件配置功能正在开发中，敬请期待...
-            </Text>
-          </div>
-        </Card>
-
         <Card title={<span>📊 组件信息</span>} size="small">
           <div style={{ fontSize: '12px', lineHeight: '1.6' }}>
             <Row>
@@ -1058,6 +1030,37 @@ export const PropertyPanel: React.FC<{
     );
   };
 
+  const TabItems = [
+    {
+      key: 'properties',
+      label: (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <FormatPainterOutlined />
+          属性配置
+        </span>
+      ),
+      children: (
+        <div style={{ height: 'calc(100vh - 120px)', overflow: 'auto' }}>
+          {renderProperties()}
+        </div>
+      ),
+    },
+    {
+      key: 'events',
+      label: (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <BgColorsOutlined />
+          事件管理
+        </span>
+      ),
+      children: (
+        <div style={{ height: 'calc(100vh - 120px)', overflow: 'auto' }}>
+          {renderEvents()}
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div
       style={{
@@ -1080,34 +1083,8 @@ export const PropertyPanel: React.FC<{
           borderBottom: '1px solid #d9d9d9',
         }}
         size="small"
-      >
-        <TabPane
-          tab={
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <FormatPainterOutlined />
-              属性配置
-            </span>
-          }
-          key="properties"
-        >
-          <div style={{ height: 'calc(100vh - 120px)', overflow: 'auto' }}>
-            {renderProperties()}
-          </div>
-        </TabPane>
-        <TabPane
-          tab={
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <BgColorsOutlined />
-              事件管理
-            </span>
-          }
-          key="events"
-        >
-          <div style={{ height: 'calc(100vh - 120px)', overflow: 'auto' }}>
-            {renderEvents()}
-          </div>
-        </TabPane>
-      </Tabs>
+        items={TabItems}
+      ></Tabs>
     </div>
   );
 };
