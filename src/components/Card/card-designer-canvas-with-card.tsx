@@ -45,6 +45,8 @@ const Canvas: React.FC<CanvasProps> = ({
 }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
 
+  console.warn('data====', data);
+
   // 处理卡片元素变化
   const handleElementsChange = (elements: ComponentType[]) => {
     const newData = {

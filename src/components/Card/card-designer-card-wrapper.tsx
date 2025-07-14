@@ -44,6 +44,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
   isCardSelected,
   onCardSelect,
 }) => {
+  console.warn('elements', elements);
   // 检查路径是否指向同一个组件
   const isSamePath = (
     path1: (string | number)[] | null,
