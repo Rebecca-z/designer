@@ -206,7 +206,14 @@ const CardDesigner: React.FC = () => {
   };
 
   const handleSaveConfig = () => {
-    config.saveConfig(cardData as any, variables);
+    config.saveConfig(
+      {
+        direction: 'vertical' as const,
+        vertical_spacing: cardData.dsl.body.vertical_spacing,
+        elements: cardData.dsl.body.elements,
+      } as any,
+      variables,
+    );
   };
 
   const handleLoadConfig = () => {
@@ -275,7 +282,13 @@ const CardDesigner: React.FC = () => {
           onSave={handleSaveConfig}
           onLoad={handleLoadConfig}
           onImport={config.importConfig}
-          onExport={() => config.exportConfig(cardData as any)}
+          onExport={() =>
+            config.exportConfig({
+              direction: 'vertical' as const,
+              vertical_spacing: cardData.dsl.body.vertical_spacing,
+              elements: cardData.dsl.body.elements,
+            } as any)
+          }
           onPreview={() => setPreviewVisible(true)}
           elementsCount={cardData.dsl.body.elements.length}
           variablesCount={variables.length}
