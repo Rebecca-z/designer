@@ -54,6 +54,172 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     return JSON.stringify(path1) === JSON.stringify(path2);
   };
 
+  // 根据路径添加组件到指定位置
+  const addComponentByPath = (
+    elements: ComponentType[],
+    path: (string | number)[],
+    newComponent: ComponentType,
+    insertIndex?: number,
+  ): ComponentType[] => {
+    const newElements = [...elements];
+    let current: any = newElements;
+
+    console.log('🎯 添加组件到路径:', {
+      path,
+      newComponent: { id: newComponent.id, tag: newComponent.tag },
+      insertIndex,
+    });
+
+    // 如果是根级别（直接添加到卡片）
+    if (path.length === 3 && path[2] === 'elements') {
+      if (insertIndex !== undefined) {
+        newElements.splice(insertIndex, 0, newComponent);
+      } else {
+        newElements.push(newComponent);
+      }
+      return newElements;
+    }
+
+    // 导航到目标容器
+    for (let i = 3; i < path.length; i++) {
+      const key = path[i];
+      if (key === 'elements') {
+        // 找到目标elements数组
+        // current应该是一个包含elements属性的组件对象
+        if (current && current.elements && Array.isArray(current.elements)) {
+          if (insertIndex !== undefined) {
+            current.elements.splice(insertIndex, 0, newComponent);
+          } else {
+            current.elements.push(newComponent);
+          }
+        }
+        return newElements;
+      } else if (key === 'columns') {
+        const columnIndex = path[i + 1] as number;
+        // current应该是ColumnSetComponent，它有columns属性
+        // path[i + 2]应该是'elements'
+        current = current.columns[columnIndex].elements;
+        i += 2; // 跳过下两个索引
+      } else if (typeof key === 'number') {
+        current = current[key];
+      } else {
+        current = current[key];
+      }
+    }
+
+    return newElements;
+  };
+
+  // 根据路径移除组件
+  const removeComponentByPath = (
+    elements: ComponentType[],
+    path: (string | number)[],
+  ): ComponentType[] => {
+    const newElements = [...elements];
+    let current: any = newElements;
+
+    // 如果是根级别
+    if (path.length === 4 && path[2] === 'elements') {
+      const index = path[3] as number;
+      newElements.splice(index, 1);
+      return newElements;
+    }
+
+    // 导航到父容器
+    for (let i = 3; i < path.length - 1; i++) {
+      const key = path[i];
+      if (key === 'elements') {
+        current = current[path[i + 1]].elements;
+        i++; // 跳过下一个索引
+      } else if (key === 'columns') {
+        current = current[path[i + 1]].columns[path[i + 2]].elements;
+        i += 2; // 跳过下两个索引
+      } else {
+        current = current[key];
+      }
+    }
+
+    // 移除目标组件
+    const lastIndex = path[path.length - 1] as number;
+    current.splice(lastIndex, 1);
+
+    return newElements;
+  };
+
+  // 处理容器拖拽
+  const handleContainerDrop = (
+    draggedItem: DragItem,
+    targetPath: (string | number)[],
+    dropIndex?: number,
+  ) => {
+    console.log('🎯 处理容器拖拽:', {
+      draggedItem: { type: draggedItem.type, isNew: draggedItem.isNew },
+      targetPath,
+      dropIndex,
+    });
+
+    if (draggedItem.isNew) {
+      // 新组件
+      const newComponent = createDefaultComponent(draggedItem.type);
+      const newElements = addComponentByPath(
+        elements,
+        targetPath,
+        newComponent,
+        dropIndex,
+      );
+      onElementsChange(newElements);
+    } else if (draggedItem.component && draggedItem.path) {
+      // 现有组件移动
+      const draggedComponent = draggedItem.component;
+      const draggedPath = draggedItem.path;
+
+      // 先移除原位置的组件
+      let newElements = removeComponentByPath(elements, draggedPath);
+
+      // 再添加到新位置
+      newElements = addComponentByPath(
+        newElements,
+        targetPath,
+        draggedComponent,
+        dropIndex,
+      );
+
+      onElementsChange(newElements);
+    }
+  };
+
+  // 处理组件排序
+  const handleComponentSort = (
+    draggedComponent: ComponentType,
+    draggedPath: (string | number)[],
+    targetPath: (string | number)[],
+    dropIndex: number,
+  ) => {
+    console.log('🔄 处理组件排序:', {
+      draggedComponent: { id: draggedComponent.id, tag: draggedComponent.tag },
+      draggedPath,
+      targetPath,
+      dropIndex,
+    });
+
+    // 先移除原位置的组件
+    let newElements = removeComponentByPath(elements, draggedPath);
+
+    // 计算目标容器路径
+    const targetContainerPath = targetPath.slice(0, -1);
+    const targetElementsPath = [...targetContainerPath, 'elements'];
+
+    // 添加到新位置
+    newElements = addComponentByPath(
+      newElements,
+      targetElementsPath,
+      draggedComponent,
+      dropIndex,
+    );
+
+    onElementsChange(newElements);
+  };
+
   // 拖拽处理
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: ['component', 'existing-component'],
@@ -67,8 +233,8 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         onElementsChange([...elements, newComponent]);
       } else if (item.component && item.path) {
         // 现有组件移动
-        // 这里需要实现更复杂的逻辑来处理组件移动
         console.log('Move existing component to card', item);
+        handleContainerDrop(item, ['dsl', 'body', 'elements']);
       }
     },
     collect: (monitor) => ({
@@ -191,6 +357,8 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                   onCanvasFocus={onCanvasFocus}
                   hoveredPath={hoveredPath}
                   isHovered={isHovered}
+                  onContainerDrop={handleContainerDrop}
+                  onComponentSort={handleComponentSort}
                 />
               </ErrorBoundary>
             );

@@ -3,7 +3,7 @@
 import { Button, Divider, Input, Select, Typography } from 'antd';
 import React, { useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
-import { ComponentType, DragItem } from './card-designer-types';
+import { ComponentType, DragItem } from './card-designer-types-updated';
 
 const { Option } = Select;
 const { Text } = Typography;

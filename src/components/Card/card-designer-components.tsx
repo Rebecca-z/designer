@@ -4,7 +4,11 @@ import { CopyOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons';
 import { Button, Dropdown, Menu, message } from 'antd';
 import React from 'react';
 import ComponentRendererCore from './card-designer-renderer-core';
-import { ComponentType, DesignData, DragItem } from './card-designer-types';
+import {
+  ComponentType,
+  DesignData,
+  DragItem,
+} from './card-designer-types-updated';
 import ErrorBoundary from './ErrorBoundary';
 
 interface ComponentRendererProps {
@@ -41,7 +45,7 @@ interface ComponentRendererProps {
 //   return componentType === 'form' || componentType === 'column_set';
 // };
 
-// 检查是否可以在目标容器中放置指定类型的组件
+// // 检查是否可以在目标容器中放置指定类型的组件
 // const canDropInContainer = (
 //   draggedType: string,
 //   targetPath: (string | number)[],
@@ -56,7 +60,7 @@ interface ComponentRendererProps {
 //   return true;
 // };
 
-// 获取容器类型（用于错误提示）
+// // 获取容器类型（用于错误提示）
 // const getContainerType = (path: (string | number)[]): string => {
 //   if (path.includes('columns')) return '分栏容器';
 //   if (path.includes('elements') && path.length > 2) return '表单容器';
@@ -261,16 +265,24 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
     onCanvasFocus?.(); // 通知画布获得焦点
   };
 
-  const handleDelete = (e: React.MouseEvent) => {
+  const handleDelete = (e: any) => {
     if (isPreview) return;
-    e?.stopPropagation();
+    // Ant Design Menu.Item onClick doesn't provide stopPropagation
+    // Only call stopPropagation if it's available (for regular React events)
+    if (e?.stopPropagation && typeof e.stopPropagation === 'function') {
+      e.stopPropagation();
+    }
     onDelete(path);
     message.success('组件已删除');
   };
 
-  const handleCopy = (e: React.MouseEvent) => {
+  const handleCopy = (e: any) => {
     if (isPreview) return;
-    e?.stopPropagation();
+    // Ant Design Menu.Item onClick doesn't provide stopPropagation
+    // Only call stopPropagation if it's available (for regular React events)
+    if (e?.stopPropagation && typeof e.stopPropagation === 'function') {
+      e.stopPropagation();
+    }
     onCopy(component);
     message.success('组件已复制');
   };
