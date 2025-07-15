@@ -6,6 +6,13 @@ export interface ComponentBase {
   name?: string;
 }
 
+export interface TitleComponent extends ComponentBase {
+  tag: 'title';
+  title: string;
+  subtitle: string;
+  style: 'blue' | 'wethet' | 'green' | 'red';
+}
+
 export interface PlainTextComponent extends ComponentBase {
   tag: 'plain_text';
   content: string;
@@ -124,6 +131,7 @@ export interface ImageCombinationComponent extends ComponentBase {
 }
 
 export type ComponentType =
+  | TitleComponent
   | PlainTextComponent
   | InputComponent
   | ButtonComponent

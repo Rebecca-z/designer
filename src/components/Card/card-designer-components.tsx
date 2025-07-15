@@ -289,9 +289,12 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
 
   const contextMenu = (
     <Menu>
-      <Menu.Item key="copy" icon={<CopyOutlined />} onClick={handleCopy}>
-        复制组件
-      </Menu.Item>
+      {/* 标题组件不显示复制选项 */}
+      {component.tag !== 'title' && (
+        <Menu.Item key="copy" icon={<CopyOutlined />} onClick={handleCopy}>
+          复制组件
+        </Menu.Item>
+      )}
       <Menu.Item
         key="delete"
         icon={<DeleteOutlined />}

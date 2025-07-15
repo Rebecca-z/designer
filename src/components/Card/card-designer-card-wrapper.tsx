@@ -1,6 +1,7 @@
 // card-designer-card-wrapper.tsx - 会话卡片包装器组件
 
 import { PlusOutlined } from '@ant-design/icons';
+import { message } from 'antd';
 import React from 'react';
 import { useDrop } from 'react-dnd';
 import ComponentRenderer from './card-designer-components';
@@ -45,6 +46,25 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
   onCardSelect,
 }) => {
   console.warn('elements', elements);
+
+  // 检查画布中是否已存在标题组件
+  const hasExistingTitle = (elements: ComponentType[]): boolean => {
+    return elements.some((component) => component.tag === 'title');
+  };
+
+  // 将标题组件插入到数组开头的工具函数
+  const insertTitleAtTop = (
+    elements: ComponentType[],
+    titleComponent: ComponentType,
+  ): ComponentType[] => {
+    // 移除现有的标题组件（如果存在）
+    const elementsWithoutTitle = elements.filter(
+      (component) => component.tag !== 'title',
+    );
+    // 将标题组件插入到开头
+    return [titleComponent, ...elementsWithoutTitle];
+  };
+
   // 检查路径是否指向同一个组件
   const isSamePath = (
     path1: (string | number)[] | null,
@@ -223,14 +243,33 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
   // 拖拽处理
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: ['component', 'existing-component'],
-    canDrop: () => true,
+    canDrop: (item: DragItem) => {
+      // 如果是标题组件，检查是否已存在
+      if (item.type === 'title' && hasExistingTitle(elements)) {
+        return false;
+      }
+      return true;
+    },
     drop: (item: DragItem, monitor) => {
       if (monitor.didDrop()) return;
+
+      // 如果是标题组件且已存在，显示提示
+      if (item.type === 'title' && hasExistingTitle(elements)) {
+        message.warning('画布中已存在标题组件，每个画布只能有一个标题组件');
+        return;
+      }
 
       if (item.isNew) {
         // 新组件
         const newComponent = createDefaultComponent(item.type);
-        onElementsChange([...elements, newComponent]);
+
+        // 如果是标题组件，放置在最顶部
+        if (item.type === 'title') {
+          onElementsChange(insertTitleAtTop(elements, newComponent));
+          message.success('标题组件已添加到画布顶部');
+        } else {
+          onElementsChange([...elements, newComponent]);
+        }
       } else if (item.component && item.path) {
         // 现有组件移动
         console.log('Move existing component to card', item);
