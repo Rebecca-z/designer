@@ -119,6 +119,10 @@ const DragSortableItem: React.FC<{
         targetIndex = hoverIndex + 1;
       }
 
+      // 获取组件信息用于后续检查和日志
+      const draggedComponent = item.component;
+      const hoverComponent = component;
+
       console.log('🎯 插入式拖拽检测:', {
         dragIndex,
         hoverIndex,
@@ -126,21 +130,34 @@ const DragSortableItem: React.FC<{
         hoverMiddleY,
         insertPosition: currentInsertPosition,
         targetIndex,
-        willMove: dragIndex !== targetIndex && dragIndex !== targetIndex - 1,
+        draggedComponent: draggedComponent.tag,
+        hoverComponent: hoverComponent.tag,
+        willProceed: 'checking...',
       });
 
       // 更新插入位置状态，用于显示指示线
       setInsertPosition(currentInsertPosition);
 
       // 避免无意义的移动
-      // 如果拖拽到自己的位置或紧邻的位置，不执行移动
-      if (dragIndex === targetIndex || dragIndex === targetIndex - 1) {
+      // 检查是否是真正的移动操作
+      if (currentInsertPosition === 'before') {
+        // 插入到before位置：如果拖拽元素紧接在hover元素之前，则无意义
+        if (dragIndex === hoverIndex - 1) {
+          return;
+        }
+      } else {
+        // 插入到after位置：如果拖拽元素紧接在hover元素之后，则无意义
+        if (dragIndex === hoverIndex + 1) {
+          return;
+        }
+      }
+
+      // 不要拖拽到自己身上
+      if (dragIndex === hoverIndex) {
         return;
       }
 
       // 特殊处理标题组件的拖拽限制
-      const draggedComponent = item.component;
-      const hoverComponent = component;
 
       // 1. 标题组件不能移动到非标题组件的位置
       if (draggedComponent.tag === 'title' && hoverComponent.tag !== 'title') {
@@ -152,8 +169,12 @@ const DragSortableItem: React.FC<{
         return;
       }
 
-      // 3. 不能将非标题组件移动到第一位（如果第一位是标题）
-      if (hoverIndex === 0 && draggedComponent.tag !== 'title') {
+      // 3. 不能将非标题组件插入到标题组件之前
+      if (
+        hoverComponent.tag === 'title' &&
+        draggedComponent.tag !== 'title' &&
+        currentInsertPosition === 'before'
+      ) {
         return;
       }
 
@@ -847,8 +868,16 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     }
 
     // 防止无意义的移动
-    if (dragIndex === insertIndex || dragIndex === insertIndex - 1) {
-      console.log('⚠️ 跳过无意义的移动');
+    // 插入式移动中，只有当拖拽元素就在插入位置时才是无意义的
+    if (
+      dragIndex === insertIndex ||
+      (insertIndex > 0 && dragIndex === insertIndex - 1)
+    ) {
+      console.log('⚠️ 跳过无意义的移动:', {
+        dragIndex,
+        insertIndex,
+        reason: dragIndex === insertIndex ? '拖拽到相同位置' : '拖拽到紧邻位置',
+      });
       return;
     }
 
