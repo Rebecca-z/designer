@@ -417,8 +417,26 @@ const SmartDropZone: React.FC<{
     drop: (item: DragItem, monitor) => {
       if (monitor.didDrop()) return;
 
+      console.log('🎯 SmartDropZone 拖拽处理:', {
+        containerType,
+        targetPath,
+        item: {
+          type: item.type,
+          isNew: item.isNew,
+          hasComponent: !!item.component,
+          hasPath: !!item.path,
+        },
+        childElementsCount: childElements.length,
+        columnIndex,
+      });
+
       if (item.isNew) {
         // 新组件添加到末尾
+        console.log('✅ 新组件拖拽到容器:', {
+          itemType: item.type,
+          targetPath,
+          insertIndex: childElements.length,
+        });
         onContainerDrop?.(item, targetPath, childElements.length);
       } else if (item.component && item.path) {
         // 现有组件移动

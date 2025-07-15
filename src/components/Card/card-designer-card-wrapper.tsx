@@ -387,6 +387,29 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         }
       } else if (key === 'columns') {
         const columnIndex = path[i + 1] as number;
+        const nextKey = path[i + 2]; // 应该是'elements'
+
+        console.log('🔍 处理分栏路径导航:', {
+          currentKey: key,
+          columnIndex,
+          nextKey,
+          currentType: current ? current.tag : 'undefined',
+          hasColumns: current && current.columns ? 'yes' : 'no',
+          columnsLength:
+            current && current.columns ? current.columns.length : 0,
+          targetColumnExists:
+            current && current.columns && current.columns[columnIndex]
+              ? 'yes'
+              : 'no',
+          targetColumnHasElements:
+            current &&
+            current.columns &&
+            current.columns[columnIndex] &&
+            current.columns[columnIndex].elements
+              ? 'yes'
+              : 'no',
+        });
+
         // current应该是ColumnSetComponent，它有columns属性
         // path[i + 2]应该是'elements'
         if (
@@ -397,6 +420,10 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           current.columns[columnIndex].elements
         ) {
           current = current.columns[columnIndex].elements;
+          console.log('✅ 成功导航到分栏elements数组:', {
+            columnIndex,
+            elementsLength: current.length,
+          });
           i += 2; // 跳过下两个索引
         } else {
           console.error('❌ 添加组件失败：无效的分栏结构', {
@@ -404,8 +431,16 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
             currentIndex: i,
             key,
             columnIndex,
+            nextKey,
             current: current ? 'exists' : 'undefined',
+            currentTag: current ? current.tag : 'undefined',
             hasColumns: current && current.columns ? 'yes' : 'no',
+            columnsLength:
+              current && current.columns ? current.columns.length : 0,
+            targetColumnExists:
+              current && current.columns && current.columns[columnIndex]
+                ? 'yes'
+                : 'no',
           });
           return elements; // 返回原始数组，不做修改
         }
@@ -442,6 +477,41 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           return elements; // 返回原始数组，不做修改
         }
       }
+    }
+
+    // 如果执行到这里，说明已经成功导航到目标位置
+    // current应该指向目标数组
+    if (Array.isArray(current)) {
+      if (insertIndex !== undefined) {
+        current.splice(insertIndex, 0, newComponent);
+        console.log('✅ 组件添加成功 (指定位置):', {
+          componentId: newComponent.id,
+          componentTag: newComponent.tag,
+          insertIndex,
+          arrayLength: current.length,
+          targetPath: path,
+        });
+      } else {
+        current.push(newComponent);
+        console.log('✅ 组件添加成功 (末尾):', {
+          componentId: newComponent.id,
+          componentTag: newComponent.tag,
+          arrayLength: current.length,
+          targetPath: path,
+        });
+      }
+    } else {
+      console.error('❌ 添加组件失败：最终目标不是数组', {
+        path,
+        current: current
+          ? {
+              type: typeof current,
+              tag: current.tag || 'no tag',
+              keys: Object.keys(current),
+            }
+          : 'null/undefined',
+      });
+      return elements;
     }
 
     return newElements;
@@ -626,6 +696,18 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     if (draggedItem.isNew) {
       // 新组件
       const newComponent = createDefaultComponent(draggedItem.type);
+
+      console.log('🆕 创建新组件:', {
+        componentType: draggedItem.type,
+        componentId: newComponent.id,
+        targetPath,
+        dropIndex,
+        pathAnalysis: {
+          isRoot: targetPath.length === 3 && targetPath[2] === 'elements',
+          isForm: targetPath.includes('elements') && targetPath.length > 3,
+          isColumn: targetPath.includes('columns'),
+        },
+      });
 
       // 如果是标题组件，强制放置在最顶部
       if (draggedItem.type === 'title') {
