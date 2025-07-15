@@ -495,7 +495,7 @@ const Modals: React.FC<ModalsProps> = ({
                 }
 
                 return (
-                  <ErrorBoundary key={component.id || `preview-${index}`}>
+                  <ErrorBoundary key={`preview-${component.id}-${index}`}>
                     <div style={{ marginBottom: '8px' }}>
                       <ComponentRenderer
                         component={component}
@@ -508,6 +508,8 @@ const Modals: React.FC<ModalsProps> = ({
                         onCopy={() => {}}
                         path={['elements', index]}
                         isPreview={true}
+                        hoveredPath={null}
+                        isHovered={false}
                       />
                     </div>
                   </ErrorBoundary>

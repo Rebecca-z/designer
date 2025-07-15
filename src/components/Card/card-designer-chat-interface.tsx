@@ -77,7 +77,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             {username}
           </Text>
         </div>
-
         {/* 卡片容器 */}
         <CardWrapper
           elements={elements}

@@ -1,7 +1,7 @@
 // card-designer-components.tsx - 修复表单容器嵌套显示的组件渲染器
 
 import { CopyOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons';
-import { Button, Dropdown, Menu, message } from 'antd';
+import { Button, Dropdown, message } from 'antd';
 import React from 'react';
 import ComponentRendererCore from './card-designer-renderer-core';
 import {
@@ -289,24 +289,28 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
     message.success('组件已复制');
   };
 
-  const contextMenu = (
-    <Menu>
-      {/* 标题组件不显示复制选项 */}
-      {component.tag !== 'title' && (
-        <Menu.Item key="copy" icon={<CopyOutlined />} onClick={handleCopy}>
-          复制组件
-        </Menu.Item>
-      )}
-      <Menu.Item
-        key="delete"
-        icon={<DeleteOutlined />}
-        onClick={handleDelete}
-        danger
-      >
-        删除组件
-      </Menu.Item>
-    </Menu>
-  );
+  const contextMenu = {
+    items: [
+      // 标题组件不显示复制选项
+      ...(component.tag !== 'title'
+        ? [
+            {
+              key: 'copy',
+              icon: <CopyOutlined />,
+              label: '复制组件',
+              onClick: handleCopy,
+            },
+          ]
+        : []),
+      {
+        key: 'delete',
+        icon: <DeleteOutlined />,
+        label: '删除组件',
+        onClick: handleDelete,
+        danger: true,
+      },
+    ],
+  };
 
   // 统一的选中样式配置
   const getSelectedStyle = (isSelected: boolean) => ({
@@ -375,7 +379,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
               }}
             >
               <Dropdown
-                overlay={contextMenu}
+                menu={contextMenu}
                 trigger={['click']}
                 placement="bottomRight"
               >
@@ -512,7 +516,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             }}
           >
             <Dropdown
-              overlay={contextMenu}
+              menu={contextMenu}
               trigger={['click']}
               placement="bottomRight"
             >

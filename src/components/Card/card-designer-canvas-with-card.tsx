@@ -1,8 +1,6 @@
 // card-designer-canvas-with-card.tsx - 集成会话卡片的画布组件
 
-import { message } from 'antd';
 import React, { useRef } from 'react';
-import { useDrop } from 'react-dnd';
 import {
   CanvasGrid,
   CanvasHeader,
@@ -11,12 +9,7 @@ import {
 } from './card-designer-canvas-components';
 import ChatInterface from './card-designer-chat-interface';
 import { DEVICE_SIZES } from './card-designer-constants-updated';
-import {
-  CardDesignData,
-  ComponentType,
-  DragItem,
-} from './card-designer-types-updated';
-import { createDefaultComponent } from './card-designer-utils';
+import { CardDesignData, ComponentType } from './card-designer-types-updated';
 
 interface CanvasProps {
   data: CardDesignData;
@@ -48,24 +41,6 @@ const Canvas: React.FC<CanvasProps> = ({
 
   console.warn('data====', data);
 
-  // 检查画布中是否已存在标题组件
-  const hasExistingTitle = (elements: ComponentType[]): boolean => {
-    return elements.some((component) => component.tag === 'title');
-  };
-
-  // 将标题组件插入到数组开头的工具函数
-  const insertTitleAtTop = (
-    elements: ComponentType[],
-    titleComponent: ComponentType,
-  ): ComponentType[] => {
-    // 移除现有的标题组件（如果存在）
-    const elementsWithoutTitle = elements.filter(
-      (component) => component.tag !== 'title',
-    );
-    // 将标题组件插入到开头
-    return [titleComponent, ...elementsWithoutTitle];
-  };
-
   // 处理卡片元素变化
   const handleElementsChange = (elements: ComponentType[]) => {
     const newData = {
@@ -87,44 +62,6 @@ const Canvas: React.FC<CanvasProps> = ({
     selectedPath.length === 2 &&
     selectedPath[0] === 'dsl' &&
     selectedPath[1] === 'body';
-
-  // 拖拽处理 - 所有拖拽都会被重定向到卡片内
-  const [{ isOver, canDrop }, drop] = useDrop({
-    accept: ['component', 'existing-component'],
-    canDrop: (item: DragItem) => {
-      // 如果是标题组件，检查是否已存在
-      if (item.type === 'title' && hasExistingTitle(data.dsl.body.elements)) {
-        return false;
-      }
-      return true;
-    },
-    drop: (item: DragItem, monitor) => {
-      if (monitor.didDrop()) return;
-
-      // 如果是标题组件且已存在，显示提示
-      if (item.type === 'title' && hasExistingTitle(data.dsl.body.elements)) {
-        message.warning('画布中已存在标题组件，每个画布只能有一个标题组件');
-        return;
-      }
-
-      // 所有拖拽到画布外的组件都添加到卡片内
-      const newComponent = createDefaultComponent(item.type);
-
-      // 如果是标题组件，放置在最顶部
-      if (item.type === 'title') {
-        handleElementsChange(
-          insertTitleAtTop(data.dsl.body.elements, newComponent),
-        );
-        message.success('标题组件已添加到画布顶部');
-      } else {
-        handleElementsChange([...data.dsl.body.elements, newComponent]);
-      }
-    },
-    collect: (monitor) => ({
-      isOver: monitor.isOver({ shallow: true }),
-      canDrop: monitor.canDrop(),
-    }),
-  });
 
   // 处理画布点击事件
   const handleCanvasClick = (e: React.MouseEvent) => {
@@ -193,10 +130,7 @@ const Canvas: React.FC<CanvasProps> = ({
 
       {/* 画布容器 */}
       <div
-        ref={(node) => {
-          canvasRef.current = node;
-          drop(node);
-        }}
+        ref={canvasRef}
         style={{
           width: canvasWidth,
           minHeight: '600px',
@@ -218,7 +152,7 @@ const Canvas: React.FC<CanvasProps> = ({
         <CanvasHeader elementsCount={data.dsl.body.elements.length} />
 
         {/* 拖拽提示 - 全局拖拽都会添加到卡片内 */}
-        {isOver && canDrop && (
+        {/* isOver && canDrop && (
           <div
             style={{
               position: 'absolute',
@@ -250,7 +184,7 @@ const Canvas: React.FC<CanvasProps> = ({
               </div>
             </div>
           </div>
-        )}
+        ) */}
 
         {/* 会话界面 */}
         <div
@@ -279,7 +213,7 @@ const Canvas: React.FC<CanvasProps> = ({
             onSelectComponent={onSelectComponent}
             onDeleteComponent={onDeleteComponent}
             onCopyComponent={onCopyComponent}
-            onCanvasFocus={onCanvasFocus}
+            onCanvasFocus={onCanvasFocus || (() => {})}
             isCardSelected={!!isCardSelected}
             onCardSelect={handleCardSelect}
             username="用户名"

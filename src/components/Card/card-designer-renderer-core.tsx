@@ -1,6 +1,7 @@
 // 修复后的 ComponentRendererCore.tsx - 完整解决表单嵌套显示问题
 
-import { Button, Divider, Input, Select, Typography } from 'antd';
+import { CopyOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons';
+import { Button, Divider, Dropdown, Input, Select, Typography } from 'antd';
 import React, { useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { ComponentType, DragItem } from './card-designer-types-updated';
@@ -393,6 +394,14 @@ const SmartDropZone: React.FC<{
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: ['component', 'existing-component'],
     canDrop: (item: DragItem) => {
+      // 特殊处理标题组件 - 标题组件不能拖拽到容器中
+      if (
+        item.type === 'title' ||
+        (item.component && item.component.tag === 'title')
+      ) {
+        return false;
+      }
+
       // 检查是否可以在此容器中放置
       if (item.isNew) {
         return canDropInContainer(item.type, targetPath);
@@ -673,13 +682,11 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         onCanvasFocus?.();
       };
 
-      const handleDelete = (e: React.MouseEvent) => {
-        e.stopPropagation();
+      const handleDelete = () => {
         onDelete?.(childPath);
       };
 
-      const handleCopy = (e: React.MouseEvent) => {
-        e.stopPropagation();
+      const handleCopy = () => {
         onCopy?.(element);
       };
 
@@ -729,44 +736,49 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                 top: '-2px',
                 right: '-2px',
                 zIndex: 10,
-                display: 'flex',
-                gap: '4px',
               }}
             >
-              {/* 标题组件不显示复制按钮 */}
-              {element.tag !== 'title' && (
+              <Dropdown
+                menu={{
+                  items: [
+                    // 标题组件不显示复制选项
+                    ...(element.tag !== 'title'
+                      ? [
+                          {
+                            key: 'copy',
+                            icon: <CopyOutlined />,
+                            label: '复制组件',
+                            onClick: handleCopy,
+                          },
+                        ]
+                      : []),
+                    {
+                      key: 'delete',
+                      icon: <DeleteOutlined />,
+                      label: '删除组件',
+                      onClick: handleDelete,
+                      danger: true,
+                    },
+                  ],
+                }}
+                trigger={['click']}
+                placement="bottomRight"
+              >
                 <Button
                   size="small"
                   type="primary"
-                  icon={<span style={{ fontSize: '12px' }}>📋</span>}
+                  icon={<MoreOutlined />}
                   style={{
-                    width: '20px',
-                    height: '20px',
+                    borderRadius: '50%',
+                    width: '24px',
+                    height: '24px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '10px',
                   }}
-                  onClick={handleCopy}
-                  title="复制组件"
+                  onClick={(e) => e.stopPropagation()}
                 />
-              )}
-              <Button
-                size="small"
-                type="primary"
-                danger
-                icon={<span style={{ fontSize: '12px' }}>🗑️</span>}
-                style={{
-                  width: '20px',
-                  height: '20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '10px',
-                }}
-                onClick={handleDelete}
-                title="删除组件"
-              />
+              </Dropdown>
             </div>
           )}
 
@@ -793,7 +805,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       if (enableDrag && !isPreview) {
         return (
           <DraggableWrapper
-            key={element.id}
+            key={`${element.id}-${elementIndex}-${childPath.join('-')}`}
             component={element}
             path={childPath}
             index={elementIndex}
@@ -806,7 +818,10 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         );
       } else {
         return (
-          <div key={element.id} style={{ marginBottom: '8px' }}>
+          <div
+            key={`${element.id}-${elementIndex}-${childPath.join('-')}`}
+            style={{ marginBottom: '8px' }}
+          >
             {selectableWrapper}
           </div>
         );
@@ -964,7 +979,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
               return (
                 <SmartDropZone
-                  key={columnIndex}
+                  key={`column-${columnIndex}-${columnPath.join('-')}`}
                   targetPath={columnPath}
                   containerType="column"
                   columnIndex={columnIndex}
@@ -1392,7 +1407,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             {(comp.img_list || []).length > 0 ? (
               (comp.img_list || []).map((img: any, imgIndex: number) => (
                 <img
-                  key={imgIndex}
+                  key={`img-${component.id}-${imgIndex}`}
                   src={
                     img.img_url ||
                     'https://via.placeholder.com/150x150?text=图片'
