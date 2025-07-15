@@ -22,6 +22,9 @@ const DragSortableItem: React.FC<{
   children: React.ReactNode;
 }> = ({ component, index, path, onMove, children }) => {
   const ref = useRef<HTMLDivElement>(null);
+  const [insertPosition, setInsertPosition] = React.useState<
+    'before' | 'after' | null
+  >(null);
 
   const [{ isDragging }, drag] = useDrag({
     type: 'canvas-component',
@@ -64,6 +67,10 @@ const DragSortableItem: React.FC<{
         isOver: monitor.isOver(),
       };
     },
+    drop() {
+      // 清除插入位置状态
+      setInsertPosition(null);
+    },
     hover(item: any, monitor) {
       if (!ref.current) {
         return;
@@ -98,14 +105,36 @@ const DragSortableItem: React.FC<{
       // 获取鼠标相对于hover元素的位置
       const hoverClientY = clientOffset.y - hoverBoundingRect.top;
 
-      // 只有当鼠标越过了元素的中点时才执行移动
-      // 向下拖拽时，只有当鼠标位于下半部分时才移动
-      if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) {
-        return;
+      // 插入式拖拽逻辑：确定插入位置
+      let currentInsertPosition: 'before' | 'after' | null = null;
+      let targetIndex: number;
+
+      if (hoverClientY < hoverMiddleY) {
+        // 鼠标在上半部分 - 插入到当前元素之前
+        currentInsertPosition = 'before';
+        targetIndex = hoverIndex;
+      } else {
+        // 鼠标在下半部分 - 插入到当前元素之后
+        currentInsertPosition = 'after';
+        targetIndex = hoverIndex + 1;
       }
 
-      // 向上拖拽时，只有当鼠标位于上半部分时才移动
-      if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) {
+      console.log('🎯 插入式拖拽检测:', {
+        dragIndex,
+        hoverIndex,
+        hoverClientY,
+        hoverMiddleY,
+        insertPosition: currentInsertPosition,
+        targetIndex,
+        willMove: dragIndex !== targetIndex && dragIndex !== targetIndex - 1,
+      });
+
+      // 更新插入位置状态，用于显示指示线
+      setInsertPosition(currentInsertPosition);
+
+      // 避免无意义的移动
+      // 如果拖拽到自己的位置或紧邻的位置，不执行移动
+      if (dragIndex === targetIndex || dragIndex === targetIndex - 1) {
         return;
       }
 
@@ -128,12 +157,21 @@ const DragSortableItem: React.FC<{
         return;
       }
 
-      // 执行移动
-      onMove(dragIndex, hoverIndex);
+      // 执行插入式移动
+      console.log('✅ 执行插入式移动:', {
+        from: dragIndex,
+        insertAt: targetIndex,
+        insertPosition: currentInsertPosition,
+        draggedComponent: draggedComponent.tag,
+        hoverComponent: hoverComponent.tag,
+      });
+
+      onMove(dragIndex, targetIndex);
 
       // 注意：这里我们修改了监视器项目，因为我们在移动时修改了索引
       // 一般来说，最好避免修改监视器项目，但这里是为了性能考虑
-      item.index = hoverIndex;
+      // 对于插入式移动，需要调整索引
+      item.index = targetIndex > dragIndex ? targetIndex - 1 : targetIndex;
     },
   });
 
@@ -151,19 +189,35 @@ const DragSortableItem: React.FC<{
       }}
       data-handler-id={handlerId}
     >
-      {/* 拖拽排序指示线 */}
-      {isOver && (
+      {/* 插入位置指示线 */}
+      {isOver && insertPosition === 'before' && (
         <div
           style={{
             position: 'absolute',
             top: '-2px',
             left: '0',
             right: '0',
-            height: '2px',
+            height: '3px',
             backgroundColor: '#1890ff',
-            borderRadius: '1px',
+            borderRadius: '1.5px',
             zIndex: 1000,
-            boxShadow: '0 0 4px rgba(24, 144, 255, 0.5)',
+            boxShadow: '0 0 6px rgba(24, 144, 255, 0.6)',
+          }}
+        />
+      )}
+
+      {isOver && insertPosition === 'after' && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '-2px',
+            left: '0',
+            right: '0',
+            height: '3px',
+            backgroundColor: '#1890ff',
+            borderRadius: '1.5px',
+            zIndex: 1000,
+            boxShadow: '0 0 6px rgba(24, 144, 255, 0.6)',
           }}
         />
       )}
@@ -773,51 +827,65 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     }
   };
 
-  // 处理画布组件排序（专门用于DragSortableItem）
-  const handleCanvasComponentSort = (dragIndex: number, hoverIndex: number) => {
-    console.log('🔄 处理画布组件排序:', { dragIndex, hoverIndex });
+  // 处理画布组件排序（专门用于DragSortableItem） - 插入式排序
+  const handleCanvasComponentSort = (
+    dragIndex: number,
+    insertIndex: number,
+  ) => {
+    console.log('🔄 处理画布组件插入式排序:', {
+      dragIndex,
+      insertIndex,
+      draggedComponent: elements[dragIndex]?.tag,
+      totalElements: elements.length,
+    });
 
     const draggedComponent = elements[dragIndex];
-    const hoverComponent = elements[hoverIndex];
 
-    if (!draggedComponent || !hoverComponent) {
-      console.warn('无效的组件索引');
+    if (!draggedComponent) {
+      console.warn('无效的拖拽组件索引:', dragIndex);
       return;
     }
 
     // 防止无意义的移动
-    if (dragIndex === hoverIndex) {
+    if (dragIndex === insertIndex || dragIndex === insertIndex - 1) {
+      console.log('⚠️ 跳过无意义的移动');
+      return;
+    }
+
+    // 确保插入索引有效
+    if (insertIndex < 0 || insertIndex > elements.length) {
+      console.warn('无效的插入索引:', insertIndex);
       return;
     }
 
     // 严格的标题组件限制
     if (draggedComponent.tag === 'title') {
-      // 标题组件只能在第一位
-      if (hoverIndex !== 0) {
+      // 标题组件只能插入到第一位
+      if (insertIndex !== 0) {
         message.info('标题组件只能在画布的最上方');
         return;
       }
     } else {
-      // 非标题组件不能移动到标题组件的位置
-      if (hoverComponent.tag === 'title') {
-        // message.info('不能将组件移动到标题组件的位置');
+      // 非标题组件不能插入到标题组件的位置
+      const targetComponent = elements[insertIndex];
+      if (targetComponent && targetComponent.tag === 'title') {
         return;
       }
 
-      // 如果第一位是标题组件，非标题组件不能移动到第一位
-      if (hoverIndex === 0 && elements[0]?.tag === 'title') {
+      // 如果第一位是标题组件，非标题组件不能插入到第一位
+      if (insertIndex === 0 && elements[0]?.tag === 'title') {
         message.info('标题组件必须保持在画布顶部');
         return;
       }
     }
 
-    let targetIndex = hoverIndex;
+    let finalInsertIndex = insertIndex;
 
     // 特殊处理：确保标题组件始终在第一位
-    if (targetIndex === 0 && draggedComponent.tag !== 'title') {
+    if (finalInsertIndex === 0 && draggedComponent.tag !== 'title') {
       const hasTitle = elements.some((comp) => comp.tag === 'title');
       if (hasTitle) {
-        targetIndex = 1; // 调整到标题后面
+        finalInsertIndex = 1; // 调整到标题后面
         message.info('已调整位置，标题组件保持在顶部');
       }
     }
@@ -826,8 +894,8 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     if (
       dragIndex < 0 ||
       dragIndex >= elements.length ||
-      targetIndex < 0 ||
-      targetIndex >= elements.length
+      finalInsertIndex < 0 ||
+      finalInsertIndex > elements.length
     ) {
       console.warn('索引超出范围');
       return;
@@ -835,15 +903,22 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
 
     const newElements = [...elements];
 
-    // 移除拖拽的组件
-    newElements.splice(dragIndex, 1);
+    // 执行插入式移动：先移除，后插入
+    const [movedComponent] = newElements.splice(dragIndex, 1);
 
-    // 调整目标索引（如果目标索引在拖拽索引之后，需要减1）
-    const adjustedTargetIndex =
-      targetIndex > dragIndex ? targetIndex - 1 : targetIndex;
+    // 调整插入索引（如果插入位置在拖拽位置之后，需要减1）
+    const adjustedInsertIndex =
+      finalInsertIndex > dragIndex ? finalInsertIndex - 1 : finalInsertIndex;
 
     // 插入到新位置
-    newElements.splice(adjustedTargetIndex, 0, draggedComponent);
+    newElements.splice(adjustedInsertIndex, 0, movedComponent);
+
+    console.log('✅ 插入式排序完成:', {
+      from: dragIndex,
+      insertAt: finalInsertIndex,
+      adjustedTo: adjustedInsertIndex,
+      movedComponent: movedComponent.tag,
+    });
 
     onElementsChange(newElements);
   };
