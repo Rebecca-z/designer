@@ -426,7 +426,15 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             path={path}
             index={0}
             containerPath={path.slice(0, -1)}
-            enableDrag={!isPreview}
+            enableDrag={
+              !isPreview &&
+              !(
+                path.length === 4 &&
+                path[0] === 'dsl' &&
+                path[1] === 'body' &&
+                path[2] === 'elements'
+              )
+            } // 根级别组件禁用内部拖拽，让DragSortableItem处理
             enableSort={!isPreview}
             onSelect={onSelect}
             selectedPath={selectedPath}
@@ -561,7 +569,15 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
           path={path}
           index={0}
           containerPath={path.slice(0, -1)}
-          enableDrag={!isPreview}
+          enableDrag={
+            !isPreview &&
+            !(
+              path.length === 4 &&
+              path[0] === 'dsl' &&
+              path[1] === 'body' &&
+              path[2] === 'elements'
+            )
+          } // 根级别组件禁用内部拖拽，让DragSortableItem处理
           enableSort={!isPreview}
         />
 

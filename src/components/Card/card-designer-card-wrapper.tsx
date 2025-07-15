@@ -26,6 +26,13 @@ const DragSortableItem: React.FC<{
   const [{ isDragging }, drag] = useDrag({
     type: 'canvas-component',
     item: () => {
+      console.log('🚀 DragSortableItem 开始拖拽:', {
+        componentId: component.id,
+        componentTag: component.tag,
+        index,
+        path,
+        canDrag: component.tag !== 'title',
+      });
       return {
         id: component.id,
         index,
@@ -39,7 +46,14 @@ const DragSortableItem: React.FC<{
       isDragging: monitor.isDragging(),
     }),
     // 标题组件不允许拖拽
-    canDrag: () => component.tag !== 'title',
+    canDrag: () => {
+      const canDrag = component.tag !== 'title';
+      console.log('🎯 DragSortableItem canDrag 检查:', {
+        componentTag: component.tag,
+        canDrag,
+      });
+      return canDrag;
+    },
   });
 
   const [{ handlerId, isOver }, drop] = useDrop({
@@ -54,6 +68,14 @@ const DragSortableItem: React.FC<{
       if (!ref.current) {
         return;
       }
+
+      console.log('🖱️ DragSortableItem hover 触发:', {
+        draggedComponent: item.component?.tag,
+        draggedIndex: item.index,
+        hoverComponent: component.tag,
+        hoverIndex: index,
+      });
+
       const dragIndex = item.index;
       const hoverIndex = index;
 
@@ -1135,6 +1157,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                     isHovered={isHovered}
                     onContainerDrop={handleContainerDrop}
                     onComponentSort={handleComponentSort}
+                    isPreview={false}
                   />
                 </ErrorBoundary>
               </DragSortableItem>
