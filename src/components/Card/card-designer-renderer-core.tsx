@@ -20,7 +20,7 @@ interface ComponentRendererCoreProps {
     draggedComponent: ComponentType,
     draggedPath: (string | number)[],
     targetPath: (string | number)[],
-    dropIndex?: number,
+    dropIndex: number,
   ) => void;
   path?: (string | number)[];
   index?: number;
@@ -32,6 +32,12 @@ interface ComponentRendererCoreProps {
     elements: ComponentType[],
     basePath: (string | number)[],
   ) => React.ReactNode[];
+  // 新增：用于支持组件选中和操作菜单
+  onSelect?: (component: ComponentType, path: (string | number)[]) => void;
+  selectedPath?: (string | number)[] | null;
+  onDelete?: (path: (string | number)[]) => void;
+  onCopy?: (component: ComponentType) => void;
+  onCanvasFocus?: () => void;
 }
 
 // 检查组件是否为容器类型
@@ -54,11 +60,12 @@ const canDropInContainer = (
   return true;
 };
 
-// 检查两个路径是否相同
+// 辅助函数：检查两个路径是否相同
 const isSamePath = (
-  path1: (string | number)[],
+  path1: (string | number)[] | null,
   path2: (string | number)[],
 ): boolean => {
+  if (!path1) return false;
   return JSON.stringify(path1) === JSON.stringify(path2);
 };
 
@@ -174,8 +181,34 @@ const DraggableWrapper: React.FC<{
             return;
           }
 
-          // 执行排序
-          onComponentMove(item.component, draggedPath, path, targetIndex);
+          // 安全检查：确保路径有效
+          if (
+            draggedPath.length >= 4 &&
+            path.length >= 4 &&
+            draggedPath[0] === 'dsl' &&
+            draggedPath[1] === 'body' &&
+            path[0] === 'dsl' &&
+            path[1] === 'body'
+          ) {
+            console.log('🔄 执行同容器排序:', {
+              draggedComponent: {
+                id: item.component.id,
+                tag: item.component.tag,
+              },
+              draggedPath,
+              targetPath: path,
+              targetIndex,
+            });
+
+            // 执行排序
+            onComponentMove(item.component, draggedPath, path, targetIndex);
+          } else {
+            console.warn('⚠️ 跳过无效的排序操作:', {
+              draggedPath,
+              targetPath: path,
+              reason: '路径格式不正确',
+            });
+          }
         }
       }
     },
@@ -208,7 +241,33 @@ const DraggableWrapper: React.FC<{
             return;
           }
 
-          onComponentMove(item.component, draggedPath, path, insertIndex);
+          // 安全检查：确保路径有效
+          if (
+            draggedPath.length >= 4 &&
+            path.length >= 4 &&
+            draggedPath[0] === 'dsl' &&
+            draggedPath[1] === 'body' &&
+            path[0] === 'dsl' &&
+            path[1] === 'body'
+          ) {
+            console.log('🔄 执行跨容器移动:', {
+              draggedComponent: {
+                id: item.component.id,
+                tag: item.component.tag,
+              },
+              draggedPath,
+              targetPath: path,
+              insertIndex,
+            });
+
+            onComponentMove(item.component, draggedPath, path, insertIndex);
+          } else {
+            console.warn('⚠️ 跳过无效的跨容器移动:', {
+              draggedPath,
+              targetPath: path,
+              reason: '路径格式不正确',
+            });
+          }
         }
       }
     },
@@ -229,13 +288,31 @@ const DraggableWrapper: React.FC<{
     transition: 'all 0.2s ease',
   };
 
-  // 排序提示线
+  // 拖拽悬停样式
   if (isOver && canDrop && enableSort) {
-    wrapperStyle.borderTop = '2px solid #1890ff';
+    wrapperStyle.transform = 'translateY(-2px)';
+    wrapperStyle.boxShadow = '0 4px 12px rgba(24, 144, 255, 0.3)';
   }
 
   return (
     <div ref={ref} style={wrapperStyle}>
+      {/* 拖拽排序提示线 - 顶部 */}
+      {isOver && canDrop && enableSort && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '-2px',
+            left: '0',
+            right: '0',
+            height: '2px',
+            backgroundColor: '#1890ff',
+            borderRadius: '1px',
+            zIndex: 1000,
+            boxShadow: '0 0 4px rgba(24, 144, 255, 0.5)',
+          }}
+        />
+      )}
+
       {children}
 
       {/* 拖拽限制提示 */}
@@ -254,9 +331,32 @@ const DraggableWrapper: React.FC<{
             fontWeight: 'bold',
             pointerEvents: 'none',
             zIndex: 1000,
+            boxShadow: '0 2px 8px rgba(255, 77, 79, 0.3)',
           }}
         >
           ❌ 不能移动到这里
+        </div>
+      )}
+
+      {/* 拖拽成功提示 */}
+      {isOver && canDrop && enableSort && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '-8px',
+            right: '8px',
+            backgroundColor: 'rgba(24, 144, 255, 0.9)',
+            color: 'white',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            fontSize: '10px',
+            fontWeight: 'bold',
+            pointerEvents: 'none',
+            zIndex: 1001,
+            boxShadow: '0 2px 8px rgba(24, 144, 255, 0.3)',
+          }}
+        >
+          ↕️ 排序
         </div>
       )}
     </div>
@@ -359,6 +459,19 @@ const SmartDropZone: React.FC<{
     transition: 'all 0.2s ease',
     flex: containerType === 'column' ? 1 : 'none',
   };
+
+  // 拖拽悬停效果
+  if (isOver && canDrop) {
+    dropZoneStyle.transform = 'scale(1.02)';
+    dropZoneStyle.boxShadow = '0 4px 12px rgba(24, 144, 255, 0.2)';
+  }
+
+  // 拖拽限制效果
+  if (isOver && !canDrop) {
+    dropZoneStyle.border = '2px dashed #ff4d4f';
+    dropZoneStyle.backgroundColor = 'rgba(255, 77, 79, 0.05)';
+    dropZoneStyle.transform = 'scale(0.98)';
+  }
 
   const emptyStateMessage =
     containerType === 'form'
@@ -478,6 +591,11 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
   enableDrag = true,
   enableSort = true,
   renderChildren,
+  onSelect,
+  selectedPath,
+  onDelete,
+  onCopy,
+  onCanvasFocus,
 }) => {
   // 安全检查
   if (!component || !component.tag) {
@@ -537,14 +655,140 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       }
 
       const childPath = [...basePath, elementIndex];
+      const isSelected = isSamePath(selectedPath || null, childPath);
 
       console.log(`✅ 渲染子组件 ${elementIndex}:`, {
         elementId: element.id,
         elementTag: element.tag,
         childPath,
+        isSelected,
         enableDrag,
         isPreview,
       });
+
+      // 组件选中和操作处理
+      const handleClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onSelect?.(element, childPath);
+        onCanvasFocus?.();
+      };
+
+      const handleDelete = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onDelete?.(childPath);
+      };
+
+      const handleCopy = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onCopy?.(element);
+      };
+
+      // 组件内容
+      const componentContent = (
+        <ComponentRendererCore
+          component={element}
+          isPreview={isPreview}
+          onContainerDrop={onContainerDrop}
+          onComponentMove={onComponentMove}
+          path={childPath}
+          index={elementIndex}
+          containerPath={basePath}
+          enableDrag={enableDrag}
+          enableSort={enableSort}
+          onSelect={onSelect}
+          selectedPath={selectedPath}
+          onDelete={onDelete}
+          onCopy={onCopy}
+          onCanvasFocus={onCanvasFocus}
+        />
+      );
+
+      // 包装器样式
+      const wrapperStyle: React.CSSProperties = {
+        position: 'relative',
+        border:
+          isSelected && !isPreview
+            ? '2px solid #1890ff'
+            : '1px solid transparent',
+        borderRadius: '4px',
+        padding: '4px',
+        margin: '2px 0',
+        backgroundColor:
+          isSelected && !isPreview ? 'rgba(24, 144, 255, 0.05)' : 'transparent',
+        cursor: isPreview ? 'default' : 'pointer',
+        transition: 'all 0.2s ease',
+      };
+
+      const selectableWrapper = (
+        <div style={wrapperStyle} onClick={handleClick}>
+          {/* 操作按钮 */}
+          {isSelected && !isPreview && onDelete && onCopy && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '-2px',
+                right: '-2px',
+                zIndex: 10,
+                display: 'flex',
+                gap: '4px',
+              }}
+            >
+              {/* 标题组件不显示复制按钮 */}
+              {element.tag !== 'title' && (
+                <Button
+                  size="small"
+                  type="primary"
+                  icon={<span style={{ fontSize: '12px' }}>📋</span>}
+                  style={{
+                    width: '20px',
+                    height: '20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '10px',
+                  }}
+                  onClick={handleCopy}
+                  title="复制组件"
+                />
+              )}
+              <Button
+                size="small"
+                type="primary"
+                danger
+                icon={<span style={{ fontSize: '12px' }}>🗑️</span>}
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '10px',
+                }}
+                onClick={handleDelete}
+                title="删除组件"
+              />
+            </div>
+          )}
+
+          {/* 选中状态指示器 */}
+          {isSelected && !isPreview && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '-2px',
+                left: '-2px',
+                width: '8px',
+                height: '8px',
+                backgroundColor: '#1890ff',
+                borderRadius: '50%',
+                zIndex: 10,
+              }}
+            />
+          )}
+
+          {componentContent}
+        </div>
+      );
 
       if (enableDrag && !isPreview) {
         return (
@@ -557,33 +801,13 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             onComponentMove={onComponentMove}
             enableSort={enableSort}
           >
-            <ComponentRendererCore
-              component={element}
-              isPreview={isPreview}
-              onContainerDrop={onContainerDrop}
-              onComponentMove={onComponentMove}
-              path={childPath}
-              index={elementIndex}
-              containerPath={basePath}
-              enableDrag={enableDrag}
-              enableSort={enableSort}
-            />
+            {selectableWrapper}
           </DraggableWrapper>
         );
       } else {
         return (
           <div key={element.id} style={{ marginBottom: '8px' }}>
-            <ComponentRendererCore
-              component={element}
-              isPreview={isPreview}
-              onContainerDrop={onContainerDrop}
-              onComponentMove={onComponentMove}
-              path={childPath}
-              index={elementIndex}
-              containerPath={basePath}
-              enableDrag={enableDrag}
-              enableSort={enableSort}
-            />
+            {selectableWrapper}
           </div>
         );
       }
@@ -1275,7 +1499,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             backgroundColor: '#fafafa',
           }}
         >
-          ❓ 未知组件类型: {component.tag}
+          ❓ 未知组件类型: {(component as any).tag}
         </div>
       );
 

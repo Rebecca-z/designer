@@ -112,18 +112,66 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           } else {
             current.elements.push(newComponent);
           }
+        } else {
+          console.error('❌ 添加组件失败：无效的elements数组', {
+            path,
+            currentIndex: i,
+            key,
+            current: current ? 'exists' : 'undefined',
+            hasElements: current && current.elements ? 'yes' : 'no',
+          });
+          return elements; // 返回原始数组，不做修改
         }
         return newElements;
       } else if (key === 'columns') {
         const columnIndex = path[i + 1] as number;
         // current应该是ColumnSetComponent，它有columns属性
         // path[i + 2]应该是'elements'
-        current = current.columns[columnIndex].elements;
-        i += 2; // 跳过下两个索引
+        if (
+          current &&
+          current.columns &&
+          Array.isArray(current.columns) &&
+          current.columns[columnIndex] &&
+          current.columns[columnIndex].elements
+        ) {
+          current = current.columns[columnIndex].elements;
+          i += 2; // 跳过下两个索引
+        } else {
+          console.error('❌ 添加组件失败：无效的分栏结构', {
+            path,
+            currentIndex: i,
+            key,
+            columnIndex,
+            current: current ? 'exists' : 'undefined',
+            hasColumns: current && current.columns ? 'yes' : 'no',
+          });
+          return elements; // 返回原始数组，不做修改
+        }
       } else if (typeof key === 'number') {
-        current = current[key];
+        if (current && Array.isArray(current) && current[key]) {
+          current = current[key];
+        } else {
+          console.error('❌ 添加组件失败：无效的数组索引', {
+            path,
+            currentIndex: i,
+            key,
+            current: current ? 'exists' : 'undefined',
+            isArray: Array.isArray(current),
+          });
+          return elements; // 返回原始数组，不做修改
+        }
       } else {
-        current = current[key];
+        if (current && current[key] !== undefined) {
+          current = current[key];
+        } else {
+          console.error('❌ 添加组件失败：无效的属性路径', {
+            path,
+            currentIndex: i,
+            key,
+            current: current ? 'exists' : 'undefined',
+          });
+          return elements; // 返回原始数组，不做修改
+        }
       }
     }
 
@@ -149,19 +197,76 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     for (let i = 3; i < path.length - 1; i++) {
       const key = path[i];
       if (key === 'elements') {
-        current = current[path[i + 1]].elements;
+        const nextIndex = path[i + 1] as number;
+        // 安全检查：确保当前对象和索引有效
+        if (!current || !current[nextIndex] || !current[nextIndex].elements) {
+          console.error('❌ 路径导航错误：无效的元素路径', {
+            path,
+            currentIndex: i,
+            key,
+            nextIndex,
+            current: current ? 'exists' : 'undefined',
+            element: current && current[nextIndex] ? 'exists' : 'undefined',
+          });
+          return elements; // 返回原始数组，不做修改
+        }
+        current = current[nextIndex].elements;
         i++; // 跳过下一个索引
       } else if (key === 'columns') {
-        current = current[path[i + 1]].columns[path[i + 2]].elements;
+        const columnSetIndex = path[i + 1] as number;
+        const columnIndex = path[i + 2] as number;
+        // 安全检查：确保分栏结构有效
+        if (
+          !current ||
+          !current[columnSetIndex] ||
+          !current[columnSetIndex].columns ||
+          !current[columnSetIndex].columns[columnIndex] ||
+          !current[columnSetIndex].columns[columnIndex].elements
+        ) {
+          console.error('❌ 路径导航错误：无效的分栏路径', {
+            path,
+            currentIndex: i,
+            key,
+            columnSetIndex,
+            columnIndex,
+            current: current ? 'exists' : 'undefined',
+          });
+          return elements; // 返回原始数组，不做修改
+        }
+        current = current[columnSetIndex].columns[columnIndex].elements;
         i += 2; // 跳过下两个索引
       } else {
+        // 安全检查：确保属性存在
+        if (!current || current[key] === undefined) {
+          console.error('❌ 路径导航错误：无效的属性路径', {
+            path,
+            currentIndex: i,
+            key,
+            current: current ? 'exists' : 'undefined',
+          });
+          return elements; // 返回原始数组，不做修改
+        }
         current = current[key];
       }
     }
 
     // 移除目标组件
     const lastIndex = path[path.length - 1] as number;
-    current.splice(lastIndex, 1);
+    if (
+      current &&
+      Array.isArray(current) &&
+      lastIndex >= 0 &&
+      lastIndex < current.length
+    ) {
+      current.splice(lastIndex, 1);
+    } else {
+      console.error('❌ 无法移除组件：无效的目标索引', {
+        path,
+        lastIndex,
+        currentLength: current ? current.length : 'undefined',
+      });
+      return elements; // 返回原始数组，不做修改
+    }
 
     return newElements;
   };
@@ -229,12 +334,36 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     const targetContainerPath = targetPath.slice(0, -1);
     const targetElementsPath = [...targetContainerPath, 'elements'];
 
+    // 计算实际的插入位置
+    let actualDropIndex = dropIndex;
+
+    // 如果目标是根节点（画布），需要考虑标题组件的影响
+    if (
+      targetElementsPath.length === 3 &&
+      targetElementsPath[0] === 'dsl' &&
+      targetElementsPath[1] === 'body' &&
+      targetElementsPath[2] === 'elements'
+    ) {
+      // 检查是否有标题组件
+      const titleIndex = newElements.findIndex((comp) => comp.tag === 'title');
+
+      // 如果有标题组件，并且被拖拽的不是标题组件，确保不插入到标题组件之前
+      if (
+        titleIndex !== -1 &&
+        draggedComponent.tag !== 'title' &&
+        actualDropIndex <= titleIndex
+      ) {
+        actualDropIndex = titleIndex + 1;
+        console.log('📌 调整插入位置，确保标题组件在最上方:', actualDropIndex);
+      }
+    }
+
     // 添加到新位置
     newElements = addComponentByPath(
       newElements,
       targetElementsPath,
       draggedComponent,
-      dropIndex,
+      actualDropIndex,
     );
 
     onElementsChange(newElements);
@@ -259,6 +388,13 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         return;
       }
 
+      console.log('🎯 画布拖拽处理:', {
+        itemType: item.type,
+        isNew: item.isNew,
+        hasComponent: !!item.component,
+        hasPath: !!item.path,
+      });
+
       if (item.isNew) {
         // 新组件
         const newComponent = createDefaultComponent(item.type);
@@ -268,12 +404,25 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           onElementsChange(insertTitleAtTop(elements, newComponent));
           message.success('标题组件已添加到画布顶部');
         } else {
+          // 其他组件添加到末尾
           onElementsChange([...elements, newComponent]);
+          message.success(`${item.type} 组件已添加到画布`);
         }
       } else if (item.component && item.path) {
-        // 现有组件移动
-        console.log('Move existing component to card', item);
-        handleContainerDrop(item, ['dsl', 'body', 'elements']);
+        // 现有组件移动到画布根级别
+        console.log('🔄 移动现有组件到画布根级别:', {
+          component: { id: item.component.id, tag: item.component.tag },
+          fromPath: item.path,
+        });
+
+        // 检查是否是从容器中移动到根级别
+        if (item.path.length > 4) {
+          // 从容器移动到根级别
+          handleContainerDrop(item, ['dsl', 'body', 'elements']);
+        } else {
+          // 根级别内部移动，这种情况通常由排序处理
+          console.log('⚠️ 根级别内部移动应该由排序处理');
+        }
       }
     },
     collect: (monitor) => ({
@@ -355,6 +504,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
             display: 'flex',
             flexDirection: 'column',
             gap: `${verticalSpacing}px`,
+            position: 'relative',
           }}
         >
           {elements.map((component, index) => {
@@ -382,24 +532,63 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
             const isHovered = isSamePath(hoveredPath, componentPath);
 
             return (
-              <ErrorBoundary key={component.id || `component-${index}`}>
-                <ComponentRenderer
-                  component={component}
-                  onSelect={onSelectComponent}
-                  isSelected={isSelected}
-                  selectedComponent={null}
-                  selectedPath={selectedPath}
-                  onUpdate={() => {}}
-                  onDelete={onDeleteComponent}
-                  onCopy={onCopyComponent}
-                  path={componentPath}
-                  onCanvasFocus={onCanvasFocus}
-                  hoveredPath={hoveredPath}
-                  isHovered={isHovered}
-                  onContainerDrop={handleContainerDrop}
-                  onComponentSort={handleComponentSort}
-                />
-              </ErrorBoundary>
+              <div
+                key={component.id || `component-${index}`}
+                style={{ position: 'relative' }}
+              >
+                {/* 拖拽插入指示器 - 顶部 */}
+                {isOver && canDrop && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '-4px',
+                      left: '0',
+                      right: '0',
+                      height: '2px',
+                      backgroundColor: '#1890ff',
+                      borderRadius: '1px',
+                      zIndex: 1000,
+                      opacity: 0.8,
+                    }}
+                  />
+                )}
+
+                <ErrorBoundary>
+                  <ComponentRenderer
+                    component={component}
+                    onSelect={onSelectComponent}
+                    isSelected={isSelected}
+                    selectedComponent={null}
+                    selectedPath={selectedPath}
+                    onUpdate={() => {}}
+                    onDelete={onDeleteComponent}
+                    onCopy={onCopyComponent}
+                    path={componentPath}
+                    onCanvasFocus={onCanvasFocus}
+                    hoveredPath={hoveredPath}
+                    isHovered={isHovered}
+                    onContainerDrop={handleContainerDrop}
+                    onComponentSort={handleComponentSort}
+                  />
+                </ErrorBoundary>
+
+                {/* 拖拽插入指示器 - 底部（最后一个组件） */}
+                {isOver && canDrop && index === elements.length - 1 && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: '-4px',
+                      left: '0',
+                      right: '0',
+                      height: '2px',
+                      backgroundColor: '#1890ff',
+                      borderRadius: '1px',
+                      zIndex: 1000,
+                      opacity: 0.8,
+                    }}
+                  />
+                )}
+              </div>
             );
           })}
         </div>

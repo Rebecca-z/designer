@@ -17,6 +17,8 @@ interface ComponentRendererProps {
   isSelected: boolean;
   selectedComponent: ComponentType | null;
   selectedPath: (string | number)[] | null;
+  hoveredPath: (string | number)[] | null;
+  isHovered: boolean;
   onUpdate: (data: DesignData) => void;
   onDelete: (path: (string | number)[]) => void;
   onCopy: (component: ComponentType) => void;
@@ -422,6 +424,11 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             containerPath={path.slice(0, -1)}
             enableDrag={!isPreview}
             enableSort={!isPreview}
+            onSelect={onSelect}
+            selectedPath={selectedPath}
+            onDelete={onDelete}
+            onCopy={onCopy}
+            onCanvasFocus={onCanvasFocus}
           />
 
           {/* 选中状态标签 */}
