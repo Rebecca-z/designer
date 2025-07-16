@@ -51,13 +51,33 @@ const canDropInContainer = (
   draggedType: string,
   targetPath: (string | number)[],
 ): boolean => {
+  console.log('🔍 canDropInContainer 检查:', {
+    draggedType,
+    targetPath,
+    targetPathLength: targetPath.length,
+  });
+
   // 容器组件不能嵌套到其他容器中
   if (isContainerComponent(draggedType)) {
     // 检查是否要放到容器内部（非根节点）
-    return !targetPath.some(
+    const hasContainerSegment = targetPath.some(
       (segment) => segment === 'elements' || segment === 'columns',
     );
+
+    console.log('🔍 容器组件嵌套检查:', {
+      draggedType,
+      hasContainerSegment,
+      canDrop: !hasContainerSegment,
+    });
+
+    return !hasContainerSegment;
   }
+
+  // 非容器组件可以放置在任何地方
+  console.log('✅ 非容器组件可以放置:', {
+    draggedType,
+    canDrop: true,
+  });
   return true;
 };
 
@@ -82,8 +102,8 @@ const isParentChild = (
   return true;
 };
 
-// 可拖拽的组件包装器
-const DraggableWrapper: React.FC<{
+// 容器内子组件的插入式拖拽排序包装器
+const ContainerSortableItem: React.FC<{
   component: ComponentType;
   path: (string | number)[];
   index: number;
@@ -106,26 +126,482 @@ const DraggableWrapper: React.FC<{
   enableSort = true,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
+  const [insertPosition, setInsertPosition] = React.useState<
+    'before' | 'after' | null
+  >(null);
+  const insertTargetIndex = useRef<number>(index); // 记录最后一次hover的插入索引
+
+  // 添加防抖和缓存机制
+  const lastHoverState = useRef<{
+    position: 'before' | 'after' | null;
+    targetIndex: number;
+    dragIndex: number;
+    hoverIndex: number;
+  } | null>(null);
+
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 拖拽源配置
   const [{ isDragging }, drag] = useDrag({
-    type: 'existing-component',
-    item: {
-      type: component.tag,
-      component,
-      path,
-      isNew: false,
-    } as DragItem,
+    type: 'container-component', // 使用专门的容器内拖拽类型
+    item: () => {
+      console.log('🟢 ContainerSortableItem 开始拖拽:', {
+        tag: component.tag,
+        path,
+        componentId: component.id,
+        index,
+      });
+      return {
+        type: component.tag,
+        component,
+        path,
+        isNew: false,
+        isChildComponent: true, // 标识为子组件
+      } as DragItem;
+    },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
+    canDrag: () => {
+      const canDrag = component.tag !== 'title';
+      console.log('🎯 ContainerSortableItem canDrag 检查:', {
+        componentTag: component.tag,
+        canDrag,
+      });
+      return canDrag;
+    },
   });
 
   // 拖拽目标配置（用于排序）
   const [{ isOver, canDrop }, drop] = useDrop({
-    accept: ['component', 'existing-component'],
+    accept: [
+      'component',
+      'existing-component',
+      'container-component',
+      'canvas-component',
+    ], // 添加canvas-component类型
     canDrop: (item: DragItem) => {
       if (!enableSort) return false;
+
+      console.log('🔍 ContainerSortableItem canDrop 检查:', {
+        itemType: item.type,
+        isNew: item.isNew,
+        hasComponent: !!item.component,
+        componentTag: item.component?.tag,
+        isChildComponent: item.isChildComponent,
+        currentPath: path,
+        containerPath,
+      });
+
+      // 不能拖拽到自己身上
+      if (!item.isNew && item.path && isSamePath(item.path, path)) {
+        console.log('❌ 不能拖拽到自己身上');
+        return false;
+      }
+
+      // 不能拖拽到自己的子元素上
+      if (!item.isNew && item.path && isParentChild(item.path, path)) {
+        console.log('❌ 不能拖拽到自己的子元素上');
+        return false;
+      }
+
+      // 检查是否是根节点组件拖拽到容器
+      if (!item.isNew && item.component && item.path) {
+        const isRootComponent =
+          item.path.length === 4 &&
+          item.path[0] === 'dsl' &&
+          item.path[1] === 'body' &&
+          item.path[2] === 'elements';
+
+        if (isRootComponent) {
+          console.log('🔍 根节点组件拖拽到容器检查:', {
+            componentTag: item.component.tag,
+            containerPath,
+          });
+        }
+      }
+
+      // 检查容器嵌套限制
+      if (item.isNew) {
+        const canDrop = canDropInContainer(item.type, containerPath);
+        console.log('✅ 新组件拖拽检查结果:', canDrop);
+        return canDrop;
+      } else if (item.component) {
+        const canDrop = canDropInContainer(item.component.tag, containerPath);
+        console.log('✅ 现有组件拖拽检查结果:', canDrop);
+        return canDrop;
+      }
+
+      return true;
+    },
+    hover: (item: DragItem, monitor) => {
+      if (!ref.current || !enableSort) return;
+
+      // 清除之前的防抖定时器
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+
+      // 使用防抖机制，延迟处理hover事件
+      hoverTimeoutRef.current = setTimeout(() => {
+        const dragIndex = item.path
+          ? (item.path[item.path.length - 1] as number)
+          : -1;
+        const hoverIndex = index;
+
+        // 不要替换自己
+        if (dragIndex === hoverIndex) {
+          return;
+        }
+
+        // 获取hover元素的边界矩形
+        const hoverBoundingRect = ref.current?.getBoundingClientRect();
+        if (!hoverBoundingRect) return;
+
+        // 获取垂直方向的中点
+        const hoverMiddleY =
+          (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
+
+        // 确定鼠标位置
+        const clientOffset = monitor.getClientOffset();
+        if (!clientOffset) return;
+
+        // 获取鼠标相对于hover元素的位置
+        const hoverClientY = clientOffset.y - hoverBoundingRect.top;
+
+        // 插入式拖拽逻辑：确定插入位置
+        let currentInsertPosition: 'before' | 'after' | null = null;
+        let targetIndex: number;
+
+        if (hoverClientY < hoverMiddleY) {
+          // 鼠标在上半部分 - 插入到当前元素之前
+          currentInsertPosition = 'before';
+          targetIndex = hoverIndex;
+        } else {
+          // 鼠标在下半部分 - 插入到当前元素之后
+          currentInsertPosition = 'after';
+          targetIndex = hoverIndex + 1;
+        }
+
+        // 检查是否与上次状态相同，避免不必要的更新
+        const currentHoverState = {
+          position: currentInsertPosition,
+          targetIndex,
+          dragIndex,
+          hoverIndex,
+        };
+
+        if (
+          lastHoverState.current &&
+          lastHoverState.current.position === currentHoverState.position &&
+          lastHoverState.current.targetIndex ===
+            currentHoverState.targetIndex &&
+          lastHoverState.current.dragIndex === currentHoverState.dragIndex &&
+          lastHoverState.current.hoverIndex === currentHoverState.hoverIndex
+        ) {
+          return; // 状态没有变化，不更新
+        }
+
+        // 更新缓存状态
+        lastHoverState.current = currentHoverState;
+
+        // 获取组件信息用于后续检查和日志
+        const draggedComponent = item.component;
+        const hoverComponent = component;
+
+        console.log('🎯 容器内插入式拖拽检测:', {
+          dragIndex,
+          hoverIndex,
+          hoverClientY,
+          hoverMiddleY,
+          insertPosition: currentInsertPosition,
+          targetIndex,
+          draggedComponent: draggedComponent?.tag,
+          hoverComponent: hoverComponent.tag,
+          willProceed: 'checking...',
+        });
+
+        // 更新插入位置状态，用于显示指示线
+        setInsertPosition(currentInsertPosition);
+        insertTargetIndex.current = targetIndex; // 更新记录
+
+        // 避免无意义的移动
+        if (currentInsertPosition === 'before') {
+          // 插入到before位置：如果拖拽元素紧接在hover元素之前，则无意义
+          if (dragIndex === hoverIndex - 1) {
+            return;
+          }
+        } else {
+          // 插入到after位置：如果拖拽元素紧接在hover元素之后，则无意义
+          if (dragIndex === hoverIndex + 1) {
+            return;
+          }
+        }
+
+        // 不要拖拽到自己身上
+        if (dragIndex === hoverIndex) {
+          return;
+        }
+
+        // 只更新状态，不执行排序
+        // 排序将在drop时执行
+      }, 50); // 50ms防抖延迟
+    },
+    drop: (item: DragItem, monitor) => {
+      if (monitor.didDrop() || !enableSort) return;
+
+      // 清除防抖定时器
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+
+      // 处理同容器内排序
+      if (!item.isNew && item.path && item.component && onComponentMove) {
+        const draggedPath = item.path;
+        const draggedContainerPath = draggedPath.slice(0, -1);
+        const targetContainerPath = containerPath;
+
+        // 检查是否在同一容器内
+        if (isSamePath(draggedContainerPath, targetContainerPath)) {
+          console.log('✅ 执行容器内插入式排序 (drop):', {
+            from: item.path[item.path.length - 1],
+            insertAt: insertTargetIndex.current,
+            draggedComponent: item.component.tag,
+            hoverComponent: component.tag,
+          });
+
+          // 用最后一次hover的insertTargetIndex
+          const targetPath = [
+            ...draggedContainerPath,
+            insertTargetIndex.current,
+          ];
+          onComponentMove(
+            item.component,
+            draggedPath,
+            targetPath,
+            insertTargetIndex.current,
+          );
+
+          // 更新监视器项目的索引
+          item.path = targetPath;
+        } else {
+          // 处理跨容器移动
+          // 确定插入位置
+          const rect = ref.current?.getBoundingClientRect();
+          const clientOffset = monitor.getClientOffset();
+          let insertIndex = index;
+
+          if (rect && clientOffset) {
+            const hoverMiddleY = rect.top + rect.height / 2;
+            if (clientOffset.y > hoverMiddleY) {
+              insertIndex = index + 1;
+            }
+          }
+
+          // 检查拖拽限制
+          if (!canDropInContainer(item.component.tag, targetContainerPath)) {
+            console.warn('容器组件不能嵌套到其他容器中');
+            return;
+          }
+
+          console.log('🔄 执行跨容器移动:', {
+            draggedComponent: {
+              id: item.component.id,
+              tag: item.component.tag,
+            },
+            draggedPath,
+            targetPath: path,
+            insertIndex,
+          });
+
+          // 执行跨容器移动 - 传递正确的目标路径
+          const targetPath = [...targetContainerPath, insertIndex];
+          onComponentMove(item.component, draggedPath, targetPath, insertIndex);
+        }
+      }
+      setInsertPosition(null); // 清理
+      lastHoverState.current = null; // 清理缓存状态
+    },
+    collect: (monitor) => ({
+      isOver: monitor.isOver({ shallow: true }),
+      canDrop: monitor.canDrop(),
+    }),
+  });
+
+  // 清理定时器
+  React.useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const opacity = isDragging ? 0.4 : 1;
+  drag(drop(ref));
+
+  const handleContainerSortableClick = (e: React.MouseEvent) => {
+    // 阻止事件冒泡到容器，避免触发容器选中
+    e.stopPropagation();
+    e.preventDefault();
+  };
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        opacity,
+        position: 'relative',
+        transition: 'all 0.15s ease', // 减少过渡时间，提高响应速度
+        cursor: component.tag === 'title' ? 'default' : 'grab',
+        marginBottom: '8px',
+      }}
+      onClick={handleContainerSortableClick}
+      data-container-sortable-item="true"
+    >
+      {/* 插入位置指示线 */}
+      {isOver && insertPosition === 'before' && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '-2px',
+            left: '0',
+            right: '0',
+            height: '3px',
+            backgroundColor: '#1890ff',
+            borderRadius: '1.5px',
+            zIndex: 1000,
+            boxShadow: '0 0 6px rgba(24, 144, 255, 0.6)',
+            transition: 'opacity 0.1s ease', // 快速显示/隐藏
+          }}
+        />
+      )}
+
+      {isOver && insertPosition === 'after' && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '-2px',
+            left: '0',
+            right: '0',
+            height: '3px',
+            backgroundColor: '#1890ff',
+            borderRadius: '1.5px',
+            zIndex: 1000,
+            boxShadow: '0 0 6px rgba(24, 144, 255, 0.6)',
+            transition: 'opacity 0.1s ease', // 快速显示/隐藏
+          }}
+        />
+      )}
+
+      {/* 拖拽悬停样式 */}
+      {isOver && canDrop && enableSort && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '0',
+            left: '0',
+            right: '0',
+            bottom: '0',
+            border: '2px dashed #1890ff',
+            borderRadius: '4px',
+            backgroundColor: 'rgba(24, 144, 255, 0.05)',
+            pointerEvents: 'none',
+            zIndex: 999,
+            transition: 'all 0.1s ease', // 快速显示/隐藏
+          }}
+        />
+      )}
+
+      {children}
+    </div>
+  );
+};
+
+// 可拖拽的组件包装器
+const DraggableWrapper: React.FC<{
+  component: ComponentType;
+  path: (string | number)[];
+  index: number;
+  containerPath: (string | number)[];
+  children: React.ReactNode;
+  onComponentMove?: (
+    draggedComponent: ComponentType,
+    draggedPath: (string | number)[],
+    targetPath: (string | number)[],
+    dropIndex: number,
+  ) => void;
+  enableSort?: boolean;
+  isChildComponent?: boolean; // 新增：标识是否为子组件
+}> = ({
+  component,
+  path,
+  index,
+  containerPath,
+  children,
+  onComponentMove,
+  enableSort = true,
+  isChildComponent = false, // 新增参数
+}) => {
+  const ref = useRef<HTMLDivElement>(null);
+
+  // 添加防抖和缓存机制
+  const lastHoverState = useRef<{
+    dragIndex: number;
+    targetIndex: number;
+    isSameContainer: boolean;
+  } | null>(null);
+
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 拖拽源配置
+  const [{ isDragging }, drag] = useDrag({
+    type: 'existing-component',
+    item: () => {
+      console.log('🟢 DraggableWrapper 开始拖拽:', {
+        tag: component.tag,
+        path,
+        componentId: component.id,
+        index,
+        isChildComponent,
+      });
+      return {
+        type: component.tag,
+        component,
+        path,
+        isNew: false,
+        isChildComponent,
+      } as DragItem;
+    },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+    canDrag: () => {
+      const canDrag = component.tag !== 'title';
+      console.log('🎯 DraggableWrapper canDrag 检查:', {
+        componentTag: component.tag,
+        canDrag,
+        isChildComponent,
+      });
+      return canDrag;
+    },
+  });
+
+  // 拖拽目标配置（用于排序）
+  const [{ isOver, canDrop }, drop] = useDrop({
+    accept: ['component', 'existing-component', 'canvas-component'], // 添加canvas-component类型
+    canDrop: (item: DragItem) => {
+      if (!enableSort) return false;
+
+      console.log('🔍 DraggableWrapper canDrop 检查:', {
+        itemType: item.type,
+        isNew: item.isNew,
+        hasComponent: !!item.component,
+        componentTag: item.component?.tag,
+        isChildComponent: item.isChildComponent,
+        currentPath: path,
+        containerPath,
+      });
 
       // 不能拖拽到自己身上
       if (!item.isNew && item.path && isSamePath(item.path, path)) {
@@ -135,6 +611,33 @@ const DraggableWrapper: React.FC<{
       // 不能拖拽到自己的子元素上
       if (!item.isNew && item.path && isParentChild(item.path, path)) {
         return false;
+      }
+
+      // 子组件不能拖拽到父组件上
+      if (isChildComponent && !item.isNew && item.path) {
+        const draggedPath = item.path;
+        const currentPath = path;
+
+        // 检查是否是父子关系
+        if (isParentChild(currentPath, draggedPath)) {
+          return false;
+        }
+      }
+
+      // 检查是否是根节点组件拖拽到容器
+      if (!item.isNew && item.component && item.path) {
+        const isRootComponent =
+          item.path.length === 4 &&
+          item.path[0] === 'dsl' &&
+          item.path[1] === 'body' &&
+          item.path[2] === 'elements';
+
+        if (isRootComponent) {
+          console.log('🔍 根节点组件拖拽到容器检查:', {
+            componentTag: item.component.tag,
+            containerPath,
+          });
+        }
       }
 
       // 检查容器嵌套限制
@@ -149,72 +652,122 @@ const DraggableWrapper: React.FC<{
     hover: (item: DragItem, monitor) => {
       if (!ref.current || !enableSort) return;
 
-      const hoverBoundingRect = ref.current.getBoundingClientRect();
-      const hoverMiddleY =
-        (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
-      const clientOffset = monitor.getClientOffset();
-      if (!clientOffset) return;
+      // 清除之前的防抖定时器
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
 
-      const hoverClientY = clientOffset.y - hoverBoundingRect.top;
-
-      // 只处理现有组件的排序
-      if (!item.isNew && item.path && item.component && onComponentMove) {
-        const draggedPath = item.path;
-
-        // 检查是否在同一容器内
-        const draggedContainerPath = draggedPath.slice(0, -1);
-        const targetContainerPath = containerPath;
-
-        if (isSamePath(draggedContainerPath, targetContainerPath)) {
-          const draggedIndex = draggedPath[draggedPath.length - 1] as number;
-          let targetIndex = index;
-
-          // 根据鼠标位置决定插入位置
-          if (hoverClientY > hoverMiddleY) {
-            targetIndex = index + 1;
-          }
-
-          // 避免无意义的移动
+      // 使用防抖机制，延迟处理hover事件
+      hoverTimeoutRef.current = setTimeout(() => {
+        // 如果是子组件拖拽，需要更精确的检测
+        if (isChildComponent && item.isChildComponent) {
+          // 子组件拖拽时，需要确保鼠标在拖拽区域内
+          const dragOffset = monitor.getDifferenceFromInitialOffset();
           if (
-            draggedIndex === targetIndex ||
-            draggedIndex === targetIndex - 1
+            !dragOffset ||
+            Math.abs(dragOffset.x) < 5 ||
+            Math.abs(dragOffset.y) < 5
           ) {
-            return;
-          }
-
-          // 安全检查：确保路径有效
-          if (
-            draggedPath.length >= 4 &&
-            path.length >= 4 &&
-            draggedPath[0] === 'dsl' &&
-            draggedPath[1] === 'body' &&
-            path[0] === 'dsl' &&
-            path[1] === 'body'
-          ) {
-            console.log('🔄 执行同容器排序:', {
-              draggedComponent: {
-                id: item.component.id,
-                tag: item.component.tag,
-              },
-              draggedPath,
-              targetPath: path,
-              targetIndex,
-            });
-
-            // 执行排序
-            onComponentMove(item.component, draggedPath, path, targetIndex);
-          } else {
-            console.warn('⚠️ 跳过无效的排序操作:', {
-              draggedPath,
-              targetPath: path,
-              reason: '路径格式不正确',
-            });
+            return; // 拖拽距离太小，不触发排序
           }
         }
-      }
+
+        const hoverBoundingRect = ref.current?.getBoundingClientRect();
+        if (!hoverBoundingRect) return;
+        const hoverMiddleY =
+          (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
+        const clientOffset = monitor.getClientOffset();
+        if (!clientOffset) return;
+
+        const hoverClientY = clientOffset.y - hoverBoundingRect.top;
+
+        // 只处理现有组件的排序
+        if (!item.isNew && item.path && item.component && onComponentMove) {
+          const draggedPath = item.path;
+
+          // 检查是否在同一容器内
+          const draggedContainerPath = draggedPath.slice(0, -1);
+          const targetContainerPath = containerPath;
+
+          if (isSamePath(draggedContainerPath, targetContainerPath)) {
+            const draggedIndex = draggedPath[draggedPath.length - 1] as number;
+            let targetIndex = index;
+
+            // 根据鼠标位置决定插入位置
+            if (hoverClientY > hoverMiddleY) {
+              targetIndex = index + 1;
+            }
+
+            // 检查是否与上次状态相同，避免不必要的更新
+            const currentHoverState = {
+              dragIndex: draggedIndex,
+              targetIndex,
+              isSameContainer: true,
+            };
+
+            if (
+              lastHoverState.current &&
+              lastHoverState.current.dragIndex ===
+                currentHoverState.dragIndex &&
+              lastHoverState.current.targetIndex ===
+                currentHoverState.targetIndex &&
+              lastHoverState.current.isSameContainer ===
+                currentHoverState.isSameContainer
+            ) {
+              return; // 状态没有变化，不更新
+            }
+
+            // 更新缓存状态
+            lastHoverState.current = currentHoverState;
+
+            // 避免无意义的移动
+            if (
+              draggedIndex === targetIndex ||
+              draggedIndex === targetIndex - 1
+            ) {
+              return;
+            }
+
+            // 安全检查：确保路径有效
+            if (
+              draggedPath.length >= 4 &&
+              path.length >= 4 &&
+              draggedPath[0] === 'dsl' &&
+              draggedPath[1] === 'body' &&
+              path[0] === 'dsl' &&
+              path[1] === 'body'
+            ) {
+              console.log('🔄 执行同容器排序:', {
+                draggedComponent: {
+                  id: item.component.id,
+                  tag: item.component.tag,
+                },
+                draggedPath,
+                targetPath: path,
+                targetIndex,
+                isChildComponent,
+              });
+
+              // 执行排序
+              onComponentMove(item.component, draggedPath, path, targetIndex);
+            } else {
+              console.warn('⚠️ 跳过无效的排序操作:', {
+                draggedPath,
+                targetPath: path,
+                reason: '路径格式不正确',
+              });
+            }
+          }
+        }
+      }, 50); // 50ms防抖延迟
     },
     drop: (item: DragItem, monitor) => {
       if (monitor.didDrop() || !enableSort) return;
+
+      // 清除防抖定时器
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
 
       // 处理跨容器移动
       if (!item.isNew && item.path && item.component && onComponentMove) {
@@ -259,6 +812,7 @@ const DraggableWrapper: React.FC<{
               draggedPath,
               targetPath: path,
               insertIndex,
+              isChildComponent,
             });
 
             onComponentMove(item.component, draggedPath, path, insertIndex);
@@ -271,12 +825,22 @@ const DraggableWrapper: React.FC<{
           }
         }
       }
+      lastHoverState.current = null; // 清理缓存状态
     },
     collect: (monitor) => ({
       isOver: monitor.isOver({ shallow: true }),
       canDrop: monitor.canDrop(),
     }),
   });
+
+  // 清理定时器
+  React.useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // 合并拖拽引用
   drag(drop(ref));
@@ -286,7 +850,7 @@ const DraggableWrapper: React.FC<{
     opacity: isDragging ? 0.5 : 1,
     cursor: isDragging ? 'grabbing' : 'pointer', // 改为pointer而不是grab，避免影响子组件选中
     position: 'relative',
-    transition: 'all 0.2s ease',
+    transition: 'all 0.15s ease', // 减少过渡时间，提高响应速度
   };
 
   // 拖拽悬停样式
@@ -295,8 +859,22 @@ const DraggableWrapper: React.FC<{
     wrapperStyle.boxShadow = '0 4px 12px rgba(24, 144, 255, 0.3)';
   }
 
+  // 子组件拖拽时的特殊样式
+  if (isChildComponent) {
+    wrapperStyle.zIndex = isDragging ? 1000 : 'auto';
+  }
+
   return (
-    <div ref={ref} style={wrapperStyle}>
+    <div
+      ref={ref}
+      style={wrapperStyle}
+      onMouseDown={(e) => {
+        // 子组件拖拽时阻止事件冒泡
+        if (isChildComponent) {
+          e.stopPropagation();
+        }
+      }}
+    >
       {/* 拖拽排序提示线 - 顶部 */}
       {isOver && canDrop && enableSort && (
         <div
@@ -310,6 +888,7 @@ const DraggableWrapper: React.FC<{
             borderRadius: '1px',
             zIndex: 1000,
             boxShadow: '0 0 4px rgba(24, 144, 255, 0.5)',
+            transition: 'opacity 0.1s ease', // 快速显示/隐藏
           }}
         />
       )}
@@ -329,35 +908,12 @@ const DraggableWrapper: React.FC<{
             padding: '4px 8px',
             borderRadius: '4px',
             fontSize: '12px',
-            fontWeight: 'bold',
-            pointerEvents: 'none',
             zIndex: 1000,
-            boxShadow: '0 2px 8px rgba(255, 77, 79, 0.3)',
-          }}
-        >
-          ❌ 不能移动到这里
-        </div>
-      )}
-
-      {/* 拖拽成功提示 */}
-      {isOver && canDrop && enableSort && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '-8px',
-            right: '8px',
-            backgroundColor: 'rgba(24, 144, 255, 0.9)',
-            color: 'white',
-            padding: '2px 6px',
-            borderRadius: '4px',
-            fontSize: '10px',
-            fontWeight: 'bold',
             pointerEvents: 'none',
-            zIndex: 1001,
-            boxShadow: '0 2px 8px rgba(24, 144, 255, 0.3)',
+            transition: 'opacity 0.1s ease', // 快速显示/隐藏
           }}
         >
-          ↕️ 排序
+          ❌ 不能放置
         </div>
       )}
     </div>
@@ -391,27 +947,76 @@ const SmartDropZone: React.FC<{
   onComponentMove,
   childElements = [],
 }) => {
-  const [{ isOver, canDrop }, drop] = useDrop({
-    accept: ['component', 'existing-component'],
+  const [{ isOver, canDrop, draggedItem }, drop] = useDrop({
+    accept: ['component', 'existing-component', 'canvas-component'], // 添加canvas-component类型
     canDrop: (item: DragItem) => {
+      console.log('🔍 SmartDropZone canDrop 检查:', {
+        itemType: item.type,
+        isNew: item.isNew,
+        hasComponent: !!item.component,
+        componentTag: item.component?.tag,
+        isChildComponent: item.isChildComponent,
+        targetPath,
+        childElementsCount: childElements.length,
+        containerType,
+      });
+
       // 特殊处理标题组件 - 标题组件不能拖拽到容器中
       if (
         item.type === 'title' ||
         (item.component && item.component.tag === 'title')
       ) {
+        console.log('❌ 标题组件不能拖拽到容器中');
         return false;
+      }
+
+      // 子组件拖拽时的特殊处理
+      if (item.isChildComponent) {
+        // 子组件可以拖拽到其他容器中，但不能拖拽到自己的父容器
+        if (item.path && isParentChild(item.path, targetPath)) {
+          console.log('❌ 子组件不能拖拽到自己的父容器');
+          return false;
+        }
+        const canDrop = canDropInContainer(
+          item.component?.tag || item.type,
+          targetPath,
+        );
+        console.log('✅ 子组件拖拽检查结果:', canDrop);
+        return canDrop;
       }
 
       // 检查是否可以在此容器中放置
       if (item.isNew) {
-        return canDropInContainer(item.type, targetPath);
+        const canDrop = canDropInContainer(item.type, targetPath);
+        console.log('✅ 新组件拖拽检查结果:', canDrop);
+        return canDrop;
       } else if (item.component && item.path) {
         // 不能拖拽到自己的父容器中
         if (isParentChild(item.path, targetPath)) {
+          console.log('❌ 不能拖拽到自己的父容器中');
           return false;
         }
-        return canDropInContainer(item.component.tag, targetPath);
+
+        // 检查是否是根节点组件拖拽到容器
+        const isRootComponent =
+          item.path.length === 4 &&
+          item.path[0] === 'dsl' &&
+          item.path[1] === 'body' &&
+          item.path[2] === 'elements';
+
+        if (isRootComponent) {
+          console.log('🔍 根节点组件拖拽到容器检查:', {
+            componentTag: item.component.tag,
+            targetPath,
+            containerType,
+          });
+        }
+
+        const canDrop = canDropInContainer(item.component.tag, targetPath);
+        console.log('✅ 现有组件拖拽检查结果:', canDrop);
+        return canDrop;
       }
+      console.log('❌ 默认拒绝拖拽');
       return false;
     },
     drop: (item: DragItem, monitor) => {
@@ -425,6 +1030,7 @@ const SmartDropZone: React.FC<{
           isNew: item.isNew,
           hasComponent: !!item.component,
           hasPath: !!item.path,
+          isChildComponent: item.isChildComponent,
         },
         childElementsCount: childElements.length,
         columnIndex,
@@ -453,6 +1059,59 @@ const SmartDropZone: React.FC<{
             );
             return;
           }
+
+          // 检查是否是根节点组件移动到容器
+          const isRootComponent =
+            item.path.length === 4 &&
+            item.path[0] === 'dsl' &&
+            item.path[1] === 'body' &&
+            item.path[2] === 'elements';
+
+          if (isRootComponent) {
+            console.log('🔄 根节点组件移动到容器:', {
+              component: item.component.tag,
+              from: item.path,
+              to: targetPath,
+              containerType,
+              insertIndex: childElements.length,
+            });
+          }
+
+          // 子组件跨容器移动的特殊处理
+          if (item.isChildComponent) {
+            console.log('🔄 子组件跨容器移动:', {
+              component: item.component.tag,
+              from: draggedContainerPath,
+              to: targetPath,
+              containerType,
+            });
+          }
+
+          // 移动到末尾
+          onComponentMove?.(
+            item.component,
+            item.path,
+            [...targetPath, childElements.length],
+            childElements.length,
+          );
+        } else {
+          // 同容器内的拖拽 - 允许添加到末尾
+          console.log('🔄 同容器内拖拽到末尾:', {
+            component: item.component.tag,
+            targetPath,
+            insertIndex: childElements.length,
+          });
+
+          // 检查拖拽限制
+          if (!canDropInContainer(item.component.tag, targetPath)) {
+            console.warn(
+              `容器组件不能嵌套到${
+                containerType === 'form' ? '表单' : '分栏'
+              }中`,
+            );
+            return;
+          }
+
           // 移动到末尾
           onComponentMove?.(
             item.component,
@@ -466,6 +1125,7 @@ const SmartDropZone: React.FC<{
     collect: (monitor) => ({
       isOver: monitor.isOver({ shallow: true }),
       canDrop: monitor.canDrop(),
+      draggedItem: monitor.getItem(),
     }),
   });
 
@@ -483,8 +1143,10 @@ const SmartDropZone: React.FC<{
     borderRadius: '4px',
     backgroundColor: isOver && canDrop ? 'rgba(24, 144, 255, 0.05)' : '#fafafa',
     position: 'relative',
-    transition: 'all 0.2s ease',
+    transition: 'all 0.15s ease', // 减少过渡时间，提高响应速度
     flex: containerType === 'column' ? 1 : 'none',
+    // 确保拖拽区域始终可交互，即使有子组件
+    pointerEvents: 'auto',
   };
 
   // 拖拽悬停效果
@@ -505,10 +1167,16 @@ const SmartDropZone: React.FC<{
       ? '拖拽组件到表单中'
       : `拖拽组件到第${(columnIndex ?? 0) + 1}列`;
 
-  const dropMessage =
-    containerType === 'form'
+  const dropMessage = (isChildComponent?: boolean) => {
+    if (isChildComponent) {
+      return containerType === 'form'
+        ? '释放以移动到表单'
+        : `释放以移动到第${(columnIndex ?? 0) + 1}列`;
+    }
+    return containerType === 'form'
       ? '释放以添加到表单'
       : `释放以添加到第${(columnIndex ?? 0) + 1}列`;
+  };
 
   // 处理点击事件 - 确保不阻止子组件的选中
   const handleContainerClick = (e: React.MouseEvent) => {
@@ -547,9 +1215,11 @@ const SmartDropZone: React.FC<{
             display: 'flex',
             flexDirection: 'column',
             gap: containerType === 'form' ? '12px' : '8px',
+            // 确保内容区域不会阻止拖拽事件
+            pointerEvents: 'none',
           }}
         >
-          {children}
+          <div style={{ pointerEvents: 'auto' }}>{children}</div>
         </div>
       ) : (
         <div
@@ -586,9 +1256,10 @@ const SmartDropZone: React.FC<{
             fontWeight: 'bold',
             pointerEvents: 'none',
             zIndex: 1000,
+            transition: 'opacity 0.1s ease', // 快速显示/隐藏
           }}
         >
-          {dropMessage}
+          {dropMessage(draggedItem?.isChildComponent)}
         </div>
       )}
 
@@ -608,6 +1279,7 @@ const SmartDropZone: React.FC<{
             fontWeight: 'bold',
             pointerEvents: 'none',
             zIndex: 1000,
+            transition: 'opacity 0.1s ease', // 快速显示/隐藏
           }}
         >
           ❌ 不能移动到这里
@@ -850,8 +1522,15 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       );
 
       if (enableDrag && !isPreview) {
+        console.log('🟢 渲染 ContainerSortableItem for:', {
+          elementTag: element.tag,
+          elementId: element.id,
+          childPath,
+          enableDrag,
+          isPreview,
+        });
         return (
-          <DraggableWrapper
+          <ContainerSortableItem
             key={`${element.id}-${elementIndex}-${childPath.join('-')}`}
             component={element}
             path={childPath}
@@ -861,7 +1540,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             enableSort={enableSort}
           >
             {selectableWrapper}
-          </DraggableWrapper>
+          </ContainerSortableItem>
         );
       } else {
         return (

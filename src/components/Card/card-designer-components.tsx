@@ -453,9 +453,11 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
                 path.length === 4 &&
                 path[0] === 'dsl' &&
                 path[1] === 'body' &&
-                path[2] === 'elements'
+                path[2] === 'elements' &&
+                // 只有非容器组件才禁用内部拖拽
+                !(component.tag === 'form' || component.tag === 'column_set')
               )
-            } // 根级别组件禁用内部拖拽，让DragSortableItem处理
+            } // 根级别非容器组件禁用内部拖拽，让DragSortableItem处理
             enableSort={!isPreview}
             onSelect={onSelect}
             selectedPath={selectedPath}

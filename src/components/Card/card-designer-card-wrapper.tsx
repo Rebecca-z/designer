@@ -26,41 +26,18 @@ const DragSortableItem: React.FC<{
     'before' | 'after' | null
   >(null);
 
-  const [{ isDragging }, drag] = useDrag({
-    type: 'canvas-component',
-    item: () => {
-      console.log('🚀 DragSortableItem 开始拖拽:', {
-        componentId: component.id,
-        componentTag: component.tag,
-        index,
-        path,
-        canDrag: component.tag !== 'title',
-      });
-      return {
-        id: component.id,
-        index,
-        component,
-        path,
-        type: component.tag,
-        isNew: false,
-      };
-    },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-    // 标题组件不允许拖拽
-    canDrag: () => {
-      const canDrag = component.tag !== 'title';
-      console.log('🎯 DragSortableItem canDrag 检查:', {
-        componentTag: component.tag,
-        canDrag,
-      });
-      return canDrag;
-    },
-  });
+  // 添加防抖和缓存机制
+  const lastHoverState = useRef<{
+    position: 'before' | 'after' | null;
+    targetIndex: number;
+    dragIndex: number;
+    hoverIndex: number;
+  } | null>(null);
+
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [{ handlerId, isOver }, drop] = useDrop({
-    accept: 'canvas-component',
+    accept: ['canvas-component'],
     collect(monitor) {
       return {
         handlerId: monitor.getHandlerId(),
@@ -70,129 +47,198 @@ const DragSortableItem: React.FC<{
     drop() {
       // 清除插入位置状态
       setInsertPosition(null);
+      lastHoverState.current = null; // 清理缓存状态
     },
     hover(item: any, monitor) {
       if (!ref.current) {
         return;
       }
 
-      console.log('🖱️ DragSortableItem hover 触发:', {
-        draggedComponent: item.component?.tag,
-        draggedIndex: item.index,
-        hoverComponent: component.tag,
-        hoverIndex: index,
-      });
-
-      const dragIndex = item.index;
-      const hoverIndex = index;
-
-      // 不要替换自己
-      if (dragIndex === hoverIndex) {
-        return;
+      // 清除之前的防抖定时器
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
       }
 
-      // 获取hover元素的边界矩形
-      const hoverBoundingRect = ref.current?.getBoundingClientRect();
+      // 使用防抖机制，延迟处理hover事件
+      hoverTimeoutRef.current = setTimeout(() => {
+        const dragIndex = item.index;
+        const hoverIndex = index;
 
-      // 获取垂直方向的中点
-      const hoverMiddleY =
-        (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
-
-      // 确定鼠标位置
-      const clientOffset = monitor.getClientOffset();
-      if (!clientOffset) return;
-
-      // 获取鼠标相对于hover元素的位置
-      const hoverClientY = clientOffset.y - hoverBoundingRect.top;
-
-      // 插入式拖拽逻辑：确定插入位置
-      let currentInsertPosition: 'before' | 'after' | null = null;
-      let targetIndex: number;
-
-      if (hoverClientY < hoverMiddleY) {
-        // 鼠标在上半部分 - 插入到当前元素之前
-        currentInsertPosition = 'before';
-        targetIndex = hoverIndex;
-      } else {
-        // 鼠标在下半部分 - 插入到当前元素之后
-        currentInsertPosition = 'after';
-        targetIndex = hoverIndex + 1;
-      }
-
-      // 获取组件信息用于后续检查和日志
-      const draggedComponent = item.component;
-      const hoverComponent = component;
-
-      console.log('🎯 插入式拖拽检测:', {
-        dragIndex,
-        hoverIndex,
-        hoverClientY,
-        hoverMiddleY,
-        insertPosition: currentInsertPosition,
-        targetIndex,
-        draggedComponent: draggedComponent.tag,
-        hoverComponent: hoverComponent.tag,
-        willProceed: 'checking...',
-      });
-
-      // 更新插入位置状态，用于显示指示线
-      setInsertPosition(currentInsertPosition);
-
-      // 避免无意义的移动
-      // 检查是否是真正的移动操作
-      if (currentInsertPosition === 'before') {
-        // 插入到before位置：如果拖拽元素紧接在hover元素之前，则无意义
-        if (dragIndex === hoverIndex - 1) {
+        // 不要替换自己
+        if (dragIndex === hoverIndex) {
           return;
         }
-      } else {
-        // 插入到after位置：如果拖拽元素紧接在hover元素之后，则无意义
-        if (dragIndex === hoverIndex + 1) {
+
+        // 获取hover元素的边界矩形
+        const hoverBoundingRect = ref.current?.getBoundingClientRect();
+        if (!hoverBoundingRect) return;
+
+        // 获取垂直方向的中点
+        const hoverMiddleY =
+          (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
+
+        // 确定鼠标位置
+        const clientOffset = monitor.getClientOffset();
+        if (!clientOffset) return;
+
+        // 获取鼠标相对于hover元素的位置
+        const hoverClientY = clientOffset.y - hoverBoundingRect.top;
+
+        // 插入式拖拽逻辑：确定插入位置
+        let currentInsertPosition: 'before' | 'after' | null = null;
+        let targetIndex: number;
+
+        if (hoverClientY < hoverMiddleY) {
+          // 鼠标在上半部分 - 插入到当前元素之前
+          currentInsertPosition = 'before';
+          targetIndex = hoverIndex;
+        } else {
+          // 鼠标在下半部分 - 插入到当前元素之后
+          currentInsertPosition = 'after';
+          targetIndex = hoverIndex + 1;
+        }
+
+        // 检查是否与上次状态相同，避免不必要的更新
+        const currentHoverState = {
+          position: currentInsertPosition,
+          targetIndex,
+          dragIndex,
+          hoverIndex,
+        };
+
+        if (
+          lastHoverState.current &&
+          lastHoverState.current.position === currentHoverState.position &&
+          lastHoverState.current.targetIndex ===
+            currentHoverState.targetIndex &&
+          lastHoverState.current.dragIndex === currentHoverState.dragIndex &&
+          lastHoverState.current.hoverIndex === currentHoverState.hoverIndex
+        ) {
+          return; // 状态没有变化，不更新
+        }
+
+        // 更新缓存状态
+        lastHoverState.current = currentHoverState;
+
+        // 获取组件信息用于后续检查和日志
+        const draggedComponent = item.component;
+        const hoverComponent = component;
+
+        console.log('🎯 插入式拖拽检测:', {
+          dragIndex,
+          hoverIndex,
+          hoverClientY,
+          hoverMiddleY,
+          insertPosition: currentInsertPosition,
+          targetIndex,
+          draggedComponent: draggedComponent.tag,
+          hoverComponent: hoverComponent.tag,
+          willProceed: 'checking...',
+        });
+
+        // 更新插入位置状态，用于显示指示线
+        setInsertPosition(currentInsertPosition);
+
+        // 避免无意义的移动
+        // 检查是否是真正的移动操作
+        if (currentInsertPosition === 'before') {
+          // 插入到before位置：如果拖拽元素紧接在hover元素之前，则无意义
+          if (dragIndex === hoverIndex - 1) {
+            return;
+          }
+        } else {
+          // 插入到after位置：如果拖拽元素紧接在hover元素之后，则无意义
+          if (dragIndex === hoverIndex + 1) {
+            return;
+          }
+        }
+
+        // 不要拖拽到自己身上
+        if (dragIndex === hoverIndex) {
           return;
         }
+
+        // 特殊处理标题组件的拖拽限制
+
+        // 1. 标题组件不能移动到非标题组件的位置
+        if (
+          draggedComponent.tag === 'title' &&
+          hoverComponent.tag !== 'title'
+        ) {
+          return;
+        }
+
+        // 2. 非标题组件不能移动到标题组件的位置（第一位）
+        if (
+          draggedComponent.tag !== 'title' &&
+          hoverComponent.tag === 'title'
+        ) {
+          return;
+        }
+
+        // 3. 不能将非标题组件插入到标题组件之前
+        if (
+          hoverComponent.tag === 'title' &&
+          draggedComponent.tag !== 'title' &&
+          currentInsertPosition === 'before'
+        ) {
+          return;
+        }
+
+        // 执行插入式移动
+        console.log('✅ 执行插入式移动:', {
+          from: dragIndex,
+          insertAt: targetIndex,
+          insertPosition: currentInsertPosition,
+          draggedComponent: draggedComponent.tag,
+          hoverComponent: hoverComponent.tag,
+        });
+
+        onMove(dragIndex, targetIndex);
+
+        // 注意：这里我们修改了监视器项目，因为我们在移动时修改了索引
+        // 一般来说，最好避免修改监视器项目，但这里是为了性能考虑
+        // 对于插入式移动，需要调整索引
+        item.index = targetIndex > dragIndex ? targetIndex - 1 : targetIndex;
+      }, 50); // 50ms防抖延迟
+    },
+  });
+
+  // 清理定时器
+  React.useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
       }
+    };
+  }, []);
 
-      // 不要拖拽到自己身上
-      if (dragIndex === hoverIndex) {
-        return;
-      }
-
-      // 特殊处理标题组件的拖拽限制
-
-      // 1. 标题组件不能移动到非标题组件的位置
-      if (draggedComponent.tag === 'title' && hoverComponent.tag !== 'title') {
-        return;
-      }
-
-      // 2. 非标题组件不能移动到标题组件的位置（第一位）
-      if (draggedComponent.tag !== 'title' && hoverComponent.tag === 'title') {
-        return;
-      }
-
-      // 3. 不能将非标题组件插入到标题组件之前
-      if (
-        hoverComponent.tag === 'title' &&
-        draggedComponent.tag !== 'title' &&
-        currentInsertPosition === 'before'
-      ) {
-        return;
-      }
-
-      // 执行插入式移动
-      console.log('✅ 执行插入式移动:', {
-        from: dragIndex,
-        insertAt: targetIndex,
-        insertPosition: currentInsertPosition,
-        draggedComponent: draggedComponent.tag,
-        hoverComponent: hoverComponent.tag,
+  const [{ isDragging }, drag] = useDrag({
+    type: 'canvas-component',
+    item: () => {
+      console.log('🟢 DragSortableItem 开始拖拽:', {
+        tag: component.tag,
+        index,
+        componentId: component.id,
       });
-
-      onMove(dragIndex, targetIndex);
-
-      // 注意：这里我们修改了监视器项目，因为我们在移动时修改了索引
-      // 一般来说，最好避免修改监视器项目，但这里是为了性能考虑
-      // 对于插入式移动，需要调整索引
-      item.index = targetIndex > dragIndex ? targetIndex - 1 : targetIndex;
+      return {
+        type: component.tag,
+        component,
+        index,
+        path,
+        isNew: false,
+      };
+    },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+    canDrag: () => {
+      const canDrag = component.tag !== 'title';
+      console.log('🎯 DragSortableItem canDrag 检查:', {
+        componentTag: component.tag,
+        canDrag,
+      });
+      return canDrag;
     },
   });
 
@@ -211,7 +257,7 @@ const DragSortableItem: React.FC<{
       style={{
         opacity,
         position: 'relative',
-        transition: 'all 0.2s ease',
+        transition: 'all 0.15s ease', // 减少过渡时间，提高响应速度
         cursor: component.tag === 'title' ? 'default' : 'grab',
       }}
       data-handler-id={handlerId}
@@ -231,6 +277,7 @@ const DragSortableItem: React.FC<{
             borderRadius: '1.5px',
             zIndex: 1000,
             boxShadow: '0 0 6px rgba(24, 144, 255, 0.6)',
+            transition: 'opacity 0.1s ease', // 快速显示/隐藏
           }}
         />
       )}
@@ -247,6 +294,7 @@ const DragSortableItem: React.FC<{
             borderRadius: '1.5px',
             zIndex: 1000,
             boxShadow: '0 0 6px rgba(24, 144, 255, 0.6)',
+            transition: 'opacity 0.1s ease', // 快速显示/隐藏
           }}
         />
       )}
@@ -344,34 +392,83 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
   ): ComponentType[] | null => {
     let current: any = elements;
 
-    // 从索引3开始导航（跳过 'dsl', 'body', 'elements'）
-    for (let i = 3; i < path.length; i++) {
+    console.log('🔍 getElementsArrayByPath 开始解析:', {
+      path,
+      elementsLength: elements.length,
+    });
+
+    // 检查路径是否以 ['dsl', 'body', 'elements'] 开头
+    const isStandardPath =
+      path.length >= 3 &&
+      path[0] === 'dsl' &&
+      path[1] === 'body' &&
+      path[2] === 'elements';
+
+    // 根据路径格式决定起始索引
+    const startIndex = isStandardPath ? 3 : 0;
+
+    console.log('🔍 路径格式分析:', {
+      isStandardPath,
+      startIndex,
+      pathPrefix: isStandardPath ? path.slice(0, 3) : '从根级别开始',
+    });
+
+    for (let i = startIndex; i < path.length; i++) {
       const key = path[i];
+      const nextKey = path[i + 1];
+      console.log(`🔍 路径解析步骤 ${i}:`, {
+        key,
+        keyType: typeof key,
+        currentType: current ? typeof current : 'undefined',
+        isArray: Array.isArray(current),
+        hasElements: current && current.elements ? 'yes' : 'no',
+        currentKeys:
+          current && typeof current === 'object' ? Object.keys(current) : 'N/A',
+        nextKey,
+      });
 
       if (key === 'elements') {
-        // 如果是最后一个elements，返回当前数组或对象的elements属性
+        // 1. 如果已经到达最后，直接返回
         if (i === path.length - 1) {
-          if (Array.isArray(current)) {
-            return current;
-          } else if (
-            current &&
-            current.elements &&
-            Array.isArray(current.elements)
-          ) {
+          if (Array.isArray(current)) return current;
+          if (current && Array.isArray(current.elements))
             return current.elements;
-          } else {
-            return null;
-          }
-        } else {
-          // 中间的elements，继续导航
-          const nextIndex = path[i + 1] as number;
-          if (current && Array.isArray(current) && current[nextIndex]) {
-            current = current[nextIndex];
-            i++; // 跳过下一个索引
-          } else {
-            return null;
-          }
+          return null;
         }
+        // 2. 如果下一个key不是数字，说明已经到达目标数组
+        if (typeof nextKey !== 'number') {
+          if (Array.isArray(current)) return current;
+          if (current && Array.isArray(current.elements))
+            return current.elements;
+          return null;
+        }
+        // 3. 否则继续导航
+        if (Array.isArray(current) && current[nextKey]) {
+          current = current[nextKey];
+          i++;
+          continue;
+        }
+        if (
+          current &&
+          Array.isArray(current.elements) &&
+          current.elements[nextKey]
+        ) {
+          current = current.elements[nextKey];
+          i++;
+          continue;
+        }
+        console.error('❌ 无效的elements数组索引导航:', {
+          current: current ? 'exists' : 'undefined',
+          isArray: Array.isArray(current),
+          hasElements: current && current.elements ? 'yes' : 'no',
+          nextKey,
+          arrayLength: Array.isArray(current) ? current.length : 'N/A',
+          elementsArrayLength:
+            current && current.elements && Array.isArray(current.elements)
+              ? current.elements.length
+              : 'N/A',
+        });
+        return null;
       } else if (key === 'columns') {
         const columnIndex = path[i + 1] as number;
         if (
@@ -383,24 +480,70 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         ) {
           current = current.columns[columnIndex].elements;
           i += 2; // 跳过下两个索引
+          console.log(
+            `✅ 导航到分栏 ${columnIndex} 的elements:`,
+            current.length,
+          );
         } else {
+          console.error('❌ 无效的分栏导航:', {
+            current: current ? 'exists' : 'undefined',
+            hasColumns: current && current.columns ? 'yes' : 'no',
+            columnIndex,
+            targetColumnExists:
+              current && current.columns && current.columns[columnIndex]
+                ? 'yes'
+                : 'no',
+          });
           return null;
         }
       } else if (typeof key === 'number') {
         if (current && Array.isArray(current) && current[key]) {
           current = current[key];
+          console.log(`✅ 导航到数组索引 ${key}:`, {
+            nextComponent: current
+              ? { id: current.id, tag: current.tag }
+              : 'undefined',
+          });
         } else {
+          console.error('❌ 无效的数字索引导航:', {
+            current: current ? 'exists' : 'undefined',
+            isArray: Array.isArray(current),
+            key,
+            arrayLength: Array.isArray(current) ? current.length : 'N/A',
+          });
           return null;
         }
       } else {
         if (current && current[key] !== undefined) {
           current = current[key];
+          console.log(`✅ 导航到属性 ${key}:`, {
+            nextValue: current
+              ? typeof current === 'object'
+                ? { id: current.id, tag: current.tag }
+                : current
+              : 'undefined',
+          });
         } else {
+          console.error('❌ 无效的属性导航:', {
+            current: current ? 'exists' : 'undefined',
+            key,
+            availableKeys:
+              current && typeof current === 'object'
+                ? Object.keys(current)
+                : 'N/A',
+          });
           return null;
         }
       }
     }
 
+    console.log('❌ 路径解析完成但未找到目标:', {
+      finalCurrent: current
+        ? Array.isArray(current)
+          ? `array(${current.length})`
+          : typeof current
+        : 'undefined',
+    });
     return null;
   };
 
@@ -416,6 +559,12 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
 
     console.log('🎯 添加组件到路径:', {
       path,
+      pathLength: path.length,
+      pathDetails: path.map((item, index) => ({
+        index,
+        item,
+        type: typeof item,
+      })),
       newComponent: { id: newComponent.id, tag: newComponent.tag },
       insertIndex,
     });
@@ -427,12 +576,27 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       } else {
         newElements.push(newComponent);
       }
+      console.log('✅ 根级别组件添加成功:', {
+        componentId: newComponent.id,
+        componentTag: newComponent.tag,
+        insertIndex,
+        finalLength: newElements.length,
+      });
       return newElements;
     }
 
     // 导航到目标容器
     for (let i = 3; i < path.length; i++) {
       const key = path[i];
+
+      console.log(`🔍 路径导航步骤 ${i}:`, {
+        key,
+        keyType: typeof key,
+        currentType: current ? typeof current : 'undefined',
+        isArray: Array.isArray(current),
+        currentKeys:
+          current && typeof current === 'object' ? Object.keys(current) : 'N/A',
+      });
 
       if (key === 'elements') {
         // 检查是否是最后一个 elements（目标位置）
@@ -469,54 +633,96 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           } else {
             targetArray.push(newComponent);
           }
+
+          console.log('✅ 组件添加成功 (指定位置):', {
+            componentId: newComponent.id,
+            componentTag: newComponent.tag,
+            insertIndex,
+            arrayLength: targetArray.length,
+            targetPath: path,
+          });
           return newElements;
         } else {
           // 这是中间的elements，需要继续导航
           // 下一个应该是数组索引
-          const nextIndex = path[i + 1] as number;
-          if (current && Array.isArray(current) && current[nextIndex]) {
-            current = current[nextIndex];
-            i++; // 跳过下一个索引
+          const nextIndex = path[i + 1];
+
+          // 检查下一个是否是数字索引
+          if (typeof nextIndex === 'number') {
+            if (current && Array.isArray(current) && current[nextIndex]) {
+              current = current[nextIndex];
+              i++; // 跳过下一个索引
+              console.log(`✅ 导航到数组索引 ${nextIndex}:`, {
+                nextComponent: current
+                  ? { id: current.id, tag: current.tag }
+                  : 'undefined',
+              });
+            } else {
+              console.error('❌ 添加组件失败：无效的elements数组索引', {
+                path,
+                currentIndex: i,
+                key,
+                nextIndex,
+                current: current ? 'exists' : 'undefined',
+                isArray: Array.isArray(current),
+                arrayLength: Array.isArray(current) ? current.length : 'N/A',
+              });
+              return elements; // 返回原始数组，不做修改
+            }
+          } else if (nextIndex === 'elements') {
+            // 如果下一个也是 'elements'，说明这是表单容器的结构
+            // 当前current应该是表单组件对象，需要访问其elements属性
+            if (
+              current &&
+              current.elements &&
+              Array.isArray(current.elements)
+            ) {
+              current = current.elements;
+              i++; // 跳过下一个 'elements'
+              console.log('✅ 导航到表单组件的elements数组:', {
+                componentTag: current.tag || 'unknown',
+                elementsLength: current.length,
+              });
+            } else {
+              console.error('❌ 添加组件失败：表单组件没有elements数组', {
+                path,
+                currentIndex: i,
+                key,
+                nextIndex,
+                current: current ? 'exists' : 'undefined',
+                hasElements: current && current.elements ? 'yes' : 'no',
+                currentTag: current ? current.tag : 'undefined',
+              });
+              return elements; // 返回原始数组，不做修改
+            }
           } else {
-            console.error('❌ 添加组件失败：无效的elements数组索引', {
-              path,
-              currentIndex: i,
-              key,
-              nextIndex,
-              current: current ? 'exists' : 'undefined',
-              isArray: Array.isArray(current),
-              arrayLength: Array.isArray(current) ? current.length : 'N/A',
-            });
-            return elements; // 返回原始数组，不做修改
+            // 如果下一个不是数字也不是 'elements'，说明这是目标elements数组
+            // 检查current是否是组件对象，需要访问其elements属性
+            if (
+              current &&
+              current.elements &&
+              Array.isArray(current.elements)
+            ) {
+              current = current.elements;
+              console.log('✅ 导航到组件对象的elements数组:', {
+                componentTag: current.tag || 'unknown',
+                elementsLength: current.length,
+              });
+            } else {
+              console.error('❌ 添加组件失败：无法找到elements数组', {
+                path,
+                currentIndex: i,
+                key,
+                nextIndex,
+                current: current ? 'exists' : 'undefined',
+                hasElements: current && current.elements ? 'yes' : 'no',
+              });
+              return elements; // 返回原始数组，不做修改
+            }
           }
         }
       } else if (key === 'columns') {
         const columnIndex = path[i + 1] as number;
-        const nextKey = path[i + 2]; // 应该是'elements'
-
-        console.log('🔍 处理分栏路径导航:', {
-          currentKey: key,
-          columnIndex,
-          nextKey,
-          currentType: current ? current.tag : 'undefined',
-          hasColumns: current && current.columns ? 'yes' : 'no',
-          columnsLength:
-            current && current.columns ? current.columns.length : 0,
-          targetColumnExists:
-            current && current.columns && current.columns[columnIndex]
-              ? 'yes'
-              : 'no',
-          targetColumnHasElements:
-            current &&
-            current.columns &&
-            current.columns[columnIndex] &&
-            current.columns[columnIndex].elements
-              ? 'yes'
-              : 'no',
-        });
-
-        // current应该是ColumnSetComponent，它有columns属性
-        // path[i + 2]应该是'elements'
         if (
           current &&
           current.columns &&
@@ -525,18 +731,17 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           current.columns[columnIndex].elements
         ) {
           current = current.columns[columnIndex].elements;
-          console.log('✅ 成功导航到分栏elements数组:', {
-            columnIndex,
-            elementsLength: current.length,
-          });
           i += 2; // 跳过下两个索引
+          console.log(
+            `✅ 导航到分栏 ${columnIndex} 的elements:`,
+            current.length,
+          );
         } else {
           console.error('❌ 添加组件失败：无效的分栏结构', {
             path,
             currentIndex: i,
             key,
             columnIndex,
-            nextKey,
             current: current ? 'exists' : 'undefined',
             currentTag: current ? current.tag : 'undefined',
             hasColumns: current && current.columns ? 'yes' : 'no',
@@ -552,6 +757,11 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       } else if (typeof key === 'number') {
         if (current && Array.isArray(current) && current[key]) {
           current = current[key];
+          console.log(`✅ 导航到数组索引 ${key}:`, {
+            nextComponent: current
+              ? { id: current.id, tag: current.tag }
+              : 'undefined',
+          });
         } else {
           console.error('❌ 添加组件失败：无效的数组索引', {
             path,
@@ -570,6 +780,9 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           // 如果导航到了一个对象的elements属性，需要检查下一步
           if (key === 'elements' && current && Array.isArray(current)) {
             // 已经到达了elements数组，继续处理
+            console.log('✅ 导航到elements数组:', {
+              elementsLength: current.length,
+            });
             continue;
           }
         } else {
@@ -578,6 +791,10 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
             currentIndex: i,
             key,
             current: current ? 'exists' : 'undefined',
+            availableKeys:
+              current && typeof current === 'object'
+                ? Object.keys(current)
+                : 'N/A',
           });
           return elements; // 返回原始数组，不做修改
         }
@@ -630,11 +847,24 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     const newElements = [...elements];
     let current: any = newElements;
 
-    console.log('🗑️ 从路径移除组件:', { path });
+    console.log('🗑️ 从路径移除组件:', {
+      path,
+      pathLength: path.length,
+    });
 
     // 如果是根级别
     if (path.length === 4 && path[2] === 'elements') {
       const index = path[3] as number;
+      console.log('✅ 根级别组件移除:', {
+        index,
+        componentToRemove: newElements[index]
+          ? {
+              id: newElements[index].id,
+              tag: newElements[index].tag,
+            }
+          : 'undefined',
+        arrayLength: newElements.length,
+      });
       newElements.splice(index, 1);
       return newElements;
     }
@@ -643,11 +873,19 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     for (let i = 3; i < path.length - 1; i++) {
       const key = path[i];
 
+      console.log(`🔍 移除路径导航步骤 ${i}:`, {
+        key,
+        keyType: typeof key,
+        currentType: current ? typeof current : 'undefined',
+        isArray: Array.isArray(current),
+      });
+
       if (key === 'elements') {
         // 检查是否是倒数第二个elements（父容器）
         if (i === path.length - 2) {
           // 这是目标组件的父elements数组
           // 不需要进一步导航，current就是目标数组
+          console.log('✅ 到达父elements数组，停止导航');
           break;
         } else {
           // 这是中间的elements，需要继续导航
@@ -655,6 +893,11 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           if (current && Array.isArray(current) && current[nextIndex]) {
             current = current[nextIndex];
             i++; // 跳过下一个索引
+            console.log(`✅ 导航到数组索引 ${nextIndex}:`, {
+              nextComponent: current
+                ? { id: current.id, tag: current.tag }
+                : 'undefined',
+            });
           } else {
             console.error('❌ 路径导航错误：无效的elements数组索引', {
               path,
@@ -691,9 +934,15 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         }
         current = current[columnSetIndex].columns[columnIndex].elements;
         i += 2; // 跳过下两个索引
+        console.log(`✅ 导航到分栏 ${columnIndex} 的elements:`, current.length);
       } else if (typeof key === 'number') {
         if (current && Array.isArray(current) && current[key]) {
           current = current[key];
+          console.log(`✅ 导航到数组索引 ${key}:`, {
+            nextComponent: current
+              ? { id: current.id, tag: current.tag }
+              : 'undefined',
+          });
         } else {
           console.error('❌ 路径导航错误：无效的数组索引', {
             path,
@@ -749,6 +998,17 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     }
 
     if (lastIndex >= 0 && lastIndex < targetArray.length) {
+      const removedComponent = targetArray[lastIndex];
+      console.log('✅ 组件移除成功:', {
+        removedComponent: removedComponent
+          ? {
+              id: removedComponent.id,
+              tag: removedComponent.tag,
+            }
+          : 'undefined',
+        lastIndex,
+        targetArrayLength: targetArray.length,
+      });
       targetArray.splice(lastIndex, 1);
     } else {
       console.error('❌ 无法移除组件：无效的目标索引', {
@@ -974,10 +1234,35 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       dropIndex,
     });
 
-    // 计算容器路径
+    // 添加详细的路径分析日志
+    console.log('🔍 详细路径分析:', {
+      draggedPathLength: draggedPath.length,
+      targetPathLength: targetPath.length,
+      draggedPathDetails: draggedPath.map((item, index) => ({
+        index,
+        item,
+        type: typeof item,
+      })),
+      targetPathDetails: targetPath.map((item, index) => ({
+        index,
+        item,
+        type: typeof item,
+      })),
+    });
+
+    // 分析路径结构
     const draggedContainerPath = draggedPath.slice(0, -1);
     const targetContainerPath = targetPath.slice(0, -1);
     const draggedIndex = draggedPath[draggedPath.length - 1] as number;
+
+    console.log('🔍 路径分析:', {
+      draggedContainerPath,
+      targetContainerPath,
+      draggedIndex,
+      isSameContainer:
+        JSON.stringify(draggedContainerPath) ===
+        JSON.stringify(targetContainerPath),
+    });
 
     // 检查是否在同一容器内移动
     const isSameContainer =
@@ -1009,22 +1294,65 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       // 使用路径找到目标容器
       const targetElementsPath = [...targetContainerPath, 'elements'];
 
+      console.log('🔍 查找目标容器:', {
+        targetElementsPath,
+        newElementsLength: newElements.length,
+      });
+
       // 获取目标容器的elements数组
       const targetContainer = getElementsArrayByPath(
         newElements,
         targetElementsPath,
       );
 
+      console.log('🔍 目标容器查找结果:', {
+        targetContainer: targetContainer
+          ? `array(${targetContainer.length})`
+          : 'null',
+        isArray: Array.isArray(targetContainer),
+      });
+
       if (targetContainer && Array.isArray(targetContainer)) {
-        // 执行位置交换
+        // 执行插入式移动：先移除，后插入（与根级别逻辑保持一致）
         const draggedItem = targetContainer[draggedIndex];
+
+        console.log('🔍 排序前的容器状态:', {
+          containerLength: targetContainer.length,
+          draggedIndex,
+          dropIndex,
+          draggedItem: draggedItem
+            ? { id: draggedItem.id, tag: draggedItem.tag }
+            : 'null',
+          containerElements: targetContainer.map((el, idx) => ({
+            index: idx,
+            id: el.id,
+            tag: el.tag,
+          })),
+        });
+
+        // 移除原位置的组件
         targetContainer.splice(draggedIndex, 1);
 
-        // 调整目标索引
+        // 调整插入索引（如果插入位置在拖拽位置之后，需要减1）
         const adjustedTargetIndex =
           dropIndex > draggedIndex ? dropIndex - 1 : dropIndex;
+
+        // 插入到新位置
         targetContainer.splice(adjustedTargetIndex, 0, draggedItem);
 
+        console.log('✅ 同容器内排序完成:', {
+          from: draggedIndex,
+          to: adjustedTargetIndex,
+          containerLength: targetContainer.length,
+          movedComponent: draggedItem.tag,
+          containerElementsAfter: targetContainer.map((el, idx) => ({
+            index: idx,
+            id: el.id,
+            tag: el.tag,
+          })),
+        });
+
+        console.log('🔄 调用 onElementsChange 更新数据');
         onElementsChange(newElements);
       } else {
         console.error('❌ 无法找到目标容器');
@@ -1034,6 +1362,10 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       console.log('🔄 跨容器移动:', {
         from: draggedContainerPath,
         to: targetContainerPath,
+        draggedComponent: {
+          id: draggedComponent.id,
+          tag: draggedComponent.tag,
+        },
       });
 
       // 先移除原位置的组件
@@ -1071,6 +1403,13 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         }
       }
 
+      console.log('🔍 跨容器移动详细信息:', {
+        draggedPath,
+        targetElementsPath,
+        actualDropIndex,
+        newElementsLength: newElements.length,
+      });
+
       // 添加到新位置
       newElements = addComponentByPath(
         newElements,
@@ -1078,6 +1417,13 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         draggedComponent,
         actualDropIndex,
       );
+
+      console.log('✅ 跨容器移动完成:', {
+        movedComponent: { id: draggedComponent.id, tag: draggedComponent.tag },
+        fromPath: draggedPath,
+        toPath: targetElementsPath,
+        finalElementsLength: newElements.length,
+      });
 
       onElementsChange(newElements);
     }

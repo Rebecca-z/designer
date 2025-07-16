@@ -212,6 +212,7 @@ export interface DragItem {
   component?: ComponentType;
   path?: (string | number)[];
   isNew?: boolean;
+  isChildComponent?: boolean; // 标识是否为子组件
 }
 
 export interface DeviceConfig {
