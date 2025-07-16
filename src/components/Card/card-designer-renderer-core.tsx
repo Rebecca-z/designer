@@ -284,7 +284,7 @@ const DraggableWrapper: React.FC<{
   // 样式
   const wrapperStyle: React.CSSProperties = {
     opacity: isDragging ? 0.5 : 1,
-    cursor: isDragging ? 'grabbing' : 'grab',
+    cursor: isDragging ? 'grabbing' : 'pointer', // 改为pointer而不是grab，避免影响子组件选中
     position: 'relative',
     transition: 'all 0.2s ease',
   };
@@ -510,8 +510,17 @@ const SmartDropZone: React.FC<{
       ? '释放以添加到表单'
       : `释放以添加到第${(columnIndex ?? 0) + 1}列`;
 
+  // 处理点击事件 - 确保不阻止子组件的选中
+  const handleContainerClick = (e: React.MouseEvent) => {
+    // 只在点击容器本身（而非子组件）时阻止事件传播
+    if (e.target === e.currentTarget) {
+      e.stopPropagation();
+    }
+    // 允许子组件的点击事件正常冒泡
+  };
+
   return (
-    <div ref={drop} style={dropZoneStyle}>
+    <div ref={drop} style={dropZoneStyle} onClick={handleContainerClick}>
       {/* 分栏标题 */}
       {containerType === 'column' && (
         <div
@@ -525,6 +534,7 @@ const SmartDropZone: React.FC<{
             backgroundColor: '#f0f0f0',
             borderRadius: '4px',
           }}
+          onClick={(e) => e.stopPropagation()} // 阻止标题点击冒泡
         >
           📐 第{(columnIndex ?? 0) + 1}列
         </div>
@@ -908,7 +918,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             {formElements.length > 0
               ? renderChildElements(formElements, formPath)
               : null}
-            {formElements.length}
           </SmartDropZone>
         </div>
       );

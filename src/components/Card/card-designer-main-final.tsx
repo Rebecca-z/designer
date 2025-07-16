@@ -62,9 +62,9 @@ const CardDesigner: React.FC = () => {
   const config = useConfigManagement();
 
   // 类型转换：将历史数据转为卡片数据
-  const cardData = history.data as CardDesignData;
+  const cardData = history.data as unknown as CardDesignData;
 
-  // 根据路径获取组件的辅助函数
+  // 根据路径获取组件的辅助函数 - 支持嵌套组件
   const getComponentByPath = (
     data: CardDesignData,
     path: (string | number)[],
@@ -77,8 +77,48 @@ const CardDesigner: React.FC = () => {
     ) {
       return null;
     }
-    const index = path[3] as number;
-    return data.dsl.body.elements[index] || null;
+
+    if (path.length === 4) {
+      // 根级组件: ['dsl', 'body', 'elements', index]
+      const index = path[3] as number;
+      return data.dsl.body.elements[index] || null;
+    } else if (path.length === 6 && path[4] === 'elements') {
+      // 表单内组件: ['dsl', 'body', 'elements', formIndex, 'elements', componentIndex]
+      const formIndex = path[3] as number;
+      const componentIndex = path[5] as number;
+      const formComponent = data.dsl.body.elements[formIndex];
+
+      if (
+        formComponent &&
+        formComponent.tag === 'form' &&
+        (formComponent as any).elements
+      ) {
+        return (formComponent as any).elements[componentIndex] || null;
+      }
+    } else if (
+      path.length === 8 &&
+      path[4] === 'columns' &&
+      path[6] === 'elements'
+    ) {
+      // 分栏内组件: ['dsl', 'body', 'elements', columnSetIndex, 'columns', columnIndex, 'elements', componentIndex]
+      const columnSetIndex = path[3] as number;
+      const columnIndex = path[5] as number;
+      const componentIndex = path[7] as number;
+      const columnSetComponent = data.dsl.body.elements[columnSetIndex];
+
+      if (
+        columnSetComponent &&
+        columnSetComponent.tag === 'column_set' &&
+        (columnSetComponent as any).columns
+      ) {
+        const column = (columnSetComponent as any).columns[columnIndex];
+        if (column && column.elements) {
+          return column.elements[componentIndex] || null;
+        }
+      }
+    }
+
+    return null;
   };
 
   // 处理组件更新的副作用
@@ -124,28 +164,74 @@ const CardDesigner: React.FC = () => {
 
   const handleDelete = (path: (string | number)[]) => {
     if (
-      path.length >= 4 &&
-      path[0] === 'dsl' &&
-      path[1] === 'body' &&
-      path[2] === 'elements'
+      path.length < 4 ||
+      path[0] !== 'dsl' ||
+      path[1] !== 'body' ||
+      path[2] !== 'elements'
     ) {
-      const index = path[3] as number;
-      const newElements = cardData.dsl.body.elements.filter(
-        (_, i) => i !== index,
-      );
-      const newData = {
-        ...cardData,
-        dsl: {
-          ...cardData.dsl,
-          body: {
-            ...cardData.dsl.body,
-            elements: newElements,
-          },
-        },
-      };
-      history.updateData(newData as any);
-      selection.clearSelection();
+      console.warn('无效的删除路径:', path);
+      return;
     }
+
+    let newData = JSON.parse(JSON.stringify(cardData));
+
+    console.log('🗑️ 删除组件:', {
+      path,
+      pathLength: path.length,
+    });
+
+    if (path.length === 4) {
+      // 根级组件: ['dsl', 'body', 'elements', index]
+      const index = path[3] as number;
+      newData.dsl.body.elements.splice(index, 1);
+      console.log('🗑️ 删除根级组件:', { index });
+    } else if (path.length === 6 && path[4] === 'elements') {
+      // 表单内组件: ['dsl', 'body', 'elements', formIndex, 'elements', componentIndex]
+      const formIndex = path[3] as number;
+      const componentIndex = path[5] as number;
+      const formComponent = newData.dsl.body.elements[formIndex];
+
+      if (
+        formComponent &&
+        formComponent.tag === 'form' &&
+        formComponent.elements
+      ) {
+        formComponent.elements.splice(componentIndex, 1);
+        console.log('🗑️ 删除表单内组件:', { formIndex, componentIndex });
+      }
+    } else if (
+      path.length === 8 &&
+      path[4] === 'columns' &&
+      path[6] === 'elements'
+    ) {
+      // 分栏内组件: ['dsl', 'body', 'elements', columnSetIndex, 'columns', columnIndex, 'elements', componentIndex]
+      const columnSetIndex = path[3] as number;
+      const columnIndex = path[5] as number;
+      const componentIndex = path[7] as number;
+      const columnSetComponent = newData.dsl.body.elements[columnSetIndex];
+
+      if (
+        columnSetComponent &&
+        columnSetComponent.tag === 'column_set' &&
+        columnSetComponent.columns
+      ) {
+        const column = columnSetComponent.columns[columnIndex];
+        if (column && column.elements) {
+          column.elements.splice(componentIndex, 1);
+          console.log('🗑️ 删除分栏内组件:', {
+            columnSetIndex,
+            columnIndex,
+            componentIndex,
+          });
+        }
+      }
+    } else {
+      console.warn('⚠️ 不支持的删除路径格式:', path);
+      return;
+    }
+
+    history.updateData(newData as any);
+    selection.clearSelection();
   };
 
   const handleSmartDelete = (path: (string | number)[]) => {
@@ -158,24 +244,82 @@ const CardDesigner: React.FC = () => {
   };
 
   const handleUpdateSelectedComponent = (updatedComponent: ComponentType) => {
-    if (selection.selectedPath && selection.selectedPath.length >= 4) {
-      const index = selection.selectedPath[3] as number;
-      const newElements = [...cardData.dsl.body.elements];
-      newElements[index] = updatedComponent;
-
-      const newData = {
-        ...cardData,
-        dsl: {
-          ...cardData.dsl,
-          body: {
-            ...cardData.dsl.body,
-            elements: newElements,
-          },
-        },
-      };
-      history.updateData(newData as any);
-      selection.selectComponent(updatedComponent, selection.selectedPath);
+    if (!selection.selectedPath || selection.selectedPath.length < 4) {
+      console.warn('无效的选中路径:', selection.selectedPath);
+      return;
     }
+
+    const path = selection.selectedPath;
+    let newData = JSON.parse(JSON.stringify(cardData));
+
+    console.log('🔄 更新组件:', {
+      componentId: updatedComponent.id,
+      componentTag: updatedComponent.tag,
+      path,
+      pathLength: path.length,
+    });
+
+    if (path.length === 4) {
+      // 根级组件: ['dsl', 'body', 'elements', index]
+      const index = path[3] as number;
+      newData.dsl.body.elements[index] = updatedComponent;
+      console.log('📝 更新根级组件:', {
+        index,
+        componentTag: updatedComponent.tag,
+      });
+    } else if (path.length === 6 && path[4] === 'elements') {
+      // 表单内组件: ['dsl', 'body', 'elements', formIndex, 'elements', componentIndex]
+      const formIndex = path[3] as number;
+      const componentIndex = path[5] as number;
+      const formComponent = newData.dsl.body.elements[formIndex];
+
+      if (formComponent && formComponent.tag === 'form') {
+        if (!formComponent.elements) {
+          formComponent.elements = [];
+        }
+        formComponent.elements[componentIndex] = updatedComponent;
+        console.log('📋 更新表单内组件:', {
+          formIndex,
+          componentIndex,
+          componentTag: updatedComponent.tag,
+        });
+      }
+    } else if (
+      path.length === 8 &&
+      path[4] === 'columns' &&
+      path[6] === 'elements'
+    ) {
+      // 分栏内组件: ['dsl', 'body', 'elements', columnSetIndex, 'columns', columnIndex, 'elements', componentIndex]
+      const columnSetIndex = path[3] as number;
+      const columnIndex = path[5] as number;
+      const componentIndex = path[7] as number;
+      const columnSetComponent = newData.dsl.body.elements[columnSetIndex];
+
+      if (columnSetComponent && columnSetComponent.tag === 'column_set') {
+        if (!columnSetComponent.columns) {
+          columnSetComponent.columns = [];
+        }
+        const column = columnSetComponent.columns[columnIndex];
+        if (column) {
+          if (!column.elements) {
+            column.elements = [];
+          }
+          column.elements[componentIndex] = updatedComponent;
+          console.log('📐 更新分栏内组件:', {
+            columnSetIndex,
+            columnIndex,
+            componentIndex,
+            componentTag: updatedComponent.tag,
+          });
+        }
+      }
+    } else {
+      console.warn('⚠️ 不支持的组件路径格式:', path);
+      return;
+    }
+
+    history.updateData(newData as any);
+    selection.selectComponent(updatedComponent, selection.selectedPath);
   };
 
   // 处理卡片属性更新
