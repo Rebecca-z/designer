@@ -191,7 +191,24 @@ const getComponentRealPath = (
   component: ComponentType | null;
   realPath: (string | number)[] | null;
 } => {
-  if (!selectedPath || selectedPath.length < 4) {
+  if (!selectedPath) {
+    return { component: null, realPath: null };
+  }
+
+  // 检查是否是卡片选中状态：['dsl', 'body']
+  if (
+    selectedPath.length === 2 &&
+    selectedPath[0] === 'dsl' &&
+    selectedPath[1] === 'body'
+  ) {
+    console.log('🎯 卡片选中状态:', {
+      selectedPath,
+      realPath: selectedPath,
+    });
+    return { component: null, realPath: selectedPath };
+  }
+
+  if (selectedPath.length < 4) {
     return { component: null, realPath: null };
   }
 
@@ -292,7 +309,7 @@ const OutlineTree: React.FC<{
   selectedPath: (string | number)[] | null;
   onOutlineHover: (path: (string | number)[] | null) => void;
   onOutlineSelect: (
-    component: ComponentType,
+    component: ComponentType | null,
     path: (string | number)[],
   ) => void;
 }> = ({ data, selectedPath, onOutlineHover, onOutlineSelect }) => {
@@ -380,20 +397,66 @@ const OutlineTree: React.FC<{
       return node;
     };
 
-    // 从卡片的 body.elements 开始构建树
-    return data.dsl.body.elements.map((component, index) =>
-      buildTreeNode(component, index, ['dsl', 'body', 'elements']),
-    );
+    // 创建卡片节点作为一级节点
+    const cardNode = {
+      title: (
+        <Space size={4}>
+          <Text
+            style={{ fontSize: '14px', fontWeight: 'bold', color: '#1890ff' }}
+          >
+            📄 正文
+          </Text>
+          <Text type="secondary" style={{ fontSize: '11px' }}>
+            ({data.dsl.body.elements.length}个组件)
+          </Text>
+        </Space>
+      ),
+      key: 'dsl-body',
+      path: ['dsl', 'body'],
+      component: null, // 卡片本身不是组件，所以为null
+      children: data.dsl.body.elements.map((component, index) =>
+        buildTreeNode(component, index, ['dsl', 'body', 'elements']),
+      ),
+    };
+
+    return [cardNode];
   }, [data.dsl.body.elements]);
 
   const handleSelect = (selectedKeys: React.Key[], info: any) => {
-    if (info.node?.component && info.node?.path) {
+    console.log('🌳 大纲树选择事件触发:', {
+      selectedKeys,
+      nodePath: info.node?.path,
+      nodeComponent: info.node?.component,
+      nodeKey: info.node?.key,
+    });
+
+    if (info.node?.path) {
       console.log('🌳 大纲树选择:', {
-        componentId: info.node.component.id,
-        componentTag: info.node.component.tag,
+        componentId: info.node.component?.id,
+        componentTag: info.node.component?.tag,
         path: info.node.path,
+        isCard:
+          info.node.path.length === 2 &&
+          info.node.path[0] === 'dsl' &&
+          info.node.path[1] === 'body',
       });
-      onOutlineSelect(info.node.component, info.node.path);
+
+      // 如果是卡片节点，传递null作为组件，路径为['dsl', 'body']
+      if (
+        info.node.path.length === 2 &&
+        info.node.path[0] === 'dsl' &&
+        info.node.path[1] === 'body'
+      ) {
+        console.log('🎯 调用卡片选择: onOutlineSelect(null, ["dsl", "body"])');
+        onOutlineSelect(null, info.node.path);
+      } else if (info.node.component) {
+        console.log('🎯 调用组件选择: onOutlineSelect(component, path)');
+        onOutlineSelect(info.node.component, info.node.path);
+      } else {
+        console.log('⚠️ 未找到有效的组件或卡片节点');
+      }
+    } else {
+      console.log('⚠️ 大纲树选择事件中没有找到有效的节点路径');
     }
   };
 
@@ -423,7 +486,7 @@ const OutlineTree: React.FC<{
             }}
           >
             <Text style={{ fontSize: '12px', color: '#0958d9' }}>
-              📊 当前有 {data.dsl.body.elements.length} 个根组件
+              📊 卡片包含 {data.dsl.body.elements.length} 个组件
             </Text>
           </div>
 
@@ -478,7 +541,7 @@ export const ComponentPanel: React.FC<{
   selectedPath: (string | number)[] | null;
   onOutlineHover: (path: (string | number)[] | null) => void;
   onOutlineSelect: (
-    component: ComponentType,
+    component: ComponentType | null,
     path: (string | number)[],
   ) => void;
 }> = ({ data, selectedPath, onOutlineHover, onOutlineSelect }) => {
@@ -595,6 +658,8 @@ export const PropertyPanel: React.FC<{
     hasSelectedComponent: !!currentComponent,
     componentTag: currentComponent?.tag,
     componentId: currentComponent?.id,
+    selectedComponentFromProps: selectedComponent,
+    selectedPathFromProps: selectedPath,
   });
 
   const handleValueChange = (field: string, value: any) => {

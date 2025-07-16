@@ -63,8 +63,43 @@ const Canvas: React.FC<CanvasProps> = ({
     selectedPath[0] === 'dsl' &&
     selectedPath[1] === 'body';
 
+  console.log('🎯 卡片选中状态检查:', {
+    selectedPath,
+    selectedPathLength: selectedPath?.length,
+    isCardSelected,
+    selectedPath0: selectedPath?.[0],
+    selectedPath1: selectedPath?.[1],
+  });
+
   // 处理画布点击事件
   const handleCanvasClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+
+    console.log('🎨 画布点击处理:', {
+      targetTag: target.tagName,
+      targetClass: target.className,
+      hasCardContainer: !!target.closest('[data-card-container]'),
+      hasComponentWrapper: !!target.closest('[data-component-wrapper]'),
+      hasDragSortableItem: !!target.closest('[data-drag-sortable-item]'),
+    });
+
+    // 如果点击的是卡片容器、组件包装器或拖拽排序项，不处理画布点击
+    if (
+      target.closest('[data-card-container]') ||
+      target.closest('[data-component-wrapper]') ||
+      target.closest('[data-drag-sortable-item]')
+    ) {
+      console.log('🚫 阻止画布点击：点击的是卡片或组件区域');
+      return;
+    }
+
+    // 如果点击的是操作按钮，不处理画布点击
+    if (target.closest('.ant-dropdown') || target.closest('.ant-btn')) {
+      console.log('🚫 阻止画布点击：点击的是操作按钮');
+      return;
+    }
+
+    console.log('✅ 处理画布点击，清除选择状态');
     e.stopPropagation();
     onSelectComponent(null);
     onCanvasFocus?.();
@@ -77,6 +112,9 @@ const Canvas: React.FC<CanvasProps> = ({
 
   // 处理卡片选中
   const handleCardSelect = () => {
+    console.log(
+      '🎯 处理卡片选中，调用 onSelectComponent(null, ["dsl", "body"])',
+    );
     onSelectComponent(null, ['dsl', 'body']);
   };
 

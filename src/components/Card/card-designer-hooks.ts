@@ -142,15 +142,52 @@ export const useComponentSelection = () => {
 
   const selectComponent = useCallback(
     (component: ComponentType | null, path?: (string | number)[]) => {
+      console.log('🎯 selectComponent 被调用:', {
+        componentId: component?.id,
+        componentTag: component?.tag,
+        path,
+        pathLength: path?.length,
+        isCard: path?.length === 2 && path[0] === 'dsl' && path[1] === 'body',
+        timestamp: new Date().toISOString(),
+        stack: new Error().stack?.split('\n').slice(1, 4).join('\n'),
+      });
+
+      // 直接更新状态，不使用防抖
       setSelectedComponent(component);
       setSelectedPath(path || null);
+
+      console.log('✅ 选择状态已更新:', {
+        newComponentId: component?.id,
+        newPath: path || null,
+        timestamp: new Date().toISOString(),
+      });
     },
     [],
   );
 
   const clearSelection = useCallback(() => {
+    console.log('🗑️ clearSelection 被调用:', {
+      timestamp: new Date().toISOString(),
+      stack: new Error().stack?.split('\n').slice(1, 4).join('\n'),
+    });
     setSelectedComponent(null);
     setSelectedPath(null);
+  }, []);
+
+  // 监听选择状态变化
+  useEffect(() => {
+    console.log('🔄 选择状态变化:', {
+      selectedComponent: selectedComponent?.id,
+      selectedPath,
+      timestamp: new Date().toISOString(),
+    });
+  }, [selectedComponent, selectedPath]);
+
+  // 组件卸载时清理
+  useEffect(() => {
+    return () => {
+      // 清理工作
+    };
   }, []);
 
   return {
@@ -362,6 +399,14 @@ export const useComponentUpdate = () => {
       clearSelection: any,
     ) => {
       if (selectedPath) {
+        // 允许卡片选中路径通过，不清空
+        if (
+          selectedPath.length === 2 &&
+          selectedPath[0] === 'dsl' &&
+          selectedPath[1] === 'body'
+        ) {
+          return null;
+        }
         const currentComponent = getComponentByPath(data, selectedPath);
         if (currentComponent && currentComponent.id === selectedComponent?.id) {
           return currentComponent;

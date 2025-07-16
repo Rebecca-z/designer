@@ -124,7 +124,16 @@ const CardDesigner: React.FC = () => {
   // 处理组件更新的副作用
   useEffect(() => {
     if (selection.selectedPath) {
-      // 对于卡片数据结构，需要调整路径查找逻辑
+      // 如果是卡片选择路径，不需要检查组件存在性
+      if (
+        selection.selectedPath.length === 2 &&
+        selection.selectedPath[0] === 'dsl' &&
+        selection.selectedPath[1] === 'body'
+      ) {
+        return; // 卡片选择路径不需要验证
+      }
+
+      // 对于组件选择路径，需要调整路径查找逻辑
       const component = getComponentByPath(cardData, selection.selectedPath);
       if (component && component.id === selection.selectedComponent?.id) {
         // 组件仍然存在且匹配
@@ -244,6 +253,17 @@ const CardDesigner: React.FC = () => {
   };
 
   const handleUpdateSelectedComponent = (updatedComponent: ComponentType) => {
+    // 检查是否是卡片选中状态
+    if (
+      selection.selectedPath &&
+      selection.selectedPath.length === 2 &&
+      selection.selectedPath[0] === 'dsl' &&
+      selection.selectedPath[1] === 'body'
+    ) {
+      console.log('🎯 卡片选中状态，不处理组件更新');
+      return;
+    }
+
     if (!selection.selectedPath || selection.selectedPath.length < 4) {
       console.warn('无效的选中路径:', selection.selectedPath);
       return;
@@ -319,7 +339,8 @@ const CardDesigner: React.FC = () => {
     }
 
     history.updateData(newData as any);
-    selection.selectComponent(updatedComponent, selection.selectedPath);
+    // 移除这行代码，避免重新设置选择状态
+    // selection.selectComponent(updatedComponent, selection.selectedPath);
   };
 
   // 处理卡片属性更新
@@ -342,9 +363,16 @@ const CardDesigner: React.FC = () => {
 
   // 大纲树选择处理
   const handleOutlineSelect = (
-    component: ComponentType,
+    component: ComponentType | null,
     path: (string | number)[],
   ) => {
+    console.log('🌳 大纲树选择处理:', {
+      componentId: component?.id,
+      componentTag: component?.tag,
+      path,
+      pathLength: path.length,
+      isCard: path.length === 2 && path[0] === 'dsl' && path[1] === 'body',
+    });
     selection.selectComponent(component, path);
     focus.handleCanvasFocus();
   };

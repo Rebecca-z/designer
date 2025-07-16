@@ -705,9 +705,23 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
       // 组件选中和操作处理
       const handleClick = (e: React.MouseEvent) => {
+        // 立即阻止事件冒泡，防止触发父级选中
         e.stopPropagation();
-        onSelect?.(element, childPath);
-        onCanvasFocus?.();
+        e.preventDefault();
+
+        // 确保点击的是组件包装器本身，而不是其子元素
+        const target = e.target as HTMLElement;
+        const currentTarget = e.currentTarget as HTMLElement;
+
+        // 检查点击目标是否是组件包装器本身
+        if (
+          target === currentTarget ||
+          target.closest('[data-component-wrapper]') === currentTarget
+        ) {
+          // 直接处理组件选中，不使用setTimeout
+          onSelect?.(element, childPath);
+          onCanvasFocus?.();
+        }
       };
 
       const handleDelete = () => {
@@ -755,7 +769,12 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       };
 
       const selectableWrapper = (
-        <div style={wrapperStyle} onClick={handleClick}>
+        <div
+          style={wrapperStyle}
+          onClick={handleClick}
+          data-component-wrapper="true"
+          data-component-id={element.id}
+        >
           {/* 操作按钮 */}
           {isSelected && !isPreview && onDelete && onCopy && (
             <div

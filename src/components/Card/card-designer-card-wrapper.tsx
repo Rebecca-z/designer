@@ -199,6 +199,12 @@ const DragSortableItem: React.FC<{
   const opacity = isDragging ? 0.4 : 1;
   drag(drop(ref));
 
+  const handleDragSortableClick = (e: React.MouseEvent) => {
+    // 阻止事件冒泡到卡片容器，避免触发卡片选中
+    e.stopPropagation();
+    e.preventDefault();
+  };
+
   return (
     <div
       ref={ref}
@@ -209,6 +215,8 @@ const DragSortableItem: React.FC<{
         cursor: component.tag === 'title' ? 'default' : 'grab',
       }}
       data-handler-id={handlerId}
+      onClick={handleDragSortableClick}
+      data-drag-sortable-item="true"
     >
       {/* 插入位置指示线 */}
       {isOver && insertPosition === 'before' && (
@@ -1138,7 +1146,45 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
   });
 
   const handleCardClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    const currentTarget = e.currentTarget as HTMLElement;
+
+    console.log('🎯 卡片点击处理:', {
+      targetTag: target.tagName,
+      targetClass: target.className,
+      isCurrentTarget: target === currentTarget,
+      hasComponentWrapper: !!target.closest('[data-component-wrapper]'),
+      hasDragSortableItem: !!target.closest('[data-drag-sortable-item]'),
+      hasCardContainer: !!target.closest('[data-card-container]'),
+      isCardSelected,
+    });
+
+    // 立即阻止事件冒泡，防止触发画布点击事件
     e.stopPropagation();
+
+    // 如果卡片已经被选中，不再重复处理选中事件
+    if (isCardSelected) {
+      console.log('🚫 卡片已选中，跳过重复选中');
+      return;
+    }
+
+    // 如果点击的是组件包装器或拖拽排序项，不处理卡片选中
+    if (
+      target.closest('[data-component-wrapper]') ||
+      target.closest('[data-drag-sortable-item]')
+    ) {
+      console.log('🚫 阻止卡片选中：点击的是组件或拖拽项');
+      return;
+    }
+
+    // 如果点击的是操作按钮，不处理卡片选中
+    if (target.closest('.ant-dropdown') || target.closest('.ant-btn')) {
+      console.log('🚫 阻止卡片选中：点击的是操作按钮');
+      return;
+    }
+
+    // 如果点击的是卡片容器本身或其子元素（但不是组件或按钮），则处理卡片选中
+    console.log('✅ 处理卡片选中');
     onCardSelect();
     onCanvasFocus();
   };
@@ -1164,7 +1210,12 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
   }
 
   return (
-    <div ref={drop} style={cardStyle} onClick={handleCardClick}>
+    <div
+      ref={drop}
+      style={cardStyle}
+      onClick={handleCardClick}
+      data-card-container="true"
+    >
       {/* 选中状态指示器 */}
       {isCardSelected && (
         <div
@@ -1180,7 +1231,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           }}
         />
       )}
-
       {/* 拖拽提示 */}
       {isOver && canDrop && (
         <div
@@ -1202,7 +1252,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           释放以添加组件到卡片
         </div>
       )}
-
       {/* 卡片内容 */}
       {elements.length > 0 ? (
         <div
@@ -1290,7 +1339,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           <div style={{ fontSize: '12px' }}>从左侧面板拖拽组件到卡片中</div>
         </div>
       )}
-
       {/* 卡片标签 */}
       {isCardSelected && (
         <div

@@ -262,7 +262,26 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
 
   const handleClick = (e: React.MouseEvent) => {
     if (isPreview) return;
-    e?.stopPropagation();
+
+    console.log('🎯 组件点击处理:', {
+      componentId: component.id,
+      componentTag: component.tag,
+      path,
+      targetTag: (e.target as HTMLElement)?.tagName,
+      targetClass: (e.target as HTMLElement)?.className,
+    });
+
+    // 立即阻止事件冒泡，防止触发卡片选中
+    e.stopPropagation();
+    e.preventDefault();
+
+    console.log('✅ 处理组件选中:', {
+      componentId: component.id,
+      componentTag: component.tag,
+      path,
+    });
+
+    // 直接处理组件选中
     onSelect(component, path);
     onCanvasFocus?.(); // 通知画布获得焦点
   };
@@ -367,6 +386,8 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             transition: 'all 0.2s ease',
           }}
           onClick={handleClick}
+          data-component-wrapper="true"
+          data-component-id={component.id}
         >
           {/* 操作按钮 */}
           {isCurrentSelected && !isPreview && (
@@ -512,7 +533,12 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
         </div>
       }
     >
-      <div style={containerStyle} onClick={handleClick}>
+      <div
+        style={containerStyle}
+        onClick={handleClick}
+        data-component-wrapper="true"
+        data-component-id={component.id}
+      >
         {/* 组件操作按钮 */}
         {isCurrentSelected && !isPreview && (
           <div
