@@ -555,7 +555,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     insertIndex?: number,
   ): ComponentType[] => {
     const newElements = [...elements];
-    let current: any = newElements;
 
     console.log('🎯 添加组件到路径:', {
       path,
@@ -569,273 +568,215 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       insertIndex,
     });
 
-    // 如果是根级别（直接添加到卡片）
-    if (path.length === 3 && path[2] === 'elements') {
-      if (insertIndex !== undefined) {
-        newElements.splice(insertIndex, 0, newComponent);
-      } else {
-        newElements.push(newComponent);
-      }
-      console.log('✅ 根级别组件添加成功:', {
-        componentId: newComponent.id,
-        componentTag: newComponent.tag,
-        insertIndex,
-        finalLength: newElements.length,
-      });
-      return newElements;
-    }
+    // 兼容 SmartDropZone 传递的带索引 targetPath，最后一个为插入索引
+    const isPathEndsWithElements = path[path.length - 1] === 'elements';
+    const realInsertIndex = isPathEndsWithElements
+      ? insertIndex ?? 0
+      : (path[path.length - 1] as number);
+    const navPath = isPathEndsWithElements ? path : path.slice(0, -1);
 
-    // 导航到目标容器
-    for (let i = 3; i < path.length; i++) {
-      const key = path[i];
+    // 检查路径格式，决定起始导航位置
+    const isStandardPath =
+      navPath.length >= 3 &&
+      navPath[0] === 'dsl' &&
+      navPath[1] === 'body' &&
+      navPath[2] === 'elements';
 
+    const startIndex = isStandardPath ? 3 : 0;
+    const actualNavPath = navPath.slice(startIndex);
+
+    console.log('🔍 路径导航分析:', {
+      isStandardPath,
+      startIndex,
+      navPath,
+      actualNavPath,
+      realInsertIndex,
+    });
+
+    let current: any = newElements;
+    for (let i = 0; i < actualNavPath.length; i++) {
+      const key = actualNavPath[i];
+      const nextKey = actualNavPath[i + 1];
       console.log(`🔍 路径导航步骤 ${i}:`, {
         key,
         keyType: typeof key,
+        nextKey,
+        nextKeyType: typeof nextKey,
         currentType: current ? typeof current : 'undefined',
         isArray: Array.isArray(current),
+        currentTag:
+          !Array.isArray(current) && current ? current.tag : 'undefined',
         currentKeys:
-          current && typeof current === 'object' ? Object.keys(current) : 'N/A',
+          !Array.isArray(current) && current ? Object.keys(current) : 'N/A',
+        arrayLength: Array.isArray(current) ? current.length : 'N/A',
       });
 
       if (key === 'elements') {
-        // 检查是否是最后一个 elements（目标位置）
-        if (i === path.length - 1) {
-          // 这是目标elements数组，在这里插入组件
-          // 如果current是组件对象，需要访问它的elements属性
-          let targetArray;
-          if (current && Array.isArray(current)) {
-            targetArray = current;
-          } else if (
+        // 只在 current 有 elements 属性时才进入
+        if (
+          !Array.isArray(current) &&
+          current &&
+          Array.isArray(current.elements)
+        ) {
+          current = current.elements;
+        } else if (Array.isArray(current)) {
+          // 已经是数组，跳过
+        } else {
+          // 跳过，继续
+          continue;
+        }
+      } else if (key === 'columns') {
+        // columns 导航
+        console.log('🔍 columns 导航调试:', {
+          current: current ? 'exists' : 'undefined',
+          currentType: current ? typeof current : 'undefined',
+          isArray: Array.isArray(current),
+          currentTag:
+            !Array.isArray(current) && current ? current.tag : 'undefined',
+          hasColumns:
+            !Array.isArray(current) && current && current.columns
+              ? 'yes'
+              : 'no',
+          columnsLength:
+            !Array.isArray(current) && current && current.columns
+              ? current.columns.length
+              : 'N/A',
+          columnIndex: nextKey,
+          columnExists:
+            !Array.isArray(current) &&
             current &&
-            current.elements &&
-            Array.isArray(current.elements)
+            current.columns &&
+            current.columns[nextKey]
+              ? 'yes'
+              : 'no',
+        });
+
+        if (!current || Array.isArray(current) || !current.columns) {
+          console.error('❌ 添加组件失败：无效的分栏索引', {
+            path,
+            navPath,
+            currentIndex: i,
+            columnIndex: nextKey,
+            current: current ? 'exists' : 'undefined',
+            currentTag:
+              !Array.isArray(current) && current ? current.tag : 'undefined',
+            hasColumns:
+              !Array.isArray(current) && current && current.columns
+                ? 'yes'
+                : 'no',
+            columnsLength:
+              !Array.isArray(current) && current && current.columns
+                ? current.columns.length
+                : 'N/A',
+          });
+          return elements;
+        }
+        if (!Array.isArray(current.columns)) {
+          current.columns = [];
+        }
+        if (typeof nextKey === 'number') {
+          while (current.columns.length <= nextKey) {
+            current.columns.push({ elements: [] });
+          }
+          if (
+            !current.columns[nextKey] ||
+            typeof current.columns[nextKey] !== 'object'
           ) {
-            targetArray = current.elements;
+            current.columns[nextKey] = { elements: [] };
+          }
+          current = current.columns[nextKey];
+          i++; // 跳过下一个索引
+          continue;
+        } else {
+          current = current.columns;
+          continue;
+        }
+      } else if (typeof key === 'number') {
+        if (current && Array.isArray(current)) {
+          console.log(`🔍 数字索引导航:`, {
+            key,
+            arrayLength: current.length,
+            isValidIndex: key >= 0 && key < current.length,
+            currentElement: current[key]
+              ? { id: current[key].id, tag: current[key].tag }
+              : 'undefined',
+          });
+
+          if (key >= 0 && key < current.length) {
+            current = current[key];
+            console.log(`✅ 导航到数组索引 ${key}:`, {
+              nextComponent: current
+                ? { id: current.id, tag: current.tag }
+                : 'undefined',
+            });
           } else {
-            console.error('❌ 添加组件失败：目标不是有效的elements数组', {
+            console.error('❌ 添加组件失败：无效的数组索引', {
               path,
+              navPath,
               currentIndex: i,
               key,
               current: current ? 'exists' : 'undefined',
               isArray: Array.isArray(current),
-              hasElements: current && current.elements ? 'yes' : 'no',
-              elementsIsArray:
-                current && current.elements
-                  ? Array.isArray(current.elements)
-                  : 'N/A',
+              arrayLength: Array.isArray(current) ? current.length : 'N/A',
             });
-            return elements; // 返回原始数组，不做修改
+            return elements;
           }
-
-          if (insertIndex !== undefined) {
-            targetArray.splice(insertIndex, 0, newComponent);
-          } else {
-            targetArray.push(newComponent);
-          }
-
-          console.log('✅ 组件添加成功 (指定位置):', {
-            componentId: newComponent.id,
-            componentTag: newComponent.tag,
-            insertIndex,
-            arrayLength: targetArray.length,
-            targetPath: path,
-          });
-          return newElements;
-        } else {
-          // 这是中间的elements，需要继续导航
-          // 下一个应该是数组索引
-          const nextIndex = path[i + 1];
-
-          // 检查下一个是否是数字索引
-          if (typeof nextIndex === 'number') {
-            if (current && Array.isArray(current) && current[nextIndex]) {
-              current = current[nextIndex];
-              i++; // 跳过下一个索引
-              console.log(`✅ 导航到数组索引 ${nextIndex}:`, {
-                nextComponent: current
-                  ? { id: current.id, tag: current.tag }
-                  : 'undefined',
-              });
-            } else {
-              console.error('❌ 添加组件失败：无效的elements数组索引', {
-                path,
-                currentIndex: i,
-                key,
-                nextIndex,
-                current: current ? 'exists' : 'undefined',
-                isArray: Array.isArray(current),
-                arrayLength: Array.isArray(current) ? current.length : 'N/A',
-              });
-              return elements; // 返回原始数组，不做修改
-            }
-          } else if (nextIndex === 'elements') {
-            // 如果下一个也是 'elements'，说明这是表单容器的结构
-            // 当前current应该是表单组件对象，需要访问其elements属性
-            if (
-              current &&
-              current.elements &&
-              Array.isArray(current.elements)
-            ) {
-              current = current.elements;
-              i++; // 跳过下一个 'elements'
-              console.log('✅ 导航到表单组件的elements数组:', {
-                componentTag: current.tag || 'unknown',
-                elementsLength: current.length,
-              });
-            } else {
-              console.error('❌ 添加组件失败：表单组件没有elements数组', {
-                path,
-                currentIndex: i,
-                key,
-                nextIndex,
-                current: current ? 'exists' : 'undefined',
-                hasElements: current && current.elements ? 'yes' : 'no',
-                currentTag: current ? current.tag : 'undefined',
-              });
-              return elements; // 返回原始数组，不做修改
-            }
-          } else {
-            // 如果下一个不是数字也不是 'elements'，说明这是目标elements数组
-            // 检查current是否是组件对象，需要访问其elements属性
-            if (
-              current &&
-              current.elements &&
-              Array.isArray(current.elements)
-            ) {
-              current = current.elements;
-              console.log('✅ 导航到组件对象的elements数组:', {
-                componentTag: current.tag || 'unknown',
-                elementsLength: current.length,
-              });
-            } else {
-              console.error('❌ 添加组件失败：无法找到elements数组', {
-                path,
-                currentIndex: i,
-                key,
-                nextIndex,
-                current: current ? 'exists' : 'undefined',
-                hasElements: current && current.elements ? 'yes' : 'no',
-              });
-              return elements; // 返回原始数组，不做修改
-            }
-          }
-        }
-      } else if (key === 'columns') {
-        const columnIndex = path[i + 1] as number;
-        if (
-          current &&
-          current.columns &&
-          Array.isArray(current.columns) &&
-          current.columns[columnIndex] &&
-          current.columns[columnIndex].elements
-        ) {
-          current = current.columns[columnIndex].elements;
-          i += 2; // 跳过下两个索引
-          console.log(
-            `✅ 导航到分栏 ${columnIndex} 的elements:`,
-            current.length,
-          );
-        } else {
-          console.error('❌ 添加组件失败：无效的分栏结构', {
-            path,
-            currentIndex: i,
-            key,
-            columnIndex,
-            current: current ? 'exists' : 'undefined',
-            currentTag: current ? current.tag : 'undefined',
-            hasColumns: current && current.columns ? 'yes' : 'no',
-            columnsLength:
-              current && current.columns ? current.columns.length : 0,
-            targetColumnExists:
-              current && current.columns && current.columns[columnIndex]
-                ? 'yes'
-                : 'no',
-          });
-          return elements; // 返回原始数组，不做修改
-        }
-      } else if (typeof key === 'number') {
-        if (current && Array.isArray(current) && current[key]) {
-          current = current[key];
-          console.log(`✅ 导航到数组索引 ${key}:`, {
-            nextComponent: current
-              ? { id: current.id, tag: current.tag }
-              : 'undefined',
-          });
         } else {
           console.error('❌ 添加组件失败：无效的数组索引', {
             path,
+            navPath,
             currentIndex: i,
             key,
             current: current ? 'exists' : 'undefined',
             isArray: Array.isArray(current),
             arrayLength: Array.isArray(current) ? current.length : 'N/A',
           });
-          return elements; // 返回原始数组，不做修改
+          return elements;
         }
       } else {
-        if (current && current[key] !== undefined) {
+        if (current && !Array.isArray(current) && current[key] !== undefined) {
           current = current[key];
-
-          // 如果导航到了一个对象的elements属性，需要检查下一步
-          if (key === 'elements' && current && Array.isArray(current)) {
-            // 已经到达了elements数组，继续处理
-            console.log('✅ 导航到elements数组:', {
-              elementsLength: current.length,
-            });
-            continue;
-          }
         } else {
           console.error('❌ 添加组件失败：无效的属性路径', {
             path,
+            navPath,
             currentIndex: i,
             key,
             current: current ? 'exists' : 'undefined',
             availableKeys:
-              current && typeof current === 'object'
+              current && typeof current === 'object' && !Array.isArray(current)
                 ? Object.keys(current)
                 : 'N/A',
           });
-          return elements; // 返回原始数组，不做修改
+          return elements;
         }
       }
     }
-
-    // 如果执行到这里，说明已经成功导航到目标位置
-    // current应该指向目标数组
+    // current 应该是目标 elements 数组
     if (Array.isArray(current)) {
-      if (insertIndex !== undefined) {
-        current.splice(insertIndex, 0, newComponent);
-        console.log('✅ 组件添加成功 (指定位置):', {
-          componentId: newComponent.id,
-          componentTag: newComponent.tag,
-          insertIndex,
-          arrayLength: current.length,
-          targetPath: path,
-        });
-      } else {
-        current.push(newComponent);
-        console.log('✅ 组件添加成功 (末尾):', {
-          componentId: newComponent.id,
-          componentTag: newComponent.tag,
-          arrayLength: current.length,
-          targetPath: path,
-        });
-      }
+      current.splice(realInsertIndex, 0, newComponent);
+      console.log('✅ 组件添加成功 (指定位置):', {
+        componentId: newComponent.id,
+        componentTag: newComponent.tag,
+        insertIndex: realInsertIndex,
+        arrayLength: current.length,
+        targetPath: path,
+      });
     } else {
       console.error('❌ 添加组件失败：最终目标不是数组', {
         path,
-        current: current
-          ? {
-              type: typeof current,
-              tag: current.tag || 'no tag',
-              keys: Object.keys(current),
-            }
-          : 'null/undefined',
+        navPath,
+        current:
+          current && !Array.isArray(current)
+            ? {
+                type: typeof current,
+                tag: current.tag || 'no tag',
+                keys: Object.keys(current),
+              }
+            : 'null/undefined',
       });
       return elements;
     }
-
     return newElements;
   };
 
@@ -845,7 +786,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     path: (string | number)[],
   ): ComponentType[] => {
     const newElements = [...elements];
-    let current: any = newElements;
 
     console.log('🗑️ 从路径移除组件:', {
       path,
@@ -869,73 +809,45 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       return newElements;
     }
 
-    // 导航到父容器
+    // 简化的路径导航逻辑
+    let current: any = newElements;
+
+    // 从第3元素开始导航（跳过 'dsl', body, elements'）
     for (let i = 3; i < path.length - 1; i++) {
       const key = path[i];
-
-      console.log(`🔍 移除路径导航步骤 ${i}:`, {
+      const nextKey = path[i + 1];
+      console.log(`🔍 路径导航步骤 ${i}:`, {
         key,
         keyType: typeof key,
+        nextKey,
+        nextKeyType: typeof nextKey,
         currentType: current ? typeof current : 'undefined',
         isArray: Array.isArray(current),
       });
 
-      if (key === 'elements') {
-        // 检查是否是倒数第二个elements（父容器）
-        if (i === path.length - 2) {
-          // 这是目标组件的父elements数组
-          // 不需要进一步导航，current就是目标数组
-          console.log('✅ 到达父elements数组，停止导航');
-          break;
-        } else {
-          // 这是中间的elements，需要继续导航
-          const nextIndex = path[i + 1] as number;
-          if (current && Array.isArray(current) && current[nextIndex]) {
-            current = current[nextIndex];
-            i++; // 跳过下一个索引
-            console.log(`✅ 导航到数组索引 ${nextIndex}:`, {
-              nextComponent: current
-                ? { id: current.id, tag: current.tag }
-                : 'undefined',
-            });
-          } else {
-            console.error('❌ 路径导航错误：无效的elements数组索引', {
-              path,
-              currentIndex: i,
-              key,
-              nextIndex,
-              current: current ? 'exists' : 'undefined',
-              isArray: Array.isArray(current),
-              arrayLength: Array.isArray(current) ? current.length : 'N/A',
-            });
-            return elements; // 返回原始数组，不做修改
-          }
-        }
-      } else if (key === 'columns') {
-        const columnSetIndex = path[i + 1] as number;
-        const columnIndex = path[i + 2] as number;
-        // 安全检查：确保分栏结构有效
-        if (
-          !current ||
-          !current[columnSetIndex] ||
-          !current[columnSetIndex].columns ||
-          !current[columnSetIndex].columns[columnIndex] ||
-          !current[columnSetIndex].columns[columnIndex].elements
-        ) {
-          console.error('❌ 路径导航错误：无效的分栏路径', {
+      // 处理分栏特殊情况
+      if (key === 'columns' && typeof nextKey === 'number') {
+        // 直接导航到 columns[columnIndex]
+        if (!current || !current.columns || !current.columns[nextKey]) {
+          console.error('❌ 路径导航错误：无效的分栏索引', {
             path,
             currentIndex: i,
-            key,
-            columnSetIndex,
-            columnIndex,
+            columnIndex: nextKey,
             current: current ? 'exists' : 'undefined',
+            hasColumns: current && current.columns ? 'yes' : 'no',
+            columnsLength:
+              current && current.columns ? current.columns.length : 'N/A',
           });
-          return elements; // 返回原始数组，不做修改
+          return elements;
         }
-        current = current[columnSetIndex].columns[columnIndex].elements;
-        i += 2; // 跳过下两个索引
-        console.log(`✅ 导航到分栏 ${columnIndex} 的elements:`, current.length);
-      } else if (typeof key === 'number') {
+        current = current.columns[nextKey];
+        i++; // 跳过下一个索引
+        console.log(`✅ 导航到分栏 ${nextKey}:`, Object.keys(current));
+        continue;
+      }
+
+      // 处理普通属性导航
+      if (typeof key === 'number') {
         if (current && Array.isArray(current) && current[key]) {
           current = current[key];
           console.log(`✅ 导航到数组索引 ${key}:`, {
@@ -952,26 +864,29 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
             isArray: Array.isArray(current),
             arrayLength: Array.isArray(current) ? current.length : 'N/A',
           });
-          return elements; // 返回原始数组，不做修改
+          return elements;
         }
       } else {
-        // 安全检查：确保属性存在
+        // 对象属性导航
         if (!current || current[key] === undefined) {
           console.error('❌ 路径导航错误：无效的属性路径', {
             path,
             currentIndex: i,
             key,
             current: current ? 'exists' : 'undefined',
+            availableKeys: current ? Object.keys(current) : 'N/A',
           });
-          return elements; // 返回原始数组，不做修改
+          return elements;
         }
         current = current[key];
-
-        // 如果导航到了一个对象的elements属性，需要检查下一步
-        if (key === 'elements' && current && Array.isArray(current)) {
-          // 已经到达了elements数组，继续处理
-          continue;
-        }
+        console.log(`✅ 导航到属性 ${key}:`, {
+          type: typeof current,
+          isArray: Array.isArray(current),
+          keys:
+            current && typeof current === 'object'
+              ? Object.keys(current)
+              : 'N/A',
+        });
       }
     }
 
@@ -994,8 +909,20 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         elementsIsArray:
           current && current.elements ? Array.isArray(current.elements) : 'N/A',
       });
-      return elements; // 返回原始数组，不做修改
+      return elements;
     }
+
+    // 增强日志，确认 targetArray 内容
+    console.log('🟠 即将删除的目标数组内容:', {
+      path,
+      lastIndex,
+      targetArraySnapshot: targetArray.map((el: any, idx: number) => ({
+        idx,
+        id: el?.id || 'undefined',
+        tag: el?.tag || 'undefined',
+        isValid: !!el,
+      })),
+    });
 
     if (lastIndex >= 0 && lastIndex < targetArray.length) {
       const removedComponent = targetArray[lastIndex];
@@ -1016,7 +943,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         lastIndex,
         targetArrayLength: targetArray.length,
       });
-      return elements; // 返回原始数组，不做修改
+      return elements;
     }
 
     return newElements;
@@ -1269,7 +1196,43 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       JSON.stringify(draggedContainerPath) ===
       JSON.stringify(targetContainerPath);
 
-    if (isSameContainer) {
+    // 修复：分栏容器内的跨列移动应该被视为同容器内排序
+    // 检查是否是分栏容器内的跨列移动
+    const isColumnSetContainer =
+      draggedContainerPath.length >= 5 &&
+      draggedContainerPath[0] === 'dsl' &&
+      draggedContainerPath[1] === 'body' &&
+      draggedContainerPath[2] === 'elements' &&
+      typeof draggedContainerPath[3] === 'number' &&
+      draggedContainerPath[4] === 'columns' &&
+      targetContainerPath.length >= 5 &&
+      targetContainerPath[0] === 'dsl' &&
+      targetContainerPath[1] === 'body' &&
+      targetContainerPath[2] === 'elements' &&
+      typeof targetContainerPath[3] === 'number' &&
+      targetContainerPath[4] === 'columns' &&
+      draggedContainerPath[3] === targetContainerPath[3]; // 同一个 column_set
+
+    // 检查是否是跨列移动（不同列）
+    const isCrossColumnMove =
+      isColumnSetContainer &&
+      draggedContainerPath.length >= 6 &&
+      targetContainerPath.length >= 6 &&
+      draggedContainerPath[5] !== targetContainerPath[5]; // 不同的列索引
+
+    const shouldTreatAsSameContainer =
+      isSameContainer || (isColumnSetContainer && !isCrossColumnMove);
+
+    console.log('🔍 容器类型分析:', {
+      isSameContainer,
+      isColumnSetContainer,
+      isCrossColumnMove,
+      shouldTreatAsSameContainer,
+      draggedContainerPath,
+      targetContainerPath,
+    });
+
+    if (shouldTreatAsSameContainer) {
       // 同容器内移动 - 使用位置交换而不是删除+添加
       console.log('🔄 同容器内移动:', {
         draggedIndex,
@@ -1305,30 +1268,26 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         targetElementsPath,
       );
 
-      console.log('🔍 目标容器查找结果:', {
-        targetContainer: targetContainer
-          ? `array(${targetContainer.length})`
-          : 'null',
-        isArray: Array.isArray(targetContainer),
+      // 新增详细日志
+      console.log('🟡 同容器内排序前:', {
+        draggedIndex,
+        dropIndex,
+        targetContainerPath,
+        targetElementsPath,
+        targetContainerSnapshot:
+          targetContainer && Array.isArray(targetContainer)
+            ? targetContainer.map((el, idx) => ({
+                idx,
+                id: el?.id || 'undefined',
+                tag: el?.tag || 'undefined',
+                isValid: !!el,
+              }))
+            : targetContainer,
       });
 
       if (targetContainer && Array.isArray(targetContainer)) {
         // 执行插入式移动：先移除，后插入（与根级别逻辑保持一致）
         const draggedItem = targetContainer[draggedIndex];
-
-        console.log('🔍 排序前的容器状态:', {
-          containerLength: targetContainer.length,
-          draggedIndex,
-          dropIndex,
-          draggedItem: draggedItem
-            ? { id: draggedItem.id, tag: draggedItem.tag }
-            : 'null',
-          containerElements: targetContainer.map((el, idx) => ({
-            index: idx,
-            id: el.id,
-            tag: el.tag,
-          })),
-        });
 
         // 移除原位置的组件
         targetContainer.splice(draggedIndex, 1);
@@ -1340,15 +1299,27 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         // 插入到新位置
         targetContainer.splice(adjustedTargetIndex, 0, draggedItem);
 
+        // 新增排序后日志
+        console.log('🟢 同容器内排序后:', {
+          adjustedTargetIndex,
+          targetContainerSnapshot: targetContainer.map((el, idx) => ({
+            idx,
+            id: el?.id || 'undefined',
+            tag: el?.tag || 'undefined',
+            isValid: !!el,
+          })),
+        });
+
         console.log('✅ 同容器内排序完成:', {
           from: draggedIndex,
           to: adjustedTargetIndex,
           containerLength: targetContainer.length,
-          movedComponent: draggedItem.tag,
+          movedComponent: draggedItem?.tag || 'undefined',
           containerElementsAfter: targetContainer.map((el, idx) => ({
             index: idx,
-            id: el.id,
-            tag: el.tag,
+            id: el?.id || 'undefined',
+            tag: el?.tag || 'undefined',
+            isValid: !!el,
           })),
         });
 
@@ -1366,13 +1337,45 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           id: draggedComponent.id,
           tag: draggedComponent.tag,
         },
+        isCrossColumnMove: isCrossColumnMove,
       });
 
       // 先移除原位置的组件
       let newElements = removeComponentByPath(elements, draggedPath);
 
+      console.log('🟠 移除组件后的状态:', {
+        originalLength: elements.length,
+        newLength: newElements.length,
+        removedComponent: {
+          id: draggedComponent.id,
+          tag: draggedComponent.tag,
+        },
+      });
+
+      // 重新计算目标容器路径（因为数组长度可能已经改变）
+      let adjustedTargetContainerPath = [...targetContainerPath];
+
+      // 如果目标路径包含数组索引，需要调整
+      if (
+        targetContainerPath.length > 3 &&
+        typeof targetContainerPath[3] === 'number'
+      ) {
+        const targetIndex = targetContainerPath[3] as number;
+
+        // 如果移除的组件在目标索引之前，需要调整索引
+        const draggedIndex = draggedPath[3] as number;
+        if (draggedIndex < targetIndex) {
+          adjustedTargetContainerPath[3] = targetIndex - 1;
+          console.log('🔧 调整目标路径索引:', {
+            originalIndex: targetIndex,
+            adjustedIndex: targetIndex - 1,
+            reason: '移除的组件在目标索引之前',
+          });
+        }
+      }
+
       // 计算目标容器路径
-      const targetElementsPath = [...targetContainerPath, 'elements'];
+      const targetElementsPath = [...adjustedTargetContainerPath, 'elements'];
 
       // 计算实际的插入位置
       let actualDropIndex = dropIndex;
@@ -1408,6 +1411,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         targetElementsPath,
         actualDropIndex,
         newElementsLength: newElements.length,
+        isCrossColumnMove: isCrossColumnMove,
       });
 
       // 添加到新位置
@@ -1423,6 +1427,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         fromPath: draggedPath,
         toPath: targetElementsPath,
         finalElementsLength: newElements.length,
+        isCrossColumnMove: isCrossColumnMove,
       });
 
       onElementsChange(newElements);

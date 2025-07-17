@@ -1102,23 +1102,25 @@ const SmartDropZone: React.FC<{
             insertIndex: childElements.length,
           });
 
-          // 检查拖拽限制
-          if (!canDropInContainer(item.component.tag, targetPath)) {
-            console.warn(
-              `容器组件不能嵌套到${
-                containerType === 'form' ? '表单' : '分栏'
-              }中`,
-            );
-            return;
-          }
+          // 这里直接return，避免和ContainerSortableItem重复处理，防止原位置未删除
+          return;
+          // // 检查拖拽限制
+          // if (!canDropInContainer(item.component.tag, targetPath)) {
+          //   console.warn(
+          //     `容器组件不能嵌套到${
+          //       containerType === 'form' ? '表单' : '分栏'
+          //     }中`,
+          //   );
+          //   return;
+          // }
 
-          // 移动到末尾
-          onComponentMove?.(
-            item.component,
-            item.path,
-            [...targetPath, childElements.length],
-            childElements.length,
-          );
+          // // 移动到末尾
+          // onComponentMove?.(
+          //   item.component,
+          //   item.path,
+          //   [...targetPath, childElements.length],
+          //   childElements.length,
+          // );
         }
       }
     },
