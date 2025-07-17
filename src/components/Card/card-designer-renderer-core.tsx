@@ -43,7 +43,13 @@ interface ComponentRendererCoreProps {
 
 // 检查组件是否为容器类型
 const isContainerComponent = (componentType: string): boolean => {
-  return componentType === 'form' || componentType === 'column_set';
+  // 支持左侧面板的容器组件类型
+  return (
+    componentType === 'form' ||
+    componentType === 'column_set' ||
+    componentType === 'form-container' ||
+    componentType === 'layout-columns'
+  );
 };
 
 // 检查是否可以在目标容器中放置指定类型的组件
@@ -223,6 +229,7 @@ const ContainerSortableItem: React.FC<{
 
       // 检查容器嵌套限制
       if (item.isNew) {
+        // 左侧新组件的拖拽检查
         const canDrop = canDropInContainer(item.type, containerPath);
         console.log('✅ 新组件拖拽检查结果:', canDrop);
         return canDrop;
@@ -412,10 +419,18 @@ const ContainerSortableItem: React.FC<{
             draggedPath,
             targetPath: path,
             insertIndex,
+            draggedContainerPath,
+            targetContainerPath,
           });
 
           // 执行跨容器移动 - 传递正确的目标路径
           const targetPath = [...targetContainerPath, insertIndex];
+          console.log('🎯 调用 onComponentMove 进行跨容器移动:', {
+            component: item.component.tag,
+            fromPath: draggedPath,
+            toPath: targetPath,
+            insertIndex,
+          });
           onComponentMove(item.component, draggedPath, targetPath, insertIndex);
         }
       }
@@ -642,6 +657,7 @@ const DraggableWrapper: React.FC<{
 
       // 检查容器嵌套限制
       if (item.isNew) {
+        // 左侧新组件的拖拽检查
         return canDropInContainer(item.type, containerPath);
       } else if (item.component) {
         return canDropInContainer(item.component.tag, containerPath);
@@ -812,7 +828,8 @@ const DraggableWrapper: React.FC<{
               draggedPath,
               targetPath: path,
               insertIndex,
-              isChildComponent,
+              draggedContainerPath,
+              targetContainerPath,
             });
 
             onComponentMove(item.component, draggedPath, path, insertIndex);
@@ -947,8 +964,14 @@ const SmartDropZone: React.FC<{
   onComponentMove,
   childElements = [],
 }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [insertPosition, setInsertPosition] = React.useState<
+    'before' | 'after' | 'inside' | null
+  >(null);
+  const [insertIndex, setInsertIndex] = React.useState<number>(0);
+
   const [{ isOver, canDrop, draggedItem }, drop] = useDrop({
-    accept: ['component', 'existing-component', 'canvas-component'], // 添加canvas-component类型
+    accept: ['component', 'existing-component', 'canvas-component'],
     canDrop: (item: DragItem) => {
       console.log('🔍 SmartDropZone canDrop 检查:', {
         itemType: item.type,
@@ -1019,6 +1042,79 @@ const SmartDropZone: React.FC<{
       console.log('❌ 默认拒绝拖拽');
       return false;
     },
+    hover: (item: DragItem, monitor) => {
+      if (!ref.current) return;
+
+      const hoverBoundingRect = ref.current.getBoundingClientRect();
+      const clientOffset = monitor.getClientOffset();
+      if (!clientOffset) return;
+
+      // 获取鼠标相对于容器的位置
+      const hoverClientY = clientOffset.y - hoverBoundingRect.top;
+      const hoverClientX = clientOffset.x - hoverBoundingRect.left;
+      const containerHeight = hoverBoundingRect.height;
+      const containerWidth = hoverBoundingRect.width;
+
+      // 确定插入位置
+      let currentInsertPosition: 'before' | 'after' | 'inside' | null = null;
+      let currentInsertIndex = 0;
+
+      // 如果容器为空，直接插入到内部
+      if (childElements.length === 0) {
+        currentInsertPosition = 'inside';
+        currentInsertIndex = 0;
+      } else {
+        // 检查是否在容器的边缘区域
+        const edgeThreshold = 20; // 边缘检测阈值
+
+        // 检查顶部边缘
+        if (hoverClientY <= edgeThreshold) {
+          currentInsertPosition = 'before';
+          currentInsertIndex = 0;
+        }
+        // 检查底部边缘
+        else if (hoverClientY >= containerHeight - edgeThreshold) {
+          currentInsertPosition = 'after';
+          currentInsertIndex = childElements.length;
+        }
+        // 检查左侧边缘
+        else if (hoverClientX <= edgeThreshold) {
+          currentInsertPosition = 'before';
+          currentInsertIndex = 0;
+        }
+        // 检查右侧边缘
+        else if (hoverClientX >= containerWidth - edgeThreshold) {
+          currentInsertPosition = 'after';
+          currentInsertIndex = childElements.length;
+        }
+        // 在容器内部，根据鼠标位置确定插入位置
+        else {
+          // 计算每个子元素的位置
+          const childHeight = containerHeight / childElements.length;
+          const targetChildIndex = Math.floor(hoverClientY / childHeight);
+
+          if (targetChildIndex < childElements.length) {
+            const childTop = targetChildIndex * childHeight;
+            const childMiddle = childTop + childHeight / 2;
+
+            if (hoverClientY < childMiddle) {
+              currentInsertPosition = 'before';
+              currentInsertIndex = targetChildIndex;
+            } else {
+              currentInsertPosition = 'after';
+              currentInsertIndex = targetChildIndex + 1;
+            }
+          } else {
+            currentInsertPosition = 'after';
+            currentInsertIndex = childElements.length;
+          }
+        }
+      }
+
+      // 更新插入位置状态
+      setInsertPosition(currentInsertPosition);
+      setInsertIndex(currentInsertIndex);
+    },
     drop: (item: DragItem, monitor) => {
       if (monitor.didDrop()) return;
 
@@ -1034,16 +1130,19 @@ const SmartDropZone: React.FC<{
         },
         childElementsCount: childElements.length,
         columnIndex,
+        insertPosition,
+        insertIndex,
       });
 
       if (item.isNew) {
-        // 新组件添加到末尾
+        // 新组件添加到指定位置
         console.log('✅ 新组件拖拽到容器:', {
           itemType: item.type,
           targetPath,
-          insertIndex: childElements.length,
+          insertIndex,
+          insertPosition,
         });
-        onContainerDrop?.(item, targetPath, childElements.length);
+        onContainerDrop?.(item, targetPath, insertIndex);
       } else if (item.component && item.path) {
         // 现有组件移动
         const draggedContainerPath = item.path.slice(0, -1);
@@ -1073,7 +1172,7 @@ const SmartDropZone: React.FC<{
               from: item.path,
               to: targetPath,
               containerType,
-              insertIndex: childElements.length,
+              insertIndex,
             });
           }
 
@@ -1087,42 +1186,44 @@ const SmartDropZone: React.FC<{
             });
           }
 
-          // 移动到末尾
+          // 移动到指定位置
           onComponentMove?.(
             item.component,
             item.path,
-            [...targetPath, childElements.length],
-            childElements.length,
+            [...targetPath, insertIndex],
+            insertIndex,
           );
         } else {
-          // 同容器内的拖拽 - 允许添加到末尾
-          console.log('🔄 同容器内拖拽到末尾:', {
+          // 同容器内的拖拽 - 移动到指定位置
+          console.log('🔄 同容器内拖拽到指定位置:', {
             component: item.component.tag,
             targetPath,
-            insertIndex: childElements.length,
+            insertIndex,
           });
 
-          // 这里直接return，避免和ContainerSortableItem重复处理，防止原位置未删除
-          return;
-          // // 检查拖拽限制
-          // if (!canDropInContainer(item.component.tag, targetPath)) {
-          //   console.warn(
-          //     `容器组件不能嵌套到${
-          //       containerType === 'form' ? '表单' : '分栏'
-          //     }中`,
-          //   );
-          //   return;
-          // }
+          // 检查拖拽限制
+          if (!canDropInContainer(item.component.tag, targetPath)) {
+            console.warn(
+              `容器组件不能嵌套到${
+                containerType === 'form' ? '表单' : '分栏'
+              }中`,
+            );
+            return;
+          }
 
-          // // 移动到末尾
-          // onComponentMove?.(
-          //   item.component,
-          //   item.path,
-          //   [...targetPath, childElements.length],
-          //   childElements.length,
-          // );
+          // 移动到指定位置
+          onComponentMove?.(
+            item.component,
+            item.path,
+            [...targetPath, insertIndex],
+            insertIndex,
+          );
         }
       }
+
+      // 清理状态
+      setInsertPosition(null);
+      setInsertIndex(0);
     },
     collect: (monitor) => ({
       isOver: monitor.isOver({ shallow: true }),
@@ -1210,6 +1311,41 @@ const SmartDropZone: React.FC<{
         </div>
       )}
 
+      {/* 插入位置指示线 */}
+      {isOver && canDrop && insertPosition === 'before' && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '-2px',
+            left: '0',
+            right: '0',
+            height: '3px',
+            backgroundColor: '#1890ff',
+            borderRadius: '1.5px',
+            zIndex: 1000,
+            boxShadow: '0 0 6px rgba(24, 144, 255, 0.6)',
+            transition: 'opacity 0.1s ease',
+          }}
+        />
+      )}
+
+      {isOver && canDrop && insertPosition === 'after' && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '-2px',
+            left: '0',
+            right: '0',
+            height: '3px',
+            backgroundColor: '#1890ff',
+            borderRadius: '1.5px',
+            zIndex: 1000,
+            boxShadow: '0 0 6px rgba(24, 144, 255, 0.6)',
+            transition: 'opacity 0.1s ease',
+          }}
+        />
+      )}
+
       {/* 内容区域 */}
       {hasContent ? (
         <div
@@ -1262,6 +1398,13 @@ const SmartDropZone: React.FC<{
           }}
         >
           {dropMessage(draggedItem?.isChildComponent)}
+          {insertPosition && (
+            <div style={{ fontSize: '10px', marginTop: '2px' }}>
+              {insertPosition === 'before' && '插入到顶部'}
+              {insertPosition === 'after' && '插入到底部'}
+              {insertPosition === 'inside' && '插入到容器内'}
+            </div>
+          )}
         </div>
       )}
 
@@ -1432,14 +1575,14 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         border:
           isSelected && !isPreview
             ? '2px solid #1890ff'
-            : '2px solid transparent',
+            : '1px solid transparent',
         borderRadius: '4px',
         padding: '4px',
         margin: '2px 0',
         backgroundColor:
           isSelected && !isPreview ? 'rgba(24, 144, 255, 0.05)' : 'transparent',
         cursor: isPreview ? 'default' : 'pointer',
-        // transition: 'all 0.2s ease',
+        transition: 'all 0.2s ease',
       };
 
       const selectableWrapper = (

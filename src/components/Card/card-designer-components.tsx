@@ -334,7 +334,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
   // 统一的选中样式配置
   const getSelectedStyle = (isSelected: boolean) => ({
     border:
-      isSelected && !isPreview ? '2px solid #1890ff' : '2px solid #d9d9d9',
+      isSelected && !isPreview ? '2px solid #1890ff' : '1px solid #d9d9d9',
     backgroundColor:
       isSelected && !isPreview ? 'rgba(24, 144, 255, 0.05)' : '#fff',
     boxShadow:
@@ -379,8 +379,8 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
           style={{
             ...getSelectedStyle(isCurrentSelected),
             borderRadius: '8px',
-            // padding: '4px',
-            // margin: '4px 0',
+            padding: '4px',
+            margin: '4px 0',
             position: 'relative',
             cursor: isPreview ? 'default' : 'pointer',
             transition: 'all 0.2s ease',
@@ -495,14 +495,14 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
     border:
       isCurrentSelected && !isPreview
         ? '2px solid #1890ff'
-        : '2px solid transparent',
-    // padding: '4px',
-    // margin: '2px',
+        : '1px solid transparent',
+    padding: '4px',
+    margin: '2px',
     borderRadius: '4px',
     cursor: isPreview ? 'default' : 'pointer',
     minHeight: '30px',
     position: 'relative',
-    // transition: 'all 0.2s ease',
+    transition: 'all 0.2s ease',
     backgroundColor:
       isCurrentSelected && !isPreview
         ? 'rgba(24, 144, 255, 0.05)'
