@@ -323,21 +323,10 @@ const OutlineTree: React.FC<{
       const path = [...basePath, index];
       const config = COMPONENT_TYPES[component.tag];
 
-      const node = {
+      const node: any = {
         title: (
           <Space size={4}>
-            {config?.icon && (
-              <config.icon
-                style={{
-                  fontSize: '12px',
-                  color: config
-                    ? COMPONENT_CATEGORIES.find(
-                        (cat) => cat.key === config.category,
-                      )?.color
-                    : '#999',
-                }}
-              />
-            )}
+            {config?.icon && <config.icon />}
             <Text style={{ fontSize: '12px' }}>
               {config?.name || component.tag}
             </Text>
@@ -398,7 +387,7 @@ const OutlineTree: React.FC<{
     };
 
     // 创建卡片节点作为一级节点
-    const cardNode = {
+    const cardNode: any = {
       title: (
         <Space size={4}>
           <Text
@@ -729,17 +718,71 @@ export const PropertyPanel: React.FC<{
               label: '📏 间距设置',
               children: (
                 <Form form={form} layout="vertical">
-                  <Form.Item label="垂直间距" help="组件之间的垂直间距">
+                  <Form.Item
+                    label="垂直间距"
+                    help="组件之间的垂直间距，实时预览效果"
+                    extra={
+                      <div
+                        style={{
+                          fontSize: '12px',
+                          color: '#666',
+                          marginTop: '4px',
+                          padding: '8px',
+                          backgroundColor: '#f5f5f5',
+                          borderRadius: '4px',
+                          border: '1px solid #e8e8e8',
+                        }}
+                      >
+                        💡 当前间距: <strong>{cardVerticalSpacing}px</strong>
+                        <br />
+                        📊 影响组件数: {cardData.dsl.body.elements.length}{' '}
+                        个根组件
+                      </div>
+                    }
+                  >
                     <InputNumber
                       value={cardVerticalSpacing}
-                      onChange={(value) =>
-                        onUpdateCard({ vertical_spacing: value || 8 })
-                      }
+                      onChange={(value) => {
+                        const newValue = value || 8;
+                        console.log('🎯 更新垂直间距:', {
+                          oldValue: cardVerticalSpacing,
+                          newValue,
+                          timestamp: new Date().toISOString(),
+                        });
+                        onUpdateCard({ vertical_spacing: newValue });
+                      }}
                       min={0}
                       max={50}
+                      step={1}
                       style={{ width: '100%' }}
                       addonAfter="px"
+                      placeholder="请输入间距值"
                     />
+                  </Form.Item>
+
+                  {/* 快速预设按钮 */}
+                  <Form.Item label="快速设置">
+                    <div
+                      style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}
+                    >
+                      {[4, 8, 12, 16, 20].map((preset) => (
+                        <Button
+                          key={preset}
+                          size="small"
+                          type={
+                            cardVerticalSpacing === preset
+                              ? 'primary'
+                              : 'default'
+                          }
+                          onClick={() =>
+                            onUpdateCard({ vertical_spacing: preset })
+                          }
+                          style={{ minWidth: '40px' }}
+                        >
+                          {preset}px
+                        </Button>
+                      ))}
+                    </div>
                   </Form.Item>
                 </Form>
               ),
@@ -756,6 +799,67 @@ export const PropertyPanel: React.FC<{
             },
           ]}
         />
+
+        {/* 实时预览提示 */}
+        <div
+          style={{
+            marginTop: '16px',
+            padding: '12px',
+            backgroundColor: '#e6f7ff',
+            border: '1px solid #91d5ff',
+            borderRadius: '6px',
+            fontSize: '12px',
+            color: '#0958d9',
+          }}
+        >
+          <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+            🎨 实时预览
+          </div>
+          <div>
+            修改间距和内边距时，画布中的卡片会实时更新显示效果。
+            您可以立即看到调整后的视觉效果。
+          </div>
+        </div>
+
+        {/* 导出配置预览 */}
+        <div
+          style={{
+            marginTop: '12px',
+            padding: '12px',
+            backgroundColor: '#f0fdf4',
+            border: '1px solid #bbf7d0',
+            borderRadius: '6px',
+            fontSize: '12px',
+            color: '#166534',
+          }}
+        >
+          <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+            📤 导出配置预览
+          </div>
+          <div style={{ marginBottom: '8px' }}>
+            当前设置将包含在导出的配置中：
+          </div>
+          <div
+            style={{
+              backgroundColor: '#f8fafc',
+              padding: '8px',
+              borderRadius: '4px',
+              border: '1px solid #e2e8f0',
+              fontFamily: 'Monaco, Consolas, monospace',
+              fontSize: '11px',
+              lineHeight: '1.4',
+            }}
+          >
+            {`{
+  "direction": "vertical",
+  "vertical_spacing": ${cardVerticalSpacing},
+  "elements": [...]
+}`}
+          </div>
+          <div style={{ marginTop: '8px', fontSize: '11px', opacity: 0.8 }}>
+            💡 导出配置时会自动包含最新的间距设置
+          </div>
+        </div>
       </div>
     );
   };

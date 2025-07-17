@@ -58,6 +58,9 @@ interface ToolbarProps {
   elementsCount: number;
   variablesCount: number;
   canvasFocused: boolean;
+
+  // 卡片设置
+  verticalSpacing?: number;
 }
 
 const Toolbar: React.FC<ToolbarProps> = ({
@@ -80,6 +83,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
   elementsCount,
   variablesCount,
   canvasFocused,
+  verticalSpacing,
 }) => {
   // 复制卡片ID
   const copyCardId = async () => {
@@ -310,14 +314,16 @@ const Toolbar: React.FC<ToolbarProps> = ({
           在线预览
         </Button>
 
-        <Button
-          type="primary"
-          icon={<CodeOutlined />}
-          onClick={onExport}
-          size="small"
-        >
-          导出配置
-        </Button>
+        <Tooltip title={`当前间距: ${verticalSpacing || 8}px`}>
+          <Button
+            type="primary"
+            icon={<CodeOutlined />}
+            onClick={onExport}
+            size="small"
+          >
+            导出配置
+          </Button>
+        </Tooltip>
 
         <Button
           icon={<QuestionCircleOutlined />}

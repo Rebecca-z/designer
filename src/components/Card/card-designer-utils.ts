@@ -858,7 +858,7 @@ export const convertToTargetFormat = (data: DesignData): any => {
 
   return {
     direction: 'vertical',
-    vertical_spacing: 5,
+    vertical_spacing: data.vertical_spacing || 5,
     elements: data.elements.map(convertComponent),
   };
 };

@@ -348,6 +348,13 @@ const CardDesigner: React.FC = () => {
     vertical_spacing?: number;
     padding?: CardPadding;
   }) => {
+    console.log('🎯 处理卡片属性更新:', {
+      updates,
+      currentVerticalSpacing: cardData.dsl.body.vertical_spacing,
+      currentPadding: cardData.dsl.body.padding,
+      timestamp: new Date().toISOString(),
+    });
+
     const newData = {
       ...cardData,
       dsl: {
@@ -358,6 +365,17 @@ const CardDesigner: React.FC = () => {
         },
       },
     };
+
+    // 如果更新了垂直间距，记录详细信息
+    if (updates.vertical_spacing !== undefined) {
+      console.log('📏 垂直间距更新:', {
+        oldValue: cardData.dsl.body.vertical_spacing,
+        newValue: updates.vertical_spacing,
+        willAffectExport: true,
+        exportConfigWillInclude: updates.vertical_spacing,
+      });
+    }
+
     history.updateData(newData as any);
   };
 
@@ -465,6 +483,7 @@ const CardDesigner: React.FC = () => {
           elementsCount={cardData.dsl.body.elements.length}
           variablesCount={variables.length}
           canvasFocused={focus.canvasFocused}
+          verticalSpacing={cardData.dsl.body.vertical_spacing}
         />
 
         {/* 主体区域 */}
