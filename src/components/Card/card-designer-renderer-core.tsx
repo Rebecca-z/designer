@@ -1432,14 +1432,14 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         border:
           isSelected && !isPreview
             ? '2px solid #1890ff'
-            : '1px solid transparent',
+            : '2px solid transparent',
         borderRadius: '4px',
         padding: '4px',
         margin: '2px 0',
         backgroundColor:
           isSelected && !isPreview ? 'rgba(24, 144, 255, 0.05)' : 'transparent',
         cursor: isPreview ? 'default' : 'pointer',
-        transition: 'all 0.2s ease',
+        // transition: 'all 0.2s ease',
       };
 
       const selectableWrapper = (
