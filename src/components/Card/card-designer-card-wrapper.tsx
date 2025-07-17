@@ -363,6 +363,67 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     return elements.some((component) => component.tag === 'title');
   };
 
+  // 验证并修正路径，确保索引在有效范围内
+  const validateAndCorrectPath = (
+    elements: ComponentType[],
+    path: (string | number)[],
+  ): (string | number)[] => {
+    const newPath = [...path];
+
+    // 验证路径前缀
+    if (
+      newPath.length < 3 ||
+      newPath[0] !== 'dsl' ||
+      newPath[1] !== 'body' ||
+      newPath[2] !== 'elements'
+    ) {
+      console.warn('⚠️ 路径前缀无效，返回原始路径');
+      return path;
+    }
+
+    // 检查根级别索引
+    if (newPath.length >= 4 && typeof newPath[3] === 'number') {
+      const rootIndex = newPath[3] as number;
+      if (rootIndex >= elements.length) {
+        console.warn(
+          `⚠️ 根级别索引 ${rootIndex} 超出范围，调整为 ${elements.length - 1}`,
+        );
+        newPath[3] = Math.max(0, elements.length - 1);
+      }
+    }
+
+    // 检查分栏索引
+    if (
+      newPath.length >= 6 &&
+      newPath[4] === 'columns' &&
+      typeof newPath[5] === 'number'
+    ) {
+      const rootIndex = newPath[3] as number;
+      const columnIndex = newPath[5] as number;
+
+      if (rootIndex < elements.length) {
+        const rootComponent = elements[rootIndex];
+        if (
+          rootComponent &&
+          rootComponent.tag === 'column_set' &&
+          rootComponent.columns
+        ) {
+          const columns = rootComponent.columns;
+          if (columnIndex >= columns.length) {
+            console.warn(
+              `⚠️ 分栏索引 ${columnIndex} 超出范围，调整为 ${
+                columns.length - 1
+              }`,
+            );
+            newPath[5] = Math.max(0, columns.length - 1);
+          }
+        }
+      }
+    }
+
+    return newPath;
+  };
+
   // 工具函数：将标题组件插入到数组开头
   const insertTitleAtTop = (
     elements: ComponentType[],
@@ -599,6 +660,16 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         isArray: Array.isArray(current),
         currentKeys:
           current && typeof current === 'object' ? Object.keys(current) : 'N/A',
+        currentLength: Array.isArray(current) ? current.length : 'N/A',
+        pathSegment: path.slice(i, i + 3), // 显示当前和接下来的几个路径段
+        currentState: current
+          ? {
+              tag: current.tag || 'no tag',
+              id: current.id || 'no id',
+              hasElements: current.elements ? 'yes' : 'no',
+              hasColumns: current.columns ? 'yes' : 'no',
+            }
+          : 'null/undefined',
       });
 
       if (key === 'elements') {
@@ -652,7 +723,12 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
 
           // 检查下一个是否是数字索引
           if (typeof nextIndex === 'number') {
-            if (current && Array.isArray(current) && current[nextIndex]) {
+            if (
+              current &&
+              Array.isArray(current) &&
+              nextIndex >= 0 &&
+              nextIndex < current.length
+            ) {
               current = current[nextIndex];
               i++; // 跳过下一个索引
               console.log(`✅ 导航到数组索引 ${nextIndex}:`, {
@@ -669,8 +745,25 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                 current: current ? 'exists' : 'undefined',
                 isArray: Array.isArray(current),
                 arrayLength: Array.isArray(current) ? current.length : 'N/A',
+                validRange: Array.isArray(current)
+                  ? `0-${current.length - 1}`
+                  : 'N/A',
               });
-              return elements; // 返回原始数组，不做修改
+
+              // 尝试恢复：如果索引超出范围，使用最后一个有效索引
+              if (Array.isArray(current) && current.length > 0) {
+                const fallbackIndex = current.length - 1;
+                console.warn(`⚠️ 尝试使用回退索引: ${fallbackIndex}`);
+                current = current[fallbackIndex];
+                i++; // 跳过下一个索引
+                console.log(`✅ 使用回退索引 ${fallbackIndex}:`, {
+                  nextComponent: current
+                    ? { id: current.id, tag: current.tag }
+                    : 'undefined',
+                });
+              } else {
+                return elements; // 返回原始数组，不做修改
+              }
             }
           } else if (nextIndex === 'elements') {
             // 如果下一个也是 'elements'，说明这是表单容器的结构
@@ -757,7 +850,12 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           return elements; // 返回原始数组，不做修改
         }
       } else if (typeof key === 'number') {
-        if (current && Array.isArray(current) && current[key]) {
+        if (
+          current &&
+          Array.isArray(current) &&
+          key >= 0 &&
+          key < current.length
+        ) {
           current = current[key];
           console.log(`✅ 导航到数组索引 ${key}:`, {
             nextComponent: current
@@ -772,8 +870,24 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
             current: current ? 'exists' : 'undefined',
             isArray: Array.isArray(current),
             arrayLength: Array.isArray(current) ? current.length : 'N/A',
+            validRange: Array.isArray(current)
+              ? `0-${current.length - 1}`
+              : 'N/A',
           });
-          return elements; // 返回原始数组，不做修改
+
+          // 尝试恢复：如果索引超出范围，使用最后一个有效索引
+          if (Array.isArray(current) && current.length > 0) {
+            const fallbackIndex = current.length - 1;
+            console.warn(`⚠️ 尝试使用回退索引: ${fallbackIndex}`);
+            current = current[fallbackIndex];
+            console.log(`✅ 使用回退索引 ${fallbackIndex}:`, {
+              nextComponent: current
+                ? { id: current.id, tag: current.tag }
+                : 'undefined',
+            });
+          } else {
+            return elements; // 返回原始数组，不做修改
+          }
         }
       } else {
         if (current && current[key] !== undefined) {
@@ -851,9 +965,14 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     console.log('🗑️ 从路径移除组件:', {
       path,
       pathLength: path.length,
+      pathDetails: path.map((item, index) => ({
+        index,
+        item,
+        type: typeof item,
+      })),
     });
 
-    // 根级别
+    // 根级别组件移除
     if (path.length === 4 && path[2] === 'elements') {
       const index = path[3] as number;
       console.log('✅ 根级别组件移除:', {
@@ -862,8 +981,30 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           ? { id: newElements[index].id, tag: newElements[index].tag }
           : 'undefined',
         arrayLength: newElements.length,
+        beforeRemove: newElements.map((el, idx) => ({
+          index: idx,
+          id: el.id,
+          tag: el.tag,
+        })),
       });
-      newElements.splice(index, 1);
+
+      if (index >= 0 && index < newElements.length) {
+        newElements.splice(index, 1);
+        console.log('✅ 根级别组件移除成功:', {
+          removedIndex: index,
+          newArrayLength: newElements.length,
+          afterRemove: newElements.map((el, idx) => ({
+            index: idx,
+            id: el.id,
+            tag: el.tag,
+          })),
+        });
+      } else {
+        console.error('❌ 根级别组件移除失败：索引无效', {
+          index,
+          arrayLength: newElements.length,
+        });
+      }
       return newElements;
     }
 
@@ -882,6 +1023,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
             idx,
             id: target[idx]?.id,
             tag: target[idx]?.tag,
+            depth,
           });
           target.splice(idx, 1);
           return true;
@@ -889,6 +1031,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           console.error('❌ 递归移除失败，索引无效', {
             idx,
             arrLen: target.length,
+            depth,
           });
           return false;
         }
@@ -906,6 +1049,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           console.error('❌ 递归移除失败，columns索引无效', {
             colIdx,
             columnsLen: target.columns.length,
+            depth,
           });
           return false;
         }
@@ -1277,6 +1421,20 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       // 先移除原位置的组件
       let newElements = removeComponentByPath(elements, draggedPath);
 
+      console.log('🔍 移除后的数组状态:', {
+        originalLength: elements.length,
+        newLength: newElements.length,
+        removedComponent: {
+          id: draggedComponent.id,
+          tag: draggedComponent.tag,
+        },
+        newElements: newElements.map((el, idx) => ({
+          index: idx,
+          id: el.id,
+          tag: el.tag,
+        })),
+      });
+
       // 计算目标容器路径
       const targetElementsPath = [...targetContainerPath, 'elements'];
 
@@ -1316,10 +1474,23 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         newElementsLength: newElements.length,
       });
 
+      // 验证并修正目标路径
+      const validatedPath = validateAndCorrectPath(
+        newElements,
+        targetElementsPath,
+      );
+
+      console.log('🔍 路径验证结果:', {
+        originalPath: targetElementsPath,
+        validatedPath,
+        pathChanged:
+          JSON.stringify(targetElementsPath) !== JSON.stringify(validatedPath),
+      });
+
       // 添加到新位置
       newElements = addComponentByPath(
         newElements,
-        targetElementsPath,
+        validatedPath,
         draggedComponent,
         actualDropIndex,
       );

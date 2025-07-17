@@ -1187,6 +1187,13 @@ const SmartDropZone: React.FC<{
           }
 
           // 移动到指定位置
+          console.log('🎯 调用 onComponentMove (跨容器):', {
+            component: item.component.tag,
+            fromPath: item.path,
+            toPath: [...targetPath, insertIndex],
+            insertIndex,
+            targetPath,
+          });
           onComponentMove?.(
             item.component,
             item.path,
@@ -1212,6 +1219,13 @@ const SmartDropZone: React.FC<{
           }
 
           // 移动到指定位置
+          console.log('🎯 调用 onComponentMove (同容器):', {
+            component: item.component.tag,
+            fromPath: item.path,
+            toPath: [...targetPath, insertIndex],
+            insertIndex,
+            targetPath,
+          });
           onComponentMove?.(
             item.component,
             item.path,
