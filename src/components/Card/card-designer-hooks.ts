@@ -465,7 +465,57 @@ export const useConfigManagement = () => {
       try {
         const jsonData = importFromJSON(e.target?.result as string);
         if (jsonData) {
-          updateData(jsonData);
+          // 将旧格式数据转换为新格式的卡片数据
+          const newCardData = {
+            id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+            name: '导入的卡片',
+            dsl: {
+              schema: 0.1,
+              config: {},
+              card_link: {
+                multi_url: {
+                  url: '',
+                  android_url: '',
+                  ios_url: '',
+                  pc_url: '',
+                },
+              },
+              header: {
+                style: {},
+                title: {
+                  content: '',
+                  i18n_content: {
+                    'en-US': '',
+                  },
+                },
+                subtitle: {
+                  content: '',
+                  i18n_content: {
+                    'en-US': '',
+                  },
+                },
+              },
+              body: {
+                direction: jsonData.direction || 'vertical',
+                vertical_spacing: jsonData.vertical_spacing || 8,
+                padding: {
+                  top: 16,
+                  right: 16,
+                  bottom: 16,
+                  left: 16,
+                },
+                elements: jsonData.elements || [],
+              },
+            },
+            variables: {},
+          };
+
+          console.log('✅ 导入数据转换完成:', {
+            originalFormat: jsonData,
+            newCardFormat: newCardData,
+          });
+
+          updateData(newCardData);
           setImportModalVisible(false);
           message.success('配置导入成功');
         } else {
@@ -502,7 +552,57 @@ export const useConfigManagement = () => {
       if (config) {
         const parsedConfig = importFromJSON(config);
         if (parsedConfig) {
-          updateData(parsedConfig);
+          // 将旧格式数据转换为新格式的卡片数据
+          const newCardData = {
+            id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+            name: '本地配置',
+            dsl: {
+              schema: 0.1,
+              config: {},
+              card_link: {
+                multi_url: {
+                  url: '',
+                  android_url: '',
+                  ios_url: '',
+                  pc_url: '',
+                },
+              },
+              header: {
+                style: {},
+                title: {
+                  content: '',
+                  i18n_content: {
+                    'en-US': '',
+                  },
+                },
+                subtitle: {
+                  content: '',
+                  i18n_content: {
+                    'en-US': '',
+                  },
+                },
+              },
+              body: {
+                direction: parsedConfig.direction || 'vertical',
+                vertical_spacing: parsedConfig.vertical_spacing || 8,
+                padding: {
+                  top: 16,
+                  right: 16,
+                  bottom: 16,
+                  left: 16,
+                },
+                elements: parsedConfig.elements || [],
+              },
+            },
+            variables: {},
+          };
+
+          console.log('✅ 本地配置转换完成:', {
+            originalFormat: parsedConfig,
+            newCardFormat: newCardData,
+          });
+
+          updateData(newCardData);
         }
       }
 
@@ -513,6 +613,7 @@ export const useConfigManagement = () => {
       message.success('配置已加载');
     } catch (error) {
       message.error('加载失败');
+      console.error('Load config error:', error);
     }
   }, []);
 

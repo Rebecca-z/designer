@@ -64,6 +64,15 @@ const CardDesigner: React.FC = () => {
   // 类型转换：将历史数据转为卡片数据
   const cardData = history.data as unknown as CardDesignData;
 
+  // 安全检查：确保数据结构完整
+  const safeCardData = React.useMemo(() => {
+    if (!cardData || !cardData.dsl || !cardData.dsl.body) {
+      console.warn('⚠️ 卡片数据结构不完整，使用默认数据');
+      return DEFAULT_CARD_DATA;
+    }
+    return cardData;
+  }, [cardData]);
+
   // 根据路径获取组件的辅助函数 - 支持嵌套组件
   const getComponentByPath = (
     data: CardDesignData,
@@ -134,14 +143,17 @@ const CardDesigner: React.FC = () => {
       }
 
       // 对于组件选择路径，需要调整路径查找逻辑
-      const component = getComponentByPath(cardData, selection.selectedPath);
+      const component = getComponentByPath(
+        safeCardData,
+        selection.selectedPath,
+      );
       if (component && component.id === selection.selectedComponent?.id) {
         // 组件仍然存在且匹配
       } else {
         selection.clearSelection();
       }
     }
-  }, [cardData, selection.selectedPath, selection.selectedComponent?.id]);
+  }, [safeCardData, selection.selectedPath, selection.selectedComponent?.id]);
 
   // 组合操作函数
   const handleCopy = () => {
@@ -158,12 +170,12 @@ const CardDesigner: React.FC = () => {
         id: Date.now().toString(36) + Math.random().toString(36).substr(2),
       };
       const newData = {
-        ...cardData,
+        ...safeCardData,
         dsl: {
-          ...cardData.dsl,
+          ...safeCardData.dsl,
           body: {
-            ...cardData.dsl.body,
-            elements: [...cardData.dsl.body.elements, newComponent],
+            ...safeCardData.dsl.body,
+            elements: [...safeCardData.dsl.body.elements, newComponent],
           },
         },
       };
@@ -182,7 +194,7 @@ const CardDesigner: React.FC = () => {
       return;
     }
 
-    let newData = JSON.parse(JSON.stringify(cardData));
+    let newData = JSON.parse(JSON.stringify(safeCardData));
 
     console.log('🗑️ 删除组件:', {
       path,
@@ -270,7 +282,7 @@ const CardDesigner: React.FC = () => {
     }
 
     const path = selection.selectedPath;
-    let newData = JSON.parse(JSON.stringify(cardData));
+    let newData = JSON.parse(JSON.stringify(safeCardData));
 
     console.log('🔄 更新组件:', {
       componentId: updatedComponent.id,
@@ -350,17 +362,17 @@ const CardDesigner: React.FC = () => {
   }) => {
     console.log('🎯 处理卡片属性更新:', {
       updates,
-      currentVerticalSpacing: cardData.dsl.body.vertical_spacing,
-      currentPadding: cardData.dsl.body.padding,
+      currentVerticalSpacing: safeCardData.dsl.body.vertical_spacing,
+      currentPadding: safeCardData.dsl.body.padding,
       timestamp: new Date().toISOString(),
     });
 
     const newData = {
-      ...cardData,
+      ...safeCardData,
       dsl: {
-        ...cardData.dsl,
+        ...safeCardData.dsl,
         body: {
-          ...cardData.dsl.body,
+          ...safeCardData.dsl.body,
           ...updates,
         },
       },
@@ -369,7 +381,7 @@ const CardDesigner: React.FC = () => {
     // 如果更新了垂直间距，记录详细信息
     if (updates.vertical_spacing !== undefined) {
       console.log('📏 垂直间距更新:', {
-        oldValue: cardData.dsl.body.vertical_spacing,
+        oldValue: safeCardData.dsl.body.vertical_spacing,
         newValue: updates.vertical_spacing,
         willAffectExport: true,
         exportConfigWillInclude: updates.vertical_spacing,
@@ -399,8 +411,8 @@ const CardDesigner: React.FC = () => {
     config.saveConfig(
       {
         direction: 'vertical' as const,
-        vertical_spacing: cardData.dsl.body.vertical_spacing,
-        elements: cardData.dsl.body.elements,
+        vertical_spacing: safeCardData.dsl.body.vertical_spacing,
+        elements: safeCardData.dsl.body.elements,
       } as any,
       variables,
     );
@@ -420,11 +432,11 @@ const CardDesigner: React.FC = () => {
       content: '确定要清空卡片内容吗？此操作不可撤销。',
       onOk: () => {
         const newData = {
-          ...cardData,
+          ...safeCardData,
           dsl: {
-            ...cardData.dsl,
+            ...safeCardData.dsl,
             body: {
-              ...cardData.dsl.body,
+              ...safeCardData.dsl.body,
               elements: [],
             },
           },
@@ -458,7 +470,7 @@ const CardDesigner: React.FC = () => {
       >
         {/* 顶部工具栏 - 显示卡片ID */}
         <Toolbar
-          cardId={cardData.id}
+          cardId={safeCardData.id}
           device={device}
           onDeviceChange={setDevice}
           canUndo={history.canUndo}
@@ -475,22 +487,22 @@ const CardDesigner: React.FC = () => {
           onExport={() =>
             config.exportConfig({
               direction: 'vertical' as const,
-              vertical_spacing: cardData.dsl.body.vertical_spacing,
-              elements: cardData.dsl.body.elements,
+              vertical_spacing: safeCardData.dsl.body.vertical_spacing,
+              elements: safeCardData.dsl.body.elements,
             } as any)
           }
           onPreview={() => setPreviewVisible(true)}
-          elementsCount={cardData.dsl.body.elements.length}
+          elementsCount={safeCardData.dsl.body.elements.length}
           variablesCount={variables.length}
           canvasFocused={focus.canvasFocused}
-          verticalSpacing={cardData.dsl.body.vertical_spacing}
+          verticalSpacing={safeCardData.dsl.body.vertical_spacing}
         />
 
         {/* 主体区域 */}
         <div style={{ flex: 1, display: 'flex' }}>
           {/* 左侧组件面板 - 包含组件库和大纲树的Tab */}
           <ComponentPanel
-            data={cardData}
+            data={safeCardData}
             selectedPath={selection.selectedPath}
             onOutlineHover={outline.handleOutlineHover}
             onOutlineSelect={handleOutlineSelect}
@@ -500,7 +512,7 @@ const CardDesigner: React.FC = () => {
           <div style={{ flex: 1 }}>
             <div data-canvas="true" style={{ height: '100%' }}>
               <Canvas
-                data={cardData}
+                data={safeCardData}
                 onDataChange={(newData) => history.updateData(newData as any)}
                 selectedPath={selection.selectedPath}
                 hoveredPath={outline.hoveredPath}
@@ -522,16 +534,16 @@ const CardDesigner: React.FC = () => {
               onUpdateCard={handleUpdateCard}
               variables={variables}
               onUpdateVariables={setVariables}
-              cardVerticalSpacing={cardData.dsl.body.vertical_spacing}
+              cardVerticalSpacing={safeCardData.dsl.body.vertical_spacing}
               cardPadding={
-                cardData.dsl.body.padding || {
+                safeCardData.dsl.body.padding || {
                   top: 16,
                   right: 16,
                   bottom: 16,
                   left: 16,
                 }
               }
-              cardData={cardData}
+              cardData={safeCardData}
             />
           </div>
         </div>
@@ -549,8 +561,8 @@ const CardDesigner: React.FC = () => {
           setPreviewVisible={setPreviewVisible}
           data={{
             direction: 'vertical' as const,
-            vertical_spacing: cardData.dsl.body.vertical_spacing,
-            elements: cardData.dsl.body.elements,
+            vertical_spacing: safeCardData.dsl.body.vertical_spacing,
+            elements: safeCardData.dsl.body.elements,
           }}
           device={device}
           variables={variables}

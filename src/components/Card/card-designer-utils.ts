@@ -918,21 +918,40 @@ const getEmptyContent = (): string => {
   `;
 };
 
-// 从JSON导入配置
+// 从JSON导入配置 - 支持旧格式和新格式
 export const importFromJSON = (jsonString: string): DesignData | null => {
   try {
     const parsed = JSON.parse(jsonString);
 
-    // 验证数据结构
+    // 检查是否是新格式的卡片数据
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      parsed.dsl &&
+      parsed.dsl.body &&
+      Array.isArray(parsed.dsl.body.elements)
+    ) {
+      console.log('✅ 检测到新格式卡片数据，转换为旧格式');
+      // 新格式转换为旧格式
+      return {
+        direction: parsed.dsl.body.direction || 'vertical',
+        vertical_spacing: parsed.dsl.body.vertical_spacing || 5,
+        elements: parsed.dsl.body.elements || [],
+      };
+    }
+
+    // 验证旧格式数据结构
     if (
       parsed &&
       typeof parsed === 'object' &&
       parsed.direction &&
       Array.isArray(parsed.elements)
     ) {
+      console.log('✅ 检测到旧格式数据，直接使用');
       return convertFromTargetFormat(parsed);
     }
 
+    console.error('❌ 不支持的数据格式:', parsed);
     return null;
   } catch (error) {
     console.error('JSON解析失败:', error);
