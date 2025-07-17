@@ -53,6 +53,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         borderRadius: '8px',
         width: '100%',
         margin: '0 auto',
+        // 修复：确保容器能够正确显示内边距
+        boxSizing: 'border-box',
       }}
     >
       {/* 左侧头像 */}
@@ -70,7 +72,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       </div>
 
       {/* 右侧内容区域 */}
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          // 修复：确保内容区域能够正确显示
+          boxSizing: 'border-box',
+        }}
+      >
         {/* 用户名 */}
         <div style={{ marginBottom: '8px' }}>
           <Text strong style={{ fontSize: '14px', color: '#333' }}>

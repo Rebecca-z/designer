@@ -1543,15 +1543,16 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
   const cardStyle: React.CSSProperties = {
     backgroundColor: '#fff',
     borderRadius: '12px',
-    border: isCardSelected ? '2px solid #1890ff' : '1px solid #e8e8e8',
+    border: isCardSelected ? '2px solid #1890ff' : '2px solid #e8e8e8',
     boxShadow: isCardSelected
       ? '0 0 8px rgba(24, 144, 255, 0.3)'
       : '0 2px 8px rgba(0, 0, 0, 0.1)',
     padding: `${padding.top}px ${padding.right}px ${padding.bottom}px ${padding.left}px`,
     minHeight: '200px',
     cursor: 'pointer',
-    transition: 'all 0.2s ease',
+    // transition: 'all 0.2s ease',
     position: 'relative',
+    boxSizing: 'border-box',
   };
 
   // 拖拽悬停样式
@@ -1611,6 +1612,9 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
             flexDirection: 'column',
             gap: `${verticalSpacing}px`,
             position: 'relative',
+            // 修复：确保内容区域能够正确显示内边距
+            minHeight: '100%',
+            width: '100%',
           }}
         >
           {elements.map((component, index) => {
@@ -1669,18 +1673,25 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           })}
         </div>
       ) : (
-        // 空状态
+        // 空状态 - 修复：动态适应卡片的宽高减去内边距
         <div
           style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            minHeight: '160px',
+            // 动态计算减去内边距的宽高
+            width: `calc(100% - ${padding.left + padding.right}px)`,
+            height: `calc(100% - ${padding.top + padding.bottom}px)`,
+            minHeight: '120px', // 设置最小高度
             color: '#999',
             border: '2px dashed #d9d9d9',
             borderRadius: '8px',
             backgroundColor: '#fafafa',
+            boxSizing: 'border-box',
+            position: 'absolute',
+            top: `${padding.top}px`,
+            left: `${padding.left}px`,
           }}
         >
           <PlusOutlined style={{ fontSize: '32px', marginBottom: '12px' }} />
