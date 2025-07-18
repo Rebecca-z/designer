@@ -1187,17 +1187,17 @@ const SmartDropZone: React.FC<{
           }
 
           // 移动到指定位置
-          console.log('🎯 调用 onComponentMove (跨容器):', {
+          console.log('🎯 调用 onComponentMove (同容器):', {
             component: item.component.tag,
             fromPath: item.path,
-            toPath: [...targetPath, insertIndex],
+            toPath: targetPath,
             insertIndex,
             targetPath,
           });
           onComponentMove?.(
             item.component,
             item.path,
-            [...targetPath, insertIndex],
+            targetPath, // ✅ 修复：直接传递targetPath，不添加insertIndex
             insertIndex,
           );
         } else {
@@ -1222,14 +1222,14 @@ const SmartDropZone: React.FC<{
           console.log('🎯 调用 onComponentMove (同容器):', {
             component: item.component.tag,
             fromPath: item.path,
-            toPath: [...targetPath, insertIndex],
+            toPath: targetPath,
             insertIndex,
             targetPath,
           });
           onComponentMove?.(
             item.component,
             item.path,
-            [...targetPath, insertIndex],
+            targetPath, // ✅ 修复：直接传递targetPath，不添加insertIndex
             insertIndex,
           );
         }
@@ -1719,7 +1719,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
   switch (component.tag) {
     case 'form': {
-      console.warn('form====', comp);
       const formElements = comp.elements || [];
       const formPath = [...path, 'elements'];
 
@@ -1899,6 +1898,18 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
     // 所有其他组件类型的渲染逻辑保持不变...
     case 'plain_text': {
+      console.log('📝 渲染 plain_text 组件:', {
+        componentId: comp.id,
+        content: comp.content,
+        textColor: comp.textColor,
+        fontSize: comp.fontSize,
+        fontWeight: comp.fontWeight,
+        textAlign: comp.textAlign,
+        path,
+        isPreview,
+        enableDrag,
+      });
+
       const textContent = (
         <div
           style={{
