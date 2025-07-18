@@ -659,6 +659,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       remainingPath: (string | number)[],
       depth: number = 0,
       rootElements?: ComponentType[], // ✅ 修复：添加根elements数组参数
+      originalTargetPath?: (string | number)[], // ✅ 修复：添加原始目标路径参数
     ): boolean => {
       if (!target || remainingPath.length === 0) {
         console.error('❌ 路径导航失败：目标为空或路径为空', {
@@ -732,6 +733,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
               nextPath.slice(1),
               depth + 1,
               rootElements,
+              originalTargetPath,
             );
           } else {
             console.error('❌ 分栏索引无效:', {
@@ -769,7 +771,13 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
 
               // 重新构建路径：先导航到分栏容器，然后处理columns
               const correctedPath = [columnSetIndex, 'columns', ...nextPath];
-              return navigateAndAdd(target, correctedPath, depth, rootElements);
+              return navigateAndAdd(
+                target,
+                correctedPath,
+                depth,
+                rootElements,
+                originalTargetPath,
+              );
             } else {
               console.error('❌ 在根elements中未找到分栏容器');
               return false;
@@ -808,6 +816,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                     correctedPath,
                     depth,
                     rootElements,
+                    originalTargetPath,
                   );
                 } else {
                   console.error('❌ 在全局elements中未找到分栏容器');
@@ -930,6 +939,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                 nextPath.slice(1),
                 depth + 1,
                 rootElements,
+                originalTargetPath,
               );
             } else {
               console.error('❌ elements数组索引无效:', {
@@ -947,6 +957,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                 nextPath.slice(1),
                 depth + 1,
                 rootElements,
+                originalTargetPath,
               );
             } else {
               // ✅ 修复：智能修正表单容器路径
@@ -965,6 +976,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                   nextPath.slice(1),
                   depth + 1,
                   rootElements,
+                  originalTargetPath,
                 );
               } else {
                 // ✅ 修复：当路径指向错误的组件类型时，尝试智能修正
@@ -1002,6 +1014,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                       correctedPath,
                       depth,
                       rootElements,
+                      originalTargetPath,
                     );
                   } else {
                     console.error('❌ 在根elements中未找到表单容器');
@@ -1043,6 +1056,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                           correctedPath,
                           depth,
                           rootElements,
+                          originalTargetPath,
                         );
                       } else {
                         console.error('❌ 在全局elements中未找到表单容器');
@@ -1067,6 +1081,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                 nextPath,
                 depth + 1,
                 rootElements,
+                originalTargetPath,
               );
             } else {
               console.error('❌ 无法访问elements属性:', {
@@ -1105,56 +1120,94 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           rootElements &&
           Array.isArray(rootElements)
         ) {
+          // 检查目标路径是否指向表单容器
+          const isTargetingForm =
+            originalTargetPath &&
+            originalTargetPath.length === 5 &&
+            originalTargetPath[0] === 'dsl' &&
+            originalTargetPath[1] === 'body' &&
+            originalTargetPath[2] === 'elements' &&
+            originalTargetPath[4] === 'elements';
+
+          // 检查目标路径是否指向分栏容器
+          const isTargetingColumn =
+            originalTargetPath &&
+            originalTargetPath.length === 7 &&
+            originalTargetPath[0] === 'dsl' &&
+            originalTargetPath[1] === 'body' &&
+            originalTargetPath[2] === 'elements' &&
+            originalTargetPath[4] === 'columns' &&
+            originalTargetPath[6] === 'elements';
+
+          console.log('🔍 路径修正分析:', {
+            isTargetingForm,
+            isTargetingColumn,
+            targetPath: originalTargetPath || 'undefined',
+            targetPathLength: originalTargetPath?.length || 0,
+            nextTargetTag: nextTarget.tag,
+            expectedTag: isTargetingForm
+              ? 'form'
+              : isTargetingColumn
+              ? 'column_set'
+              : 'unknown',
+          });
+
           // 拖拽到表单容器但实际不是
-          if (
-            rootElements.some((c) => c && c.tag === 'form') &&
-            nextTarget.tag !== 'form'
-          ) {
+          if (isTargetingForm && nextTarget.tag !== 'form') {
             const formIndex = rootElements.findIndex(
               (c) => c && c.tag === 'form',
             );
-            const correctedPath = [formIndex, ...nextPath];
-            console.warn('⚠️ 索引指向非表单容器，修正为全局表单容器:', {
-              originalIndex: key,
-              correctedIndex: formIndex,
-              correctedPath,
-            });
-            // 修复：直接导航到修正后的目标，跳过当前数字索引处理
-            const correctedTarget = rootElements[formIndex];
-            return navigateAndAdd(
-              correctedTarget,
-              nextPath,
-              depth + 1,
-              rootElements,
-            );
+            if (formIndex !== -1) {
+              const correctedPath = [formIndex, ...nextPath];
+              console.warn('⚠️ 索引指向非表单容器，修正为全局表单容器:', {
+                originalIndex: key,
+                correctedIndex: formIndex,
+                correctedPath,
+              });
+              // 修复：直接导航到修正后的目标，跳过当前数字索引处理
+              const correctedTarget = rootElements[formIndex];
+              return navigateAndAdd(
+                correctedTarget,
+                nextPath,
+                depth + 1,
+                rootElements,
+                originalTargetPath,
+              );
+            }
           }
           // 拖拽到分栏容器但实际不是
-          if (
-            rootElements.some((c) => c && c.tag === 'column_set') &&
-            nextTarget.tag !== 'column_set'
-          ) {
+          if (isTargetingColumn && nextTarget.tag !== 'column_set') {
             const colIndex = rootElements.findIndex(
               (c) => c && c.tag === 'column_set',
             );
-            const correctedPath = [colIndex, ...nextPath];
-            console.warn('⚠️ 索引指向非分栏容器，修正为全局分栏容器:', {
-              originalIndex: key,
-              correctedIndex: colIndex,
-              correctedPath,
-            });
-            // 修复：直接导航到修正后的目标，跳过当前数字索引处理
-            const correctedTarget = rootElements[colIndex];
-            return navigateAndAdd(
-              correctedTarget,
-              nextPath,
-              depth + 1,
-              rootElements,
-            );
+            if (colIndex !== -1) {
+              const correctedPath = [colIndex, ...nextPath];
+              console.warn('⚠️ 索引指向非分栏容器，修正为全局分栏容器:', {
+                originalIndex: key,
+                correctedIndex: colIndex,
+                correctedPath,
+              });
+              // 修复：直接导航到修正后的目标，跳过当前数字索引处理
+              const correctedTarget = rootElements[colIndex];
+              return navigateAndAdd(
+                correctedTarget,
+                nextPath,
+                depth + 1,
+                rootElements,
+                originalTargetPath,
+              );
+            }
           }
         }
         // --- 原有逻辑 ---
         if (Array.isArray(target) && key >= 0 && key < target.length) {
-          return navigateAndAdd(target[key], nextPath, depth + 1, rootElements);
+          return navigateAndAdd(
+            target[key],
+            nextPath,
+            depth + 1,
+            rootElements,
+            originalTargetPath,
+          );
         } else {
           console.error('❌ 数组索引无效:', {
             key,
@@ -1167,7 +1220,13 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
 
       // 处理其他属性
       if (target && target[key] !== undefined) {
-        return navigateAndAdd(target[key], nextPath, depth + 1, rootElements);
+        return navigateAndAdd(
+          target[key],
+          nextPath,
+          depth + 1,
+          rootElements,
+          originalTargetPath,
+        );
       } else {
         console.error('❌ 属性路径无效:', {
           key,
@@ -1193,7 +1252,13 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       })),
     });
 
-    const success = navigateAndAdd(newElements, path.slice(3), 0, newElements);
+    const success = navigateAndAdd(
+      newElements,
+      path.slice(3),
+      0,
+      newElements,
+      path,
+    );
 
     if (success) {
       console.log('✅ 路径导航和组件添加完成');
