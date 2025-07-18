@@ -149,7 +149,7 @@ const ContainerSortableItem: React.FC<{
 
   // 拖拽源配置
   const [{ isDragging }, drag] = useDrag({
-    type: 'container-component', // 使用专门的容器内拖拽类型
+    type: 'existing-component', // 修复：使用统一的拖拽类型，确保其他组件能识别
     item: () => {
       console.log('🟢 ContainerSortableItem 开始拖拽:', {
         tag: component.tag,
@@ -162,7 +162,7 @@ const ContainerSortableItem: React.FC<{
         component,
         path,
         isNew: false,
-        isChildComponent: true, // 标识为子组件
+        isChildComponent: false, // 修复：容器内的组件不应该是子组件标识
       } as DragItem;
     },
     collect: (monitor) => ({
@@ -197,6 +197,8 @@ const ContainerSortableItem: React.FC<{
         isChildComponent: item.isChildComponent,
         currentPath: path,
         containerPath,
+        currentComponentTag: component.tag,
+        currentComponentId: component.id,
       });
 
       // 不能拖拽到自己身上
@@ -1995,6 +1997,14 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
     }
 
     case 'hr': {
+      console.log('📏 渲染分割线组件:', {
+        componentId: comp.id,
+        path,
+        isPreview,
+        enableDrag,
+        enableSort,
+      });
+
       const hrContent = (
         <div style={{ margin: '12px 0' }}>
           <Divider
