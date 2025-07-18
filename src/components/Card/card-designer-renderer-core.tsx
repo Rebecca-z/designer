@@ -370,6 +370,17 @@ const ContainerSortableItem: React.FC<{
         const draggedContainerPath = draggedPath.slice(0, -1);
         const targetContainerPath = containerPath;
 
+        console.log('🔍 容器内排序检查:', {
+          draggedPath,
+          draggedContainerPath,
+          targetContainerPath,
+          isSameContainer: isSamePath(
+            draggedContainerPath,
+            targetContainerPath,
+          ),
+          insertTargetIndex: insertTargetIndex.current,
+        });
+
         // 检查是否在同一容器内
         if (isSamePath(draggedContainerPath, targetContainerPath)) {
           console.log('✅ 执行容器内插入式排序 (drop):', {
@@ -1035,6 +1046,13 @@ const SmartDropZone: React.FC<{
             targetPath,
             containerType,
           });
+        }
+
+        // ✅ 修复：限制容器热区的拖拽接受条件
+        // 只有当组件是从根级别拖拽到容器时，才允许容器热区接受
+        if (!isRootComponent) {
+          console.log('❌ 非根级别组件不能拖拽到容器热区');
+          return false;
         }
 
         const canDrop = canDropInContainer(item.component.tag, targetPath);

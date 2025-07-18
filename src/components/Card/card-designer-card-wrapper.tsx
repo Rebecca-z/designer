@@ -980,46 +980,34 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                 );
               } else {
                 // ✅ 修复：当路径指向错误的组件类型时，尝试智能修正
-                console.warn('⚠️ 路径指向了非表单组件，尝试智能修正:', {
+                console.warn('⚠️ 路径指向了非容器组件，尝试智能修正:', {
                   targetTag: target ? target.tag : 'undefined',
                   targetId: target ? target.id : 'undefined',
-                  expectedTag: 'form',
                   depth,
                 });
 
-                // 如果当前目标是数组（根elements），尝试查找表单容器
+                // 如果当前目标是数组，说明我们已经到达了elements数组，直接在这里添加组件
                 if (Array.isArray(target)) {
-                  console.log('🔍 在根elements数组中查找表单容器');
+                  console.log('✅ 已到达elements数组，直接添加组件:', {
+                    targetLength: target.length,
+                    insertIndex,
+                    componentId: newComponent.id,
+                    componentTag: newComponent.tag,
+                  });
 
-                  const formIndex = target.findIndex(
-                    (comp) => comp && comp.tag === 'form',
-                  );
-
-                  if (formIndex !== -1) {
-                    const form = target[formIndex];
-                    console.log('✅ 找到表单容器，修正路径:', {
-                      formIndex,
-                      formId: form.id,
-                      originalPath: remainingPath,
-                    });
-
-                    // 重新构建路径：先导航到表单容器，然后处理elements
-                    const correctedPath = [
-                      formIndex,
-                      'elements',
-                      ...nextPath.slice(1),
-                    ];
-                    return navigateAndAdd(
-                      target,
-                      correctedPath,
-                      depth,
-                      rootElements,
-                      originalTargetPath,
-                    );
+                  if (insertIndex !== undefined) {
+                    target.splice(insertIndex, 0, newComponent);
                   } else {
-                    console.error('❌ 在根elements中未找到表单容器');
-                    return false;
+                    target.push(newComponent);
                   }
+
+                  console.log('✅ 组件添加成功 (elements数组):', {
+                    componentId: newComponent.id,
+                    componentTag: newComponent.tag,
+                    insertIndex,
+                    arrayLength: target.length,
+                  });
+                  return true;
                 }
 
                 // 如果当前目标是组件对象，使用rootElements进行全局查找
@@ -1028,8 +1016,26 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                     '🔍 当前目标是组件对象，使用rootElements进行全局查找',
                   );
 
-                  if (target.tag === 'column_set') {
-                    console.warn('⚠️ 路径指向了分栏容器，但期望表单容器');
+                  // 根据原始目标路径判断应该查找什么类型的容器
+                  const isTargetingForm =
+                    originalTargetPath &&
+                    originalTargetPath.length === 5 &&
+                    originalTargetPath[0] === 'dsl' &&
+                    originalTargetPath[1] === 'body' &&
+                    originalTargetPath[2] === 'elements' &&
+                    originalTargetPath[4] === 'elements';
+
+                  const isTargetingColumn =
+                    originalTargetPath &&
+                    originalTargetPath.length === 7 &&
+                    originalTargetPath[0] === 'dsl' &&
+                    originalTargetPath[1] === 'body' &&
+                    originalTargetPath[2] === 'elements' &&
+                    originalTargetPath[4] === 'columns' &&
+                    originalTargetPath[6] === 'elements';
+
+                  if (isTargetingForm && target.tag !== 'form') {
+                    console.warn('⚠️ 路径指向了非表单容器，但期望表单容器');
 
                     // 使用rootElements在全局查找表单容器
                     if (rootElements && Array.isArray(rootElements)) {
@@ -1066,10 +1072,48 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                       console.error('❌ rootElements不可用，无法进行全局查找');
                       return false;
                     }
+                  } else if (isTargetingColumn && target.tag !== 'column_set') {
+                    console.warn('⚠️ 路径指向了非分栏容器，但期望分栏容器');
+
+                    // 使用rootElements在全局查找分栏容器
+                    if (rootElements && Array.isArray(rootElements)) {
+                      const columnIndex = rootElements.findIndex(
+                        (comp) => comp && comp.tag === 'column_set',
+                      );
+
+                      if (columnIndex !== -1) {
+                        const column = rootElements[columnIndex];
+                        console.log('✅ 在全局找到分栏容器，修正路径:', {
+                          columnIndex,
+                          columnId: column.id,
+                          originalPath: remainingPath,
+                        });
+
+                        // 重新构建路径：先导航到分栏容器，然后处理columns和elements
+                        const correctedPath = [
+                          columnIndex,
+                          'columns',
+                          ...nextPath.slice(1),
+                        ];
+                        return navigateAndAdd(
+                          rootElements,
+                          correctedPath,
+                          depth,
+                          rootElements,
+                          originalTargetPath,
+                        );
+                      } else {
+                        console.error('❌ 在全局elements中未找到分栏容器');
+                        return false;
+                      }
+                    } else {
+                      console.error('❌ rootElements不可用，无法进行全局查找');
+                      return false;
+                    }
                   }
                 }
 
-                console.error('❌ 无法修正路径，目标不是表单容器');
+                console.error('❌ 无法修正路径，目标不是期望的容器类型');
                 return false;
               }
             }
@@ -1597,20 +1641,13 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       dropIndex,
     });
 
-    // ✅ 修复：根据组件ID找到正确的拖拽路径
-    const correctDraggedIndex = elements.findIndex(
-      (el) => el.id === draggedComponent.id,
-    );
-    const correctDraggedPath = ['dsl', 'body', 'elements', correctDraggedIndex];
-
-    console.log('🔍 路径修正检查:', {
+    // ✅ 修复：不要错误地修正拖拽路径，保持原始路径
+    console.log('🔍 路径检查:', {
       originalDraggedPath: draggedPath,
-      correctDraggedPath,
-      correctDraggedIndex,
-      pathNeedsCorrection:
-        correctDraggedIndex !== draggedPath[draggedPath.length - 1],
-      originalIndex: draggedPath[draggedPath.length - 1],
-      correctIndex: correctDraggedIndex,
+      draggedComponent: {
+        id: draggedComponent.id,
+        tag: draggedComponent.tag,
+      },
       currentElements: elements.map((el, idx) => ({
         index: idx,
         id: el.id,
@@ -1618,18 +1655,8 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       })),
     });
 
-    // 如果路径不正确，使用正确的路径
+    // 保持原始拖拽路径，不要错误地修正为根级别路径
     let finalDraggedPath = draggedPath;
-    if (
-      correctDraggedIndex !== -1 &&
-      correctDraggedIndex !== draggedPath[draggedPath.length - 1]
-    ) {
-      console.log('✅ 使用修正后的拖拽路径:', {
-        from: draggedPath,
-        to: correctDraggedPath,
-      });
-      finalDraggedPath = correctDraggedPath;
-    }
 
     // ✅ 修复：检查并修正目标路径
     let finalTargetPath = targetPath;
@@ -1703,6 +1730,16 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       draggedContainerPath,
       targetContainerPath,
       draggedIndex,
+      draggedPathDetails: draggedContainerPath.map((item, index) => ({
+        index,
+        item,
+        type: typeof item,
+      })),
+      targetPathDetails: targetContainerPath.map((item, index) => ({
+        index,
+        item,
+        type: typeof item,
+      })),
       isSameContainer:
         JSON.stringify(draggedContainerPath) ===
         JSON.stringify(targetContainerPath),
