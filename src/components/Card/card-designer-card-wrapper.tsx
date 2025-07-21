@@ -298,27 +298,6 @@ const DragSortableItem: React.FC<{
           }}
         />
       )}
-
-      {/* 标题组件不可拖拽提示 */}
-      {component.tag === 'title' && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '-2px',
-            right: '8px',
-            backgroundColor: '#fa8c16',
-            color: 'white',
-            padding: '2px 6px',
-            borderRadius: '4px',
-            fontSize: '10px',
-            fontWeight: 'bold',
-            zIndex: 10,
-          }}
-        >
-          📌 固定顶部
-        </div>
-      )}
-
       {children}
     </div>
   );

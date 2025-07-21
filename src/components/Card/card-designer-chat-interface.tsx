@@ -70,7 +70,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     borderWidth: cardStyles.borderWidth || '1px',
     borderStyle: cardStyles.borderStyle || 'solid',
     borderColor: cardStyles.borderColor || '#e8e8e8',
-    borderRadius: cardStyles.borderRadius || '8px',
+    borderRadius: cardStyles.borderRadius || '13px',
     boxShadow: cardStyles.boxShadow || '0 2px 8px rgba(0,0,0,0.1)',
     ...cardStyles,
   };

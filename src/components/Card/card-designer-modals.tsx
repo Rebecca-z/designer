@@ -128,57 +128,8 @@ const Modals: React.FC<ModalsProps> = ({
         destroyOnHidden
       >
         <div style={{ marginBottom: '16px' }}>
-          {/* 数据结构说明 */}
-          <div
-            style={{
-              padding: '12px',
-              backgroundColor: '#f0f9ff',
-              border: '1px solid #bae6fd',
-              borderRadius: '6px',
-              marginBottom: '16px',
-            }}
-          >
-            <h4 style={{ margin: '0 0 8px 0', color: '#0369a1' }}>
-              新卡片数据结构说明
-            </h4>
-            <div style={{ fontSize: '12px', color: '#0c4a6e' }}>
-              <p style={{ margin: '4px 0' }}>• name: 卡片名称</p>
-              <p style={{ margin: '4px 0' }}>• variables: 变量定义对象</p>
-              <p style={{ margin: '4px 0' }}>• dsl.schema: 数据结构版本号</p>
-              <p style={{ margin: '4px 0' }}>
-                • dsl.card_link: 卡片链接配置（multi_url包含各平台URL）
-              </p>
-              <p style={{ margin: '4px 0' }}>
-                • dsl.header: 标题相关配置（title、subtitle、style）
-              </p>
-              <p style={{ margin: '4px 0' }}>
-                • dsl.body:
-                主体内容配置（direction、vertical_spacing、padding、elements）
-              </p>
-              <p style={{ margin: '4px 0' }}>
-                • 标题信息已从组件中移到header中，title组件只保留样式
-              </p>
-            </div>
-          </div>
-
-          {/* 提示信息 */}
-          <div
-            style={{
-              padding: '8px 12px',
-              backgroundColor: '#fef3c7',
-              border: '1px solid #fcd34d',
-              borderRadius: '4px',
-              marginBottom: '12px',
-            }}
-          >
-            <Text style={{ fontSize: '12px', color: '#92400e' }}>
-              💡
-              提示：此数据结构包含完整的卡片配置，包括标题信息、链接配置、样式设置等
-            </Text>
-          </div>
-
           {/* 统计信息 */}
-          <div
+          {/* <div
             style={{
               padding: '8px 12px',
               backgroundColor: '#f0fdf4',
@@ -201,7 +152,7 @@ const Modals: React.FC<ModalsProps> = ({
                 {variables.length} | 历史记录: {historyLength}
               </span>
             </div>
-          </div>
+          </div> */}
         </div>
 
         {/* JSON 配置内容 */}

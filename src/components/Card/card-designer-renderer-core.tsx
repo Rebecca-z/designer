@@ -1957,6 +1957,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         fontSize: comp.fontSize,
         fontWeight: comp.fontWeight,
         textAlign: comp.textAlign,
+        maxLines: comp.maxLines,
         path,
         isPreview,
         enableDrag,
@@ -1972,6 +1973,12 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         backgroundColor: '#fff',
         border: '1px solid #f0f0f0',
         borderRadius: '4px',
+        // 添加最大行数限制
+        display: '-webkit-box',
+        WebkitLineClamp: comp.maxLines || 1,
+        WebkitBoxOrient: 'vertical',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
       };
 
       const mergedStyles = mergeStyles(component, defaultStyles);
@@ -2003,6 +2010,17 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         borderRadius: '4px',
         backgroundColor: '#fff7e6',
         position: 'relative',
+        color: comp.textColor || '#000000',
+        fontSize: `${comp.fontSize || 14}px`,
+        fontWeight: comp.fontWeight || 'normal',
+        textAlign: comp.textAlign || 'left',
+        lineHeight: 1.5,
+        // 添加最大行数限制
+        display: '-webkit-box',
+        WebkitLineClamp: comp.maxLines || 1,
+        WebkitBoxOrient: 'vertical',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
       };
 
       const mergedStyles = mergeStyles(component, defaultStyles);
@@ -2090,16 +2108,14 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         <div
           style={{
             textAlign: 'center',
-            padding: '12px',
+            // padding: '12px',
             backgroundColor: '#fff',
             border: '1px solid #f0f0f0',
             borderRadius: '4px',
           }}
         >
           <img
-            src={
-              comp.img_url || 'https://via.placeholder.com/300x200?text=图片'
-            }
+            src={comp.img_url || '/demo.png'}
             alt="图片"
             style={{
               maxWidth: '100%',
@@ -2111,8 +2127,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               border: '1px solid #f0f0f0',
             }}
             onError={(e) => {
-              (e.target as HTMLImageElement).src =
-                'https://via.placeholder.com/300x200?text=图片加载失败';
+              (e.target as HTMLImageElement).src = '/demo.png';
             }}
           />
         </div>
@@ -2329,7 +2344,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       const imgCombContent = (
         <div
           style={{
-            padding: '12px',
+            // padding: '12px',
             backgroundColor: '#fff',
             border: '1px solid #f0f0f0',
             borderRadius: '4px',
@@ -2439,6 +2454,20 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               titleColor: '#1890ff',
               subtitleColor: '#096dd9',
             };
+          case 'wathet':
+            return {
+              backgroundColor: '#f0f9ff',
+              borderColor: '#bae6fd',
+              titleColor: '#0369a1',
+              subtitleColor: '#0c4a6e',
+            };
+          case 'turquoise':
+            return {
+              backgroundColor: '#f0fdfa',
+              borderColor: '#99f6e4',
+              titleColor: '#0d9488',
+              subtitleColor: '#0f766e',
+            };
           case 'green':
             return {
               backgroundColor: '#f6ffed',
@@ -2446,19 +2475,26 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               titleColor: '#52c41a',
               subtitleColor: '#389e0d',
             };
+          case 'yellow':
+            return {
+              backgroundColor: '#fffbe6',
+              borderColor: '#ffe58f',
+              titleColor: '#faad14',
+              subtitleColor: '#d48806',
+            };
+          case 'orange':
+            return {
+              backgroundColor: '#fff7e6',
+              borderColor: '#ffd591',
+              titleColor: '#fa8c16',
+              subtitleColor: '#d46b08',
+            };
           case 'red':
             return {
               backgroundColor: '#fff2f0',
               borderColor: '#ffccc7',
               titleColor: '#ff4d4f',
               subtitleColor: '#cf1322',
-            };
-          case 'wethet':
-            return {
-              backgroundColor: '#f0f9ff',
-              borderColor: '#bae6fd',
-              titleColor: '#0369a1',
-              subtitleColor: '#0c4a6e',
             };
           default:
             return {

@@ -558,7 +558,7 @@ export const createDefaultComponent = (type: string): ComponentType => {
         tag: 'title',
         title: '主标题',
         subtitle: '副标题',
-        style: 'blue',
+        style: 'blue', // 使用新的主题样式
       } as ComponentType;
 
     case 'form':
@@ -590,6 +590,8 @@ export const createDefaultComponent = (type: string): ComponentType => {
         id: generateId(),
         tag: 'plain_text',
         content: '这是一段普通文本，以默认的字号、字色、行高、行数展示',
+        fontSize: 14, // 默认字体大小
+        maxLines: 1, // 默认最大行数
         i18n_content: {
           'en-US': 'this is a plaintext rendered with the default styles',
         },
@@ -613,6 +615,8 @@ export const createDefaultComponent = (type: string): ComponentType => {
             },
           ],
         },
+        fontSize: 14, // 默认字体大小
+        maxLines: 1, // 默认最大行数
         i18n_content: {
           'en-US': {
             type: 'doc',
@@ -641,9 +645,11 @@ export const createDefaultComponent = (type: string): ComponentType => {
       return {
         id: generateId(),
         tag: 'img',
-        img_url: 'img_v2_9dd98485-2900-4d65-ada9-e31d1408dcfg',
+        img_url: '/demo.png', // 使用public目录下的demo.png文件
+        img_source: 'upload', // 新增：图片来源类型
+        img_name: 'demo.png', // 新增：图片名称
         i18n_img_url: {
-          'en-US': 'img_v2_9dd98485-2900-4d65-ada9-e31d1408dcfg',
+          'en-US': '/demo.png',
         },
       } as ComponentType;
 
@@ -842,7 +848,12 @@ export const migrateTitleStyle = (cardData: any): any => {
     typeof header.style === 'object' &&
     header.style.themeStyle
   ) {
-    newStyle = header.style.themeStyle;
+    // 处理旧的主题名称映射
+    let newThemeStyle = header.style.themeStyle;
+    if (newThemeStyle === 'wethet') {
+      newThemeStyle = 'wathet'; // 修正拼写错误
+    }
+    newStyle = newThemeStyle;
     needsMigration = true;
     console.log('✅ 数据迁移完成：style.themeStyle -> style', {
       oldValue: header.style.themeStyle,

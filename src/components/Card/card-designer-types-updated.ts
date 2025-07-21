@@ -54,7 +54,22 @@ export interface TitleComponent extends ComponentBase {
   // title和subtitle属性已移到CardHeader中
   // title: string;
   // subtitle: string;
-  style: 'blue' | 'wethet' | 'green' | 'red';
+  style:
+    | 'blue'
+    | 'wathet'
+    | 'turquoise'
+    | 'green'
+    | 'yellow'
+    | 'orange'
+    | 'red';
+}
+
+export interface TextComponent extends ComponentBase {
+  tag: 'plain_text' | 'rich_text';
+  content: string | any;
+  i18n_content?: { [key: string]: string | any };
+  fontSize?: 12 | 14 | 16; // 新增：字体大小
+  maxLines?: number; // 新增：最大显示行数
 }
 
 export interface PlainTextComponent extends ComponentBase {
@@ -124,6 +139,8 @@ export interface SelectComponent extends ComponentBase {
 export interface ImageComponent extends ComponentBase {
   tag: 'img';
   img_url: string;
+  img_source?: 'upload' | 'variable'; // 新增：图片来源类型
+  img_name?: string; // 新增：图片名称
   width?: number;
   height?: number;
   i18n_img_url?: { [key: string]: string };

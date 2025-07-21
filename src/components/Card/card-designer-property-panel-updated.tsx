@@ -5,17 +5,17 @@ import {
   BarsOutlined,
   BgColorsOutlined,
   DeleteOutlined,
-  FormatPainterOutlined,
+  EditOutlined,
   PlusOutlined,
   SettingOutlined,
   SkinOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 import {
   Button,
   Card,
   Col,
   Collapse,
-  Divider,
   Form,
   Input,
   InputNumber,
@@ -123,20 +123,6 @@ const ComponentLibrary: React.FC = () => {
 
   return (
     <div style={{ padding: '16px' }}>
-      <div
-        style={{
-          marginBottom: '16px',
-          padding: '8px 12px',
-          backgroundColor: '#f0f9ff',
-          border: '1px solid #bae6fd',
-          borderRadius: '6px',
-        }}
-      >
-        <Text style={{ fontSize: '12px', color: '#0369a1' }}>
-          💡 拖拽组件到右侧画布中使用
-        </Text>
-      </div>
-
       <Collapse
         defaultActiveKey={categories.map((cat) => cat.key)}
         ghost
@@ -165,24 +151,6 @@ const ComponentLibrary: React.FC = () => {
           )),
         }))}
       />
-
-      <div
-        style={{
-          marginTop: '20px',
-          padding: '12px',
-          backgroundColor: '#f6ffed',
-          border: '1px solid #b7eb8f',
-          borderRadius: '6px',
-        }}
-      >
-        <Text style={{ fontSize: '12px', color: '#52c41a' }}>
-          <strong>使用说明：</strong>
-          <br />• 容器组件：可以包含其他组件
-          <br />• 展示组件：用于内容展示
-          <br />• 交互组件：用于用户交互
-          <br />• 容器组件不能嵌套到其他容器中
-        </Text>
-      </div>
     </div>
   );
 };
@@ -608,7 +576,7 @@ const AddVariableModal: React.FC<{
   visible: boolean;
   newVariable: {
     name: string;
-    type: 'text' | 'number' | 'boolean' | 'object';
+    type: 'text' | 'object';
     description: string;
     mockData: string;
   };
@@ -634,9 +602,7 @@ const AddVariableModal: React.FC<{
             style={{ width: '100%' }}
           >
             <Option value="text">文本</Option>
-            <Option value="number">数字</Option>
-            <Option value="boolean">布尔值</Option>
-            <Option value="object">对象</Option>
+            <Option value="object">数组对象</Option>
           </Select>
         </Form.Item>
 
@@ -663,6 +629,83 @@ const AddVariableModal: React.FC<{
             onChange={(e) => onChange('mockData', e.target.value)}
             placeholder="请输入模拟数据"
             rows={3}
+          />
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
+};
+
+// 事件管理相关类型定义
+interface EventAction {
+  id: string;
+  type: 'callback';
+  action: string;
+  paramType: 'string' | 'object';
+  paramValue: string;
+  confirmDialog: boolean;
+}
+
+// 事件编辑弹窗组件
+const EventEditModal: React.FC<{
+  visible: boolean;
+  eventAction: EventAction;
+  variables: Variable[];
+  onOk: (action: EventAction) => void;
+  onCancel: () => void;
+  onChange: (field: string, value: any) => void;
+  onAddVariable: () => void;
+}> = ({ visible, eventAction, onOk, onCancel, onChange, onAddVariable }) => {
+  return (
+    <Modal
+      title="编辑动作"
+      open={visible}
+      onOk={() => onOk(eventAction)}
+      onCancel={onCancel}
+      okText="确定"
+      cancelText="取消"
+      width={500}
+    >
+      <Form layout="vertical">
+        <Form.Item label="动作" required>
+          <Select
+            value={eventAction.action}
+            onChange={(value) => onChange('action', value)}
+            style={{ width: '100%' }}
+          >
+            <Option value="callback">请求回调</Option>
+          </Select>
+        </Form.Item>
+
+        <Form.Item label="参数类型" required>
+          <Select
+            value={eventAction.paramType}
+            onChange={(value) => onChange('paramType', value)}
+            style={{ width: '100%' }}
+          >
+            <Option value="string">字符串</Option>
+            <Option value="object">对象</Option>
+          </Select>
+        </Form.Item>
+
+        <Form.Item label="输入参数" required>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <Input
+              value={eventAction.paramValue}
+              onChange={(e) => onChange('paramValue', e.target.value)}
+              placeholder="请输入参数"
+              style={{ flex: 1 }}
+            />
+            <Button type="default" onClick={onAddVariable} size="small">
+              变量
+            </Button>
+          </div>
+        </Form.Item>
+
+        <Form.Item label="二次确认弹窗">
+          <Switch
+            checked={eventAction.confirmDialog}
+            onChange={(checked) => onChange('confirmDialog', checked)}
           />
         </Form.Item>
       </Form>
@@ -702,13 +745,14 @@ export const PropertyPanel: React.FC<{
 }) => {
   const [form] = Form.useForm();
   const [activeTab, setActiveTab] = useState<string>('properties');
+  const [topLevelTab, setTopLevelTab] = useState<string>('component'); // 新增顶层Tab状态
 
   // 新增变量弹窗状态
   const [isAddVariableModalVisible, setIsAddVariableModalVisible] =
     useState(false);
   const [newVariable, setNewVariable] = useState<{
     name: string;
-    type: 'text' | 'number' | 'boolean' | 'object';
+    type: 'text' | 'object';
     description: string;
     mockData: string;
   }>({
@@ -717,6 +761,18 @@ export const PropertyPanel: React.FC<{
     description: '',
     mockData: '',
   });
+
+  // 事件管理相关状态
+  const [isEventEditModalVisible, setIsEventEditModalVisible] = useState(false);
+  const [currentEventAction, setCurrentEventAction] = useState<EventAction>({
+    id: '',
+    type: 'callback',
+    action: 'callback',
+    paramType: 'string',
+    paramValue: '',
+    confirmDialog: false,
+  });
+  const [editingActionIndex, setEditingActionIndex] = useState<number>(-1);
 
   // 获取真实的组件和路径
   const { component: realComponent, realPath } = getComponentRealPath(
@@ -731,6 +787,111 @@ export const PropertyPanel: React.FC<{
     selectedPath[0] === 'dsl' &&
     selectedPath[1] === 'body';
 
+  // 使用真实组件数据
+  const currentComponent = realComponent || selectedComponent;
+
+  // 检查是否为交互组件
+  const isInteractiveComponent = useMemo(() => {
+    if (!currentComponent) return false;
+    const interactiveTypes = [
+      'input',
+      'button',
+      'select-single',
+      'select-multi',
+    ];
+    return interactiveTypes.includes(currentComponent.tag);
+  }, [currentComponent]);
+
+  // 获取组件的事件配置
+  const getComponentEvents = () => {
+    if (!currentComponent) return [];
+    return (currentComponent as any).events || [];
+  };
+
+  // 更新组件事件
+  const updateComponentEvents = (events: any[]) => {
+    if (currentComponent) {
+      const updated = { ...currentComponent, events };
+      onUpdateComponent(updated);
+    }
+  };
+
+  // 创建新事件
+  const createNewEvent = () => {
+    const newEvent = {
+      id: `event_${Date.now()}`,
+      type: 'click',
+      actions: [],
+    };
+    const currentEvents = getComponentEvents();
+    updateComponentEvents([...currentEvents, newEvent]);
+  };
+
+  // 添加动作到事件
+  const addActionToEvent = (eventId: string) => {
+    const newAction: EventAction = {
+      id: `action_${Date.now()}`,
+      type: 'callback',
+      action: 'callback',
+      paramType: 'string',
+      paramValue: '',
+      confirmDialog: false,
+    };
+
+    const currentEvents = getComponentEvents();
+    const updatedEvents = currentEvents.map((event: any) => {
+      if (event.id === eventId) {
+        return {
+          ...event,
+          actions: [...(event.actions || []), newAction],
+        };
+      }
+      return event;
+    });
+    updateComponentEvents(updatedEvents);
+  };
+
+  // 编辑动作
+  const editAction = (eventId: string, actionIndex: number) => {
+    const currentEvents = getComponentEvents();
+    const event = currentEvents.find((e: any) => e.id === eventId);
+    if (event && event.actions && event.actions[actionIndex]) {
+      setCurrentEventAction(event.actions[actionIndex]);
+      setEditingActionIndex(actionIndex);
+      setIsEventEditModalVisible(true);
+    }
+  };
+
+  // 删除动作
+  const deleteAction = (eventId: string, actionIndex: number) => {
+    const currentEvents = getComponentEvents();
+    const updatedEvents = currentEvents.map((event: any) => {
+      if (event.id === eventId) {
+        const newActions = [...(event.actions || [])];
+        newActions.splice(actionIndex, 1);
+        return { ...event, actions: newActions };
+      }
+      return event;
+    });
+    updateComponentEvents(updatedEvents);
+  };
+
+  // 保存动作编辑
+  const saveActionEdit = (updatedAction: EventAction) => {
+    const currentEvents = getComponentEvents();
+    const updatedEvents = currentEvents.map((event: any) => {
+      if (event.actions && editingActionIndex >= 0) {
+        const newActions = [...event.actions];
+        newActions[editingActionIndex] = updatedAction;
+        return { ...event, actions: newActions };
+      }
+      return event;
+    });
+    updateComponentEvents(updatedEvents);
+    setIsEventEditModalVisible(false);
+    setEditingActionIndex(-1);
+  };
+
   // 当选中卡片时，自动切换到样式Tab
   useEffect(() => {
     if (isCardSelected && activeTab !== 'styles') {
@@ -738,9 +899,6 @@ export const PropertyPanel: React.FC<{
       setActiveTab('styles');
     }
   }, [isCardSelected, activeTab]);
-
-  // 使用真实组件数据
-  const currentComponent = realComponent || selectedComponent;
 
   console.log('🎨 属性面板状态:', {
     selectedPath,
@@ -824,27 +982,11 @@ export const PropertyPanel: React.FC<{
 
   const handleAddVariable = () => {
     const newVariable: Variable = {
-      name: `var_${Date.now()}`,
+      name: `变量${variables.length + 1}`,
       value: '',
       type: 'text',
     };
     onUpdateVariables([...variables, newVariable]);
-  };
-
-  const handleUpdateVariable = (
-    index: number,
-    field: keyof Variable,
-    value: any,
-  ) => {
-    const updated = variables.map((v, i) =>
-      i === index ? { ...v, [field]: value } : v,
-    );
-    onUpdateVariables(updated);
-  };
-
-  const handleDeleteVariable = (index: number) => {
-    const updated = variables.filter((_, i) => i !== index);
-    onUpdateVariables(updated);
   };
 
   // 新增变量相关函数
@@ -865,10 +1007,6 @@ export const PropertyPanel: React.FC<{
       mockData: '',
     });
     setIsAddVariableModalVisible(false);
-  };
-
-  const handleOpenAddVariableModal = () => {
-    setIsAddVariableModalVisible(true);
   };
 
   const handleCancelAddVariableModal = () => {
@@ -1107,16 +1245,17 @@ export const PropertyPanel: React.FC<{
                   children: (
                     <Form form={form} layout="vertical">
                       <Form.Item label="字体大小">
-                        <InputNumber
+                        <Select
                           value={comp.fontSize || 14}
                           onChange={(value) =>
-                            handleValueChange('fontSize', value || 14)
+                            handleValueChange('fontSize', value)
                           }
-                          min={12}
-                          max={72}
                           style={{ width: '100%' }}
-                          addonAfter="px"
-                        />
+                        >
+                          <Option value={14}>正文14px</Option>
+                          <Option value={16}>标题16px</Option>
+                          <Option value={12}>辅助信息12px</Option>
+                        </Select>
                       </Form.Item>
                       <Form.Item label="字体粗细">
                         <Select
@@ -1143,6 +1282,18 @@ export const PropertyPanel: React.FC<{
                           <Option value="center">居中</Option>
                           <Option value="right">右对齐</Option>
                         </Select>
+                      </Form.Item>
+                      <Form.Item label="最大显示行数">
+                        <InputNumber
+                          value={comp.maxLines || 1}
+                          onChange={(value) =>
+                            handleValueChange('maxLines', value || 1)
+                          }
+                          min={1}
+                          max={10}
+                          style={{ width: '100%' }}
+                          addonAfter="行"
+                        />
                       </Form.Item>
                     </Form>
                   ),
@@ -1600,15 +1751,97 @@ export const PropertyPanel: React.FC<{
                   label: '🖼️ 图片设置',
                   children: (
                     <Form form={form} layout="vertical">
-                      <Form.Item label="图片地址">
-                        <Input
-                          value={comp.img_url || ''}
-                          onChange={(e) =>
-                            handleValueChange('img_url', e.target.value)
+                      <Form.Item label="图片来源">
+                        <Select
+                          value={comp.img_source || 'upload'}
+                          onChange={(value) =>
+                            handleValueChange('img_source', value)
                           }
-                          placeholder="请输入图片URL"
-                        />
+                          style={{ width: '100%' }}
+                        >
+                          <Option value="upload">上传文件</Option>
+                          <Option value="variable">绑定变量</Option>
+                        </Select>
                       </Form.Item>
+
+                      <Form.Item label="图片名称">
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <Input
+                            value={comp.img_name || ''}
+                            onChange={(e) =>
+                              handleValueChange('img_name', e.target.value)
+                            }
+                            placeholder="请输入图片名称"
+                            style={{ flex: 1 }}
+                          />
+                          <Button
+                            type="default"
+                            size="small"
+                            onClick={() => {
+                              // 触发文件上传
+                              const input = document.createElement('input');
+                              input.type = 'file';
+                              input.accept = 'image/*';
+                              input.onchange = (e) => {
+                                const file = (e.target as HTMLInputElement)
+                                  .files?.[0];
+                                if (file) {
+                                  // 创建文件预览URL
+                                  const fileUrl = URL.createObjectURL(file);
+
+                                  // 更新组件数据
+                                  const updated = {
+                                    ...comp,
+                                    img_url: fileUrl,
+                                    img_name: file.name,
+                                    img_source: 'upload',
+                                  };
+                                  onUpdateComponent(updated);
+                                }
+                              };
+                              input.click();
+                            }}
+                          >
+                            上传
+                          </Button>
+                        </div>
+                      </Form.Item>
+
+                      {comp.img_source === 'variable' && (
+                        <Form.Item label="变量名称">
+                          <Select
+                            value={comp.img_url || ''}
+                            onChange={(value) =>
+                              handleValueChange('img_url', value)
+                            }
+                            style={{ width: '100%' }}
+                            placeholder="请选择变量"
+                          >
+                            {variables
+                              .filter((v) => v.type === 'object')
+                              .map((variable) => (
+                                <Option
+                                  key={variable.name}
+                                  value={variable.name}
+                                >
+                                  {variable.name}
+                                </Option>
+                              ))}
+                          </Select>
+                        </Form.Item>
+                      )}
+
+                      {comp.img_source === 'upload' && (
+                        <Form.Item label="图片地址">
+                          <Input
+                            value={comp.img_url || ''}
+                            onChange={(e) =>
+                              handleValueChange('img_url', e.target.value)
+                            }
+                            placeholder="请输入图片URL"
+                          />
+                        </Form.Item>
+                      )}
                     </Form>
                   ),
                 },
@@ -1759,7 +1992,7 @@ export const PropertyPanel: React.FC<{
         return (
           <div style={{ padding: '16px' }}>
             <Collapse
-              defaultActiveKey={['content']}
+              defaultActiveKey={['content', 'style']}
               ghost
               items={[
                 {
@@ -1793,6 +2026,65 @@ export const PropertyPanel: React.FC<{
                           rows={4}
                           showCount
                           maxLength={1000}
+                        />
+                      </Form.Item>
+                    </Form>
+                  ),
+                },
+                {
+                  key: 'style',
+                  label: '🎨 样式设置',
+                  children: (
+                    <Form form={form} layout="vertical">
+                      <Form.Item label="字体大小">
+                        <Select
+                          value={comp.fontSize || 14}
+                          onChange={(value) =>
+                            handleValueChange('fontSize', value)
+                          }
+                          style={{ width: '100%' }}
+                        >
+                          <Option value={14}>正文14px</Option>
+                          <Option value={16}>标题16px</Option>
+                          <Option value={12}>辅助信息12px</Option>
+                        </Select>
+                      </Form.Item>
+                      <Form.Item label="字体粗细">
+                        <Select
+                          value={comp.fontWeight || 'normal'}
+                          onChange={(value) =>
+                            handleValueChange('fontWeight', value)
+                          }
+                          style={{ width: '100%' }}
+                        >
+                          <Option value="normal">正常</Option>
+                          <Option value="bold">粗体</Option>
+                          <Option value="lighter">细体</Option>
+                        </Select>
+                      </Form.Item>
+                      <Form.Item label="文本对齐">
+                        <Select
+                          value={comp.textAlign || 'left'}
+                          onChange={(value) =>
+                            handleValueChange('textAlign', value)
+                          }
+                          style={{ width: '100%' }}
+                        >
+                          <Option value="left">左对齐</Option>
+                          <Option value="center">居中</Option>
+                          <Option value="right">右对齐</Option>
+                        </Select>
+                      </Form.Item>
+                      <Form.Item label="最大显示行数">
+                        <InputNumber
+                          value={comp.maxLines || 1}
+                          onChange={(value) =>
+                            handleValueChange('maxLines', value || 1)
+                          }
+                          min={1}
+                          max={10}
+                          style={{ width: '100%' }}
+                          addonAfter="行"
                         />
                       </Form.Item>
                     </Form>
@@ -1850,69 +2142,232 @@ export const PropertyPanel: React.FC<{
                   children: (
                     <Form form={form} layout="vertical">
                       <Form.Item label="主题样式">
-                        <Tabs
-                          size="small"
-                          items={[
-                            {
-                              key: 'specified',
-                              label: '指定',
-                              children: (
-                                <Form.Item label="主题样式">
-                                  <Select
-                                    value={headerData?.style || 'blue'}
-                                    onChange={(value) =>
-                                      handleHeaderChange('style', value)
-                                    }
-                                    style={{ width: '100%' }}
-                                  >
-                                    <Option value="blue">蓝色主题</Option>
-                                    <Option value="green">绿色主题</Option>
-                                    <Option value="red">红色主题</Option>
-                                    <Option value="wethet">天气主题</Option>
-                                  </Select>
-                                </Form.Item>
-                              ),
-                            },
-                            {
-                              key: 'variable',
-                              label: '绑定变量',
-                              children: (
-                                <Form.Item label="选择变量">
-                                  <Select
-                                    placeholder="请选择变量"
-                                    style={{ width: '100%' }}
-                                    dropdownRender={(menu) => (
-                                      <>
-                                        {menu}
-                                        <Divider style={{ margin: '8px 0' }} />
-                                        <Button
-                                          type="text"
-                                          icon={<PlusOutlined />}
-                                          onClick={handleOpenAddVariableModal}
-                                          style={{
-                                            width: '100%',
-                                            height: '32px',
-                                          }}
-                                        >
-                                          新增变量
-                                        </Button>
-                                      </>
-                                    )}
-                                  >
-                                    {variables.map((variable) => (
-                                      <Option
-                                        key={variable.name}
-                                        value={variable.name}
-                                      >
-                                        {variable.name}
-                                      </Option>
-                                    ))}
-                                  </Select>
-                                </Form.Item>
-                              ),
-                            },
-                          ]}
-                        />
+                        <Select
+                          value={headerData?.style || 'blue'}
+                          onChange={(value) =>
+                            handleHeaderChange('style', value)
+                          }
+                          style={{ width: '100%' }}
+                          optionLabelProp="label"
+                        >
+                          <Option value="blue" label="blue">
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    width: '16px',
+                                    height: '16px',
+                                    backgroundColor: '#1890ff',
+                                    borderRadius: '3px',
+                                    marginRight: '8px',
+                                    border: '1px solid #d9d9d9',
+                                  }}
+                                ></div>
+                                <span>blue</span>
+                              </div>
+                              {headerData?.style === 'blue' && (
+                                <span style={{ color: '#52c41a' }}>✅</span>
+                              )}
+                            </div>
+                          </Option>
+                          <Option value="wathet" label="wathet">
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    width: '16px',
+                                    height: '16px',
+                                    backgroundColor: '#0369a1',
+                                    borderRadius: '3px',
+                                    marginRight: '8px',
+                                    border: '1px solid #d9d9d9',
+                                  }}
+                                ></div>
+                                <span>wathet</span>
+                              </div>
+                              {headerData?.style === 'wathet' && (
+                                <span style={{ color: '#52c41a' }}>✅</span>
+                              )}
+                            </div>
+                          </Option>
+                          <Option value="turquoise" label="turquoise">
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    width: '16px',
+                                    height: '16px',
+                                    backgroundColor: '#0d9488',
+                                    borderRadius: '3px',
+                                    marginRight: '8px',
+                                    border: '1px solid #d9d9d9',
+                                  }}
+                                ></div>
+                                <span>turquoise</span>
+                              </div>
+                              {headerData?.style === 'turquoise' && (
+                                <span style={{ color: '#52c41a' }}>✅</span>
+                              )}
+                            </div>
+                          </Option>
+                          <Option value="green" label="green">
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    width: '16px',
+                                    height: '16px',
+                                    backgroundColor: '#52c41a',
+                                    borderRadius: '3px',
+                                    marginRight: '8px',
+                                    border: '1px solid #d9d9d9',
+                                  }}
+                                ></div>
+                                <span>green</span>
+                              </div>
+                              {headerData?.style === 'green' && (
+                                <span style={{ color: '#52c41a' }}>✅</span>
+                              )}
+                            </div>
+                          </Option>
+                          <Option value="yellow" label="yellow">
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    width: '16px',
+                                    height: '16px',
+                                    backgroundColor: '#faad14',
+                                    borderRadius: '3px',
+                                    marginRight: '8px',
+                                    border: '1px solid #d9d9d9',
+                                  }}
+                                ></div>
+                                <span>yellow</span>
+                              </div>
+                              {headerData?.style === 'yellow' && (
+                                <span style={{ color: '#52c41a' }}>✅</span>
+                              )}
+                            </div>
+                          </Option>
+                          <Option value="orange" label="orange">
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    width: '16px',
+                                    height: '16px',
+                                    backgroundColor: '#fa8c16',
+                                    borderRadius: '3px',
+                                    marginRight: '8px',
+                                    border: '1px solid #d9d9d9',
+                                  }}
+                                ></div>
+                                <span>orange</span>
+                              </div>
+                              {headerData?.style === 'orange' && (
+                                <span style={{ color: '#52c41a' }}>✅</span>
+                              )}
+                            </div>
+                          </Option>
+                          <Option value="red" label="red">
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    width: '16px',
+                                    height: '16px',
+                                    backgroundColor: '#ff4d4f',
+                                    borderRadius: '3px',
+                                    marginRight: '8px',
+                                    border: '1px solid #d9d9d9',
+                                  }}
+                                ></div>
+                                <span>red</span>
+                              </div>
+                              {headerData?.style === 'red' && (
+                                <span style={{ color: '#52c41a' }}>✅</span>
+                              )}
+                            </div>
+                          </Option>
+                        </Select>
                       </Form.Item>
                     </Form>
                   ),
@@ -1943,11 +2398,82 @@ export const PropertyPanel: React.FC<{
     }
   };
 
+  const renderVariables = () => {
+    return (
+      <div style={{ padding: '16px' }}>
+        <Card title={<span>🔧 变量管理</span>} style={{ marginBottom: '16px' }}>
+          <div style={{ marginBottom: '16px' }}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleAddVariable}
+              style={{ width: '100%' }}
+              size="small"
+            >
+              添加自定义变量
+            </Button>
+          </div>
+
+          {variables.length === 0 ? (
+            <div
+              style={{ textAlign: 'center', color: '#999', padding: '20px 0' }}
+            >
+              暂无变量
+            </div>
+          ) : (
+            <div>
+              {variables.map((variable, index) => (
+                <div
+                  key={index}
+                  style={{
+                    padding: '8px 12px',
+                    border: '1px solid #d9d9d9',
+                    borderRadius: '4px',
+                    marginBottom: '8px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 500, marginBottom: '4px' }}>
+                      {variable.name}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#666' }}>
+                      类型:{' '}
+                      {variable.type === 'text'
+                        ? '文本'
+                        : variable.type === 'object'
+                        ? '数组对象'
+                        : variable.type}
+                    </div>
+                  </div>
+                  <Button
+                    type="text"
+                    size="small"
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={() => {
+                      const newVariables = variables.filter(
+                        (_, i) => i !== index,
+                      );
+                      onUpdateVariables(newVariables);
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
+    );
+  };
+
   const renderEvents = () => {
     if (!currentComponent && !isCardSelected) {
       return (
         <div style={{ padding: '24px', textAlign: 'center' }}>
-          <BgColorsOutlined
+          <ThunderboltOutlined
             style={{ fontSize: '48px', color: '#d9d9d9', marginBottom: '16px' }}
           />
           <div style={{ color: '#999', marginBottom: '8px', fontSize: '16px' }}>
@@ -1960,232 +2486,167 @@ export const PropertyPanel: React.FC<{
       );
     }
 
+    // 如果不是交互组件，显示禁用状态
+    if (!isInteractiveComponent) {
+      return (
+        <div style={{ padding: '24px', textAlign: 'center' }}>
+          <ThunderboltOutlined
+            style={{ fontSize: '48px', color: '#d9d9d9', marginBottom: '16px' }}
+          />
+          <div style={{ color: '#999', marginBottom: '8px', fontSize: '16px' }}>
+            当前组件不支持事件管理
+          </div>
+          <div style={{ color: '#ccc', fontSize: '12px' }}>
+            只有交互组件（按钮、输入框等）支持事件配置
+          </div>
+        </div>
+      );
+    }
+
+    const events = getComponentEvents();
+
     return (
       <div style={{ padding: '16px' }}>
-        <Card title={<span>🔧 变量管理</span>} style={{ marginBottom: '16px' }}>
+        <Card title={<span>⚡ 事件管理</span>} style={{ marginBottom: '16px' }}>
           <div style={{ marginBottom: '16px' }}>
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              onClick={handleAddVariable}
+              onClick={createNewEvent}
               style={{ width: '100%' }}
               size="small"
             >
-              添加变量
+              创建事件
             </Button>
           </div>
 
-          {variables.map((variable, index) => (
-            <Card key={index} size="small" style={{ marginBottom: '8px' }}>
-              <Space direction="vertical" style={{ width: '100%' }}>
-                <Row gutter={8}>
-                  <Col span={16}>
-                    <Input
-                      placeholder="变量名称"
-                      value={variable.name || ''}
-                      onChange={(e) =>
-                        handleUpdateVariable(index, 'name', e.target.value)
-                      }
-                      size="small"
-                    />
-                  </Col>
-                  <Col span={8}>
-                    <Button
-                      type="text"
-                      danger
-                      icon={<DeleteOutlined />}
-                      onClick={() => handleDeleteVariable(index)}
-                      style={{ width: '100%' }}
-                      size="small"
-                    />
-                  </Col>
-                </Row>
-                <Row gutter={8}>
-                  <Col span={24}>
-                    <Select
-                      placeholder="变量类型"
-                      value={variable.type || 'text'}
-                      onChange={(value) =>
-                        handleUpdateVariable(index, 'type', value)
-                      }
-                      style={{ width: '100%' }}
-                      size="small"
-                    >
-                      <Option value="text">文本</Option>
-                      <Option value="number">数字</Option>
-                      <Option value="boolean">布尔值</Option>
-                      <Option value="object">对象</Option>
-                    </Select>
-                  </Col>
-                </Row>
-                <Row gutter={8}>
-                  <Col span={24}>
-                    <Input.TextArea
-                      placeholder="模拟数据"
-                      value={variable.value || ''}
-                      onChange={(e) =>
-                        handleUpdateVariable(index, 'value', e.target.value)
-                      }
-                      rows={2}
-                      size="small"
-                    />
-                  </Col>
-                </Row>
-              </Space>
-            </Card>
-          ))}
-
-          {variables.length === 0 && (
+          {events.length === 0 ? (
             <div
-              style={{
-                textAlign: 'center',
-                color: '#999',
-                padding: '20px',
-                border: '1px dashed #d9d9d9',
-                borderRadius: '6px',
-                backgroundColor: '#fafafa',
-              }}
+              style={{ textAlign: 'center', color: '#999', padding: '20px 0' }}
             >
-              <Text type="secondary">暂无变量，点击上方按钮添加</Text>
+              暂无事件配置
             </div>
+          ) : (
+            events.map((event: any, eventIndex: number) => (
+              <div key={event.id} style={{ marginBottom: '16px' }}>
+                <div
+                  style={{
+                    padding: '8px 12px',
+                    backgroundColor: '#f5f5f5',
+                    borderRadius: '4px',
+                    marginBottom: '8px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <span style={{ fontWeight: 500 }}>点击时</span>
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<DeleteOutlined />}
+                    onClick={() => {
+                      const newEvents = events.filter(
+                        (e: any, i: number) => i !== eventIndex,
+                      );
+                      updateComponentEvents(newEvents);
+                    }}
+                  />
+                </div>
+
+                {event.actions && event.actions.length > 0 ? (
+                  event.actions.map(
+                    (action: EventAction, actionIndex: number) => (
+                      <div
+                        key={action.id}
+                        style={{
+                          padding: '8px 12px',
+                          border: '1px solid #d9d9d9',
+                          borderRadius: '4px',
+                          marginBottom: '8px',
+                          position: 'relative',
+                          cursor: 'pointer',
+                        }}
+                        onMouseEnter={(e) => {
+                          const target = e.currentTarget;
+                          const editBtn = target.querySelector(
+                            '.action-edit-btn',
+                          ) as HTMLElement;
+                          const deleteBtn = target.querySelector(
+                            '.action-delete-btn',
+                          ) as HTMLElement;
+                          if (editBtn) editBtn.style.display = 'inline-block';
+                          if (deleteBtn)
+                            deleteBtn.style.display = 'inline-block';
+                        }}
+                        onMouseLeave={(e) => {
+                          const target = e.currentTarget;
+                          const editBtn = target.querySelector(
+                            '.action-edit-btn',
+                          ) as HTMLElement;
+                          const deleteBtn = target.querySelector(
+                            '.action-delete-btn',
+                          ) as HTMLElement;
+                          if (editBtn) editBtn.style.display = 'none';
+                          if (deleteBtn) deleteBtn.style.display = 'none';
+                        }}
+                        onClick={() => editAction(event.id, actionIndex)}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <span>请选择动作</span>
+                          <div style={{ display: 'none' }}>
+                            <Button
+                              className="action-edit-btn"
+                              type="text"
+                              size="small"
+                              icon={<EditOutlined />}
+                              style={{ display: 'none', marginRight: '4px' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                editAction(event.id, actionIndex);
+                              }}
+                            >
+                              编辑
+                            </Button>
+                            <Button
+                              className="action-delete-btn"
+                              type="text"
+                              size="small"
+                              danger
+                              icon={<DeleteOutlined />}
+                              style={{ display: 'none' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteAction(event.id, actionIndex);
+                              }}
+                            >
+                              删除
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ),
+                  )
+                ) : (
+                  <Button
+                    type="dashed"
+                    size="small"
+                    onClick={() => addActionToEvent(event.id)}
+                    style={{ width: '100%' }}
+                  >
+                    请选择动作
+                  </Button>
+                )}
+              </div>
+            ))
           )}
         </Card>
-
-        <Card
-          title={<span>📊 {isCardSelected ? '卡片信息' : '组件信息'}</span>}
-          size="small"
-        >
-          <div style={{ fontSize: '12px', lineHeight: '1.6' }}>
-            {isCardSelected ? (
-              <>
-                <Row>
-                  <Col span={8}>
-                    <strong>类型:</strong>
-                  </Col>
-                  <Col span={16}>卡片容器</Col>
-                </Row>
-                <Row style={{ marginTop: '4px' }}>
-                  <Col span={8}>
-                    <strong>垂直间距:</strong>
-                  </Col>
-                  <Col span={16}>{cardVerticalSpacing}px</Col>
-                </Row>
-                <Row style={{ marginTop: '4px' }}>
-                  <Col span={8}>
-                    <strong>内边距:</strong>
-                  </Col>
-                  <Col span={16}>
-                    {cardPadding.top}px {cardPadding.right}px{' '}
-                    {cardPadding.bottom}px {cardPadding.left}px
-                  </Col>
-                </Row>
-                <Row style={{ marginTop: '4px' }}>
-                  <Col span={8}>
-                    <strong>根组件数:</strong>
-                  </Col>
-                  <Col span={16}>{cardData.dsl.body.elements.length}</Col>
-                </Row>
-              </>
-            ) : currentComponent ? (
-              <>
-                <Row>
-                  <Col span={8}>
-                    <strong>组件类型:</strong>
-                  </Col>
-                  <Col span={16}>{currentComponent.tag}</Col>
-                </Row>
-                <Row style={{ marginTop: '4px' }}>
-                  <Col span={8}>
-                    <strong>组件ID:</strong>
-                  </Col>
-                  <Col span={16} style={{ wordBreak: 'break-all' }}>
-                    {currentComponent.id}
-                  </Col>
-                </Row>
-                {currentComponent.name && (
-                  <Row style={{ marginTop: '4px' }}>
-                    <Col span={8}>
-                      <strong>组件名称:</strong>
-                    </Col>
-                    <Col span={16}>{currentComponent.name}</Col>
-                  </Row>
-                )}
-                {realPath && (
-                  <Row style={{ marginTop: '4px' }}>
-                    <Col span={8}>
-                      <strong>数据路径:</strong>
-                    </Col>
-                    <Col span={16} style={{ fontSize: '10px', color: '#666' }}>
-                      {realPath.join(' → ')}
-                    </Col>
-                  </Row>
-                )}
-                {/* 显示组件在数据结构中的位置 */}
-                {realPath &&
-                  realPath.length >= 6 &&
-                  realPath[4] === 'elements' && (
-                    <Row style={{ marginTop: '4px' }}>
-                      <Col span={8}>
-                        <strong>容器位置:</strong>
-                      </Col>
-                      <Col
-                        span={16}
-                        style={{ fontSize: '11px', color: '#52c41a' }}
-                      >
-                        表单内第{(realPath[5] as number) + 1}个组件
-                      </Col>
-                    </Row>
-                  )}
-                {realPath &&
-                  realPath.length >= 8 &&
-                  realPath[6] === 'elements' && (
-                    <Row style={{ marginTop: '4px' }}>
-                      <Col span={8}>
-                        <strong>容器位置:</strong>
-                      </Col>
-                      <Col
-                        span={16}
-                        style={{ fontSize: '11px', color: '#722ed1' }}
-                      >
-                        第{(realPath[5] as number) + 1}列第
-                        {(realPath[7] as number) + 1}个组件
-                      </Col>
-                    </Row>
-                  )}
-              </>
-            ) : null}
-            <Row style={{ marginTop: '4px' }}>
-              <Col span={8}>
-                <strong>创建时间:</strong>
-              </Col>
-              <Col span={16}>{new Date().toLocaleString()}</Col>
-            </Row>
-          </div>
-        </Card>
-
-        {/* 数据结构调试信息 */}
-        {process.env.NODE_ENV === 'development' && (
-          <Card
-            title={<span>🐛 调试信息</span>}
-            size="small"
-            style={{ marginTop: '16px' }}
-          >
-            <div style={{ fontSize: '10px', color: '#666' }}>
-              <div>
-                <strong>选中路径:</strong> {selectedPath?.join(' → ') || '无'}
-              </div>
-              <div>
-                <strong>真实路径:</strong> {realPath?.join(' → ') || '无'}
-              </div>
-              <div>
-                <strong>是否卡片:</strong> {isCardSelected ? '是' : '否'}
-              </div>
-              <div>
-                <strong>组件存在:</strong> {currentComponent ? '是' : '否'}
-              </div>
-            </div>
-          </Card>
-        )}
       </div>
     );
   };
@@ -2271,486 +2732,101 @@ export const PropertyPanel: React.FC<{
       );
     }
 
-    // 初始化样式对象
-    const styles = currentComponent.styles || {};
-
-    const handleStyleChange = (field: string, value: any) => {
-      const updatedComponent = {
-        ...currentComponent,
-        styles: {
-          ...styles,
-          [field]: value,
-        },
-      };
-      onUpdateComponent(updatedComponent);
-    };
-
-    return (
-      <div style={{ padding: '16px' }}>
-        <Card
-          title={
-            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <SkinOutlined />
-              组件样式配置
-            </span>
-          }
-          size="small"
-          style={{ marginBottom: '16px' }}
-        >
-          <div style={{ fontSize: '12px', color: '#666' }}>
-            组件: {currentComponent.tag} ({currentComponent.id})
-          </div>
-        </Card>
-
-        {/* 布局样式 */}
-        <Card title="布局" size="small" style={{ marginBottom: '12px' }}>
-          <Form layout="vertical" size="small">
-            <Row gutter={8}>
-              <Col span={12}>
-                <Form.Item label="显示">
-                  <Select
-                    value={styles.display || 'block'}
-                    onChange={(value) => handleStyleChange('display', value)}
-                    size="small"
-                  >
-                    <Option value="block">块级</Option>
-                    <Option value="inline">行内</Option>
-                    <Option value="inline-block">行内块</Option>
-                    <Option value="flex">弹性布局</Option>
-                    <Option value="none">隐藏</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label="定位">
-                  <Select
-                    value={styles.position || 'static'}
-                    onChange={(value) => handleStyleChange('position', value)}
-                    size="small"
-                  >
-                    <Option value="static">静态</Option>
-                    <Option value="relative">相对</Option>
-                    <Option value="absolute">绝对</Option>
-                    <Option value="fixed">固定</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Row gutter={8}>
-              <Col span={12}>
-                <Form.Item label="宽度">
-                  <Input
-                    value={styles.width || ''}
-                    onChange={(e) => handleStyleChange('width', e.target.value)}
-                    placeholder="auto"
-                    size="small"
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label="高度">
-                  <Input
-                    value={styles.height || ''}
-                    onChange={(e) =>
-                      handleStyleChange('height', e.target.value)
-                    }
-                    placeholder="auto"
-                    size="small"
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Row gutter={8}>
-              <Col span={12}>
-                <Form.Item label="最小宽度">
-                  <Input
-                    value={styles.minWidth || ''}
-                    onChange={(e) =>
-                      handleStyleChange('minWidth', e.target.value)
-                    }
-                    placeholder="0"
-                    size="small"
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label="最小高度">
-                  <Input
-                    value={styles.minHeight || ''}
-                    onChange={(e) =>
-                      handleStyleChange('minHeight', e.target.value)
-                    }
-                    placeholder="0"
-                    size="small"
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-          </Form>
-        </Card>
-
-        {/* 边距和内边距 */}
-        <Card title="间距" size="small" style={{ marginBottom: '12px' }}>
-          <Form layout="vertical" size="small">
-            <Row gutter={8}>
-              <Col span={12}>
-                <Form.Item label="外边距">
-                  <Input
-                    value={styles.margin || ''}
-                    onChange={(e) =>
-                      handleStyleChange('margin', e.target.value)
-                    }
-                    placeholder="0"
-                    size="small"
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label="内边距">
-                  <Input
-                    value={styles.padding || ''}
-                    onChange={(e) =>
-                      handleStyleChange('padding', e.target.value)
-                    }
-                    placeholder="0"
-                    size="small"
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-          </Form>
-        </Card>
-
-        {/* 字体样式 */}
-        <Card title="字体" size="small" style={{ marginBottom: '12px' }}>
-          <Form layout="vertical" size="small">
-            <Row gutter={8}>
-              <Col span={12}>
-                <Form.Item label="字体大小">
-                  <Input
-                    value={styles.fontSize || ''}
-                    onChange={(e) =>
-                      handleStyleChange('fontSize', e.target.value)
-                    }
-                    placeholder="14px"
-                    size="small"
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label="字体粗细">
-                  <Select
-                    value={styles.fontWeight || 'normal'}
-                    onChange={(value) => handleStyleChange('fontWeight', value)}
-                    size="small"
-                  >
-                    <Option value="normal">正常</Option>
-                    <Option value="bold">粗体</Option>
-                    <Option value="lighter">细体</Option>
-                    <Option value="100">100</Option>
-                    <Option value="200">200</Option>
-                    <Option value="300">300</Option>
-                    <Option value="400">400</Option>
-                    <Option value="500">500</Option>
-                    <Option value="600">600</Option>
-                    <Option value="700">700</Option>
-                    <Option value="800">800</Option>
-                    <Option value="900">900</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Row gutter={8}>
-              <Col span={12}>
-                <Form.Item label="字体颜色">
-                  <Input
-                    value={styles.color || ''}
-                    onChange={(e) => handleStyleChange('color', e.target.value)}
-                    placeholder="#000000"
-                    size="small"
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label="行高">
-                  <Input
-                    value={styles.lineHeight || ''}
-                    onChange={(e) =>
-                      handleStyleChange('lineHeight', e.target.value)
-                    }
-                    placeholder="1.5"
-                    size="small"
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Row gutter={8}>
-              <Col span={12}>
-                <Form.Item label="文本对齐">
-                  <Select
-                    value={styles.textAlign || 'left'}
-                    onChange={(value) => handleStyleChange('textAlign', value)}
-                    size="small"
-                  >
-                    <Option value="left">左对齐</Option>
-                    <Option value="center">居中</Option>
-                    <Option value="right">右对齐</Option>
-                    <Option value="justify">两端对齐</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label="文本装饰">
-                  <Select
-                    value={styles.textDecoration || 'none'}
-                    onChange={(value) =>
-                      handleStyleChange('textDecoration', value)
-                    }
-                    size="small"
-                  >
-                    <Option value="none">无</Option>
-                    <Option value="underline">下划线</Option>
-                    <Option value="overline">上划线</Option>
-                    <Option value="line-through">删除线</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
-          </Form>
-        </Card>
-
-        {/* 背景样式 */}
-        <Card title="背景" size="small" style={{ marginBottom: '12px' }}>
-          <Form layout="vertical" size="small">
-            <Row gutter={8}>
-              <Col span={12}>
-                <Form.Item label="背景颜色">
-                  <Input
-                    value={styles.backgroundColor || ''}
-                    onChange={(e) =>
-                      handleStyleChange('backgroundColor', e.target.value)
-                    }
-                    placeholder="transparent"
-                    size="small"
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label="背景图片">
-                  <Input
-                    value={styles.backgroundImage || ''}
-                    onChange={(e) =>
-                      handleStyleChange('backgroundImage', e.target.value)
-                    }
-                    placeholder="url()"
-                    size="small"
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Row gutter={8}>
-              <Col span={12}>
-                <Form.Item label="背景重复">
-                  <Select
-                    value={styles.backgroundRepeat || 'repeat'}
-                    onChange={(value) =>
-                      handleStyleChange('backgroundRepeat', value)
-                    }
-                    size="small"
-                  >
-                    <Option value="repeat">重复</Option>
-                    <Option value="no-repeat">不重复</Option>
-                    <Option value="repeat-x">水平重复</Option>
-                    <Option value="repeat-y">垂直重复</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label="背景位置">
-                  <Select
-                    value={styles.backgroundPosition || 'left top'}
-                    onChange={(value) =>
-                      handleStyleChange('backgroundPosition', value)
-                    }
-                    size="small"
-                  >
-                    <Option value="left top">左上</Option>
-                    <Option value="center top">中上</Option>
-                    <Option value="right top">右上</Option>
-                    <Option value="left center">左中</Option>
-                    <Option value="center center">中心</Option>
-                    <Option value="right center">右中</Option>
-                    <Option value="left bottom">左下</Option>
-                    <Option value="center bottom">中下</Option>
-                    <Option value="right bottom">右下</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
-          </Form>
-        </Card>
-
-        {/* 边框样式 */}
-        <Card title="边框" size="small" style={{ marginBottom: '12px' }}>
-          <Form layout="vertical" size="small">
-            <Row gutter={8}>
-              <Col span={12}>
-                <Form.Item label="边框宽度">
-                  <Input
-                    value={styles.borderWidth || ''}
-                    onChange={(e) =>
-                      handleStyleChange('borderWidth', e.target.value)
-                    }
-                    placeholder="0"
-                    size="small"
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label="边框样式">
-                  <Select
-                    value={styles.borderStyle || 'solid'}
-                    onChange={(value) =>
-                      handleStyleChange('borderStyle', value)
-                    }
-                    size="small"
-                  >
-                    <Option value="none">无</Option>
-                    <Option value="solid">实线</Option>
-                    <Option value="dashed">虚线</Option>
-                    <Option value="dotted">点线</Option>
-                    <Option value="double">双线</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Row gutter={8}>
-              <Col span={12}>
-                <Form.Item label="边框颜色">
-                  <Input
-                    value={styles.borderColor || ''}
-                    onChange={(e) =>
-                      handleStyleChange('borderColor', e.target.value)
-                    }
-                    placeholder="#000000"
-                    size="small"
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label="圆角">
-                  <Input
-                    value={styles.borderRadius || ''}
-                    onChange={(e) =>
-                      handleStyleChange('borderRadius', e.target.value)
-                    }
-                    placeholder="0"
-                    size="small"
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-          </Form>
-        </Card>
-
-        {/* 阴影效果 */}
-        <Card title="阴影" size="small" style={{ marginBottom: '12px' }}>
-          <Form layout="vertical" size="small">
-            <Row gutter={8}>
-              <Col span={12}>
-                <Form.Item label="盒子阴影">
-                  <Input
-                    value={styles.boxShadow || ''}
-                    onChange={(e) =>
-                      handleStyleChange('boxShadow', e.target.value)
-                    }
-                    placeholder="0 0 0 0 rgba(0,0,0,0)"
-                    size="small"
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label="文本阴影">
-                  <Input
-                    value={styles.textShadow || ''}
-                    onChange={(e) =>
-                      handleStyleChange('textShadow', e.target.value)
-                    }
-                    placeholder="0 0 0 rgba(0,0,0,0)"
-                    size="small"
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-          </Form>
-        </Card>
-
-        {/* 自定义CSS */}
-        <Card title="自定义CSS" size="small">
-          <Form layout="vertical" size="small">
-            <Form.Item label="CSS代码">
-              <Input.TextArea
-                value={styles.customCSS || ''}
-                onChange={(e) => handleStyleChange('customCSS', e.target.value)}
-                placeholder="/* 在这里输入自定义CSS代码 */"
-                rows={4}
-                size="small"
-              />
-            </Form.Item>
-          </Form>
-        </Card>
-      </div>
-    );
+    return <></>;
   };
 
   const TabItems = [
     {
-      key: 'properties',
+      key: 'component',
       label: (
         <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <FormatPainterOutlined />
-          属性配置
-        </span>
-      ),
-      disabled: isCardSelected || false,
-      children: (
-        <div style={{ height: 'calc(100vh - 120px)', overflow: 'auto' }}>
-          {renderProperties()}
-        </div>
-      ),
-    },
-    {
-      key: 'styles',
-      label: (
-        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <SkinOutlined />
-          样式
+          <SettingOutlined />
+          组件配置
         </span>
       ),
       children: (
-        <div style={{ height: 'calc(100vh - 120px)', overflow: 'auto' }}>
-          {renderStyles()}
-        </div>
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          style={{ flex: 1 }}
+          tabBarStyle={{
+            padding: '0 16px',
+            backgroundColor: '#fff',
+            margin: 0,
+            borderBottom: '1px solid #d9d9d9',
+          }}
+          size="small"
+          items={[
+            {
+              key: 'properties',
+              label: (
+                <span
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                  属性
+                </span>
+              ),
+              disabled: isCardSelected || false,
+              children: (
+                <div
+                  style={{ height: 'calc(100vh - 180px)', overflow: 'auto' }}
+                >
+                  {renderProperties()}
+                </div>
+              ),
+            },
+            {
+              key: 'styles',
+              label: (
+                <span
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                  样式
+                </span>
+              ),
+              children: (
+                <div
+                  style={{ height: 'calc(100vh - 180px)', overflow: 'auto' }}
+                >
+                  {renderStyles()}
+                </div>
+              ),
+            },
+            {
+              key: 'events',
+              label: (
+                <span
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                  事件
+                </span>
+              ),
+              disabled: isCardSelected || !isInteractiveComponent,
+              children: (
+                <div
+                  style={{ height: 'calc(100vh - 180px)', overflow: 'auto' }}
+                >
+                  {renderEvents()}
+                </div>
+              ),
+            },
+          ]}
+          tabBarGutter={8}
+          className="custom-tabs"
+        />
       ),
     },
     {
-      key: 'events',
+      key: 'variables',
       label: (
         <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <BgColorsOutlined />
-          事件管理
+          变量
         </span>
       ),
-      disabled: isCardSelected || false,
       children: (
         <div style={{ height: 'calc(100vh - 120px)', overflow: 'auto' }}>
-          {renderEvents()}
+          {renderVariables()}
         </div>
       ),
     },
@@ -2767,9 +2843,59 @@ export const PropertyPanel: React.FC<{
         flexDirection: 'column',
       }}
     >
+      <style>
+        {`
+          .custom-tabs .ant-tabs-nav {
+            padding: 0 !important;
+            background: #f2f3f5 !important;
+          }
+          .custom-tabs .ant-tabs-ink-bar {
+            display: none;
+          }
+          .custom-tabs .ant-tabs-nav-list {
+            background: #f2f3f5;
+          }
+          .custom-tabs .ant-tabs-tab {
+            // background-color: #f2f3f5 !important;
+            color: #1f2329 !important;
+            border: none !important;
+            border-radius: 6px !important;
+            padding: 8px 16px !important;
+            transition: all 0.2s ease !important;
+            margin: 2px !important;
+          }
+
+          .custom-tabs .ant-tabs-tab.ant-tabs-tab-active {
+            background-color: #fff !important;
+          }
+          
+          .custom-tabs .ant-tabs-tab.ant-tabs-tab-disabled {
+            // background-color: #f5f5f5 !important;
+            color: #bbbfc4 !important;
+            cursor: not-allowed !important;
+          }
+          
+          .custom-tabs .ant-tabs-tab.ant-tabs-tab-disabled:hover {
+            background-color: #f5f5f5 !important;
+            color: #bbbfc4 !important;
+          }
+          
+          .custom-tabs .ant-tabs-nav::before {
+            border-bottom: none !important;
+          }
+          
+          .custom-tabs .ant-tabs-tab-btn {
+            color: inherit !important;
+          }
+          
+          .custom-tabs .ant-tabs-tab-btn:focus {
+            color: inherit !important;
+          }
+        `}
+      </style>
       <Tabs
-        activeKey={activeTab}
-        onChange={setActiveTab}
+        activeKey={topLevelTab}
+        onChange={setTopLevelTab}
         style={{ flex: 1 }}
         tabBarStyle={{
           padding: '0 16px',
@@ -2790,6 +2916,25 @@ export const PropertyPanel: React.FC<{
         onChange={(field, value) =>
           setNewVariable((prev) => ({ ...prev, [field]: value }))
         }
+      />
+
+      {/* 事件编辑弹窗 */}
+      <EventEditModal
+        visible={isEventEditModalVisible}
+        eventAction={currentEventAction}
+        variables={variables}
+        onOk={saveActionEdit}
+        onCancel={() => {
+          setIsEventEditModalVisible(false);
+          setEditingActionIndex(-1);
+        }}
+        onChange={(field, value) =>
+          setCurrentEventAction((prev) => ({ ...prev, [field]: value }))
+        }
+        onAddVariable={() => {
+          setIsEventEditModalVisible(false);
+          setIsAddVariableModalVisible(true);
+        }}
       />
     </div>
   );
