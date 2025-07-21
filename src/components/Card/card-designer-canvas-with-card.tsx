@@ -253,6 +253,7 @@ const Canvas: React.FC<CanvasProps> = ({
             isCardSelected={!!isCardSelected}
             onCardSelect={handleCardSelect}
             username="用户名"
+            cardStyles={data.dsl.body.styles}
           />
         </div>
 

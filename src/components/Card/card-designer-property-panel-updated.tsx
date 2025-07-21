@@ -26,7 +26,7 @@ import {
   Tree,
   Typography,
 } from 'antd';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useDrag } from 'react-dnd';
 import {
   COMPONENT_CATEGORIES,
@@ -638,6 +638,14 @@ export const PropertyPanel: React.FC<{
     selectedPath[0] === 'dsl' &&
     selectedPath[1] === 'body';
 
+  // 当选中卡片时，自动切换到样式Tab
+  useEffect(() => {
+    if (isCardSelected && activeTab !== 'styles') {
+      console.log('🎯 检测到卡片选中，自动切换到样式Tab');
+      setActiveTab('styles');
+    }
+  }, [isCardSelected, activeTab]);
+
   // 使用真实组件数据
   const currentComponent = realComponent || selectedComponent;
 
@@ -707,168 +715,35 @@ export const PropertyPanel: React.FC<{
     onUpdateVariables(updated);
   };
 
-  const renderCardProperties = () => {
-    return (
-      <div style={{ padding: '16px' }}>
-        <Collapse
-          defaultActiveKey={['spacing', 'padding']}
-          ghost
-          items={[
-            {
-              key: 'spacing',
-              label: '📏 间距设置',
-              children: (
-                <Form form={form} layout="vertical">
-                  <Form.Item
-                    label="垂直间距"
-                    help="组件之间的垂直间距，实时预览效果"
-                    extra={
-                      <div
-                        style={{
-                          fontSize: '12px',
-                          color: '#666',
-                          marginTop: '4px',
-                          padding: '8px',
-                          backgroundColor: '#f5f5f5',
-                          borderRadius: '4px',
-                          border: '1px solid #e8e8e8',
-                        }}
-                      >
-                        💡 当前间距: <strong>{cardVerticalSpacing}px</strong>
-                        <br />
-                        📊 影响组件数: {cardData.dsl.body.elements.length}{' '}
-                        个根组件
-                      </div>
-                    }
-                  >
-                    <InputNumber
-                      value={cardVerticalSpacing}
-                      onChange={(value) => {
-                        const newValue = value || 8;
-                        console.log('🎯 更新垂直间距:', {
-                          oldValue: cardVerticalSpacing,
-                          newValue,
-                          timestamp: new Date().toISOString(),
-                        });
-                        onUpdateCard({ vertical_spacing: newValue });
-                      }}
-                      min={0}
-                      max={50}
-                      step={1}
-                      style={{ width: '100%' }}
-                      addonAfter="px"
-                      placeholder="请输入间距值"
-                    />
-                  </Form.Item>
-
-                  {/* 快速预设按钮 */}
-                  <Form.Item label="快速设置">
-                    <div
-                      style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}
-                    >
-                      {[4, 8, 12, 16, 20].map((preset) => (
-                        <Button
-                          key={preset}
-                          size="small"
-                          type={
-                            cardVerticalSpacing === preset
-                              ? 'primary'
-                              : 'default'
-                          }
-                          onClick={() =>
-                            onUpdateCard({ vertical_spacing: preset })
-                          }
-                          style={{ minWidth: '40px' }}
-                        >
-                          {preset}px
-                        </Button>
-                      ))}
-                    </div>
-                  </Form.Item>
-                </Form>
-              ),
-            },
-            {
-              key: 'padding',
-              label: '📦 内边距设置',
-              children: (
-                <PaddingEditor
-                  value={cardPadding}
-                  onChange={(padding) => onUpdateCard({ padding })}
-                />
-              ),
-            },
-          ]}
-        />
-
-        {/* 实时预览提示 */}
-        {/* <div
-          style={{
-            marginTop: '16px',
-            padding: '12px',
-            backgroundColor: '#e6f7ff',
-            border: '1px solid #91d5ff',
-            borderRadius: '6px',
-            fontSize: '12px',
-            color: '#0958d9',
-          }}
-        >
-          <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-            🎨 实时预览
+  const renderProperties = () => {
+    // 如果选中了卡片本身，显示提示信息
+    if (isCardSelected) {
+      return (
+        <div style={{ padding: '24px', textAlign: 'center' }}>
+          <SkinOutlined
+            style={{ fontSize: '48px', color: '#d9d9d9', marginBottom: '16px' }}
+          />
+          <div style={{ color: '#999', marginBottom: '8px', fontSize: '16px' }}>
+            已自动切换到样式配置
           </div>
-          <div>
-            修改间距和内边距时，画布中的卡片会实时更新显示效果。
-            您可以立即看到调整后的视觉效果。
-          </div>
-        </div> */}
-
-        {/* 导出配置预览 */}
-        {/* <div
-          style={{
-            marginTop: '12px',
-            padding: '12px',
-            backgroundColor: '#f0fdf4',
-            border: '1px solid #bbf7d0',
-            borderRadius: '6px',
-            fontSize: '12px',
-            color: '#166534',
-          }}
-        >
-          <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-            📤 导出配置预览
-          </div>
-          <div style={{ marginBottom: '8px' }}>
-            当前设置将包含在导出的配置中：
+          <div style={{ color: '#ccc', fontSize: '12px' }}>
+            卡片级别的属性配置已移至样式Tab
           </div>
           <div
             style={{
-              backgroundColor: '#f8fafc',
-              padding: '8px',
-              borderRadius: '4px',
-              border: '1px solid #e2e8f0',
-              fontFamily: 'Monaco, Consolas, monospace',
-              fontSize: '11px',
-              lineHeight: '1.4',
+              marginTop: '16px',
+              padding: '12px',
+              backgroundColor: '#f0f9ff',
+              border: '1px solid #bae6fd',
+              borderRadius: '6px',
             }}
           >
-            {`{
-  "direction": "vertical",
-  "vertical_spacing": ${cardVerticalSpacing},
-  "elements": [...]
-}`}
+            <Text style={{ fontSize: '12px', color: '#0369a1' }}>
+              💡 提示：当前在样式Tab中，可以配置卡片的间距、内边距和样式
+            </Text>
           </div>
-          <div style={{ marginTop: '8px', fontSize: '11px', opacity: 0.8 }}>
-            💡 导出配置时会自动包含最新的间距设置
-          </div>
-        </div> */}
-      </div>
-    );
-  };
-
-  const renderProperties = () => {
-    // 如果选中了卡片本身，显示卡片属性
-    if (isCardSelected) {
-      return renderCardProperties();
+        </div>
+      );
     }
 
     // 如果没有选中组件，显示提示
@@ -2091,6 +1966,316 @@ export const PropertyPanel: React.FC<{
   };
 
   const renderStyles = () => {
+    // 如果选中了卡片本身，显示卡片样式配置
+    if (isCardSelected) {
+      return (
+        <div style={{ padding: '16px' }}>
+          <Card
+            title={
+              <span
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                <SkinOutlined />
+                卡片样式配置
+              </span>
+            }
+            size="small"
+            style={{ marginBottom: '16px' }}
+          >
+            <div style={{ fontSize: '12px', color: '#666' }}>
+              卡片: {cardData.name} ({cardData.id})
+            </div>
+          </Card>
+
+          {/* 间距设置 */}
+          <Card
+            title="📏 间距设置"
+            size="small"
+            style={{ marginBottom: '12px' }}
+          >
+            <Form layout="vertical" size="small">
+              <Form.Item
+                label="垂直间距"
+                help="组件之间的垂直间距，实时预览效果"
+                extra={
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      color: '#666',
+                      marginTop: '4px',
+                      padding: '8px',
+                      backgroundColor: '#f5f5f5',
+                      borderRadius: '4px',
+                      border: '1px solid #e8e8e8',
+                    }}
+                  >
+                    💡 当前间距: <strong>{cardVerticalSpacing}px</strong>
+                    <br />
+                    📊 影响组件数: {cardData.dsl.body.elements.length} 个根组件
+                  </div>
+                }
+              >
+                <InputNumber
+                  value={cardVerticalSpacing}
+                  onChange={(value) => {
+                    const newValue = value || 8;
+                    console.log('🎯 更新垂直间距:', {
+                      oldValue: cardVerticalSpacing,
+                      newValue,
+                      timestamp: new Date().toISOString(),
+                    });
+                    onUpdateCard({ vertical_spacing: newValue });
+                  }}
+                  min={0}
+                  max={50}
+                  step={1}
+                  style={{ width: '100%' }}
+                  addonAfter="px"
+                  placeholder="请输入间距值"
+                />
+              </Form.Item>
+
+              {/* 快速预设按钮 */}
+              <Form.Item label="快速设置">
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {[4, 8, 12, 16, 20].map((preset) => (
+                    <Button
+                      key={preset}
+                      size="small"
+                      type={
+                        cardVerticalSpacing === preset ? 'primary' : 'default'
+                      }
+                      onClick={() => onUpdateCard({ vertical_spacing: preset })}
+                      style={{ minWidth: '40px' }}
+                    >
+                      {preset}px
+                    </Button>
+                  ))}
+                </div>
+              </Form.Item>
+            </Form>
+          </Card>
+
+          {/* 内边距设置 */}
+          <Card
+            title="📦 内边距设置"
+            size="small"
+            style={{ marginBottom: '12px' }}
+          >
+            <PaddingEditor
+              value={cardPadding}
+              onChange={(padding) => onUpdateCard({ padding })}
+            />
+          </Card>
+
+          {/* 卡片背景样式 */}
+          <Card title="背景样式" size="small" style={{ marginBottom: '12px' }}>
+            <Form layout="vertical" size="small">
+              <Row gutter={8}>
+                <Col span={12}>
+                  <Form.Item label="背景颜色">
+                    <Input
+                      value={cardData.dsl.body.styles?.backgroundColor || ''}
+                      onChange={(e) => {
+                        const updatedCardData = {
+                          ...cardData,
+                          dsl: {
+                            ...cardData.dsl,
+                            body: {
+                              ...cardData.dsl.body,
+                              styles: {
+                                ...cardData.dsl.body.styles,
+                                backgroundColor: e.target.value,
+                              },
+                            },
+                          },
+                        };
+                        onUpdateCard({ cardData: updatedCardData });
+                      }}
+                      placeholder="transparent"
+                      size="small"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="背景图片">
+                    <Input
+                      value={cardData.dsl.body.styles?.backgroundImage || ''}
+                      onChange={(e) => {
+                        const updatedCardData = {
+                          ...cardData,
+                          dsl: {
+                            ...cardData.dsl,
+                            body: {
+                              ...cardData.dsl.body,
+                              styles: {
+                                ...cardData.dsl.body.styles,
+                                backgroundImage: e.target.value,
+                              },
+                            },
+                          },
+                        };
+                        onUpdateCard({ cardData: updatedCardData });
+                      }}
+                      placeholder="url()"
+                      size="small"
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </Form>
+          </Card>
+
+          {/* 卡片边框样式 */}
+          <Card title="边框样式" size="small" style={{ marginBottom: '12px' }}>
+            <Form layout="vertical" size="small">
+              <Row gutter={8}>
+                <Col span={12}>
+                  <Form.Item label="边框宽度">
+                    <Input
+                      value={cardData.dsl.body.styles?.borderWidth || ''}
+                      onChange={(e) => {
+                        const updatedCardData = {
+                          ...cardData,
+                          dsl: {
+                            ...cardData.dsl,
+                            body: {
+                              ...cardData.dsl.body,
+                              styles: {
+                                ...cardData.dsl.body.styles,
+                                borderWidth: e.target.value,
+                              },
+                            },
+                          },
+                        };
+                        onUpdateCard({ cardData: updatedCardData });
+                      }}
+                      placeholder="0"
+                      size="small"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="边框样式">
+                    <Select
+                      value={cardData.dsl.body.styles?.borderStyle || 'solid'}
+                      onChange={(value) => {
+                        const updatedCardData = {
+                          ...cardData,
+                          dsl: {
+                            ...cardData.dsl,
+                            body: {
+                              ...cardData.dsl.body,
+                              styles: {
+                                ...cardData.dsl.body.styles,
+                                borderStyle: value,
+                              },
+                            },
+                          },
+                        };
+                        onUpdateCard({ cardData: updatedCardData });
+                      }}
+                      size="small"
+                    >
+                      <Option value="none">无</Option>
+                      <Option value="solid">实线</Option>
+                      <Option value="dashed">虚线</Option>
+                      <Option value="dotted">点线</Option>
+                      <Option value="double">双线</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Row gutter={8}>
+                <Col span={12}>
+                  <Form.Item label="边框颜色">
+                    <Input
+                      value={cardData.dsl.body.styles?.borderColor || ''}
+                      onChange={(e) => {
+                        const updatedCardData = {
+                          ...cardData,
+                          dsl: {
+                            ...cardData.dsl,
+                            body: {
+                              ...cardData.dsl.body,
+                              styles: {
+                                ...cardData.dsl.body.styles,
+                                borderColor: e.target.value,
+                              },
+                            },
+                          },
+                        };
+                        onUpdateCard({ cardData: updatedCardData });
+                      }}
+                      placeholder="#000000"
+                      size="small"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="圆角">
+                    <Input
+                      value={cardData.dsl.body.styles?.borderRadius || ''}
+                      onChange={(e) => {
+                        const updatedCardData = {
+                          ...cardData,
+                          dsl: {
+                            ...cardData.dsl,
+                            body: {
+                              ...cardData.dsl.body,
+                              styles: {
+                                ...cardData.dsl.body.styles,
+                                borderRadius: e.target.value,
+                              },
+                            },
+                          },
+                        };
+                        onUpdateCard({ cardData: updatedCardData });
+                      }}
+                      placeholder="0"
+                      size="small"
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </Form>
+          </Card>
+
+          {/* 自定义CSS */}
+          <Card title="自定义CSS" size="small">
+            <Form layout="vertical" size="small">
+              <Form.Item label="CSS代码">
+                <Input.TextArea
+                  value={cardData.dsl.body.styles?.customCSS || ''}
+                  onChange={(e) => {
+                    const updatedCardData = {
+                      ...cardData,
+                      dsl: {
+                        ...cardData.dsl,
+                        body: {
+                          ...cardData.dsl.body,
+                          styles: {
+                            ...cardData.dsl.body.styles,
+                            customCSS: e.target.value,
+                          },
+                        },
+                      },
+                    };
+                    onUpdateCard({ cardData: updatedCardData });
+                  }}
+                  placeholder="/* 在这里输入自定义CSS代码 */"
+                  rows={4}
+                  size="small"
+                />
+              </Form.Item>
+            </Form>
+          </Card>
+        </div>
+      );
+    }
+
+    // 如果选中了组件，显示组件样式配置
     if (!currentComponent) {
       return (
         <div style={{ padding: '16px', textAlign: 'center', color: '#999' }}>
@@ -2119,7 +2304,7 @@ export const PropertyPanel: React.FC<{
           title={
             <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <SkinOutlined />
-              样式配置
+              组件样式配置
             </span>
           }
           size="small"
@@ -2546,6 +2731,7 @@ export const PropertyPanel: React.FC<{
           属性配置
         </span>
       ),
+      disabled: isCardSelected || false,
       children: (
         <div style={{ height: 'calc(100vh - 120px)', overflow: 'auto' }}>
           {renderProperties()}
@@ -2574,6 +2760,7 @@ export const PropertyPanel: React.FC<{
           事件管理
         </span>
       ),
+      disabled: isCardSelected || false,
       children: (
         <div style={{ height: 'calc(100vh - 120px)', overflow: 'auto' }}>
           {renderEvents()}

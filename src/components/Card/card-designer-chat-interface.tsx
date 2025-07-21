@@ -25,6 +25,18 @@ interface ChatInterfaceProps {
   onCardSelect: () => void;
   username?: string;
   avatar?: string;
+  // 新增：卡片样式
+  cardStyles?: {
+    backgroundColor?: string;
+    backgroundImage?: string;
+    borderWidth?: string;
+    borderStyle?: string;
+    borderColor?: string;
+    borderRadius?: string;
+    boxShadow?: string;
+    customCSS?: string;
+    [key: string]: any;
+  };
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -42,7 +54,20 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onCardSelect,
   username = '用户名',
   avatar,
+  cardStyles = {},
 }) => {
+  // 合并卡片样式
+  const mergedCardStyles: React.CSSProperties = {
+    backgroundColor: cardStyles.backgroundColor || '#fff',
+    backgroundImage: cardStyles.backgroundImage || 'none',
+    borderWidth: cardStyles.borderWidth || '1px',
+    borderStyle: cardStyles.borderStyle || 'solid',
+    borderColor: cardStyles.borderColor || '#e8e8e8',
+    borderRadius: cardStyles.borderRadius || '8px',
+    boxShadow: cardStyles.boxShadow || '0 2px 8px rgba(0,0,0,0.1)',
+    ...cardStyles,
+  };
+
   return (
     <div
       style={{
@@ -87,20 +112,26 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           </Text>
         </div>
         {/* 卡片容器 */}
-        <CardWrapper
-          elements={elements}
-          verticalSpacing={verticalSpacing}
-          padding={padding}
-          selectedPath={selectedPath}
-          hoveredPath={hoveredPath}
-          onElementsChange={onElementsChange}
-          onSelectComponent={onSelectComponent}
-          onDeleteComponent={onDeleteComponent}
-          onCopyComponent={onCopyComponent}
-          onCanvasFocus={onCanvasFocus}
-          isCardSelected={isCardSelected}
-          onCardSelect={onCardSelect}
-        />
+        <div
+          style={mergedCardStyles}
+          data-card-container="true"
+          onClick={onCardSelect}
+        >
+          <CardWrapper
+            elements={elements}
+            verticalSpacing={verticalSpacing}
+            padding={padding}
+            selectedPath={selectedPath}
+            hoveredPath={hoveredPath}
+            onElementsChange={onElementsChange}
+            onSelectComponent={onSelectComponent}
+            onDeleteComponent={onDeleteComponent}
+            onCopyComponent={onCopyComponent}
+            onCanvasFocus={onCanvasFocus}
+            isCardSelected={isCardSelected}
+            onCardSelect={onCardSelect}
+          />
+        </div>
       </div>
     </div>
   );
