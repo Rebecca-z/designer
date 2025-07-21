@@ -15,9 +15,11 @@ import {
   Card,
   Col,
   Collapse,
+  Divider,
   Form,
   Input,
   InputNumber,
+  Modal,
   Row,
   Select,
   Space,
@@ -600,6 +602,73 @@ export const ComponentPanel: React.FC<{
   );
 };
 
+// 新增变量弹窗组件
+const AddVariableModal: React.FC<{
+  visible: boolean;
+  newVariable: {
+    name: string;
+    type: 'text' | 'number' | 'boolean' | 'object';
+    description: string;
+    mockData: string;
+  };
+  onOk: () => void;
+  onCancel: () => void;
+  onChange: (field: string, value: any) => void;
+}> = ({ visible, newVariable, onOk, onCancel, onChange }) => {
+  return (
+    <Modal
+      title="新增变量"
+      open={visible}
+      onOk={onOk}
+      onCancel={onCancel}
+      okText="确定"
+      cancelText="取消"
+      width={500}
+    >
+      <Form layout="vertical">
+        <Form.Item label="类型" required>
+          <Select
+            value={newVariable.type}
+            onChange={(value) => onChange('type', value)}
+            style={{ width: '100%' }}
+          >
+            <Option value="text">文本</Option>
+            <Option value="number">数字</Option>
+            <Option value="boolean">布尔值</Option>
+            <Option value="object">对象</Option>
+          </Select>
+        </Form.Item>
+
+        <Form.Item label="变量名称" required>
+          <Input
+            value={newVariable.name}
+            onChange={(e) => onChange('name', e.target.value)}
+            placeholder="请输入变量名称"
+          />
+        </Form.Item>
+
+        <Form.Item label="变量描述">
+          <Input.TextArea
+            value={newVariable.description}
+            onChange={(e) => onChange('description', e.target.value)}
+            placeholder="请输入变量描述"
+            rows={3}
+          />
+        </Form.Item>
+
+        <Form.Item label="模拟数据" required>
+          <Input.TextArea
+            value={newVariable.mockData}
+            onChange={(e) => onChange('mockData', e.target.value)}
+            placeholder="请输入模拟数据"
+            rows={3}
+          />
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
+};
+
 // 右侧属性面板 - 修复数据更新逻辑
 export const PropertyPanel: React.FC<{
   selectedComponent: ComponentType | null;
@@ -624,6 +693,21 @@ export const PropertyPanel: React.FC<{
 }) => {
   const [form] = Form.useForm();
   const [activeTab, setActiveTab] = useState<string>('properties');
+
+  // 新增变量弹窗状态
+  const [isAddVariableModalVisible, setIsAddVariableModalVisible] =
+    useState(false);
+  const [newVariable, setNewVariable] = useState<{
+    name: string;
+    type: 'text' | 'number' | 'boolean' | 'object';
+    description: string;
+    mockData: string;
+  }>({
+    name: '',
+    type: 'text',
+    description: '',
+    mockData: '',
+  });
 
   // 获取真实的组件和路径
   const { component: realComponent, realPath } = getComponentRealPath(
@@ -713,6 +797,40 @@ export const PropertyPanel: React.FC<{
   const handleDeleteVariable = (index: number) => {
     const updated = variables.filter((_, i) => i !== index);
     onUpdateVariables(updated);
+  };
+
+  // 新增变量相关函数
+  const handleAddVariableFromModal = () => {
+    const variable: Variable = {
+      name: newVariable.name,
+      value: newVariable.mockData,
+      type: newVariable.type,
+    };
+
+    onUpdateVariables([...variables, variable]);
+
+    // 重置表单并关闭弹窗
+    setNewVariable({
+      name: '',
+      type: 'text',
+      description: '',
+      mockData: '',
+    });
+    setIsAddVariableModalVisible(false);
+  };
+
+  const handleOpenAddVariableModal = () => {
+    setIsAddVariableModalVisible(true);
+  };
+
+  const handleCancelAddVariableModal = () => {
+    setNewVariable({
+      name: '',
+      type: 'text',
+      description: '',
+      mockData: '',
+    });
+    setIsAddVariableModalVisible(false);
   };
 
   const renderProperties = () => {
@@ -1676,18 +1794,69 @@ export const PropertyPanel: React.FC<{
                   children: (
                     <Form form={form} layout="vertical">
                       <Form.Item label="主题样式">
-                        <Select
-                          value={comp.style || 'blue'}
-                          onChange={(value) =>
-                            handleValueChange('style', value)
-                          }
-                          style={{ width: '100%' }}
-                        >
-                          <Option value="blue">蓝色主题</Option>
-                          <Option value="green">绿色主题</Option>
-                          <Option value="red">红色主题</Option>
-                          <Option value="wethet">天气主题</Option>
-                        </Select>
+                        <Tabs
+                          size="small"
+                          items={[
+                            {
+                              key: 'specified',
+                              label: '指定',
+                              children: (
+                                <Form.Item label="主题样式">
+                                  <Select
+                                    value={comp.style || 'blue'}
+                                    onChange={(value) =>
+                                      handleValueChange('style', value)
+                                    }
+                                    style={{ width: '100%' }}
+                                  >
+                                    <Option value="blue">蓝色主题</Option>
+                                    <Option value="green">绿色主题</Option>
+                                    <Option value="red">红色主题</Option>
+                                    <Option value="wethet">天气主题</Option>
+                                  </Select>
+                                </Form.Item>
+                              ),
+                            },
+                            {
+                              key: 'variable',
+                              label: '绑定变量',
+                              children: (
+                                <Form.Item label="选择变量">
+                                  <Select
+                                    placeholder="请选择变量"
+                                    style={{ width: '100%' }}
+                                    dropdownRender={(menu) => (
+                                      <>
+                                        {menu}
+                                        <Divider style={{ margin: '8px 0' }} />
+                                        <Button
+                                          type="text"
+                                          icon={<PlusOutlined />}
+                                          onClick={handleOpenAddVariableModal}
+                                          style={{
+                                            width: '100%',
+                                            height: '32px',
+                                          }}
+                                        >
+                                          新增变量
+                                        </Button>
+                                      </>
+                                    )}
+                                  >
+                                    {variables.map((variable) => (
+                                      <Option
+                                        key={variable.name}
+                                        value={variable.name}
+                                      >
+                                        {variable.name}
+                                      </Option>
+                                    ))}
+                                  </Select>
+                                </Form.Item>
+                              ),
+                            },
+                          ]}
+                        />
                       </Form.Item>
                     </Form>
                   ),
@@ -2793,6 +2962,17 @@ export const PropertyPanel: React.FC<{
         size="small"
         items={TabItems}
       ></Tabs>
+
+      {/* 新增变量弹窗 */}
+      <AddVariableModal
+        visible={isAddVariableModalVisible}
+        newVariable={newVariable}
+        onOk={handleAddVariableFromModal}
+        onCancel={handleCancelAddVariableModal}
+        onChange={(field, value) =>
+          setNewVariable((prev) => ({ ...prev, [field]: value }))
+        }
+      />
     </div>
   );
 };

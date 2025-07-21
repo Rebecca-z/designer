@@ -2423,7 +2423,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             backgroundColor: '#fff',
             border: '1px solid #f0f0f0',
             borderRadius: '4px',
-            textAlign: 'center',
+            // textAlign: 'center',
           }}
         >
           <h1 style={{ margin: '0 0 8px 0', fontSize: '24px', color: '#333' }}>
