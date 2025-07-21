@@ -37,6 +37,12 @@ interface ChatInterfaceProps {
     customCSS?: string;
     [key: string]: any;
   };
+  // 新增：标题数据
+  headerData?: {
+    title?: { content: string };
+    subtitle?: { content: string };
+    style?: string; // 改为字符串类型
+  };
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -55,6 +61,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   username = '用户名',
   avatar,
   cardStyles = {},
+  headerData,
 }) => {
   // 合并卡片样式
   const mergedCardStyles: React.CSSProperties = {
@@ -130,6 +137,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             onCanvasFocus={onCanvasFocus}
             isCardSelected={isCardSelected}
             onCardSelect={onCardSelect}
+            headerData={headerData}
           />
         </div>
       </div>

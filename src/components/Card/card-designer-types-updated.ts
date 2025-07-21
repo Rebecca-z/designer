@@ -51,8 +51,9 @@ export interface ComponentBase {
 
 export interface TitleComponent extends ComponentBase {
   tag: 'title';
-  title: string;
-  subtitle: string;
+  // title和subtitle属性已移到CardHeader中
+  // title: string;
+  // subtitle: string;
   style: 'blue' | 'wethet' | 'green' | 'red';
 }
 
@@ -245,7 +246,7 @@ export interface CardBody {
 }
 
 export interface CardHeader {
-  style?: { [key: string]: any };
+  style?: string; // 改为字符串类型，直接存储主题样式
   title: {
     content: string;
     i18n_content?: { [key: string]: string };
@@ -254,14 +255,16 @@ export interface CardHeader {
     content: string;
     i18n_content?: { [key: string]: string };
   };
+  // 索引签名
+  [key: string]: any;
 }
 
 export interface CardLink {
   multi_url: {
     url: string;
-    android_url?: string;
-    ios_url?: string;
-    pc_url?: string;
+    android_url: string;
+    ios_url: string;
+    pc_url: string;
   };
 }
 
@@ -274,7 +277,7 @@ export interface CardDSL {
 }
 
 export interface CardDesignData {
-  id: string;
+  id?: string; // 可选，因为可能从外部传入
   name: string;
   dsl: CardDSL;
   variables: { [key: string]: any };

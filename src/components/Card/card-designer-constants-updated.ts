@@ -87,24 +87,24 @@ export const DEFAULT_CARD_DATA: CardDesignData = {
     config: {},
     card_link: {
       multi_url: {
-        url: '',
-        android_url: '',
-        ios_url: '',
-        pc_url: '',
+        url: 'http://www.baidu.com',
+        android_url: 'http://www.baidu.com',
+        ios_url: 'http://www.baidu.com',
+        pc_url: 'http://www.baidu.com',
       },
     },
     header: {
-      style: {},
+      style: 'blue', // 直接存储主题样式字符串
       title: {
-        content: '',
+        content: '标题',
         i18n_content: {
-          'en-US': '',
+          'en-US': 'Title',
         },
       },
       subtitle: {
-        content: '',
+        content: '副标题',
         i18n_content: {
-          'en-US': '',
+          'en-US': 'Subtitle',
         },
       },
     },

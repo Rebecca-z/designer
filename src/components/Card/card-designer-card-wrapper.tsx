@@ -340,6 +340,12 @@ interface CardWrapperProps {
   onCanvasFocus: () => void;
   isCardSelected: boolean;
   onCardSelect: () => void;
+  // 新增：标题数据
+  headerData?: {
+    title?: { content: string };
+    subtitle?: { content: string };
+    style?: string; // 改为字符串类型
+  };
 }
 
 const CardWrapper: React.FC<CardWrapperProps> = ({
@@ -355,6 +361,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
   onCanvasFocus,
   isCardSelected,
   onCardSelect,
+  headerData,
 }) => {
   // 工具函数：检查画布中是否已存在标题组件
   const hasExistingTitle = (elements: ComponentType[]): boolean => {
@@ -2199,6 +2206,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                     onContainerDrop={handleContainerDrop}
                     onComponentSort={handleComponentSort}
                     isPreview={false}
+                    headerData={headerData}
                   />
                 </ErrorBoundary>
               </DragSortableItem>

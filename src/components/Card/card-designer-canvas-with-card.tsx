@@ -254,6 +254,7 @@ const Canvas: React.FC<CanvasProps> = ({
             onCardSelect={handleCardSelect}
             username="用户名"
             cardStyles={data.dsl.body.styles}
+            headerData={data.dsl.header}
           />
         </div>
 

@@ -14,6 +14,7 @@ import {
 } from './card-designer-constants-updated';
 import Modals from './card-designer-modals';
 import Toolbar from './card-designer-toolbar-with-id';
+import { migrateTitleStyle } from './card-designer-utils';
 
 // 验证所有导入都存在
 console.log('✅ ComponentPanel 导入成功:', typeof ComponentPanel);
@@ -61,17 +62,18 @@ const CardDesigner: React.FC = () => {
   // const update = useComponentUpdate();
   const config = useConfigManagement();
 
-  // 类型转换：将历史数据转为卡片数据
-  const cardData = history.data as unknown as CardDesignData;
-
-  // 安全检查：确保数据结构完整
+  // 安全检查：确保数据结构完整，并进行数据迁移
   const safeCardData = React.useMemo(() => {
-    if (!cardData || !cardData.dsl || !cardData.dsl.body) {
+    const data = history.data as unknown as CardDesignData;
+    if (!data || !data.dsl || !data.dsl.body) {
       console.warn('⚠️ 卡片数据结构不完整，使用默认数据');
       return DEFAULT_CARD_DATA;
     }
-    return cardData;
-  }, [cardData]);
+
+    // 进行数据迁移
+    const migratedData = migrateTitleStyle(data);
+    return migratedData;
+  }, [history.data]);
 
   // 根据路径获取组件的辅助函数 - 支持嵌套组件
   const getComponentByPath = (
@@ -359,6 +361,7 @@ const CardDesigner: React.FC = () => {
   const handleUpdateCard = (updates: {
     vertical_spacing?: number;
     padding?: CardPadding;
+    cardData?: CardDesignData; // 新增：支持完整的卡片数据更新
   }) => {
     console.log('🎯 处理卡片属性更新:', {
       updates,
@@ -367,16 +370,28 @@ const CardDesigner: React.FC = () => {
       timestamp: new Date().toISOString(),
     });
 
-    const newData = {
-      ...safeCardData,
-      dsl: {
-        ...safeCardData.dsl,
-        body: {
-          ...safeCardData.dsl.body,
-          ...updates,
+    let newData;
+
+    // 如果提供了完整的卡片数据更新
+    if (updates.cardData) {
+      newData = updates.cardData;
+      console.log('🔄 完整卡片数据更新:', {
+        oldHeader: safeCardData.dsl.header,
+        newHeader: newData.dsl.header,
+      });
+    } else {
+      // 原有的body更新逻辑
+      newData = {
+        ...safeCardData,
+        dsl: {
+          ...safeCardData.dsl,
+          body: {
+            ...safeCardData.dsl.body,
+            ...updates,
+          },
         },
-      },
-    };
+      };
+    }
 
     // 如果更新了垂直间距，记录详细信息
     if (updates.vertical_spacing !== undefined) {
@@ -408,14 +423,7 @@ const CardDesigner: React.FC = () => {
   };
 
   const handleSaveConfig = () => {
-    config.saveConfig(
-      {
-        direction: 'vertical' as const,
-        vertical_spacing: safeCardData.dsl.body.vertical_spacing,
-        elements: safeCardData.dsl.body.elements,
-      } as any,
-      variables,
-    );
+    config.saveConfig(safeCardData, variables);
   };
 
   const handleLoadConfig = () => {
@@ -484,13 +492,7 @@ const CardDesigner: React.FC = () => {
           onSave={handleSaveConfig}
           onLoad={handleLoadConfig}
           onImport={config.importConfig}
-          onExport={() =>
-            config.exportConfig({
-              direction: 'vertical' as const,
-              vertical_spacing: safeCardData.dsl.body.vertical_spacing,
-              elements: safeCardData.dsl.body.elements,
-            } as any)
-          }
+          onExport={() => config.exportConfig(safeCardData)}
           onPreview={() => setPreviewVisible(true)}
           elementsCount={safeCardData.dsl.body.elements.length}
           variablesCount={variables.length}
@@ -543,6 +545,7 @@ const CardDesigner: React.FC = () => {
                   left: 16,
                 }
               }
+              headerData={safeCardData.dsl.header}
               cardData={safeCardData}
             />
           </div>

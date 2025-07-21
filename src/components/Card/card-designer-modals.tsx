@@ -10,7 +10,7 @@ import { Button, Modal, Space, Typography, Upload, message } from 'antd';
 import React from 'react';
 import ComponentRenderer from './card-designer-components';
 import { DEVICE_SIZES } from './card-designer-constants';
-import { DesignData, Variable } from './card-designer-types';
+import { Variable } from './card-designer-types';
 import { generatePreviewHTML } from './card-designer-utils';
 import ErrorBoundary from './ErrorBoundary';
 
@@ -31,7 +31,7 @@ interface ModalsProps {
   // 预览模态框
   previewVisible: boolean;
   setPreviewVisible: (visible: boolean) => void;
-  data: DesignData;
+  data: any; // 更新为支持新的卡片数据结构
   device: keyof typeof DEVICE_SIZES;
   variables: Variable[];
   historyLength: number;
@@ -139,23 +139,24 @@ const Modals: React.FC<ModalsProps> = ({
             }}
           >
             <h4 style={{ margin: '0 0 8px 0', color: '#0369a1' }}>
-              数据结构说明
+              新卡片数据结构说明
             </h4>
             <div style={{ fontSize: '12px', color: '#0c4a6e' }}>
+              <p style={{ margin: '4px 0' }}>• name: 卡片名称</p>
+              <p style={{ margin: '4px 0' }}>• variables: 变量定义对象</p>
+              <p style={{ margin: '4px 0' }}>• dsl.schema: 数据结构版本号</p>
               <p style={{ margin: '4px 0' }}>
-                • direction: vertical - 垂直布局（固定值，不可修改）
+                • dsl.card_link: 卡片链接配置（multi_url包含各平台URL）
               </p>
               <p style={{ margin: '4px 0' }}>
-                • vertical_spacing: 5 - 组件间垂直间距
+                • dsl.header: 标题相关配置（title、subtitle、style）
               </p>
               <p style={{ margin: '4px 0' }}>
-                • elements: [] - 主要组件列表，只能包含表单容器和分栏组件
+                • dsl.body:
+                主体内容配置（direction、vertical_spacing、padding、elements）
               </p>
               <p style={{ margin: '4px 0' }}>
-                • 表单容器支持嵌套：输入框、按钮、选择器等交互组件
-              </p>
-              <p style={{ margin: '4px 0' }}>
-                • 分栏组件支持嵌套：文本、图片、分割线等展示组件
+                • 标题信息已从组件中移到header中，title组件只保留样式
               </p>
             </div>
           </div>
@@ -172,7 +173,7 @@ const Modals: React.FC<ModalsProps> = ({
           >
             <Text style={{ fontSize: '12px', color: '#92400e' }}>
               💡
-              提示：此数据结构已移除内部字段（如id等），只保留目标API所需的字段
+              提示：此数据结构包含完整的卡片配置，包括标题信息、链接配置、样式设置等
             </Text>
           </div>
 
@@ -196,8 +197,8 @@ const Modals: React.FC<ModalsProps> = ({
             >
               <span>📊 配置统计：</span>
               <span>
-                组件数量: {data.elements.length} | 变量数量: {variables.length}{' '}
-                | 历史记录: {historyLength}
+                组件数量: {data.elements?.length || 0} | 变量数量:{' '}
+                {variables.length} | 历史记录: {historyLength}
               </span>
             </div>
           </div>

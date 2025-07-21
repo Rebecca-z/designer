@@ -33,6 +33,7 @@ import { useDrag } from 'react-dnd';
 import {
   COMPONENT_CATEGORIES,
   COMPONENT_TYPES,
+  DEFAULT_CARD_DATA,
 } from './card-designer-constants-updated';
 import PaddingEditor from './card-designer-padding-editor';
 import {
@@ -679,7 +680,14 @@ export const PropertyPanel: React.FC<{
   onUpdateVariables: (variables: Variable[]) => void;
   cardVerticalSpacing: number;
   cardPadding: CardPadding;
-  cardData: CardDesignData;
+  // 新增：标题数据
+  headerData?: {
+    title?: { content: string };
+    subtitle?: { content: string };
+    style?: string; // 改为字符串类型
+  };
+  // 新增：卡片数据（用于样式设置）
+  cardData?: CardDesignData;
 }> = ({
   selectedComponent,
   selectedPath,
@@ -689,6 +697,7 @@ export const PropertyPanel: React.FC<{
   onUpdateVariables,
   cardVerticalSpacing,
   cardPadding,
+  headerData,
   cardData,
 }) => {
   const [form] = Form.useForm();
@@ -711,7 +720,7 @@ export const PropertyPanel: React.FC<{
 
   // 获取真实的组件和路径
   const { component: realComponent, realPath } = getComponentRealPath(
-    cardData,
+    cardData || DEFAULT_CARD_DATA,
     selectedPath,
   );
 
@@ -755,6 +764,45 @@ export const PropertyPanel: React.FC<{
       });
       onUpdateComponent(updated);
     }
+  };
+
+  // 新增：处理CardHeader更新
+  const handleHeaderChange = (field: string, value: any) => {
+    if (!cardData) return;
+    const updatedCardData = {
+      ...cardData,
+      dsl: {
+        ...cardData.dsl,
+        header: {
+          ...cardData.dsl.header,
+          [field]: value,
+        },
+      },
+    };
+    onUpdateCard({ cardData: updatedCardData });
+  };
+
+  // 新增：处理CardHeader嵌套字段更新
+  const handleHeaderNestedChange = (
+    parentField: string,
+    field: string,
+    value: any,
+  ) => {
+    if (!cardData) return;
+    const updatedCardData = {
+      ...cardData,
+      dsl: {
+        ...cardData.dsl,
+        header: {
+          ...cardData.dsl.header,
+          [parentField]: {
+            ...cardData.dsl.header[parentField],
+            [field]: value,
+          },
+        },
+      },
+    };
+    onUpdateCard({ cardData: updatedCardData });
   };
 
   const handleNestedValueChange = (
@@ -1769,18 +1817,26 @@ export const PropertyPanel: React.FC<{
                     <Form form={form} layout="vertical">
                       <Form.Item label="主标题">
                         <Input
-                          value={comp.title || ''}
+                          value={headerData?.title?.content || ''}
                           onChange={(e) =>
-                            handleValueChange('title', e.target.value)
+                            handleHeaderNestedChange(
+                              'title',
+                              'content',
+                              e.target.value,
+                            )
                           }
                           placeholder="请输入主标题"
                         />
                       </Form.Item>
                       <Form.Item label="副标题">
                         <Input
-                          value={comp.subtitle || ''}
+                          value={headerData?.subtitle?.content || ''}
                           onChange={(e) =>
-                            handleValueChange('subtitle', e.target.value)
+                            handleHeaderNestedChange(
+                              'subtitle',
+                              'content',
+                              e.target.value,
+                            )
                           }
                           placeholder="请输入副标题"
                         />
@@ -1803,9 +1859,9 @@ export const PropertyPanel: React.FC<{
                               children: (
                                 <Form.Item label="主题样式">
                                   <Select
-                                    value={comp.style || 'blue'}
+                                    value={headerData?.style || 'blue'}
                                     onChange={(value) =>
-                                      handleValueChange('style', value)
+                                      handleHeaderChange('style', value)
                                     }
                                     style={{ width: '100%' }}
                                   >
@@ -2139,23 +2195,6 @@ export const PropertyPanel: React.FC<{
     if (isCardSelected) {
       return (
         <div style={{ padding: '16px' }}>
-          <Card
-            title={
-              <span
-                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-              >
-                <SkinOutlined />
-                卡片样式配置
-              </span>
-            }
-            size="small"
-            style={{ marginBottom: '16px' }}
-          >
-            <div style={{ fontSize: '12px', color: '#666' }}>
-              卡片: {cardData.name} ({cardData.id})
-            </div>
-          </Card>
-
           {/* 间距设置 */}
           <Card
             title="📏 间距设置"
@@ -2166,23 +2205,6 @@ export const PropertyPanel: React.FC<{
               <Form.Item
                 label="垂直间距"
                 help="组件之间的垂直间距，实时预览效果"
-                extra={
-                  <div
-                    style={{
-                      fontSize: '12px',
-                      color: '#666',
-                      marginTop: '4px',
-                      padding: '8px',
-                      backgroundColor: '#f5f5f5',
-                      borderRadius: '4px',
-                      border: '1px solid #e8e8e8',
-                    }}
-                  >
-                    💡 当前间距: <strong>{cardVerticalSpacing}px</strong>
-                    <br />
-                    📊 影响组件数: {cardData.dsl.body.elements.length} 个根组件
-                  </div>
-                }
               >
                 <InputNumber
                   value={cardVerticalSpacing}
@@ -2235,210 +2257,6 @@ export const PropertyPanel: React.FC<{
               value={cardPadding}
               onChange={(padding) => onUpdateCard({ padding })}
             />
-          </Card>
-
-          {/* 卡片背景样式 */}
-          <Card title="背景样式" size="small" style={{ marginBottom: '12px' }}>
-            <Form layout="vertical" size="small">
-              <Row gutter={8}>
-                <Col span={12}>
-                  <Form.Item label="背景颜色">
-                    <Input
-                      value={cardData.dsl.body.styles?.backgroundColor || ''}
-                      onChange={(e) => {
-                        const updatedCardData = {
-                          ...cardData,
-                          dsl: {
-                            ...cardData.dsl,
-                            body: {
-                              ...cardData.dsl.body,
-                              styles: {
-                                ...cardData.dsl.body.styles,
-                                backgroundColor: e.target.value,
-                              },
-                            },
-                          },
-                        };
-                        onUpdateCard({ cardData: updatedCardData });
-                      }}
-                      placeholder="transparent"
-                      size="small"
-                    />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item label="背景图片">
-                    <Input
-                      value={cardData.dsl.body.styles?.backgroundImage || ''}
-                      onChange={(e) => {
-                        const updatedCardData = {
-                          ...cardData,
-                          dsl: {
-                            ...cardData.dsl,
-                            body: {
-                              ...cardData.dsl.body,
-                              styles: {
-                                ...cardData.dsl.body.styles,
-                                backgroundImage: e.target.value,
-                              },
-                            },
-                          },
-                        };
-                        onUpdateCard({ cardData: updatedCardData });
-                      }}
-                      placeholder="url()"
-                      size="small"
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-            </Form>
-          </Card>
-
-          {/* 卡片边框样式 */}
-          <Card title="边框样式" size="small" style={{ marginBottom: '12px' }}>
-            <Form layout="vertical" size="small">
-              <Row gutter={8}>
-                <Col span={12}>
-                  <Form.Item label="边框宽度">
-                    <Input
-                      value={cardData.dsl.body.styles?.borderWidth || ''}
-                      onChange={(e) => {
-                        const updatedCardData = {
-                          ...cardData,
-                          dsl: {
-                            ...cardData.dsl,
-                            body: {
-                              ...cardData.dsl.body,
-                              styles: {
-                                ...cardData.dsl.body.styles,
-                                borderWidth: e.target.value,
-                              },
-                            },
-                          },
-                        };
-                        onUpdateCard({ cardData: updatedCardData });
-                      }}
-                      placeholder="0"
-                      size="small"
-                    />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item label="边框样式">
-                    <Select
-                      value={cardData.dsl.body.styles?.borderStyle || 'solid'}
-                      onChange={(value) => {
-                        const updatedCardData = {
-                          ...cardData,
-                          dsl: {
-                            ...cardData.dsl,
-                            body: {
-                              ...cardData.dsl.body,
-                              styles: {
-                                ...cardData.dsl.body.styles,
-                                borderStyle: value,
-                              },
-                            },
-                          },
-                        };
-                        onUpdateCard({ cardData: updatedCardData });
-                      }}
-                      size="small"
-                    >
-                      <Option value="none">无</Option>
-                      <Option value="solid">实线</Option>
-                      <Option value="dashed">虚线</Option>
-                      <Option value="dotted">点线</Option>
-                      <Option value="double">双线</Option>
-                    </Select>
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Row gutter={8}>
-                <Col span={12}>
-                  <Form.Item label="边框颜色">
-                    <Input
-                      value={cardData.dsl.body.styles?.borderColor || ''}
-                      onChange={(e) => {
-                        const updatedCardData = {
-                          ...cardData,
-                          dsl: {
-                            ...cardData.dsl,
-                            body: {
-                              ...cardData.dsl.body,
-                              styles: {
-                                ...cardData.dsl.body.styles,
-                                borderColor: e.target.value,
-                              },
-                            },
-                          },
-                        };
-                        onUpdateCard({ cardData: updatedCardData });
-                      }}
-                      placeholder="#000000"
-                      size="small"
-                    />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item label="圆角">
-                    <Input
-                      value={cardData.dsl.body.styles?.borderRadius || ''}
-                      onChange={(e) => {
-                        const updatedCardData = {
-                          ...cardData,
-                          dsl: {
-                            ...cardData.dsl,
-                            body: {
-                              ...cardData.dsl.body,
-                              styles: {
-                                ...cardData.dsl.body.styles,
-                                borderRadius: e.target.value,
-                              },
-                            },
-                          },
-                        };
-                        onUpdateCard({ cardData: updatedCardData });
-                      }}
-                      placeholder="0"
-                      size="small"
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-            </Form>
-          </Card>
-
-          {/* 自定义CSS */}
-          <Card title="自定义CSS" size="small">
-            <Form layout="vertical" size="small">
-              <Form.Item label="CSS代码">
-                <Input.TextArea
-                  value={cardData.dsl.body.styles?.customCSS || ''}
-                  onChange={(e) => {
-                    const updatedCardData = {
-                      ...cardData,
-                      dsl: {
-                        ...cardData.dsl,
-                        body: {
-                          ...cardData.dsl.body,
-                          styles: {
-                            ...cardData.dsl.body.styles,
-                            customCSS: e.target.value,
-                          },
-                        },
-                      },
-                    };
-                    onUpdateCard({ cardData: updatedCardData });
-                  }}
-                  placeholder="/* 在这里输入自定义CSS代码 */"
-                  rows={4}
-                  size="small"
-                />
-              </Form.Item>
-            </Form>
           </Card>
         </div>
       );

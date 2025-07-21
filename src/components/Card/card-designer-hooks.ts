@@ -5,9 +5,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ComponentType, DesignData, Variable } from './card-designer-types';
 import {
   convertToTargetFormat,
-  exportToJSON,
   generateId,
   importFromJSON,
+  migrateCardLink,
+  migrateTitleStyle,
 } from './card-designer-utils';
 
 // 工具函数：根据路径更新组件
@@ -432,7 +433,7 @@ export const useConfigManagement = () => {
   const [importModalVisible, setImportModalVisible] = useState<boolean>(false);
   const [exportData, setExportData] = useState<string>('');
 
-  const exportConfig = useCallback((data: DesignData) => {
+  const exportConfig = useCallback((data: any) => {
     try {
       const targetFormat = convertToTargetFormat(data);
       const exportJson = JSON.stringify(targetFormat, null, 2);
@@ -481,17 +482,17 @@ export const useConfigManagement = () => {
                 },
               },
               header: {
-                style: {},
+                style: 'blue', // 直接存储主题样式字符串
                 title: {
-                  content: '',
+                  content: '标题',
                   i18n_content: {
-                    'en-US': '',
+                    'en-US': 'Title',
                   },
                 },
                 subtitle: {
-                  content: '',
+                  content: '副标题',
                   i18n_content: {
-                    'en-US': '',
+                    'en-US': 'Subtitle',
                   },
                 },
               },
@@ -515,7 +516,9 @@ export const useConfigManagement = () => {
             newCardFormat: newCardData,
           });
 
-          updateData(newCardData);
+          // 进行数据迁移
+          const migratedData = migrateTitleStyle(migrateCardLink(newCardData));
+          updateData(migratedData);
           setImportModalVisible(false);
           message.success('配置导入成功');
         } else {
@@ -530,90 +533,96 @@ export const useConfigManagement = () => {
     return false; // 阻止自动上传
   }, []);
 
-  const saveConfig = useCallback((data: DesignData, variables: Variable[]) => {
+  const saveConfig = useCallback((data: any, variables: Variable[]) => {
     try {
-      const config = exportToJSON(data);
-      localStorage.setItem('card-designer-config', config);
-      localStorage.setItem(
-        'card-designer-variables',
-        JSON.stringify(variables),
-      );
-      message.success('配置已保存到本地');
+      const targetFormat = convertToTargetFormat(data);
+      const configData = {
+        ...targetFormat,
+        variables,
+      };
+      const configJson = JSON.stringify(configData, null, 2);
+      localStorage.setItem('cardDesignerConfig', configJson);
+      message.success('配置已保存到本地存储');
     } catch (error) {
-      message.error('保存失败');
+      message.error('保存配置失败');
+      console.error('Save error:', error);
     }
   }, []);
 
   const loadConfig = useCallback((updateData: any, setVariables: any) => {
     try {
-      const config = localStorage.getItem('card-designer-config');
-      const savedVariables = localStorage.getItem('card-designer-variables');
-
+      const config = localStorage.getItem('cardDesignerConfig');
       if (config) {
-        const parsedConfig = importFromJSON(config);
-        if (parsedConfig) {
-          // 将旧格式数据转换为新格式的卡片数据
-          const newCardData = {
-            id: Date.now().toString(36) + Math.random().toString(36).substr(2),
-            name: '本地配置',
-            dsl: {
-              schema: 0.1,
-              config: {},
-              card_link: {
-                multi_url: {
-                  url: '',
-                  android_url: '',
-                  ios_url: '',
-                  pc_url: '',
-                },
-              },
-              header: {
-                style: {},
-                title: {
-                  content: '',
-                  i18n_content: {
-                    'en-US': '',
+        const parsedConfig = JSON.parse(config);
+
+        // 检查是否是新的卡片格式
+        if (parsedConfig.name && parsedConfig.dsl && parsedConfig.variables) {
+          // 新格式：进行数据迁移后使用
+          const migratedData = migrateTitleStyle(migrateCardLink(parsedConfig));
+          updateData(migratedData);
+          setVariables(migratedData.variables || []);
+          message.success('配置已从本地存储加载');
+        } else {
+          // 旧格式：转换为新格式
+          const jsonData = importFromJSON(config);
+          if (jsonData) {
+            const newCardData = {
+              id:
+                Date.now().toString(36) + Math.random().toString(36).substr(2),
+              name: '导入的卡片',
+              dsl: {
+                schema: 0.1,
+                config: {},
+                card_link: {
+                  multi_url: {
+                    url: 'http://www.baidu.com',
+                    android_url: 'http://www.baidu.com',
+                    ios_url: 'http://www.baidu.com',
+                    pc_url: 'http://www.baidu.com',
                   },
                 },
-                subtitle: {
-                  content: '',
-                  i18n_content: {
-                    'en-US': '',
+                header: {
+                  style: 'blue', // 直接存储主题样式字符串
+                  title: {
+                    content: '标题',
+                    i18n_content: {
+                      'en-US': 'Title',
+                    },
+                  },
+                  subtitle: {
+                    content: '副标题',
+                    i18n_content: {
+                      'en-US': 'Subtitle',
+                    },
                   },
                 },
-              },
-              body: {
-                direction: parsedConfig.direction || 'vertical',
-                vertical_spacing: parsedConfig.vertical_spacing || 8,
-                padding: {
-                  top: 16,
-                  right: 16,
-                  bottom: 16,
-                  left: 16,
+                body: {
+                  direction: jsonData.direction || 'vertical',
+                  vertical_spacing: jsonData.vertical_spacing || 8,
+                  padding: {
+                    top: 16,
+                    right: 16,
+                    bottom: 16,
+                    left: 16,
+                  },
+                  elements: jsonData.elements || [],
                 },
-                elements: parsedConfig.elements || [],
               },
-            },
-            variables: {},
-          };
-
-          console.log('✅ 本地配置转换完成:', {
-            originalFormat: parsedConfig,
-            newCardFormat: newCardData,
-          });
-
-          updateData(newCardData);
+              variables: parsedConfig.variables || [],
+            };
+            updateData(newCardData);
+            setVariables(parsedConfig.variables || []);
+            message.success('旧格式配置已转换并加载');
+          } else {
+            message.error('配置文件格式错误');
+          }
         }
+      } else {
+        message.warning('没有找到保存的配置');
       }
-
-      if (savedVariables) {
-        setVariables(JSON.parse(savedVariables));
-      }
-
-      message.success('配置已加载');
     } catch (error) {
-      message.error('加载失败');
-      console.error('Load config error:', error);
+      message.error('加载配置失败');
+      console.error('Load error:', error);
     }
   }, []);
 

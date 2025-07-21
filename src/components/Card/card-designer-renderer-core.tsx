@@ -39,6 +39,12 @@ interface ComponentRendererCoreProps {
   onDelete?: (path: (string | number)[]) => void;
   onCopy?: (component: ComponentType) => void;
   onCanvasFocus?: () => void;
+  // 新增：标题数据，用于title组件渲染
+  headerData?: {
+    title?: { content: string };
+    subtitle?: { content: string };
+    style?: string; // 改为字符串类型
+  };
 }
 
 // 检查组件是否为容器类型
@@ -1508,6 +1514,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
   onDelete,
   onCopy,
   onCanvasFocus,
+  headerData,
 }) => {
   // 安全检查
   if (!component || !component.tag) {
@@ -1624,6 +1631,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           onDelete={onDelete}
           onCopy={onCopy}
           onCanvasFocus={onCanvasFocus}
+          headerData={headerData}
         />
       );
 
@@ -2416,21 +2424,81 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
     }
 
     case 'title': {
+      // 从CardHeader中读取标题信息
+      const headerTitle = headerData?.title?.content || '主标题';
+      const headerSubtitle = headerData?.subtitle?.content || '副标题';
+      const themeStyle = headerData?.style || 'blue'; // 直接读取字符串
+
+      // 根据主题样式设置不同的样式
+      const getThemeStyles = (theme: string) => {
+        switch (theme) {
+          case 'blue':
+            return {
+              backgroundColor: '#e6f7ff',
+              borderColor: '#91d5ff',
+              titleColor: '#1890ff',
+              subtitleColor: '#096dd9',
+            };
+          case 'green':
+            return {
+              backgroundColor: '#f6ffed',
+              borderColor: '#b7eb8f',
+              titleColor: '#52c41a',
+              subtitleColor: '#389e0d',
+            };
+          case 'red':
+            return {
+              backgroundColor: '#fff2f0',
+              borderColor: '#ffccc7',
+              titleColor: '#ff4d4f',
+              subtitleColor: '#cf1322',
+            };
+          case 'wethet':
+            return {
+              backgroundColor: '#f0f9ff',
+              borderColor: '#bae6fd',
+              titleColor: '#0369a1',
+              subtitleColor: '#0c4a6e',
+            };
+          default:
+            return {
+              backgroundColor: '#fff',
+              borderColor: '#f0f0f0',
+              titleColor: '#333',
+              subtitleColor: '#666',
+            };
+        }
+      };
+
+      const themeStyles = getThemeStyles(themeStyle);
+
       const titleContent = (
         <div
           style={{
             padding: '16px',
-            backgroundColor: '#fff',
-            border: '1px solid #f0f0f0',
+            backgroundColor: themeStyles.backgroundColor,
+            border: `1px solid ${themeStyles.borderColor}`,
             borderRadius: '4px',
             // textAlign: 'center',
           }}
         >
-          <h1 style={{ margin: '0 0 8px 0', fontSize: '24px', color: '#333' }}>
-            {comp.title || '主标题'}
+          <h1
+            style={{
+              margin: '0 0 8px 0',
+              fontSize: '24px',
+              color: themeStyles.titleColor,
+            }}
+          >
+            {headerTitle}
           </h1>
-          <h2 style={{ margin: '0', fontSize: '16px', color: '#666' }}>
-            {comp.subtitle || '副标题'}
+          <h2
+            style={{
+              margin: '0',
+              fontSize: '16px',
+              color: themeStyles.subtitleColor,
+            }}
+          >
+            {headerSubtitle}
           </h2>
         </div>
       );

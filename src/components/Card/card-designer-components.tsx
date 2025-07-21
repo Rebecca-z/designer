@@ -40,6 +40,12 @@ interface ComponentRendererProps {
     updatedComponent: ComponentType,
   ) => void;
   onCanvasFocus?: () => void;
+  // 新增：标题数据
+  headerData?: {
+    title?: { content: string };
+    subtitle?: { content: string };
+    style?: string; // 改为字符串类型
+  };
 }
 
 // 检查组件是否为容器类型
@@ -203,6 +209,8 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
   // isSelected,
   // selectedComponent,
   selectedPath,
+  // hoveredPath,
+  // isHovered,
   // onUpdate,
   onDelete,
   onCopy,
@@ -212,6 +220,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
   onComponentSort,
   // onUpdateComponent,
   onCanvasFocus,
+  headerData,
 }) => {
   // 安全检查 - 防止组件为 undefined 或 null
   if (!component) {
@@ -464,6 +473,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             onDelete={onDelete}
             onCopy={onCopy}
             onCanvasFocus={onCanvasFocus}
+            headerData={headerData}
           />
 
           {/* 选中状态标签 */}
@@ -496,8 +506,8 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
       isCurrentSelected && !isPreview
         ? '2px solid #1890ff'
         : '1px solid transparent',
-    padding: '4px',
-    margin: '2px',
+    // padding: '4px',
+    // margin: '2px',
     borderRadius: '4px',
     cursor: isPreview ? 'default' : 'pointer',
     minHeight: '30px',
@@ -607,6 +617,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             )
           } // 根级别组件禁用内部拖拽，让DragSortableItem处理
           enableSort={!isPreview}
+          headerData={headerData}
         />
 
         {/* 组件标签 */}

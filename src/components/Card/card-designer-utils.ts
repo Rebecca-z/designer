@@ -767,8 +767,124 @@ export const createDefaultComponent = (type: string): ComponentType => {
   }
 };
 
-// 转换为目标数据结构
-export const convertToTargetFormat = (data: DesignData): any => {
+// 数据迁移函数：将旧的card_link格式迁移到新的multi_url格式
+export const migrateCardLink = (cardData: any): any => {
+  if (!cardData || !cardData.dsl || !cardData.dsl.card_link) {
+    return cardData;
+  }
+
+  const cardLink = cardData.dsl.card_link;
+  let needsMigration = false;
+  let newCardLink = {
+    multi_url: {
+      url: 'http://www.baidu.com',
+      android_url: 'http://www.baidu.com',
+      ios_url: 'http://www.baidu.com',
+      pc_url: 'http://www.baidu.com',
+    },
+  };
+
+  // 如果存在旧的直接URL字段，迁移到multi_url中
+  if (cardLink.url && !cardLink.multi_url) {
+    newCardLink = {
+      multi_url: {
+        url: cardLink.url,
+        android_url: cardLink.android_url || cardLink.url,
+        ios_url: cardLink.ios_url || cardLink.url,
+        pc_url: cardLink.pc_url || cardLink.url,
+      },
+    };
+    needsMigration = true;
+    console.log('✅ 数据迁移完成：card_link -> card_link.multi_url', {
+      oldValue: cardLink,
+      newValue: newCardLink,
+    });
+  }
+
+  if (needsMigration) {
+    const migratedData = {
+      ...cardData,
+      dsl: {
+        ...cardData.dsl,
+        card_link: newCardLink,
+      },
+    };
+
+    return migratedData;
+  }
+
+  return cardData;
+};
+
+// 数据迁移函数：将旧的titleStyle字段迁移到新的style字符串中
+export const migrateTitleStyle = (cardData: any): any => {
+  if (!cardData || !cardData.dsl || !cardData.dsl.header) {
+    return cardData;
+  }
+
+  const header = cardData.dsl.header;
+  let needsMigration = false;
+  let newStyle = 'blue'; // 默认样式
+
+  // 如果存在旧的titleStyle字段，迁移到style字符串中
+  if (header.titleStyle) {
+    newStyle = header.titleStyle;
+    needsMigration = true;
+    console.log('✅ 数据迁移完成：titleStyle -> style', {
+      oldValue: header.titleStyle,
+      newValue: newStyle,
+    });
+  }
+
+  // 如果存在旧的style对象格式，迁移到style字符串中
+  if (
+    header.style &&
+    typeof header.style === 'object' &&
+    header.style.themeStyle
+  ) {
+    newStyle = header.style.themeStyle;
+    needsMigration = true;
+    console.log('✅ 数据迁移完成：style.themeStyle -> style', {
+      oldValue: header.style.themeStyle,
+      newValue: newStyle,
+    });
+  }
+
+  if (needsMigration) {
+    const migratedData = {
+      ...cardData,
+      dsl: {
+        ...cardData.dsl,
+        header: {
+          ...header,
+          style: newStyle,
+        },
+      },
+    };
+
+    // 删除旧的字段
+    delete migratedData.dsl.header.titleStyle;
+    if (
+      migratedData.dsl.header.style &&
+      typeof migratedData.dsl.header.style === 'object'
+    ) {
+      delete migratedData.dsl.header.style.themeStyle;
+    }
+
+    return migratedData;
+  }
+
+  return cardData;
+};
+
+// 转换为目标数据结构 - 更新为新的卡片数据结构
+export const convertToTargetFormat = (data: any): any => {
+  // 如果传入的是完整的卡片数据，先进行数据迁移，然后直接返回
+  if (data.name && data.dsl && data.variables) {
+    return migrateTitleStyle(data);
+  }
+
+  // 如果是旧的DesignData格式，转换为新的卡片格式
   const convertComponent = (component: any): any => {
     // 移除内部使用的字段，只保留目标结构需要的字段
     const converted: any = {
@@ -844,7 +960,6 @@ export const convertToTargetFormat = (data: DesignData): any => {
 
       case 'hr':
         // 分割线组件没有额外字段
-
         break;
 
       default:
@@ -856,10 +971,48 @@ export const convertToTargetFormat = (data: DesignData): any => {
     return converted;
   };
 
+  // 转换为新的卡片格式
   return {
-    direction: 'vertical',
-    vertical_spacing: data.vertical_spacing || 5,
-    elements: data.elements.map(convertComponent),
+    name: '空白卡片',
+    variables: {},
+    dsl: {
+      schema: 0.1,
+      config: {},
+      card_link: {
+        multi_url: {
+          url: 'http://www.baidu.com',
+          android_url: 'http://www.baidu.com',
+          ios_url: 'http://www.baidu.com',
+          pc_url: 'http://www.baidu.com',
+        },
+      },
+      header: {
+        style: 'blue', // 直接存储主题样式字符串
+        title: {
+          content: '标题',
+          i18n_content: {
+            'en-US': 'Title',
+          },
+        },
+        subtitle: {
+          content: '副标题',
+          i18n_content: {
+            'en-US': 'Subtitle',
+          },
+        },
+      },
+      body: {
+        direction: data.direction || 'vertical',
+        vertical_spacing: data.vertical_spacing || 8,
+        padding: {
+          top: 16,
+          right: 16,
+          bottom: 16,
+          left: 16,
+        },
+        elements: data.elements?.map(convertComponent) || [],
+      },
+    },
   };
 };
 
