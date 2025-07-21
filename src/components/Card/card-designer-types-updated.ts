@@ -4,6 +4,49 @@ export interface ComponentBase {
   id: string;
   tag: string;
   name?: string;
+  styles?: {
+    // 布局样式
+    display?: string;
+    position?: string;
+    width?: string;
+    height?: string;
+    minWidth?: string;
+    minHeight?: string;
+
+    // 间距样式
+    margin?: string;
+    padding?: string;
+
+    // 字体样式
+    fontSize?: string;
+    fontWeight?: string;
+    color?: string;
+    lineHeight?: string;
+    textAlign?: string;
+    textDecoration?: string;
+
+    // 背景样式
+    backgroundColor?: string;
+    backgroundImage?: string;
+    backgroundRepeat?: string;
+    backgroundPosition?: string;
+
+    // 边框样式
+    borderWidth?: string;
+    borderStyle?: string;
+    borderColor?: string;
+    borderRadius?: string;
+
+    // 阴影效果
+    boxShadow?: string;
+    textShadow?: string;
+
+    // 自定义CSS
+    customCSS?: string;
+
+    // 其他样式属性
+    [key: string]: any;
+  };
 }
 
 export interface TitleComponent extends ComponentBase {

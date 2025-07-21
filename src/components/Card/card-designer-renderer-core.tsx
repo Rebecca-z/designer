@@ -1468,6 +1468,30 @@ const SmartDropZone: React.FC<{
   );
 };
 
+// 样式合并函数
+const mergeStyles = (
+  component: ComponentType,
+  defaultStyles: React.CSSProperties,
+): React.CSSProperties => {
+  const componentStyles = component.styles || {};
+
+  // 合并默认样式和组件样式
+  const mergedStyles = { ...defaultStyles };
+
+  // 应用组件样式
+  Object.keys(componentStyles).forEach((key) => {
+    if (
+      key !== 'customCSS' &&
+      componentStyles[key] !== undefined &&
+      componentStyles[key] !== ''
+    ) {
+      mergedStyles[key as keyof React.CSSProperties] = componentStyles[key];
+    }
+  });
+
+  return mergedStyles;
+};
+
 const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
   component,
   isPreview = false,
@@ -1930,22 +1954,22 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         enableDrag,
       });
 
+      const defaultStyles: React.CSSProperties = {
+        color: comp.textColor || '#000000',
+        fontSize: `${comp.fontSize || 14}px`,
+        fontWeight: comp.fontWeight || 'normal',
+        textAlign: comp.textAlign || 'left',
+        lineHeight: 1.5,
+        padding: '8px 12px',
+        backgroundColor: '#fff',
+        border: '1px solid #f0f0f0',
+        borderRadius: '4px',
+      };
+
+      const mergedStyles = mergeStyles(component, defaultStyles);
+
       const textContent = (
-        <div
-          style={{
-            color: comp.textColor || '#000000',
-            fontSize: `${comp.fontSize || 14}px`,
-            fontWeight: comp.fontWeight || 'normal',
-            textAlign: comp.textAlign || 'left',
-            lineHeight: 1.5,
-            padding: '8px 12px',
-            backgroundColor: '#fff',
-            border: '1px solid #f0f0f0',
-            borderRadius: '4px',
-          }}
-        >
-          {comp.content || '文本内容'}
-        </div>
+        <div style={mergedStyles}>{comp.content || '文本内容'}</div>
       );
 
       return enableDrag && !isPreview ? (
@@ -1965,16 +1989,18 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
     }
 
     case 'rich_text': {
+      const defaultStyles: React.CSSProperties = {
+        padding: '12px',
+        border: '1px solid #f0f0f0',
+        borderRadius: '4px',
+        backgroundColor: '#fff7e6',
+        position: 'relative',
+      };
+
+      const mergedStyles = mergeStyles(component, defaultStyles);
+
       const richTextContent = (
-        <div
-          style={{
-            padding: '12px',
-            border: '1px solid #f0f0f0',
-            borderRadius: '4px',
-            backgroundColor: '#fff7e6',
-            position: 'relative',
-          }}
-        >
+        <div style={mergedStyles}>
           {!isPreview && (
             <div
               style={{

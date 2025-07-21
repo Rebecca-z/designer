@@ -8,6 +8,7 @@ import {
   FormatPainterOutlined,
   PlusOutlined,
   SettingOutlined,
+  SkinOutlined,
 } from '@ant-design/icons';
 import {
   Button,
@@ -801,7 +802,7 @@ export const PropertyPanel: React.FC<{
         />
 
         {/* 实时预览提示 */}
-        <div
+        {/* <div
           style={{
             marginTop: '16px',
             padding: '12px',
@@ -819,10 +820,10 @@ export const PropertyPanel: React.FC<{
             修改间距和内边距时，画布中的卡片会实时更新显示效果。
             您可以立即看到调整后的视觉效果。
           </div>
-        </div>
+        </div> */}
 
         {/* 导出配置预览 */}
-        <div
+        {/* <div
           style={{
             marginTop: '12px',
             padding: '12px',
@@ -859,7 +860,7 @@ export const PropertyPanel: React.FC<{
           <div style={{ marginTop: '8px', fontSize: '11px', opacity: 0.8 }}>
             💡 导出配置时会自动包含最新的间距设置
           </div>
-        </div>
+        </div> */}
       </div>
     );
   };
@@ -2089,6 +2090,453 @@ export const PropertyPanel: React.FC<{
     );
   };
 
+  const renderStyles = () => {
+    if (!currentComponent) {
+      return (
+        <div style={{ padding: '16px', textAlign: 'center', color: '#999' }}>
+          请选择一个组件来配置样式
+        </div>
+      );
+    }
+
+    // 初始化样式对象
+    const styles = currentComponent.styles || {};
+
+    const handleStyleChange = (field: string, value: any) => {
+      const updatedComponent = {
+        ...currentComponent,
+        styles: {
+          ...styles,
+          [field]: value,
+        },
+      };
+      onUpdateComponent(updatedComponent);
+    };
+
+    return (
+      <div style={{ padding: '16px' }}>
+        <Card
+          title={
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <SkinOutlined />
+              样式配置
+            </span>
+          }
+          size="small"
+          style={{ marginBottom: '16px' }}
+        >
+          <div style={{ fontSize: '12px', color: '#666' }}>
+            组件: {currentComponent.tag} ({currentComponent.id})
+          </div>
+        </Card>
+
+        {/* 布局样式 */}
+        <Card title="布局" size="small" style={{ marginBottom: '12px' }}>
+          <Form layout="vertical" size="small">
+            <Row gutter={8}>
+              <Col span={12}>
+                <Form.Item label="显示">
+                  <Select
+                    value={styles.display || 'block'}
+                    onChange={(value) => handleStyleChange('display', value)}
+                    size="small"
+                  >
+                    <Option value="block">块级</Option>
+                    <Option value="inline">行内</Option>
+                    <Option value="inline-block">行内块</Option>
+                    <Option value="flex">弹性布局</Option>
+                    <Option value="none">隐藏</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item label="定位">
+                  <Select
+                    value={styles.position || 'static'}
+                    onChange={(value) => handleStyleChange('position', value)}
+                    size="small"
+                  >
+                    <Option value="static">静态</Option>
+                    <Option value="relative">相对</Option>
+                    <Option value="absolute">绝对</Option>
+                    <Option value="fixed">固定</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={8}>
+              <Col span={12}>
+                <Form.Item label="宽度">
+                  <Input
+                    value={styles.width || ''}
+                    onChange={(e) => handleStyleChange('width', e.target.value)}
+                    placeholder="auto"
+                    size="small"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item label="高度">
+                  <Input
+                    value={styles.height || ''}
+                    onChange={(e) =>
+                      handleStyleChange('height', e.target.value)
+                    }
+                    placeholder="auto"
+                    size="small"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={8}>
+              <Col span={12}>
+                <Form.Item label="最小宽度">
+                  <Input
+                    value={styles.minWidth || ''}
+                    onChange={(e) =>
+                      handleStyleChange('minWidth', e.target.value)
+                    }
+                    placeholder="0"
+                    size="small"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item label="最小高度">
+                  <Input
+                    value={styles.minHeight || ''}
+                    onChange={(e) =>
+                      handleStyleChange('minHeight', e.target.value)
+                    }
+                    placeholder="0"
+                    size="small"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Form>
+        </Card>
+
+        {/* 边距和内边距 */}
+        <Card title="间距" size="small" style={{ marginBottom: '12px' }}>
+          <Form layout="vertical" size="small">
+            <Row gutter={8}>
+              <Col span={12}>
+                <Form.Item label="外边距">
+                  <Input
+                    value={styles.margin || ''}
+                    onChange={(e) =>
+                      handleStyleChange('margin', e.target.value)
+                    }
+                    placeholder="0"
+                    size="small"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item label="内边距">
+                  <Input
+                    value={styles.padding || ''}
+                    onChange={(e) =>
+                      handleStyleChange('padding', e.target.value)
+                    }
+                    placeholder="0"
+                    size="small"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Form>
+        </Card>
+
+        {/* 字体样式 */}
+        <Card title="字体" size="small" style={{ marginBottom: '12px' }}>
+          <Form layout="vertical" size="small">
+            <Row gutter={8}>
+              <Col span={12}>
+                <Form.Item label="字体大小">
+                  <Input
+                    value={styles.fontSize || ''}
+                    onChange={(e) =>
+                      handleStyleChange('fontSize', e.target.value)
+                    }
+                    placeholder="14px"
+                    size="small"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item label="字体粗细">
+                  <Select
+                    value={styles.fontWeight || 'normal'}
+                    onChange={(value) => handleStyleChange('fontWeight', value)}
+                    size="small"
+                  >
+                    <Option value="normal">正常</Option>
+                    <Option value="bold">粗体</Option>
+                    <Option value="lighter">细体</Option>
+                    <Option value="100">100</Option>
+                    <Option value="200">200</Option>
+                    <Option value="300">300</Option>
+                    <Option value="400">400</Option>
+                    <Option value="500">500</Option>
+                    <Option value="600">600</Option>
+                    <Option value="700">700</Option>
+                    <Option value="800">800</Option>
+                    <Option value="900">900</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={8}>
+              <Col span={12}>
+                <Form.Item label="字体颜色">
+                  <Input
+                    value={styles.color || ''}
+                    onChange={(e) => handleStyleChange('color', e.target.value)}
+                    placeholder="#000000"
+                    size="small"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item label="行高">
+                  <Input
+                    value={styles.lineHeight || ''}
+                    onChange={(e) =>
+                      handleStyleChange('lineHeight', e.target.value)
+                    }
+                    placeholder="1.5"
+                    size="small"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={8}>
+              <Col span={12}>
+                <Form.Item label="文本对齐">
+                  <Select
+                    value={styles.textAlign || 'left'}
+                    onChange={(value) => handleStyleChange('textAlign', value)}
+                    size="small"
+                  >
+                    <Option value="left">左对齐</Option>
+                    <Option value="center">居中</Option>
+                    <Option value="right">右对齐</Option>
+                    <Option value="justify">两端对齐</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item label="文本装饰">
+                  <Select
+                    value={styles.textDecoration || 'none'}
+                    onChange={(value) =>
+                      handleStyleChange('textDecoration', value)
+                    }
+                    size="small"
+                  >
+                    <Option value="none">无</Option>
+                    <Option value="underline">下划线</Option>
+                    <Option value="overline">上划线</Option>
+                    <Option value="line-through">删除线</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+          </Form>
+        </Card>
+
+        {/* 背景样式 */}
+        <Card title="背景" size="small" style={{ marginBottom: '12px' }}>
+          <Form layout="vertical" size="small">
+            <Row gutter={8}>
+              <Col span={12}>
+                <Form.Item label="背景颜色">
+                  <Input
+                    value={styles.backgroundColor || ''}
+                    onChange={(e) =>
+                      handleStyleChange('backgroundColor', e.target.value)
+                    }
+                    placeholder="transparent"
+                    size="small"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item label="背景图片">
+                  <Input
+                    value={styles.backgroundImage || ''}
+                    onChange={(e) =>
+                      handleStyleChange('backgroundImage', e.target.value)
+                    }
+                    placeholder="url()"
+                    size="small"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={8}>
+              <Col span={12}>
+                <Form.Item label="背景重复">
+                  <Select
+                    value={styles.backgroundRepeat || 'repeat'}
+                    onChange={(value) =>
+                      handleStyleChange('backgroundRepeat', value)
+                    }
+                    size="small"
+                  >
+                    <Option value="repeat">重复</Option>
+                    <Option value="no-repeat">不重复</Option>
+                    <Option value="repeat-x">水平重复</Option>
+                    <Option value="repeat-y">垂直重复</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item label="背景位置">
+                  <Select
+                    value={styles.backgroundPosition || 'left top'}
+                    onChange={(value) =>
+                      handleStyleChange('backgroundPosition', value)
+                    }
+                    size="small"
+                  >
+                    <Option value="left top">左上</Option>
+                    <Option value="center top">中上</Option>
+                    <Option value="right top">右上</Option>
+                    <Option value="left center">左中</Option>
+                    <Option value="center center">中心</Option>
+                    <Option value="right center">右中</Option>
+                    <Option value="left bottom">左下</Option>
+                    <Option value="center bottom">中下</Option>
+                    <Option value="right bottom">右下</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+          </Form>
+        </Card>
+
+        {/* 边框样式 */}
+        <Card title="边框" size="small" style={{ marginBottom: '12px' }}>
+          <Form layout="vertical" size="small">
+            <Row gutter={8}>
+              <Col span={12}>
+                <Form.Item label="边框宽度">
+                  <Input
+                    value={styles.borderWidth || ''}
+                    onChange={(e) =>
+                      handleStyleChange('borderWidth', e.target.value)
+                    }
+                    placeholder="0"
+                    size="small"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item label="边框样式">
+                  <Select
+                    value={styles.borderStyle || 'solid'}
+                    onChange={(value) =>
+                      handleStyleChange('borderStyle', value)
+                    }
+                    size="small"
+                  >
+                    <Option value="none">无</Option>
+                    <Option value="solid">实线</Option>
+                    <Option value="dashed">虚线</Option>
+                    <Option value="dotted">点线</Option>
+                    <Option value="double">双线</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={8}>
+              <Col span={12}>
+                <Form.Item label="边框颜色">
+                  <Input
+                    value={styles.borderColor || ''}
+                    onChange={(e) =>
+                      handleStyleChange('borderColor', e.target.value)
+                    }
+                    placeholder="#000000"
+                    size="small"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item label="圆角">
+                  <Input
+                    value={styles.borderRadius || ''}
+                    onChange={(e) =>
+                      handleStyleChange('borderRadius', e.target.value)
+                    }
+                    placeholder="0"
+                    size="small"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Form>
+        </Card>
+
+        {/* 阴影效果 */}
+        <Card title="阴影" size="small" style={{ marginBottom: '12px' }}>
+          <Form layout="vertical" size="small">
+            <Row gutter={8}>
+              <Col span={12}>
+                <Form.Item label="盒子阴影">
+                  <Input
+                    value={styles.boxShadow || ''}
+                    onChange={(e) =>
+                      handleStyleChange('boxShadow', e.target.value)
+                    }
+                    placeholder="0 0 0 0 rgba(0,0,0,0)"
+                    size="small"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item label="文本阴影">
+                  <Input
+                    value={styles.textShadow || ''}
+                    onChange={(e) =>
+                      handleStyleChange('textShadow', e.target.value)
+                    }
+                    placeholder="0 0 0 rgba(0,0,0,0)"
+                    size="small"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Form>
+        </Card>
+
+        {/* 自定义CSS */}
+        <Card title="自定义CSS" size="small">
+          <Form layout="vertical" size="small">
+            <Form.Item label="CSS代码">
+              <Input.TextArea
+                value={styles.customCSS || ''}
+                onChange={(e) => handleStyleChange('customCSS', e.target.value)}
+                placeholder="/* 在这里输入自定义CSS代码 */"
+                rows={4}
+                size="small"
+              />
+            </Form.Item>
+          </Form>
+        </Card>
+      </div>
+    );
+  };
+
   const TabItems = [
     {
       key: 'properties',
@@ -2101,6 +2549,20 @@ export const PropertyPanel: React.FC<{
       children: (
         <div style={{ height: 'calc(100vh - 120px)', overflow: 'auto' }}>
           {renderProperties()}
+        </div>
+      ),
+    },
+    {
+      key: 'styles',
+      label: (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <SkinOutlined />
+          样式
+        </span>
+      ),
+      children: (
+        <div style={{ height: 'calc(100vh - 120px)', overflow: 'auto' }}>
+          {renderStyles()}
         </div>
       ),
     },
