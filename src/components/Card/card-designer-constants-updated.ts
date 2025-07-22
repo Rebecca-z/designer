@@ -93,21 +93,7 @@ export const DEFAULT_CARD_DATA: CardDesignData = {
         pc_url: 'http://www.baidu.com',
       },
     },
-    header: {
-      style: 'blue', // 直接存储主题样式字符串
-      title: {
-        content: '标题',
-        i18n_content: {
-          'en-US': 'Title',
-        },
-      },
-      subtitle: {
-        content: '副标题',
-        i18n_content: {
-          'en-US': 'Subtitle',
-        },
-      },
-    },
+    // 移除默认的header，只有当用户添加标题组件时才创建
     body: {
       direction: 'vertical',
       vertical_spacing: 8,

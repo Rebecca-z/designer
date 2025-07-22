@@ -180,6 +180,47 @@ const getComponentRealPath = (
     return { component: null, realPath: selectedPath };
   }
 
+  // 检查是否是标题组件选中状态：['dsl', 'body', 'elements', 0]
+  if (
+    selectedPath.length === 4 &&
+    selectedPath[0] === 'dsl' &&
+    selectedPath[1] === 'body' &&
+    selectedPath[2] === 'elements' &&
+    selectedPath[3] === 0
+  ) {
+    // 标题组件特殊处理：检查headerData是否存在
+    if (
+      data.dsl.header &&
+      (data.dsl.header.title?.content || data.dsl.header.subtitle?.content)
+    ) {
+      // 创建虚拟的标题组件
+      const titleComponent = {
+        id: 'title-component',
+        tag: 'title' as const,
+        title: data.dsl.header.title?.content || '',
+        subtitle: data.dsl.header.subtitle?.content || '',
+        style: (data.dsl.header.style || 'blue') as
+          | 'blue'
+          | 'wathet'
+          | 'turquoise'
+          | 'green'
+          | 'yellow'
+          | 'orange'
+          | 'red',
+      };
+      console.log('🎯 标题组件选中状态:', {
+        componentId: titleComponent.id,
+        componentTag: titleComponent.tag,
+        selectedPath,
+        realPath: selectedPath,
+      });
+      return { component: titleComponent, realPath: selectedPath };
+    } else {
+      console.log('⚠️ 标题组件路径无效，headerData不存在');
+      return { component: null, realPath: null };
+    }
+  }
+
   if (selectedPath.length < 4) {
     return { component: null, realPath: null };
   }
@@ -990,12 +1031,16 @@ export const PropertyPanel: React.FC<{
   // 新增：处理CardHeader更新
   const handleHeaderChange = (field: string, value: any) => {
     if (!cardData) return;
+
+    // 确保header存在
+    const currentHeader = cardData.dsl?.header || {};
+
     const updatedCardData = {
       ...cardData,
       dsl: {
         ...cardData.dsl,
         header: {
-          ...cardData.dsl.header,
+          ...currentHeader,
           [field]: value,
         },
       },
@@ -1010,19 +1055,40 @@ export const PropertyPanel: React.FC<{
     value: any,
   ) => {
     if (!cardData) return;
+
+    console.log('🎯 处理标题嵌套字段更新:', {
+      parentField,
+      field,
+      value,
+      currentHeader: cardData.dsl?.header,
+      currentParentField: cardData.dsl?.header?.[parentField],
+    });
+
+    // 确保header存在
+    const currentHeader = cardData.dsl?.header || {};
+    const currentParentField = (currentHeader as any)[parentField] || {};
+
     const updatedCardData = {
       ...cardData,
       dsl: {
         ...cardData.dsl,
         header: {
-          ...cardData.dsl.header,
+          ...currentHeader,
           [parentField]: {
-            ...cardData.dsl.header[parentField],
+            ...currentParentField,
             [field]: value,
           },
         },
       },
     };
+
+    console.log('💾 更新标题数据:', {
+      newHeader: updatedCardData.dsl.header,
+      titleContent: (updatedCardData.dsl.header as any)?.title?.content,
+      subtitleContent: (updatedCardData.dsl.header as any)?.subtitle?.content,
+      style: (updatedCardData.dsl.header as any)?.style,
+    });
+
     onUpdateCard({ cardData: updatedCardData });
   };
 
@@ -1113,6 +1179,312 @@ export const PropertyPanel: React.FC<{
       );
     }
 
+    // 检查是否选中了标题组件（标题组件存储在headerData中）
+    const isTitleSelected =
+      selectedPath &&
+      selectedPath.length === 4 &&
+      selectedPath[0] === 'dsl' &&
+      selectedPath[1] === 'body' &&
+      selectedPath[2] === 'elements' &&
+      selectedPath[3] === 0 && // 标题组件通常在第一个位置
+      headerData &&
+      (headerData.title?.content || headerData.subtitle?.content);
+
+    // 如果选中了标题组件，显示标题编辑界面
+    if (isTitleSelected) {
+      return (
+        <div style={{ padding: '16px' }}>
+          <div
+            style={{
+              marginBottom: '16px',
+              padding: '12px',
+              backgroundColor: '#f6ffed',
+              border: '1px solid #b7eb8f',
+              borderRadius: '6px',
+            }}
+          >
+            <Text style={{ fontSize: '12px', color: '#389e0d' }}>
+              🎯 当前选中：标题组件
+            </Text>
+          </div>
+          <Collapse
+            defaultActiveKey={['content', 'style']}
+            ghost
+            items={[
+              {
+                key: 'content',
+                label: '📝 内容设置',
+                children: (
+                  <Form form={form} layout="vertical">
+                    <Form.Item label="主标题">
+                      <Input
+                        value={headerData?.title?.content || ''}
+                        onChange={(e) =>
+                          handleHeaderNestedChange(
+                            'title',
+                            'content',
+                            e.target.value,
+                          )
+                        }
+                        placeholder="请输入主标题"
+                      />
+                    </Form.Item>
+                    <Form.Item label="副标题">
+                      <Input
+                        value={headerData?.subtitle?.content || ''}
+                        onChange={(e) =>
+                          handleHeaderNestedChange(
+                            'subtitle',
+                            'content',
+                            e.target.value,
+                          )
+                        }
+                        placeholder="请输入副标题"
+                      />
+                    </Form.Item>
+                  </Form>
+                ),
+              },
+              {
+                key: 'style',
+                label: '🎨 样式设置',
+                children: (
+                  <Form form={form} layout="vertical">
+                    <Form.Item label="主题样式">
+                      <Select
+                        value={headerData?.style || 'blue'}
+                        onChange={(value) => handleHeaderChange('style', value)}
+                        style={{ width: '100%' }}
+                        optionLabelProp="label"
+                      >
+                        <Option value="blue" label="blue">
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: '16px',
+                                  height: '16px',
+                                  backgroundColor: '#1890ff',
+                                  borderRadius: '3px',
+                                  marginRight: '8px',
+                                  border: '1px solid #d9d9d9',
+                                }}
+                              ></div>
+                              <span>blue</span>
+                            </div>
+                            {headerData?.style === 'blue' && (
+                              <span style={{ color: '#52c41a' }}>✅</span>
+                            )}
+                          </div>
+                        </Option>
+                        <Option value="wathet" label="wathet">
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: '16px',
+                                  height: '16px',
+                                  backgroundColor: '#0369a1',
+                                  borderRadius: '3px',
+                                  marginRight: '8px',
+                                  border: '1px solid #d9d9d9',
+                                }}
+                              ></div>
+                              <span>wathet</span>
+                            </div>
+                            {headerData?.style === 'wathet' && (
+                              <span style={{ color: '#52c41a' }}>✅</span>
+                            )}
+                          </div>
+                        </Option>
+                        <Option value="turquoise" label="turquoise">
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: '16px',
+                                  height: '16px',
+                                  backgroundColor: '#0d9488',
+                                  borderRadius: '3px',
+                                  marginRight: '8px',
+                                  border: '1px solid #d9d9d9',
+                                }}
+                              ></div>
+                              <span>turquoise</span>
+                            </div>
+                            {headerData?.style === 'turquoise' && (
+                              <span style={{ color: '#52c41a' }}>✅</span>
+                            )}
+                          </div>
+                        </Option>
+                        <Option value="green" label="green">
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: '16px',
+                                  height: '16px',
+                                  backgroundColor: '#52c41a',
+                                  borderRadius: '3px',
+                                  marginRight: '8px',
+                                  border: '1px solid #d9d9d9',
+                                }}
+                              ></div>
+                              <span>green</span>
+                            </div>
+                            {headerData?.style === 'green' && (
+                              <span style={{ color: '#52c41a' }}>✅</span>
+                            )}
+                          </div>
+                        </Option>
+                        <Option value="yellow" label="yellow">
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: '16px',
+                                  height: '16px',
+                                  backgroundColor: '#faad14',
+                                  borderRadius: '3px',
+                                  marginRight: '8px',
+                                  border: '1px solid #d9d9d9',
+                                }}
+                              ></div>
+                              <span>yellow</span>
+                            </div>
+                            {headerData?.style === 'yellow' && (
+                              <span style={{ color: '#52c41a' }}>✅</span>
+                            )}
+                          </div>
+                        </Option>
+                        <Option value="orange" label="orange">
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: '16px',
+                                  height: '16px',
+                                  backgroundColor: '#fa8c16',
+                                  borderRadius: '3px',
+                                  marginRight: '8px',
+                                  border: '1px solid #d9d9d9',
+                                }}
+                              ></div>
+                              <span>orange</span>
+                            </div>
+                            {headerData?.style === 'orange' && (
+                              <span style={{ color: '#52c41a' }}>✅</span>
+                            )}
+                          </div>
+                        </Option>
+                        <Option value="red" label="red">
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: '16px',
+                                  height: '16px',
+                                  backgroundColor: '#ff4d4f',
+                                  borderRadius: '3px',
+                                  marginRight: '8px',
+                                  border: '1px solid #d9d9d9',
+                                }}
+                              ></div>
+                              <span>red</span>
+                            </div>
+                            {headerData?.style === 'red' && (
+                              <span style={{ color: '#52c41a' }}>✅</span>
+                            )}
+                          </div>
+                        </Option>
+                      </Select>
+                    </Form.Item>
+                  </Form>
+                ),
+              },
+            ]}
+          />
+        </div>
+      );
+    }
+
     // 如果没有选中组件，显示提示
     if (!currentComponent) {
       return (
@@ -1136,7 +1508,8 @@ export const PropertyPanel: React.FC<{
             }}
           >
             <Text style={{ fontSize: '12px', color: '#0369a1' }}>
-              💡 提示：点击卡片可以配置垂直间距和内边距
+              💡
+              提示：点击卡片可以配置垂直间距和内边距，点击标题可以编辑标题内容
             </Text>
           </div>
         </div>

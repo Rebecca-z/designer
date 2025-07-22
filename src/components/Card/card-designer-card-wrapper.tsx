@@ -1,7 +1,7 @@
 // card-designer-card-wrapper.tsx - 会话卡片包装器组件
 
-import { PlusOutlined } from '@ant-design/icons';
-import { message } from 'antd';
+import { DeleteOutlined, MoreOutlined, PlusOutlined } from '@ant-design/icons';
+import { Button, Dropdown, message } from 'antd';
 import React, { useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import ComponentRenderer from './card-designer-components';
@@ -325,6 +325,12 @@ interface CardWrapperProps {
     subtitle?: { content: string };
     style?: string; // 改为字符串类型
   };
+  // 新增：标题数据更新回调
+  onHeaderDataChange?: (headerData: {
+    title?: { content: string };
+    subtitle?: { content: string };
+    style?: string;
+  }) => void;
 }
 
 const CardWrapper: React.FC<CardWrapperProps> = ({
@@ -341,6 +347,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
   isCardSelected,
   onCardSelect,
   headerData,
+  onHeaderDataChange,
 }) => {
   // 工具函数：检查画布中是否已存在标题组件
   const hasExistingTitle = (elements: ComponentType[]): boolean => {
@@ -406,19 +413,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     }
 
     return newPath;
-  };
-
-  // 工具函数：将标题组件插入到数组开头
-  const insertTitleAtTop = (
-    elements: ComponentType[],
-    titleComponent: ComponentType,
-  ): ComponentType[] => {
-    // 移除现有的标题组件（如果存在）
-    const elementsWithoutTitle = elements.filter(
-      (component) => component.tag !== 'title',
-    );
-    // 将标题组件插入到开头
-    return [titleComponent, ...elementsWithoutTitle];
   };
 
   // 检查路径是否指向同一个组件
@@ -1423,9 +1417,15 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     dropIndex?: number,
   ) => {
     console.log('🎯 处理容器拖拽:', {
-      draggedItem: { type: draggedItem.type, isNew: draggedItem.isNew },
+      draggedItem: {
+        type: draggedItem.type,
+        isNew: draggedItem.isNew,
+        component: draggedItem.component,
+        componentTag: draggedItem.component?.tag,
+      },
       targetPath,
       dropIndex,
+      onHeaderDataChange: !!onHeaderDataChange,
     });
 
     // 特殊处理标题组件
@@ -1433,23 +1433,55 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       draggedItem.type === 'title' ||
       (draggedItem.component && draggedItem.component.tag === 'title')
     ) {
-      // 标题组件只能在画布根节点显示
-      const isRootLevel =
-        targetPath.length === 3 &&
-        targetPath[0] === 'dsl' &&
-        targetPath[1] === 'body' &&
-        targetPath[2] === 'elements';
+      console.log('🎯 检测到标题组件拖拽:', {
+        isNew: draggedItem.isNew,
+        component: draggedItem.component,
+        hasCallback: !!onHeaderDataChange,
+      });
 
-      if (!isRootLevel) {
-        message.warning('标题组件只能放置在画布根节点的最上方');
-        return;
-      }
+      // 标题组件不添加到elements中，而是直接更新header数据
+      if (draggedItem.isNew) {
+        // 新标题组件，使用默认标题数据
+        const defaultHeaderData = {
+          title: { content: '主标题' },
+          subtitle: { content: '副标题' },
+          style: 'blue',
+        };
 
-      // 检查是否已存在标题组件
-      if (hasExistingTitle(elements)) {
-        message.warning('画布中已存在标题组件，每个画布只能有一个标题组件');
-        return;
+        console.log(
+          '🆕 创建新标题组件，准备更新header数据:',
+          defaultHeaderData,
+        );
+
+        if (onHeaderDataChange) {
+          console.log('✅ 调用onHeaderDataChange回调');
+          onHeaderDataChange(defaultHeaderData);
+          message.success('标题组件已添加到卡片头部');
+        } else {
+          console.error('❌ 缺少onHeaderDataChange回调函数');
+          message.warning('无法更新标题数据，缺少回调函数');
+        }
+      } else if (draggedItem.component) {
+        // 现有标题组件，提取标题数据
+        const titleComponent = draggedItem.component as any;
+        const headerData = {
+          title: { content: titleComponent.title || '主标题' },
+          subtitle: { content: titleComponent.subtitle || '副标题' },
+          style: titleComponent.style || 'blue',
+        };
+
+        console.log('🔄 更新现有标题组件，准备更新header数据:', headerData);
+
+        if (onHeaderDataChange) {
+          console.log('✅ 调用onHeaderDataChange回调');
+          onHeaderDataChange(headerData);
+          message.success('标题组件已更新到卡片头部');
+        } else {
+          console.error('❌ 缺少onHeaderDataChange回调函数');
+          message.warning('无法更新标题数据，缺少回调函数');
+        }
       }
+      return; // 标题组件处理完毕，直接返回
     }
 
     if (draggedItem.isNew) {
@@ -1468,13 +1500,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         },
       });
 
-      // 如果是标题组件，强制放置在最顶部
-      if (draggedItem.type === 'title') {
-        onElementsChange(insertTitleAtTop(elements, newComponent));
-        message.success('标题组件已添加到画布顶部');
-        return;
-      }
-
       const newElements = addComponentByPath(
         elements,
         targetPath,
@@ -1486,14 +1511,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       // 现有组件移动
       const draggedComponent = draggedItem.component;
       const draggedPath = draggedItem.path;
-
-      // 如果是标题组件，强制移动到画布根节点顶部
-      if (draggedComponent.tag === 'title') {
-        let newElements = removeComponentByPath(elements, draggedPath);
-        onElementsChange(insertTitleAtTop(newElements, draggedComponent));
-        message.success('标题组件已移动到画布顶部');
-        return;
-      }
 
       // 先移除原位置的组件
       let newElements = removeComponentByPath(elements, draggedPath);
@@ -1983,19 +2000,20 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         hasPath: !!item.path,
       });
 
+      // 特殊处理标题组件
+      if (item.type === 'title') {
+        console.log('🎯 检测到标题组件拖拽，调用handleContainerDrop');
+        handleContainerDrop(item, ['dsl', 'body', 'elements']);
+        return;
+      }
+
       if (item.isNew) {
         // 新组件
         const newComponent = createDefaultComponent(item.type);
 
-        // 如果是标题组件，放置在最顶部
-        if (item.type === 'title') {
-          onElementsChange(insertTitleAtTop(elements, newComponent));
-          message.success('标题组件已添加到画布顶部');
-        } else {
-          // 其他组件添加到末尾
-          onElementsChange([...elements, newComponent]);
-          message.success(`${item.type} 组件已添加到画布`);
-        }
+        // 其他组件添加到末尾
+        onElementsChange([...elements, newComponent]);
+        message.success(`${item.type} 组件已添加到画布`);
       } else if (item.component && item.path) {
         // 现有组件移动到画布根级别
         console.log('🔄 移动现有组件到画布根级别:', {
@@ -2026,11 +2044,25 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     console.log('🎯 卡片点击处理:', {
       targetTag: target.tagName,
       targetClass: target.className,
+      targetId: target.id,
+      targetDataset: target.dataset,
+      targetAttributes: Array.from(target.attributes).map(
+        (attr) => `${attr.name}="${attr.value}"`,
+      ),
       isCurrentTarget: target === currentTarget,
       hasComponentWrapper: !!target.closest('[data-component-wrapper]'),
       hasDragSortableItem: !!target.closest('[data-drag-sortable-item]'),
       hasCardContainer: !!target.closest('[data-card-container]'),
       isCardSelected,
+      componentId: target.getAttribute('data-component-id'),
+      closestComponentWrapper: target
+        .closest('[data-component-wrapper]')
+        ?.getAttribute('data-component-id'),
+      targetTextContent: target.textContent?.substring(0, 50),
+      targetParentTag: target.parentElement?.tagName,
+      targetParentClass: target.parentElement?.className,
+      targetParentId: target.parentElement?.id,
+      targetParentDataset: target.parentElement?.dataset,
     });
 
     // 立即阻止事件冒泡，防止触发画布点击事件
@@ -2042,25 +2074,22 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       return;
     }
 
-    // 如果点击的是组件包装器或拖拽排序项，不处理卡片选中
-    if (
-      target.closest('[data-component-wrapper]') ||
-      target.closest('[data-drag-sortable-item]')
-    ) {
-      console.log('🚫 阻止卡片选中：点击的是组件或拖拽项');
+    // 检查是否点击了组件包装器
+    const componentWrapper = target.closest('[data-component-wrapper]');
+    if (componentWrapper) {
+      console.log('✅ 检测到组件点击，跳过卡片选中');
       return;
     }
 
-    // 如果点击的是操作按钮，不处理卡片选中
-    if (target.closest('.ant-dropdown') || target.closest('.ant-btn')) {
-      console.log('🚫 阻止卡片选中：点击的是操作按钮');
+    // 检查是否点击了拖拽排序项
+    const dragSortableItem = target.closest('[data-drag-sortable-item]');
+    if (dragSortableItem) {
+      console.log('✅ 检测到拖拽排序项点击，跳过卡片选中');
       return;
     }
 
-    // 如果点击的是卡片容器本身或其子元素（但不是组件或按钮），则处理卡片选中
     console.log('✅ 处理卡片选中');
     onCardSelect();
-    onCanvasFocus();
   };
 
   const cardStyle: React.CSSProperties = {
@@ -2127,93 +2156,388 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         </div>
       )}
       {/* 卡片内容 */}
-      {elements.length > 0 ? (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: `${verticalSpacing}px`,
-            position: 'relative',
-          }}
-        >
-          {elements.map((component, index) => {
-            if (!component) {
-              return (
-                <ErrorBoundary key={`error-${index}`}>
-                  <div
-                    style={{
-                      padding: '16px',
-                      border: '1px dashed #ff4d4f',
-                      borderRadius: '4px',
-                      textAlign: 'center',
-                      color: '#ff4d4f',
-                      backgroundColor: '#fff2f0',
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: `${verticalSpacing}px`,
+          position: 'relative',
+        }}
+      >
+        {/* 标题显示区域 - 独立于elements显示 */}
+        {(() => {
+          console.log('🎯 标题显示区域检查:', {
+            hasHeaderData: !!headerData,
+            headerData,
+            hasTitleContent: !!headerData?.title?.content,
+            hasSubtitleContent: !!headerData?.subtitle?.content,
+            titleContent: headerData?.title?.content,
+            subtitleContent: headerData?.subtitle?.content,
+          });
+          return (
+            headerData &&
+            (headerData.title?.content || headerData.subtitle?.content)
+          );
+        })() && (
+          <div
+            style={{
+              padding: '16px 0',
+              borderBottom: '1px solid #f0f0f0',
+              marginBottom: '16px',
+              position: 'relative',
+            }}
+            data-component-wrapper="true"
+            data-component-id="title-component"
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              console.log('🎯 标题被点击 (onMouseDown)，选中标题组件');
+              // 创建一个虚拟的标题组件用于选中
+              const titleComponent = {
+                id: 'title-component',
+                tag: 'title' as const,
+                style: (headerData?.style || 'blue') as
+                  | 'blue'
+                  | 'wathet'
+                  | 'turquoise'
+                  | 'green'
+                  | 'yellow'
+                  | 'orange'
+                  | 'red',
+              };
+              onSelectComponent(titleComponent, ['dsl', 'body', 'elements', 0]);
+              onCanvasFocus();
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log('🎯 标题被点击 (onClick)，选中标题组件');
+              // 创建一个虚拟的标题组件用于选中
+              const titleComponent = {
+                id: 'title-component',
+                tag: 'title' as const,
+                style: (headerData?.style || 'blue') as
+                  | 'blue'
+                  | 'wathet'
+                  | 'turquoise'
+                  | 'green'
+                  | 'yellow'
+                  | 'orange'
+                  | 'red',
+              };
+              onSelectComponent(titleComponent, ['dsl', 'body', 'elements', 0]);
+              onCanvasFocus();
+            }}
+          >
+            {/* 标题内容区域 */}
+            <div
+              style={{
+                padding: '16px',
+                borderWidth: isSamePath(selectedPath, [
+                  'dsl',
+                  'body',
+                  'elements',
+                  0,
+                ])
+                  ? '2px'
+                  : '1px',
+                borderStyle: 'solid',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                position: 'relative',
+                // 应用主题样式
+                ...(() => {
+                  const themeStyle = headerData?.style || 'blue';
+                  const getThemeStyles = (theme: string) => {
+                    switch (theme) {
+                      case 'blue':
+                        return {
+                          backgroundColor: '#e6f7ff',
+                          borderColor: '#91d5ff',
+                          titleColor: '#1890ff',
+                          subtitleColor: '#096dd9',
+                        };
+                      case 'wathet':
+                        return {
+                          backgroundColor: '#f0f9ff',
+                          borderColor: '#bae6fd',
+                          titleColor: '#0369a1',
+                          subtitleColor: '#0c4a6e',
+                        };
+                      case 'turquoise':
+                        return {
+                          backgroundColor: '#f0fdfa',
+                          borderColor: '#99f6e4',
+                          titleColor: '#0d9488',
+                          subtitleColor: '#0f766e',
+                        };
+                      case 'green':
+                        return {
+                          backgroundColor: '#f6ffed',
+                          borderColor: '#b7eb8f',
+                          titleColor: '#52c41a',
+                          subtitleColor: '#389e0d',
+                        };
+                      case 'yellow':
+                        return {
+                          backgroundColor: '#fffbe6',
+                          borderColor: '#ffe58f',
+                          titleColor: '#faad14',
+                          subtitleColor: '#d48806',
+                        };
+                      case 'orange':
+                        return {
+                          backgroundColor: '#fff7e6',
+                          borderColor: '#ffd591',
+                          titleColor: '#fa8c16',
+                          subtitleColor: '#d46b08',
+                        };
+                      case 'red':
+                        return {
+                          backgroundColor: '#fff2f0',
+                          borderColor: '#ffccc7',
+                          titleColor: '#ff4d4f',
+                          subtitleColor: '#cf1322',
+                        };
+                      default:
+                        return {
+                          backgroundColor: '#fff',
+                          borderColor: '#f0f0f0',
+                          titleColor: '#333',
+                          subtitleColor: '#666',
+                        };
+                    }
+                  };
+                  const themeStyles = getThemeStyles(themeStyle);
+                  const isTitleSelected = isSamePath(selectedPath, [
+                    'dsl',
+                    'body',
+                    'elements',
+                    0,
+                  ]);
+                  return {
+                    backgroundColor: isTitleSelected
+                      ? 'rgba(24, 144, 255, 0.05)'
+                      : themeStyles.backgroundColor,
+                    borderColor: isTitleSelected
+                      ? '#1890ff'
+                      : themeStyles.borderColor,
+                  };
+                })(),
+              }}
+            >
+              {/* 操作菜单 - 只在标题被选中时显示 */}
+              {isSamePath(selectedPath, ['dsl', 'body', 'elements', 0]) && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '-2px',
+                    right: '-2px',
+                    zIndex: 10,
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Dropdown
+                    menu={{
+                      items: [
+                        {
+                          key: 'delete',
+                          icon: <DeleteOutlined />,
+                          label: '删除组件',
+                          onClick: () => {
+                            console.log('🗑️ 删除标题组件');
+                            // 清除选择状态
+                            onSelectComponent(null);
+                            // 通知父组件删除header数据
+                            if (onHeaderDataChange) {
+                              onHeaderDataChange({
+                                title: { content: '' },
+                                subtitle: { content: '' },
+                                style: 'blue',
+                              });
+                            }
+                            message.success('标题组件已删除');
+                          },
+                          danger: true,
+                        },
+                      ],
                     }}
+                    trigger={['click']}
+                    placement="bottomRight"
                   >
-                    ⚠️ 组件数据异常
-                  </div>
-                </ErrorBoundary>
-              );
-            }
+                    <Button
+                      size="small"
+                      type="primary"
+                      icon={<MoreOutlined />}
+                      style={{
+                        borderRadius: '50%',
+                        width: '24px',
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </Dropdown>
+                </div>
+              )}
 
-            const componentPath = ['dsl', 'body', 'elements', index];
-            const isSelected = isSamePath(selectedPath, componentPath);
-            const isHovered = isSamePath(hoveredPath, componentPath);
-
-            return (
-              <DragSortableItem
-                key={`${component.id}-${index}-${componentPath.join('-')}`}
-                component={component}
-                index={index}
-                path={componentPath}
-                onMove={handleCanvasComponentSort}
-              >
-                <ErrorBoundary>
-                  <ComponentRenderer
-                    component={component}
-                    onSelect={onSelectComponent}
-                    isSelected={isSelected}
-                    selectedComponent={null}
-                    selectedPath={selectedPath}
-                    onUpdate={() => {}}
-                    onDelete={onDeleteComponent}
-                    onCopy={onCopyComponent}
-                    path={componentPath}
-                    onCanvasFocus={onCanvasFocus}
-                    hoveredPath={hoveredPath}
-                    isHovered={isHovered}
-                    onContainerDrop={handleContainerDrop}
-                    onComponentSort={handleComponentSort}
-                    isPreview={false}
-                    headerData={headerData}
-                  />
-                </ErrorBoundary>
-              </DragSortableItem>
-            );
-          })}
-        </div>
-      ) : (
-        // 空状态
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '160px',
-            color: '#999',
-            border: '2px dashed #d9d9d9',
-            borderRadius: '8px',
-            backgroundColor: '#fafafa',
-          }}
-        >
-          <PlusOutlined style={{ fontSize: '32px', marginBottom: '12px' }} />
-          <div style={{ fontSize: '16px', marginBottom: '8px' }}>
-            拖拽组件到这里
+              {headerData?.title?.content && (
+                <div
+                  style={{
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    marginBottom: headerData.subtitle?.content ? '8px' : '0',
+                    // 应用主题样式的主标题颜色
+                    color: (() => {
+                      const themeStyle = headerData?.style || 'blue';
+                      const getThemeStyles = (theme: string) => {
+                        switch (theme) {
+                          case 'blue':
+                            return '#1890ff';
+                          case 'wathet':
+                            return '#0369a1';
+                          case 'turquoise':
+                            return '#0d9488';
+                          case 'green':
+                            return '#52c41a';
+                          case 'yellow':
+                            return '#faad14';
+                          case 'orange':
+                            return '#fa8c16';
+                          case 'red':
+                            return '#ff4d4f';
+                          default:
+                            return '#333';
+                        }
+                      };
+                      return getThemeStyles(themeStyle);
+                    })(),
+                  }}
+                >
+                  {headerData.title.content}
+                </div>
+              )}
+              {headerData?.subtitle?.content && (
+                <div
+                  style={{
+                    fontSize: '14px',
+                    // 应用主题样式的副标题颜色
+                    color: (() => {
+                      const themeStyle = headerData?.style || 'blue';
+                      const getThemeStyles = (theme: string) => {
+                        switch (theme) {
+                          case 'blue':
+                            return '#096dd9';
+                          case 'wathet':
+                            return '#0c4a6e';
+                          case 'turquoise':
+                            return '#0f766e';
+                          case 'green':
+                            return '#389e0d';
+                          case 'yellow':
+                            return '#d48806';
+                          case 'orange':
+                            return '#d46b08';
+                          case 'red':
+                            return '#cf1322';
+                          default:
+                            return '#666';
+                        }
+                      };
+                      return getThemeStyles(themeStyle);
+                    })(),
+                  }}
+                >
+                  {headerData.subtitle.content}
+                </div>
+              )}
+            </div>
           </div>
-          <div style={{ fontSize: '12px' }}>从左侧面板拖拽组件到卡片中</div>
-        </div>
-      )}
+        )}
+
+        {/* 其他组件区域 */}
+        {elements.length > 0 ? (
+          <>
+            {elements.map((component, index) => {
+              if (!component) {
+                return (
+                  <ErrorBoundary key={`error-${index}`}>
+                    <div
+                      style={{
+                        padding: '16px',
+                        border: '1px dashed #ff4d4f',
+                        borderRadius: '4px',
+                        textAlign: 'center',
+                        color: '#ff4d4f',
+                        backgroundColor: '#fff2f0',
+                      }}
+                    >
+                      ⚠️ 组件数据异常
+                    </div>
+                  </ErrorBoundary>
+                );
+              }
+
+              const componentPath = ['dsl', 'body', 'elements', index];
+              const isSelected = isSamePath(selectedPath, componentPath);
+              const isHovered = isSamePath(hoveredPath, componentPath);
+
+              return (
+                <DragSortableItem
+                  key={`${component.id}-${index}-${componentPath.join('-')}`}
+                  component={component}
+                  index={index}
+                  path={componentPath}
+                  onMove={handleCanvasComponentSort}
+                >
+                  <ErrorBoundary>
+                    <ComponentRenderer
+                      component={component}
+                      onSelect={onSelectComponent}
+                      isSelected={isSelected}
+                      selectedComponent={null}
+                      selectedPath={selectedPath}
+                      onUpdate={() => {}}
+                      onDelete={onDeleteComponent}
+                      onCopy={onCopyComponent}
+                      path={componentPath}
+                      onCanvasFocus={onCanvasFocus}
+                      hoveredPath={hoveredPath}
+                      isHovered={isHovered}
+                      onContainerDrop={handleContainerDrop}
+                      onComponentSort={handleComponentSort}
+                      isPreview={false}
+                      headerData={headerData}
+                    />
+                  </ErrorBoundary>
+                </DragSortableItem>
+              );
+            })}
+          </>
+        ) : (
+          // 空状态提示
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: '120px',
+              color: '#999',
+              border: '2px dashed #d9d9d9',
+              borderRadius: '8px',
+              backgroundColor: '#fafafa',
+            }}
+          >
+            <PlusOutlined style={{ fontSize: '32px', marginBottom: '12px' }} />
+            <div style={{ fontSize: '16px', marginBottom: '8px' }}>
+              拖拽组件到这里
+            </div>
+            <div style={{ fontSize: '12px' }}>从左侧面板拖拽组件到卡片中</div>
+          </div>
+        )}
+      </div>
       {/* 卡片标签 */}
       {isCardSelected && (
         <div

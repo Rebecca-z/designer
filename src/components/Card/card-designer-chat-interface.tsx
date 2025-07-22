@@ -43,6 +43,12 @@ interface ChatInterfaceProps {
     subtitle?: { content: string };
     style?: string; // 改为字符串类型
   };
+  // 新增：标题数据更新回调
+  onHeaderDataChange?: (headerData: {
+    title?: { content: string };
+    subtitle?: { content: string };
+    style?: string;
+  }) => void;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -62,6 +68,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   avatar,
   cardStyles = {},
   headerData,
+  onHeaderDataChange,
 }) => {
   // 合并卡片样式
   const mergedCardStyles: React.CSSProperties = {
@@ -137,7 +144,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             onCanvasFocus={onCanvasFocus}
             isCardSelected={isCardSelected}
             onCardSelect={onCardSelect}
-            headerData={headerData}
+            headerData={headerData} // 只有当header存在时才传递
+            onHeaderDataChange={onHeaderDataChange}
           />
         </div>
       </div>

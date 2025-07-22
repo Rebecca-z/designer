@@ -10,7 +10,14 @@ export interface TitleComponent extends ComponentBase {
   tag: 'title';
   title: string;
   subtitle: string;
-  style: 'blue' | 'wethet' | 'green' | 'red';
+  style:
+    | 'blue'
+    | 'wathet'
+    | 'turquoise'
+    | 'green'
+    | 'yellow'
+    | 'orange'
+    | 'red';
 }
 
 export interface PlainTextComponent extends ComponentBase {

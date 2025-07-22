@@ -567,6 +567,10 @@ const DraggableWrapper: React.FC<{
   ) => void;
   enableSort?: boolean;
   isChildComponent?: boolean; // 新增：标识是否为子组件
+  // 新增：选中相关 props
+  onSelect?: (component: ComponentType, path: (string | number)[]) => void;
+  selectedPath?: (string | number)[] | null;
+  onCanvasFocus?: () => void;
 }> = ({
   component,
   path,
@@ -576,6 +580,10 @@ const DraggableWrapper: React.FC<{
   onComponentMove,
   enableSort = true,
   isChildComponent = false, // 新增参数
+  // 新增：选中相关 props
+  onSelect,
+  selectedPath,
+  onCanvasFocus,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -654,145 +662,105 @@ const DraggableWrapper: React.FC<{
 
         // 检查是否是父子关系
         if (isParentChild(currentPath, draggedPath)) {
+          console.log('🚫 子组件不能拖拽到父组件上');
           return false;
         }
       }
 
-      // 检查是否是根节点组件拖拽到容器
-      if (!item.isNew && item.component && item.path) {
-        const isRootComponent =
-          item.path.length === 4 &&
-          item.path[0] === 'dsl' &&
-          item.path[1] === 'body' &&
-          item.path[2] === 'elements';
+      // 检查是否在同一容器中
+      const draggedContainerPath = item.path ? item.path.slice(0, -1) : [];
+      const currentContainerPath = containerPath;
 
-        if (isRootComponent) {
-          console.log('🔍 根节点组件拖拽到容器检查:', {
-            componentTag: item.component.tag,
-            containerPath,
-          });
-        }
-      }
+      const isSameContainer = isSamePath(
+        draggedContainerPath,
+        currentContainerPath,
+      );
 
-      // 检查容器嵌套限制
-      if (item.isNew) {
-        // 左侧新组件的拖拽检查
-        return canDropInContainer(item.type, containerPath);
-      } else if (item.component) {
-        return canDropInContainer(item.component.tag, containerPath);
-      }
+      console.log('✅ DraggableWrapper canDrop 通过:', {
+        isSameContainer,
+        draggedContainerPath,
+        currentContainerPath,
+      });
 
       return true;
     },
-    hover: (item: DragItem, monitor) => {
-      if (!ref.current || !enableSort) return;
+    hover: (item: DragItem) => {
+      if (!enableSort || !ref.current) return;
 
-      // 清除之前的防抖定时器
+      // 防抖处理
       if (hoverTimeoutRef.current) {
         clearTimeout(hoverTimeoutRef.current);
       }
 
-      // 使用防抖机制，延迟处理hover事件
       hoverTimeoutRef.current = setTimeout(() => {
-        // 如果是子组件拖拽，需要更精确的检测
-        if (isChildComponent && item.isChildComponent) {
-          // 子组件拖拽时，需要确保鼠标在拖拽区域内
-          const dragOffset = monitor.getDifferenceFromInitialOffset();
-          if (
-            !dragOffset ||
-            Math.abs(dragOffset.x) < 5 ||
-            Math.abs(dragOffset.y) < 5
-          ) {
-            return; // 拖拽距离太小，不触发排序
-          }
+        if (!ref.current) return;
+
+        const draggedIndex = item.path ? item.path[item.path.length - 1] : -1;
+        const targetIndex = index;
+
+        // 检查是否是同一容器内的排序
+        const draggedContainerPath = item.path ? item.path.slice(0, -1) : [];
+        const currentContainerPath = containerPath;
+        const isSameContainer = isSamePath(
+          draggedContainerPath,
+          currentContainerPath,
+        );
+
+        // 构建当前悬停状态
+        const currentHoverState = {
+          dragIndex: draggedIndex,
+          targetIndex,
+          isSameContainer,
+        };
+
+        // 检查状态是否发生变化
+        if (
+          lastHoverState.current &&
+          lastHoverState.current.dragIndex === currentHoverState.dragIndex &&
+          lastHoverState.current.targetIndex ===
+            currentHoverState.targetIndex &&
+          lastHoverState.current.isSameContainer ===
+            currentHoverState.isSameContainer
+        ) {
+          return; // 状态没有变化，不更新
         }
 
-        const hoverBoundingRect = ref.current?.getBoundingClientRect();
-        if (!hoverBoundingRect) return;
-        const hoverMiddleY =
-          (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
-        const clientOffset = monitor.getClientOffset();
-        if (!clientOffset) return;
+        // 更新缓存状态
+        lastHoverState.current = currentHoverState;
 
-        const hoverClientY = clientOffset.y - hoverBoundingRect.top;
+        // 避免无意义的移动
+        if (draggedIndex === targetIndex || draggedIndex === targetIndex - 1) {
+          return;
+        }
 
-        // 只处理现有组件的排序
-        if (!item.isNew && item.path && item.component && onComponentMove) {
-          const draggedPath = item.path;
+        // 安全检查：确保路径有效
+        if (
+          draggedPath.length >= 4 &&
+          path.length >= 4 &&
+          draggedPath[0] === 'dsl' &&
+          draggedPath[1] === 'body' &&
+          path[0] === 'dsl' &&
+          path[1] === 'body'
+        ) {
+          console.log('🔄 执行同容器排序:', {
+            draggedComponent: {
+              id: item.component.id,
+              tag: item.component.tag,
+            },
+            draggedPath,
+            targetPath: path,
+            targetIndex,
+            isChildComponent,
+          });
 
-          // 检查是否在同一容器内
-          const draggedContainerPath = draggedPath.slice(0, -1);
-          const targetContainerPath = containerPath;
-
-          if (isSamePath(draggedContainerPath, targetContainerPath)) {
-            const draggedIndex = draggedPath[draggedPath.length - 1] as number;
-            let targetIndex = index;
-
-            // 根据鼠标位置决定插入位置
-            if (hoverClientY > hoverMiddleY) {
-              targetIndex = index + 1;
-            }
-
-            // 检查是否与上次状态相同，避免不必要的更新
-            const currentHoverState = {
-              dragIndex: draggedIndex,
-              targetIndex,
-              isSameContainer: true,
-            };
-
-            if (
-              lastHoverState.current &&
-              lastHoverState.current.dragIndex ===
-                currentHoverState.dragIndex &&
-              lastHoverState.current.targetIndex ===
-                currentHoverState.targetIndex &&
-              lastHoverState.current.isSameContainer ===
-                currentHoverState.isSameContainer
-            ) {
-              return; // 状态没有变化，不更新
-            }
-
-            // 更新缓存状态
-            lastHoverState.current = currentHoverState;
-
-            // 避免无意义的移动
-            if (
-              draggedIndex === targetIndex ||
-              draggedIndex === targetIndex - 1
-            ) {
-              return;
-            }
-
-            // 安全检查：确保路径有效
-            if (
-              draggedPath.length >= 4 &&
-              path.length >= 4 &&
-              draggedPath[0] === 'dsl' &&
-              draggedPath[1] === 'body' &&
-              path[0] === 'dsl' &&
-              path[1] === 'body'
-            ) {
-              console.log('🔄 执行同容器排序:', {
-                draggedComponent: {
-                  id: item.component.id,
-                  tag: item.component.tag,
-                },
-                draggedPath,
-                targetPath: path,
-                targetIndex,
-                isChildComponent,
-              });
-
-              // 执行排序
-              onComponentMove(item.component, draggedPath, path, targetIndex);
-            } else {
-              console.warn('⚠️ 跳过无效的排序操作:', {
-                draggedPath,
-                targetPath: path,
-                reason: '路径格式不正确',
-              });
-            }
-          }
+          // 执行排序
+          onComponentMove(item.component, draggedPath, path, targetIndex);
+        } else {
+          console.warn('⚠️ 跳过无效的排序操作:', {
+            draggedPath,
+            targetPath: path,
+            reason: '路径格式不正确',
+          });
         }
       }, 50); // 50ms防抖延迟
     },
@@ -851,6 +819,7 @@ const DraggableWrapper: React.FC<{
               targetContainerPath,
             });
 
+            // 执行跨容器移动
             onComponentMove(item.component, draggedPath, path, insertIndex);
           } else {
             console.warn('⚠️ 跳过无效的跨容器移动:', {
@@ -861,49 +830,62 @@ const DraggableWrapper: React.FC<{
           }
         }
       }
-      lastHoverState.current = null; // 清理缓存状态
     },
     collect: (monitor) => ({
-      isOver: monitor.isOver({ shallow: true }),
+      isOver: monitor.isOver(),
       canDrop: monitor.canDrop(),
     }),
   });
 
-  // 清理定时器
-  React.useEffect(() => {
-    return () => {
-      if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // 合并拖拽引用
+  const opacity = isDragging ? 0.4 : 1;
   drag(drop(ref));
 
-  // 样式
-  const wrapperStyle: React.CSSProperties = {
-    opacity: isDragging ? 0.5 : 1,
-    cursor: isDragging ? 'grabbing' : 'pointer', // 改为pointer而不是grab，避免影响子组件选中
-    position: 'relative',
-    transition: 'all 0.15s ease', // 减少过渡时间，提高响应速度
+  // 检查当前组件是否被选中
+  const isCurrentSelected = isSamePath(selectedPath || null, path);
+
+  // 处理组件点击选中
+  const handleWrapperClick = (e: React.MouseEvent) => {
+    // 阻止事件冒泡，防止触发父级选中
+    e.stopPropagation();
+    e.preventDefault();
+
+    console.log('🎯 DraggableWrapper 组件被点击:', {
+      componentId: component.id,
+      componentTag: component.tag,
+      path,
+      isChildComponent,
+    });
+
+    // 处理组件选中
+    onSelect?.(component, path);
+    onCanvasFocus?.();
   };
 
-  // 拖拽悬停样式
-  if (isOver && canDrop && enableSort) {
-    wrapperStyle.transform = 'translateY(-2px)';
-    wrapperStyle.boxShadow = '0 4px 12px rgba(24, 144, 255, 0.3)';
-  }
+  // 包装器样式
+  const wrapperStyle: React.CSSProperties = {
+    position: 'relative',
+    border: isCurrentSelected ? '2px solid #1890ff' : '1px solid transparent',
+    borderRadius: '4px',
+    padding: '4px',
+    margin: '2px 0',
+    backgroundColor: isCurrentSelected
+      ? 'rgba(24, 144, 255, 0.05)'
+      : 'transparent',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    opacity,
+  };
 
-  // 子组件拖拽时的特殊样式
-  if (isChildComponent) {
-    wrapperStyle.zIndex = isDragging ? 1000 : 'auto';
+  // 拖拽时的样式调整
+  if (isDragging) {
+    wrapperStyle.zIndex = 1000;
   }
 
   return (
     <div
       ref={ref}
       style={wrapperStyle}
+      onClick={handleWrapperClick}
       onMouseDown={(e) => {
         // 子组件拖拽时阻止事件冒泡
         if (isChildComponent) {
@@ -1838,6 +1820,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           containerPath={containerPath}
           onComponentMove={onComponentMove}
           enableSort={enableSort}
+          onSelect={onSelect}
+          selectedPath={selectedPath}
+          onCanvasFocus={onCanvasFocus}
         >
           {formContent}
         </DraggableWrapper>
@@ -1940,6 +1925,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           containerPath={containerPath}
           onComponentMove={onComponentMove}
           enableSort={enableSort}
+          onSelect={onSelect}
+          selectedPath={selectedPath}
+          onCanvasFocus={onCanvasFocus}
         >
           {columnContent}
         </DraggableWrapper>
@@ -1983,8 +1971,48 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
       const mergedStyles = mergeStyles(component, defaultStyles);
 
+      const handleTextClick = (e: React.MouseEvent) => {
+        // 立即阻止事件冒泡，防止触发父级选中
+        e.stopPropagation();
+        e.preventDefault();
+
+        console.log('📝 文本组件被点击:', {
+          componentId: comp.id,
+          componentTag: comp.tag,
+          path,
+        });
+
+        // 处理组件选中
+        onSelect?.(component, path);
+        onCanvasFocus?.();
+      };
+
+      // 检查当前组件是否被选中
+      const isCurrentSelected = isSamePath(selectedPath, path);
+
+      // 选中状态样式
+      const selectedStyles: React.CSSProperties = {
+        border:
+          isCurrentSelected && !isPreview
+            ? '2px solid #1890ff'
+            : '1px solid #f0f0f0',
+        backgroundColor:
+          isCurrentSelected && !isPreview ? 'rgba(24, 144, 255, 0.05)' : '#fff',
+        boxShadow:
+          isCurrentSelected && !isPreview
+            ? '0 0 8px rgba(24, 144, 255, 0.3)'
+            : 'none',
+      };
+
       const textContent = (
-        <div style={mergedStyles}>{comp.content || '文本内容'}</div>
+        <div
+          style={{ ...mergedStyles, ...selectedStyles }}
+          onClick={handleTextClick}
+          data-component-wrapper="true"
+          data-component-id={comp.id}
+        >
+          {comp.content || '文本内容'}
+        </div>
       );
 
       return enableDrag && !isPreview ? (
@@ -2025,8 +2053,48 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
       const mergedStyles = mergeStyles(component, defaultStyles);
 
+      const handleRichTextClick = (e: React.MouseEvent) => {
+        // 立即阻止事件冒泡，防止触发父级选中
+        e.stopPropagation();
+        e.preventDefault();
+
+        console.log('📝 富文本组件被点击:', {
+          componentId: comp.id,
+          componentTag: comp.tag,
+          path,
+        });
+
+        // 处理组件选中
+        onSelect?.(component, path);
+        onCanvasFocus?.();
+      };
+
+      // 检查当前组件是否被选中
+      const isCurrentSelected = isSamePath(selectedPath, path);
+
+      // 选中状态样式
+      const selectedStyles: React.CSSProperties = {
+        border:
+          isCurrentSelected && !isPreview
+            ? '2px solid #1890ff'
+            : '1px solid #f0f0f0',
+        backgroundColor:
+          isCurrentSelected && !isPreview
+            ? 'rgba(24, 144, 255, 0.05)'
+            : '#fff7e6',
+        boxShadow:
+          isCurrentSelected && !isPreview
+            ? '0 0 8px rgba(24, 144, 255, 0.3)'
+            : 'none',
+      };
+
       const richTextContent = (
-        <div style={mergedStyles}>
+        <div
+          style={{ ...mergedStyles, ...selectedStyles }}
+          onClick={handleRichTextClick}
+          data-component-wrapper="true"
+          data-component-id={comp.id}
+        >
           {!isPreview && (
             <div
               style={{
@@ -2095,6 +2163,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           containerPath={containerPath}
           onComponentMove={onComponentMove}
           enableSort={enableSort}
+          onSelect={onSelect}
+          selectedPath={selectedPath}
+          onCanvasFocus={onCanvasFocus}
         >
           {hrContent}
         </DraggableWrapper>
@@ -2141,6 +2212,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           containerPath={containerPath}
           onComponentMove={onComponentMove}
           enableSort={enableSort}
+          onSelect={onSelect}
+          selectedPath={selectedPath}
+          onCanvasFocus={onCanvasFocus}
         >
           {imgContent}
         </DraggableWrapper>
@@ -2189,6 +2263,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           containerPath={containerPath}
           onComponentMove={onComponentMove}
           enableSort={enableSort}
+          onSelect={onSelect}
+          selectedPath={selectedPath}
+          onCanvasFocus={onCanvasFocus}
         >
           {inputContent}
         </DraggableWrapper>
@@ -2226,6 +2303,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           containerPath={containerPath}
           onComponentMove={onComponentMove}
           enableSort={enableSort}
+          onSelect={onSelect}
+          selectedPath={selectedPath}
+          onCanvasFocus={onCanvasFocus}
         >
           {buttonContent}
         </DraggableWrapper>
@@ -2277,6 +2357,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           containerPath={containerPath}
           onComponentMove={onComponentMove}
           enableSort={enableSort}
+          onSelect={onSelect}
+          selectedPath={selectedPath}
+          onCanvasFocus={onCanvasFocus}
         >
           {selectContent}
         </DraggableWrapper>
@@ -2332,6 +2415,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           containerPath={containerPath}
           onComponentMove={onComponentMove}
           enableSort={enableSort}
+          onSelect={onSelect}
+          selectedPath={selectedPath}
+          onCanvasFocus={onCanvasFocus}
         >
           {multiSelectContent}
         </DraggableWrapper>
@@ -2430,6 +2516,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           containerPath={containerPath}
           onComponentMove={onComponentMove}
           enableSort={enableSort}
+          onSelect={onSelect}
+          selectedPath={selectedPath}
+          onCanvasFocus={onCanvasFocus}
         >
           {imgCombContent}
         </DraggableWrapper>
@@ -2547,6 +2636,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           containerPath={containerPath}
           onComponentMove={onComponentMove}
           enableSort={enableSort}
+          onSelect={onSelect}
+          selectedPath={selectedPath}
+          onCanvasFocus={onCanvasFocus}
         >
           {titleContent}
         </DraggableWrapper>
@@ -2579,6 +2671,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           containerPath={containerPath}
           onComponentMove={onComponentMove}
           enableSort={enableSort}
+          onSelect={onSelect}
+          selectedPath={selectedPath}
+          onCanvasFocus={onCanvasFocus}
         >
           {unknownContent}
         </DraggableWrapper>

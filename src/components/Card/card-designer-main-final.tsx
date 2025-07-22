@@ -64,6 +64,12 @@ const CardDesigner: React.FC = () => {
 
   // 安全检查：确保数据结构完整，并进行数据迁移
   const safeCardData = React.useMemo(() => {
+    console.log('🔄 safeCardData useMemo 执行:', {
+      historyData: history.data,
+      hasHistoryData: !!history.data,
+      timestamp: new Date().toISOString(),
+    });
+
     const data = history.data as unknown as CardDesignData;
     if (!data || !data.dsl || !data.dsl.body) {
       console.warn('⚠️ 卡片数据结构不完整，使用默认数据');
@@ -72,6 +78,15 @@ const CardDesigner: React.FC = () => {
 
     // 进行数据迁移
     const migratedData = migrateTitleStyle(data);
+
+    console.log('✅ safeCardData 计算完成:', {
+      originalData: data,
+      migratedData: migratedData,
+      hasHeader: !!migratedData.dsl?.header,
+      headerContent: migratedData.dsl?.header,
+      timestamp: new Date().toISOString(),
+    });
+
     return migratedData;
   }, [history.data]);
 
@@ -144,14 +159,40 @@ const CardDesigner: React.FC = () => {
         return; // 卡片选择路径不需要验证
       }
 
-      // 对于组件选择路径，需要调整路径查找逻辑
+      // 如果是标题组件选择路径，检查headerData是否存在
+      if (
+        selection.selectedPath.length === 4 &&
+        selection.selectedPath[0] === 'dsl' &&
+        selection.selectedPath[1] === 'body' &&
+        selection.selectedPath[2] === 'elements' &&
+        selection.selectedPath[3] === 0 &&
+        selection.selectedComponent?.tag === 'title'
+      ) {
+        // 标题组件特殊处理：检查headerData是否存在
+        if (
+          safeCardData.dsl.header &&
+          (safeCardData.dsl.header.title?.content ||
+            safeCardData.dsl.header.subtitle?.content)
+        ) {
+          console.log('✅ 标题组件选择状态有效，headerData存在');
+          return; // 标题组件选择状态有效
+        } else {
+          console.log('❌ 标题组件选择状态无效，headerData不存在');
+          selection.clearSelection();
+          return;
+        }
+      }
+
+      // 对于其他组件选择路径，需要调整路径查找逻辑
       const component = getComponentByPath(
         safeCardData,
         selection.selectedPath,
       );
       if (component && component.id === selection.selectedComponent?.id) {
         // 组件仍然存在且匹配
+        console.log('✅ 组件选择状态有效');
       } else {
+        console.log('❌ 组件选择状态无效，清除选择');
         selection.clearSelection();
       }
     }
@@ -203,11 +244,15 @@ const CardDesigner: React.FC = () => {
       pathLength: path.length,
     });
 
+    // 检查是否删除的是标题组件
+    let isDeletingTitle = false;
     if (path.length === 4) {
       // 根级组件: ['dsl', 'body', 'elements', index]
       const index = path[3] as number;
+      const componentToDelete = newData.dsl.body.elements[index];
+      isDeletingTitle = componentToDelete && componentToDelete.tag === 'title';
       newData.dsl.body.elements.splice(index, 1);
-      console.log('🗑️ 删除根级组件:', { index });
+      console.log('🗑️ 删除根级组件:', { index, isTitle: isDeletingTitle });
     } else if (path.length === 6 && path[4] === 'elements') {
       // 表单内组件: ['dsl', 'body', 'elements', formIndex, 'elements', componentIndex]
       const formIndex = path[3] as number;
@@ -219,8 +264,15 @@ const CardDesigner: React.FC = () => {
         formComponent.tag === 'form' &&
         formComponent.elements
       ) {
+        const componentToDelete = formComponent.elements[componentIndex];
+        isDeletingTitle =
+          componentToDelete && componentToDelete.tag === 'title';
         formComponent.elements.splice(componentIndex, 1);
-        console.log('🗑️ 删除表单内组件:', { formIndex, componentIndex });
+        console.log('🗑️ 删除表单内组件:', {
+          formIndex,
+          componentIndex,
+          isTitle: isDeletingTitle,
+        });
       }
     } else if (
       path.length === 8 &&
@@ -240,17 +292,27 @@ const CardDesigner: React.FC = () => {
       ) {
         const column = columnSetComponent.columns[columnIndex];
         if (column && column.elements) {
+          const componentToDelete = column.elements[componentIndex];
+          isDeletingTitle =
+            componentToDelete && componentToDelete.tag === 'title';
           column.elements.splice(componentIndex, 1);
           console.log('🗑️ 删除分栏内组件:', {
             columnSetIndex,
             columnIndex,
             componentIndex,
+            isTitle: isDeletingTitle,
           });
         }
       }
     } else {
       console.warn('⚠️ 不支持的删除路径格式:', path);
       return;
+    }
+
+    // 如果删除的是标题组件，移除header
+    if (isDeletingTitle) {
+      delete newData.dsl.header;
+      console.log('🗑️ 删除标题组件，移除header');
     }
 
     history.updateData(newData as any);
@@ -423,6 +485,93 @@ const CardDesigner: React.FC = () => {
     history.updateData(newData as any);
   };
 
+  // 处理标题数据更新
+  const handleHeaderDataChange = (headerData: {
+    title?: { content: string };
+    subtitle?: { content: string };
+    style?: string;
+  }) => {
+    console.log('🎯 处理标题数据更新 - 开始:', {
+      headerData,
+      currentHeader: safeCardData.dsl.header,
+      willCreateHeader: !safeCardData.dsl.header,
+      currentData: safeCardData,
+      timestamp: new Date().toISOString(),
+    });
+
+    // 检查是否要删除标题（标题和副标题都为空）
+    const shouldDeleteHeader =
+      (!headerData.title?.content || headerData.title.content.trim() === '') &&
+      (!headerData.subtitle?.content ||
+        headerData.subtitle.content.trim() === '');
+
+    if (shouldDeleteHeader) {
+      console.log('🗑️ 检测到标题内容为空，删除header');
+      const newData = {
+        ...safeCardData,
+        dsl: {
+          ...safeCardData.dsl,
+          header: undefined, // 删除header
+        },
+      };
+      history.updateData(newData as any);
+      console.log('✅ 标题组件已删除，header已从dsl中移除');
+      return;
+    }
+
+    const newData = {
+      ...safeCardData,
+      dsl: {
+        ...safeCardData.dsl,
+        header: {
+          ...(safeCardData.dsl.header || {}), // 确保header存在
+          ...headerData,
+        },
+      },
+    };
+
+    console.log('💾 准备保存更新后的标题数据:', {
+      newHeader: newData.dsl.header,
+      headerExists: !!newData.dsl.header,
+      titleContent: newData.dsl.header?.title?.content,
+      subtitleContent: newData.dsl.header?.subtitle?.content,
+      style: newData.dsl.header?.style,
+      newData: newData,
+      timestamp: new Date().toISOString(),
+    });
+
+    // 直接调用history.updateData
+    console.log('🔄 调用history.updateData');
+    history.updateData(newData as any);
+
+    console.log('✅ 标题数据更新完成，等待数据同步');
+
+    // 验证数据是否已更新
+    setTimeout(() => {
+      console.log('🔍 验证数据更新结果:', {
+        currentData: history.data,
+        hasHeader: !!(history.data as any).dsl?.header,
+        headerContent: (history.data as any).dsl?.header,
+        timestamp: new Date().toISOString(),
+      });
+    }, 100);
+  };
+
+  // 处理卡片元素变化
+  const handleElementsChange = (elements: ComponentType[]) => {
+    const newData = {
+      ...safeCardData,
+      dsl: {
+        ...safeCardData.dsl,
+        body: {
+          ...safeCardData.dsl.body,
+          elements,
+        },
+      },
+    };
+    history.updateData(newData as any);
+  };
+
   // 大纲树选择处理
   const handleOutlineSelect = (
     component: ComponentType | null,
@@ -540,6 +689,8 @@ const CardDesigner: React.FC = () => {
                 onCopyComponent={clipboard.copyComponent}
                 device={device}
                 onCanvasFocus={focus.handleCanvasFocus}
+                onHeaderDataChange={handleHeaderDataChange}
+                onElementsChange={handleElementsChange}
               />
             </div>
           </div>
@@ -562,7 +713,7 @@ const CardDesigner: React.FC = () => {
                   left: 16,
                 }
               }
-              headerData={safeCardData.dsl.header}
+              headerData={safeCardData.dsl.header} // 只有当header存在时才传递
               cardData={safeCardData}
             />
           </div>

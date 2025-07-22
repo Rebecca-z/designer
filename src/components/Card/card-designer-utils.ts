@@ -830,131 +830,220 @@ export const migrateCardLink = (cardData: any): any => {
 
 // 数据迁移函数：将旧的titleStyle字段迁移到新的style字符串中
 export const migrateTitleStyle = (cardData: any): any => {
-  if (!cardData || !cardData.dsl || !cardData.dsl.header) {
-    return cardData;
-  }
+  console.log('🔄 migrateTitleStyle 开始执行:', {
+    hasCardData: !!cardData,
+    hasDsl: !!cardData?.dsl,
+    hasHeader: !!cardData?.dsl?.header,
+    headerContent: cardData?.dsl?.header,
+    hasElements: !!cardData?.dsl?.body?.elements,
+    elementsCount: cardData?.dsl?.body?.elements?.length,
+    timestamp: new Date().toISOString(),
+  });
 
-  const header = cardData.dsl.header;
-  let needsMigration = false;
-  let newStyle = 'blue'; // 默认样式
+  // 检查是否需要迁移titleStyle字段
+  const needsMigration =
+    cardData?.dsl?.header?.titleStyle !== undefined ||
+    (cardData?.dsl?.header?.style &&
+      typeof cardData.dsl.header.style === 'object' &&
+      cardData.dsl.header.style.themeStyle !== undefined);
 
-  // 如果存在旧的titleStyle字段，迁移到style字符串中
-  if (header.titleStyle) {
-    newStyle = header.titleStyle;
-    needsMigration = true;
-    console.log('✅ 数据迁移完成：titleStyle -> style', {
-      oldValue: header.titleStyle,
-      newValue: newStyle,
-    });
-  }
-
-  // 如果存在旧的style对象格式，迁移到style字符串中
-  if (
-    header.style &&
-    typeof header.style === 'object' &&
-    header.style.themeStyle
-  ) {
-    // 处理旧的主题名称映射
-    let newThemeStyle = header.style.themeStyle;
-    if (newThemeStyle === 'wethet') {
-      newThemeStyle = 'wathet'; // 修正拼写错误
-    }
-    newStyle = newThemeStyle;
-    needsMigration = true;
-    console.log('✅ 数据迁移完成：style.themeStyle -> style', {
-      oldValue: header.style.themeStyle,
-      newValue: newStyle,
-    });
-  }
-
-  // 迁移组件样式字段（保留id字段用于渲染）
-  const migrateComponentStyles = (obj: any): any => {
-    if (Array.isArray(obj)) {
-      return obj.map(migrateComponentStyles);
-    }
-
-    if (obj && typeof obj === 'object' && obj !== null) {
-      const result: any = {};
-      for (const [key, value] of Object.entries(obj)) {
-        // 保留id字段，不在这里移除
-
-        // 处理组件样式字段迁移
-        if (
-          [
-            'fontSize',
-            'fontWeight',
-            'textAlign',
-            'textColor',
-            'numberOfLines',
-            'width',
-            'height',
-            'backgroundColor',
-            'borderColor',
-            'borderRadius',
-            'padding',
-            'margin',
-            'type',
-            'size',
-          ].includes(key)
-        ) {
-          // 这些是样式字段，需要移动到style对象中
-          if (!result.style) {
-            result.style = {};
-          }
-          result.style[key] = value;
-        } else if (
-          key === 'style' &&
-          typeof value === 'object' &&
-          value !== null
-        ) {
-          // 处理样式对象
-          const styleObj: any = {};
-          for (const [styleKey, styleValue] of Object.entries(value)) {
-            if (styleKey === 'id') {
-              continue; // 跳过样式对象中的id字段
-            }
-
-            styleObj[styleKey] = styleValue;
-          }
-          result[key] = styleObj;
-        } else {
-          result[key] = migrateComponentStyles(value);
-        }
-      }
-      return result;
-    }
-
-    return obj;
-  };
-
-  // 只迁移组件样式字段，不移除id字段
-  const migratedData = migrateComponentStyles(cardData);
+  console.log('🔍 迁移检查结果:', {
+    needsMigration,
+    hasTitleStyle: cardData?.dsl?.header?.titleStyle !== undefined,
+    hasThemeStyle: cardData?.dsl?.header?.style?.themeStyle !== undefined,
+  });
 
   if (needsMigration) {
-    const finalData = {
-      ...migratedData,
-      dsl: {
-        ...migratedData.dsl,
-        header: {
-          ...migratedData.dsl.header,
-          style: newStyle,
-        },
-      },
+    // 处理titleStyle迁移
+    const oldStyle = cardData.dsl.header.titleStyle;
+    const themeStyle =
+      cardData.dsl.header.style?.themeStyle || oldStyle || 'blue';
+    const newStyle = themeStyle;
+
+    // 迁移组件样式字段（保留id字段用于渲染）
+    const migrateComponentStyles = (obj: any): any => {
+      if (Array.isArray(obj)) {
+        return obj.map(migrateComponentStyles);
+      }
+
+      if (obj && typeof obj === 'object' && obj !== null) {
+        const result: any = {};
+        for (const [key, value] of Object.entries(obj)) {
+          // 保留id字段，不在这里移除
+
+          // 处理组件样式字段迁移
+          if (
+            [
+              'fontSize',
+              'fontWeight',
+              'textAlign',
+              'textColor',
+              'numberOfLines',
+              'width',
+              'height',
+              'backgroundColor',
+              'borderColor',
+              'borderRadius',
+              'padding',
+              'margin',
+              'type',
+              'size',
+            ].includes(key)
+          ) {
+            // 这些是样式字段，需要移动到style对象中
+            if (!result.style) {
+              result.style = {};
+            }
+            result.style[key] = value;
+          } else if (
+            key === 'style' &&
+            typeof value === 'object' &&
+            value !== null
+          ) {
+            // 处理样式对象
+            const styleObj: any = {};
+            for (const [styleKey, styleValue] of Object.entries(value)) {
+              if (styleKey === 'id') {
+                continue; // 跳过样式对象中的id字段
+              }
+              styleObj[styleKey] = styleValue;
+            }
+            result[key] = styleObj;
+          } else {
+            result[key] = migrateComponentStyles(value);
+          }
+        }
+        return result;
+      }
+
+      return obj;
     };
 
-    // 删除旧的字段
-    delete finalData.dsl.header.titleStyle;
-    if (
-      finalData.dsl.header.style &&
-      typeof finalData.dsl.header.style === 'object'
-    ) {
-      delete finalData.dsl.header.style.themeStyle;
+    // 只迁移组件样式字段，不移除id字段
+    const migratedData = migrateComponentStyles(cardData);
+
+    // 检查是否存在标题组件，如果不存在则移除header
+    const hasTitleComponent = migratedData.dsl.body.elements.some(
+      (component: any) => component.tag === 'title',
+    );
+
+    // 迁移标题组件数据到header
+    const titleComponent = migratedData.dsl.body.elements.find(
+      (component: any) => component.tag === 'title',
+    );
+
+    console.log('🔍 标题组件检查:', {
+      hasTitleComponent,
+      titleComponent: titleComponent
+        ? { tag: titleComponent.tag, id: titleComponent.id }
+        : null,
+      elementsCount: migratedData.dsl.body.elements.length,
+      currentHeader: migratedData.dsl.header,
+    });
+
+    if (needsMigration) {
+      const finalData = {
+        ...migratedData,
+        dsl: {
+          ...migratedData.dsl,
+          header: {
+            ...migratedData.dsl.header,
+            style: newStyle,
+          },
+        },
+      };
+
+      // 删除旧的字段
+      delete finalData.dsl.header.titleStyle;
+      if (
+        finalData.dsl.header.style &&
+        typeof finalData.dsl.header.style === 'object'
+      ) {
+        delete finalData.dsl.header.style.themeStyle;
+      }
+
+      // 如果有标题组件，迁移标题数据到header
+      if (titleComponent) {
+        finalData.dsl.header.title = {
+          content: titleComponent.title || '主标题',
+          i18n_content: titleComponent.i18n_title || {
+            'en-US': 'Title',
+          },
+        };
+        finalData.dsl.header.subtitle = {
+          content: titleComponent.subtitle || '副标题',
+          i18n_content: titleComponent.i18n_subtitle || {
+            'en-US': 'Subtitle',
+          },
+        };
+        finalData.dsl.header.style = titleComponent.style || 'blue';
+      }
+
+      // 移除elements中的标题组件
+      finalData.dsl.body.elements = finalData.dsl.body.elements.filter(
+        (component: any) => component.tag !== 'title',
+      );
+
+      // 如果没有标题组件且header是空的，才移除header
+      if (
+        !hasTitleComponent &&
+        (!finalData.dsl.header ||
+          Object.keys(finalData.dsl.header).length === 0)
+      ) {
+        delete finalData.dsl.header;
+      }
+
+      console.log('✅ 迁移完成 (needsMigration=true):', {
+        finalHeader: finalData.dsl.header,
+        hasHeader: !!finalData.dsl.header,
+        elementsCount: finalData.dsl.body.elements.length,
+      });
+
+      return finalData;
     }
 
-    return finalData;
+    // 如果有标题组件，迁移标题数据到header
+    if (titleComponent) {
+      if (!migratedData.dsl.header) {
+        migratedData.dsl.header = {};
+      }
+      migratedData.dsl.header.title = {
+        content: titleComponent.title || '主标题',
+        i18n_content: titleComponent.i18n_title || {
+          'en-US': 'Title',
+        },
+      };
+      migratedData.dsl.header.subtitle = {
+        content: titleComponent.subtitle || '副标题',
+        i18n_content: titleComponent.i18n_subtitle || {
+          'en-US': 'Subtitle',
+        },
+      };
+      migratedData.dsl.header.style = titleComponent.style || 'blue';
+
+      // 移除elements中的标题组件
+      migratedData.dsl.body.elements = migratedData.dsl.body.elements.filter(
+        (component: any) => component.tag !== 'title',
+      );
+    } else if (
+      migratedData.dsl.header &&
+      Object.keys(migratedData.dsl.header).length === 0
+    ) {
+      // 如果没有标题组件且header是空的，才移除header
+      console.log('🗑️ 删除空的header (no title component)');
+      delete migratedData.dsl.header;
+    }
+
+    console.log('✅ 迁移完成 (needsMigration=false):', {
+      finalHeader: migratedData.dsl.header,
+      hasHeader: !!migratedData.dsl.header,
+      elementsCount: migratedData.dsl.body.elements.length,
+    });
+
+    return migratedData;
   }
 
-  return migratedData;
+  return cardData;
 };
 
 // 转换为目标数据结构 - 更新为新的卡片数据结构
@@ -986,11 +1075,38 @@ export const convertToTargetFormat = (data: any): any => {
     // 移除所有id字段
     const cleanedData = removeIds(migratedData);
 
+    // 检查是否存在标题组件，如果不存在则移除header
+    const hasTitleComponent = cleanedData.dsl.body.elements.some(
+      (component: any) => component.tag === 'title',
+    );
+
+    // 修改逻辑：只有当没有标题组件且没有header数据时才移除header
+    if (!hasTitleComponent && !cleanedData.dsl.header) {
+      // 如果没有标题组件且没有header数据，则不创建header
+      console.log('🗑️ 没有标题组件且没有header数据，不创建header');
+    } else if (!hasTitleComponent && cleanedData.dsl.header) {
+      // 如果没有标题组件但有header数据，保留header（用户可能手动创建了标题）
+      console.log('✅ 保留header数据，即使elements中没有标题组件');
+    } else if (hasTitleComponent) {
+      // 如果有标题组件，确保header存在
+      console.log('✅ 检测到标题组件，确保header存在');
+    }
+
+    // 移除elements中的标题组件
+    cleanedData.dsl.body.elements = cleanedData.dsl.body.elements.filter(
+      (component: any) => component.tag !== 'title',
+    );
+
     return cleanedData;
   }
 
   // 如果是旧的DesignData格式，转换为新的卡片格式
   const convertComponent = (component: any): any => {
+    // 跳过标题组件，不转换
+    if (component.tag === 'title') {
+      return null;
+    }
+
     // 移除内部使用的字段，只保留目标结构需要的字段
     const converted: any = {
       tag: component.tag,
@@ -1000,14 +1116,15 @@ export const convertToTargetFormat = (data: any): any => {
     switch (component.tag) {
       case 'form':
         converted.name = component.name;
-        converted.elements = component.elements?.map(convertComponent) || [];
+        converted.elements =
+          component.elements?.map(convertComponent).filter(Boolean) || [];
         break;
 
       case 'column_set':
         converted.columns =
           component.columns?.map((col: any) => ({
             tag: 'column',
-            elements: col.elements?.map(convertComponent) || [],
+            elements: col.elements?.map(convertComponent).filter(Boolean) || [],
           })) || [];
         break;
 
@@ -1141,7 +1258,7 @@ export const convertToTargetFormat = (data: any): any => {
           bottom: 16,
           left: 16,
         },
-        elements: data.elements?.map(convertComponent) || [],
+        elements: data.elements?.map(convertComponent).filter(Boolean) || [],
       },
     },
   };

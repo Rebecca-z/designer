@@ -24,6 +24,14 @@ interface CanvasProps {
   onCopyComponent: (component: ComponentType) => void;
   device: keyof typeof DEVICE_SIZES;
   onCanvasFocus?: () => void;
+  // 新增：标题数据更新回调
+  onHeaderDataChange?: (headerData: {
+    title?: { content: string };
+    subtitle?: { content: string };
+    style?: string;
+  }) => void;
+  // 新增：元素变化回调
+  onElementsChange?: (elements: ComponentType[]) => void;
 }
 
 const Canvas: React.FC<CanvasProps> = ({
@@ -36,22 +44,29 @@ const Canvas: React.FC<CanvasProps> = ({
   onCopyComponent,
   device,
   onCanvasFocus,
+  onHeaderDataChange,
+  onElementsChange,
 }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // 处理卡片元素变化
   const handleElementsChange = (elements: ComponentType[]) => {
-    const newData = {
-      ...data,
-      dsl: {
-        ...data.dsl,
-        body: {
-          ...data.dsl.body,
-          elements,
+    if (onElementsChange) {
+      onElementsChange(elements);
+    } else {
+      // 兼容旧的方式
+      const newData = {
+        ...data,
+        dsl: {
+          ...data.dsl,
+          body: {
+            ...data.dsl.body,
+            elements,
+          },
         },
-      },
-    };
-    onDataChange(newData);
+      };
+      onDataChange(newData);
+    }
   };
 
   // 检查是否选中了卡片本身
@@ -254,7 +269,19 @@ const Canvas: React.FC<CanvasProps> = ({
             onCardSelect={handleCardSelect}
             username="用户名"
             cardStyles={data.dsl.body.styles}
-            headerData={data.dsl.header}
+            headerData={(() => {
+              console.log('🎯 Canvas传递headerData:', {
+                hasHeader: !!data.dsl.header,
+                headerData: data.dsl.header,
+                hasTitleContent: !!data.dsl.header?.title?.content,
+                hasSubtitleContent: !!data.dsl.header?.subtitle?.content,
+                titleContent: data.dsl.header?.title?.content,
+                subtitleContent: data.dsl.header?.subtitle?.content,
+                style: data.dsl.header?.style,
+              });
+              return data.dsl.header;
+            })()}
+            onHeaderDataChange={onHeaderDataChange}
           />
         </div>
 

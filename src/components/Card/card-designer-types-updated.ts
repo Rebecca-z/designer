@@ -289,7 +289,7 @@ export interface CardDSL {
   schema: number;
   config: { [key: string]: any };
   card_link: CardLink;
-  header: CardHeader;
+  header?: CardHeader; // 改为可选，只有当存在标题组件时才创建
   body: CardBody;
 }
 
