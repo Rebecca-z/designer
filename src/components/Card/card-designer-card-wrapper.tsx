@@ -2181,9 +2181,9 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         })() && (
           <div
             style={{
-              padding: '16px 0',
+              // padding: '16px 0',
               borderBottom: '1px solid #f0f0f0',
-              marginBottom: '16px',
+              // marginBottom: '16px',
               position: 'relative',
             }}
             data-component-wrapper="true"

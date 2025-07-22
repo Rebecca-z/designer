@@ -382,7 +382,6 @@ export const renderComponentToHTML = (component: ComponentType): string => {
       return `
         <div style="
           margin: 12px 0;
-          padding: 12px;
           background-color: white;
           border-radius: 6px;
           border: 1px solid #f0f0f0;

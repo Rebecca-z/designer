@@ -502,25 +502,25 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
 
   // 普通组件渲染 - 统一选中样式
   const containerStyle: React.CSSProperties = {
-    border:
-      isCurrentSelected && !isPreview
-        ? '2px solid #1890ff'
-        : '1px solid transparent',
+    // border:
+    //   isCurrentSelected && !isPreview
+    //     ? '2px solid #1890ff'
+    //     : '1px solid transparent',
     // padding: '4px',
     // margin: '2px',
     borderRadius: '4px',
     cursor: isPreview ? 'default' : 'pointer',
-    minHeight: '30px',
+    // minHeight: '30px',
     position: 'relative',
     transition: 'all 0.2s ease',
-    backgroundColor:
-      isCurrentSelected && !isPreview
-        ? 'rgba(24, 144, 255, 0.05)'
-        : 'transparent',
-    boxShadow:
-      isCurrentSelected && !isPreview
-        ? '0 0 4px rgba(24, 144, 255, 0.3)'
-        : 'none',
+    // backgroundColor:
+    //   isCurrentSelected && !isPreview
+    //     ? 'rgba(24, 144, 255, 0.05)'
+    //     : 'transparent',
+    // boxShadow:
+    //   isCurrentSelected && !isPreview
+    //     ? '0 0 4px rgba(24, 144, 255, 0.3)'
+    //     : 'none',
   };
 
   return (

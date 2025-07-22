@@ -1471,8 +1471,36 @@ export const PropertyPanel: React.FC<{
       const isPlainText = selectedComponent.tag === 'plain_text';
       const isRichText = selectedComponent.tag === 'rich_text';
 
+      // 安全获取组件属性，防止删除组件时的报错
+      const getSafeProperty = (
+        propertyPath: string,
+        defaultValue: any = '',
+      ) => {
+        if (!currentComponent) {
+          return defaultValue;
+        }
+
+        const properties = propertyPath.split('.');
+        let value = currentComponent as any;
+
+        for (const prop of properties) {
+          if (value && typeof value === 'object' && prop in value) {
+            value = value[prop];
+          } else {
+            return defaultValue;
+          }
+        }
+
+        return value !== undefined ? value : defaultValue;
+      };
+
       // 获取文本内容
       const getTextContent = () => {
+        // 添加空值检查，防止删除组件时的报错
+        if (!currentComponent) {
+          return '';
+        }
+
         if (isPlainText) {
           return (currentComponent as any).content || '';
         } else if (isRichText) {
@@ -1559,11 +1587,10 @@ export const PropertyPanel: React.FC<{
                       <>
                         <Form.Item label="字体大小">
                           <Select
-                            value={
-                              (currentComponent as any).style?.fontSize ||
-                              (currentComponent as any).fontSize ||
-                              14
-                            }
+                            value={getSafeProperty(
+                              'style.fontSize',
+                              getSafeProperty('fontSize', 14),
+                            )}
                             onChange={(value) =>
                               handleValueChange('fontSize', value)
                             }
@@ -1576,11 +1603,10 @@ export const PropertyPanel: React.FC<{
                         </Form.Item>
                         <Form.Item label="对齐方式">
                           <Select
-                            value={
-                              (currentComponent as any).style?.textAlign ||
-                              (currentComponent as any).textAlign ||
-                              'left'
-                            }
+                            value={getSafeProperty(
+                              'style.textAlign',
+                              getSafeProperty('textAlign', 'left'),
+                            )}
                             onChange={(value) =>
                               handleValueChange('textAlign', value)
                             }
@@ -1593,11 +1619,10 @@ export const PropertyPanel: React.FC<{
                         </Form.Item>
                         <Form.Item label="最大显示行数">
                           <InputNumber
-                            value={
-                              (currentComponent as any).style?.numberOfLines ||
-                              (currentComponent as any).numberOfLines ||
-                              1
-                            }
+                            value={getSafeProperty(
+                              'style.numberOfLines',
+                              getSafeProperty('numberOfLines', 1),
+                            )}
                             onChange={(value) =>
                               handleValueChange('numberOfLines', value)
                             }
@@ -1613,11 +1638,10 @@ export const PropertyPanel: React.FC<{
                       <>
                         <Form.Item label="字体大小">
                           <Select
-                            value={
-                              (currentComponent as any).style?.fontSize ||
-                              (currentComponent as any).fontSize ||
-                              14
-                            }
+                            value={getSafeProperty(
+                              'style.fontSize',
+                              getSafeProperty('fontSize', 14),
+                            )}
                             onChange={(value) =>
                               handleValueChange('fontSize', value)
                             }
@@ -1630,11 +1654,10 @@ export const PropertyPanel: React.FC<{
                         </Form.Item>
                         <Form.Item label="对齐方式">
                           <Select
-                            value={
-                              (currentComponent as any).style?.textAlign ||
-                              (currentComponent as any).textAlign ||
-                              'left'
-                            }
+                            value={getSafeProperty(
+                              'style.textAlign',
+                              getSafeProperty('textAlign', 'left'),
+                            )}
                             onChange={(value) =>
                               handleValueChange('textAlign', value)
                             }

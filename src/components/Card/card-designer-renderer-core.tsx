@@ -582,7 +582,7 @@ const DraggableWrapper: React.FC<{
   isChildComponent = false, // 新增参数
   // 新增：选中相关 props
   onSelect,
-  selectedPath,
+  // selectedPath,
   onCanvasFocus,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
@@ -841,7 +841,7 @@ const DraggableWrapper: React.FC<{
   drag(drop(ref));
 
   // 检查当前组件是否被选中
-  const isCurrentSelected = isSamePath(selectedPath || null, path);
+  // const isCurrentSelected = isSamePath(selectedPath || null, path);
 
   // 处理组件点击选中
   const handleWrapperClick = (e: React.MouseEvent) => {
@@ -877,13 +877,11 @@ const DraggableWrapper: React.FC<{
   // 包装器样式
   const wrapperStyle: React.CSSProperties = {
     position: 'relative',
-    border: isCurrentSelected ? '2px solid #1890ff' : '1px solid transparent',
+    border: '1px solid transparent', // 始终使用透明边框，避免双边框
     borderRadius: '4px',
     padding: '4px',
     margin: '2px 0',
-    backgroundColor: isCurrentSelected
-      ? 'rgba(24, 144, 255, 0.05)'
-      : 'transparent',
+    backgroundColor: 'transparent', // 始终使用透明背景
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     opacity,
@@ -1633,17 +1631,14 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       // 包装器样式
       const wrapperStyle: React.CSSProperties = {
         position: 'relative',
-        border:
-          isSelected && !isPreview
-            ? '2px solid #1890ff'
-            : '1px solid transparent',
+        border: '1px solid transparent', // 始终使用透明边框，避免双边框
         borderRadius: '4px',
         padding: '4px',
         margin: '2px 0',
-        backgroundColor:
-          isSelected && !isPreview ? 'rgba(24, 144, 255, 0.05)' : 'transparent',
-        cursor: isPreview ? 'default' : 'pointer',
+        backgroundColor: 'transparent', // 始终使用透明背景
+        cursor: 'pointer',
         transition: 'all 0.2s ease',
+        opacity,
       };
 
       const selectableWrapper = (
@@ -1978,9 +1973,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         fontWeight: fontWeight,
         textAlign: textAlign,
         lineHeight: 1.5,
-        padding: '8px 12px',
         backgroundColor: '#fff',
-        border: '1px solid #f0f0f0',
         borderRadius: '4px',
         // 添加最大行数限制
         display: '-webkit-box',
@@ -1988,6 +1981,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         WebkitBoxOrient: 'vertical',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
+        wordBreak: 'break-word',
+        whiteSpace: 'normal',
+        maxHeight: `${numberOfLines * 1.5 * fontSize}px`,
       };
 
       const mergedStyles = mergeStyles(component, defaultStyles);
@@ -2101,8 +2097,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         comp.style?.numberOfLines || comp.numberOfLines || 1;
 
       const defaultStyles: React.CSSProperties = {
-        padding: '12px',
-        border: '1px solid #f0f0f0',
+        // padding: '12px',
         borderRadius: '4px',
         backgroundColor: '#fff7e6',
         position: 'relative',
@@ -2117,6 +2112,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         WebkitBoxOrient: 'vertical',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
+        wordBreak: 'break-word',
+        whiteSpace: 'normal',
+        maxHeight: `${numberOfLines * 1.5 * fontSize}px`,
       };
 
       const mergedStyles = mergeStyles(component, defaultStyles);
@@ -2208,7 +2206,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               📝 富文本
             </div>
           )}
-          <div style={{ marginTop: isPreview ? '0' : '4px' }}>
+          <div style={{ minHeight: '50px' }}>
             {comp.content?.content?.[0]?.content?.[0]?.text || '富文本内容'}
           </div>
         </div>
