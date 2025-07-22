@@ -131,36 +131,6 @@ const Canvas: React.FC<CanvasProps> = ({
     onSelectComponent(null, ['dsl', 'body']);
   };
 
-  // 处理垂直间距变化
-  // const handleVerticalSpacingChange = (spacing: number) => {
-  //   const newData = {
-  //     ...data,
-  //     dsl: {
-  //       ...data.dsl,
-  //       body: {
-  //         ...data.dsl.body,
-  //         vertical_spacing: spacing,
-  //       },
-  //     },
-  //   };
-  //   onDataChange(newData);
-  // };
-
-  // 处理内边距变化
-  // const handlePaddingChange = (padding: CardPadding) => {
-  //   const newData = {
-  //     ...data,
-  //     dsl: {
-  //       ...data.dsl,
-  //       body: {
-  //         ...data.dsl.body,
-  //         padding,
-  //       },
-  //     },
-  //   };
-  //   onDataChange(newData);
-  // };
-
   const canvasWidth = DEVICE_SIZES[device].width;
 
   return (

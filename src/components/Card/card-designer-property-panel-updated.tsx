@@ -7,7 +7,6 @@ import {
   EditOutlined,
   PlusOutlined,
   SettingOutlined,
-  SkinOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons';
 import {
@@ -25,14 +24,13 @@ import {
   Tree,
   Typography,
 } from 'antd';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useDrag } from 'react-dnd';
 import {
   COMPONENT_CATEGORIES,
   COMPONENT_TYPES,
   DEFAULT_CARD_DATA,
 } from './card-designer-constants-updated';
-import PaddingEditor from './card-designer-padding-editor';
 import {
   CardDesignData,
   CardPadding,
@@ -765,7 +763,7 @@ export const PropertyPanel: React.FC<{
   variables,
   onUpdateVariables,
   cardVerticalSpacing,
-  cardPadding,
+  // cardPadding,
   headerData,
   cardData,
 }) => {
@@ -938,14 +936,6 @@ export const PropertyPanel: React.FC<{
     setIsEventEditModalVisible(false);
     setEditingActionIndex(-1);
   };
-
-  // 当选中卡片时，自动切换到样式Tab
-  useEffect(() => {
-    if (isCardSelected && activeTab !== 'styles') {
-      console.log('🎯 检测到卡片选中，自动切换到样式Tab');
-      setActiveTab('styles');
-    }
-  }, [isCardSelected, activeTab]);
 
   console.log('🎨 属性面板状态:', {
     selectedPath,
@@ -1131,29 +1121,71 @@ export const PropertyPanel: React.FC<{
     // 如果选中了卡片本身，显示提示信息
     if (isCardSelected) {
       return (
-        <div style={{ padding: '24px', textAlign: 'center' }}>
-          <SkinOutlined
-            style={{ fontSize: '48px', color: '#d9d9d9', marginBottom: '16px' }}
-          />
-          <div style={{ color: '#999', marginBottom: '8px', fontSize: '16px' }}>
-            已自动切换到样式配置
-          </div>
-          <div style={{ color: '#ccc', fontSize: '12px' }}>
-            卡片级别的属性配置已移至样式Tab
-          </div>
-          <div
-            style={{
-              marginTop: '16px',
-              padding: '12px',
-              backgroundColor: '#f0f9ff',
-              border: '1px solid #bae6fd',
-              borderRadius: '6px',
-            }}
+        <div style={{ padding: '16px' }}>
+          {/* 间距设置 */}
+          <Card
+            title="📏 间距设置"
+            size="small"
+            style={{ marginBottom: '12px' }}
           >
-            <Text style={{ fontSize: '12px', color: '#0369a1' }}>
-              💡 提示：当前在样式Tab中，可以配置卡片的间距、内边距和样式
-            </Text>
-          </div>
+            <Form layout="vertical" size="small">
+              <Form.Item
+                label="垂直间距"
+                help="组件之间的垂直间距，实时预览效果"
+              >
+                <InputNumber
+                  value={cardVerticalSpacing}
+                  onChange={(value) => {
+                    console.warn('value===', value);
+                    const newValue = value;
+                    console.log('🎯 更新垂直间距:', {
+                      oldValue: cardVerticalSpacing,
+                      newValue,
+                      timestamp: new Date().toISOString(),
+                    });
+                    onUpdateCard({ vertical_spacing: newValue });
+                  }}
+                  min={0}
+                  max={50}
+                  step={1}
+                  style={{ width: '100%' }}
+                  addonAfter="px"
+                  placeholder="请输入间距值"
+                />
+              </Form.Item>
+
+              {/* 快速预设按钮 */}
+              <Form.Item label="快速设置">
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {[4, 8, 12, 16, 20].map((preset) => (
+                    <Button
+                      key={preset}
+                      size="small"
+                      type={
+                        cardVerticalSpacing === preset ? 'primary' : 'default'
+                      }
+                      onClick={() => onUpdateCard({ vertical_spacing: preset })}
+                      style={{ minWidth: '40px' }}
+                    >
+                      {preset}px
+                    </Button>
+                  ))}
+                </div>
+              </Form.Item>
+            </Form>
+          </Card>
+
+          {/* 内边距设置 */}
+          {/* <Card
+            title="📦 内边距设置"
+            size="small"
+            style={{ marginBottom: '12px' }}
+          >
+            <PaddingEditor
+              value={cardPadding}
+              onChange={(padding) => onUpdateCard({ padding })}
+            />
+          </Card> */}
         </div>
       );
     }
@@ -1471,29 +1503,6 @@ export const PropertyPanel: React.FC<{
       const isPlainText = selectedComponent.tag === 'plain_text';
       const isRichText = selectedComponent.tag === 'rich_text';
 
-      // 安全获取组件属性，防止删除组件时的报错
-      const getSafeProperty = (
-        propertyPath: string,
-        defaultValue: any = '',
-      ) => {
-        if (!currentComponent) {
-          return defaultValue;
-        }
-
-        const properties = propertyPath.split('.');
-        let value = currentComponent as any;
-
-        for (const prop of properties) {
-          if (value && typeof value === 'object' && prop in value) {
-            value = value[prop];
-          } else {
-            return defaultValue;
-          }
-        }
-
-        return value !== undefined ? value : defaultValue;
-      };
-
       // 获取文本内容
       const getTextContent = () => {
         // 添加空值检查，防止删除组件时的报错
@@ -1587,10 +1596,11 @@ export const PropertyPanel: React.FC<{
                       <>
                         <Form.Item label="字体大小">
                           <Select
-                            value={getSafeProperty(
-                              'style.fontSize',
-                              getSafeProperty('fontSize', 14),
-                            )}
+                            value={
+                              (currentComponent as any).style?.fontSize ||
+                              (currentComponent as any).fontSize ||
+                              14
+                            }
                             onChange={(value) =>
                               handleValueChange('fontSize', value)
                             }
@@ -1603,10 +1613,11 @@ export const PropertyPanel: React.FC<{
                         </Form.Item>
                         <Form.Item label="对齐方式">
                           <Select
-                            value={getSafeProperty(
-                              'style.textAlign',
-                              getSafeProperty('textAlign', 'left'),
-                            )}
+                            value={
+                              (currentComponent as any).style?.textAlign ||
+                              (currentComponent as any).textAlign ||
+                              'left'
+                            }
                             onChange={(value) =>
                               handleValueChange('textAlign', value)
                             }
@@ -1619,10 +1630,11 @@ export const PropertyPanel: React.FC<{
                         </Form.Item>
                         <Form.Item label="最大显示行数">
                           <InputNumber
-                            value={getSafeProperty(
-                              'style.numberOfLines',
-                              getSafeProperty('numberOfLines', 1),
-                            )}
+                            value={
+                              (currentComponent as any).style?.numberOfLines ||
+                              (currentComponent as any).numberOfLines ||
+                              1
+                            }
                             onChange={(value) =>
                               handleValueChange('numberOfLines', value)
                             }
@@ -1638,10 +1650,11 @@ export const PropertyPanel: React.FC<{
                       <>
                         <Form.Item label="字体大小">
                           <Select
-                            value={getSafeProperty(
-                              'style.fontSize',
-                              getSafeProperty('fontSize', 14),
-                            )}
+                            value={
+                              (currentComponent as any).style?.fontSize ||
+                              (currentComponent as any).fontSize ||
+                              14
+                            }
                             onChange={(value) =>
                               handleValueChange('fontSize', value)
                             }
@@ -1654,10 +1667,11 @@ export const PropertyPanel: React.FC<{
                         </Form.Item>
                         <Form.Item label="对齐方式">
                           <Select
-                            value={getSafeProperty(
-                              'style.textAlign',
-                              getSafeProperty('textAlign', 'left'),
-                            )}
+                            value={
+                              (currentComponent as any).style?.textAlign ||
+                              (currentComponent as any).textAlign ||
+                              'left'
+                            }
                             onChange={(value) =>
                               handleValueChange('textAlign', value)
                             }
@@ -1955,90 +1969,6 @@ export const PropertyPanel: React.FC<{
     );
   };
 
-  const renderStyles = () => {
-    // 如果选中了卡片本身，显示卡片样式配置
-    if (isCardSelected) {
-      return (
-        <div style={{ padding: '16px' }}>
-          {/* 间距设置 */}
-          <Card
-            title="📏 间距设置"
-            size="small"
-            style={{ marginBottom: '12px' }}
-          >
-            <Form layout="vertical" size="small">
-              <Form.Item
-                label="垂直间距"
-                help="组件之间的垂直间距，实时预览效果"
-              >
-                <InputNumber
-                  value={cardVerticalSpacing}
-                  onChange={(value) => {
-                    const newValue = value || 8;
-                    console.log('🎯 更新垂直间距:', {
-                      oldValue: cardVerticalSpacing,
-                      newValue,
-                      timestamp: new Date().toISOString(),
-                    });
-                    onUpdateCard({ vertical_spacing: newValue });
-                  }}
-                  min={0}
-                  max={50}
-                  step={1}
-                  style={{ width: '100%' }}
-                  addonAfter="px"
-                  placeholder="请输入间距值"
-                />
-              </Form.Item>
-
-              {/* 快速预设按钮 */}
-              <Form.Item label="快速设置">
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {[4, 8, 12, 16, 20].map((preset) => (
-                    <Button
-                      key={preset}
-                      size="small"
-                      type={
-                        cardVerticalSpacing === preset ? 'primary' : 'default'
-                      }
-                      onClick={() => onUpdateCard({ vertical_spacing: preset })}
-                      style={{ minWidth: '40px' }}
-                    >
-                      {preset}px
-                    </Button>
-                  ))}
-                </div>
-              </Form.Item>
-            </Form>
-          </Card>
-
-          {/* 内边距设置 */}
-          <Card
-            title="📦 内边距设置"
-            size="small"
-            style={{ marginBottom: '12px' }}
-          >
-            <PaddingEditor
-              value={cardPadding}
-              onChange={(padding) => onUpdateCard({ padding })}
-            />
-          </Card>
-        </div>
-      );
-    }
-
-    // 如果选中了组件，显示组件样式配置
-    if (!currentComponent) {
-      return (
-        <div style={{ padding: '16px', textAlign: 'center', color: '#999' }}>
-          请选择一个组件来配置样式
-        </div>
-      );
-    }
-
-    return <></>;
-  };
-
   const TabItems = [
     {
       key: 'component',
@@ -2070,29 +2000,12 @@ export const PropertyPanel: React.FC<{
                   属性
                 </span>
               ),
-              disabled: isCardSelected || false,
+              disabled: false,
               children: (
                 <div
                   style={{ height: 'calc(100vh - 180px)', overflow: 'auto' }}
                 >
                   {renderProperties()}
-                </div>
-              ),
-            },
-            {
-              key: 'styles',
-              label: (
-                <span
-                  style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-                >
-                  样式
-                </span>
-              ),
-              children: (
-                <div
-                  style={{ height: 'calc(100vh - 180px)', overflow: 'auto' }}
-                >
-                  {renderStyles()}
                 </div>
               ),
             },

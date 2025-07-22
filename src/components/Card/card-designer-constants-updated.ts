@@ -97,12 +97,12 @@ export const DEFAULT_CARD_DATA: CardDesignData = {
     body: {
       direction: 'vertical',
       vertical_spacing: 8,
-      padding: {
-        top: 16,
-        right: 16,
-        bottom: 16,
-        left: 16,
-      },
+      // padding: {
+      //   top: 16,
+      //   right: 16,
+      //   bottom: 16,
+      //   left: 16,
+      // },
       elements: [],
     },
   },
