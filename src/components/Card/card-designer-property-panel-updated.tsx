@@ -1569,12 +1569,9 @@ export const PropertyPanel: React.FC<{
                             }
                             style={{ width: '100%' }}
                           >
-                            <Option value={12}>12px</Option>
-                            <Option value={14}>14px</Option>
-                            <Option value={16}>16px</Option>
-                            <Option value={18}>18px</Option>
-                            <Option value={20}>20px</Option>
-                            <Option value={24}>24px</Option>
+                            <Option value={14}>正文 14px</Option>
+                            <Option value={16}>标题 16px</Option>
+                            <Option value={12}>辅助信息 12px</Option>
                           </Select>
                         </Form.Item>
                         <Form.Item label="对齐方式">
@@ -1626,12 +1623,9 @@ export const PropertyPanel: React.FC<{
                             }
                             style={{ width: '100%' }}
                           >
-                            <Option value={12}>12px</Option>
-                            <Option value={14}>14px</Option>
-                            <Option value={16}>16px</Option>
-                            <Option value={18}>18px</Option>
-                            <Option value={20}>20px</Option>
-                            <Option value={24}>24px</Option>
+                            <Option value={14}>正文 14px</Option>
+                            <Option value={16}>标题 16px</Option>
+                            <Option value={12}>辅助信息 12px</Option>
                           </Select>
                         </Form.Item>
                         <Form.Item label="对齐方式">
