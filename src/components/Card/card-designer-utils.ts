@@ -1272,12 +1272,25 @@ export const convertFromTargetFormat = (targetData: any): DesignData => {
       id: component.id || generateId(),
     };
 
-    // 处理嵌套结构
+    // 递归处理嵌套结构
     if (component.tag === 'form' && component.elements) {
       converted.elements = component.elements.map(convertComponent);
     }
 
     if (component.tag === 'column_set' && component.columns) {
+      converted.columns = component.columns.map((col: any) => ({
+        ...col,
+        elements: col.elements?.map(convertComponent) || [],
+      }));
+    }
+
+    // 处理其他可能的嵌套结构
+    if (component.elements && Array.isArray(component.elements)) {
+      converted.elements = component.elements.map(convertComponent);
+    }
+
+    // 处理columns结构（可能在其他组件类型中）
+    if (component.columns && Array.isArray(component.columns)) {
       converted.columns = component.columns.map((col: any) => ({
         ...col,
         elements: col.elements?.map(convertComponent) || [],
@@ -1318,6 +1331,30 @@ const getEmptyContent = (): string => {
   `;
 };
 
+// 递归为所有组件添加ID的辅助函数
+const ensureComponentIds = (obj: any): any => {
+  if (Array.isArray(obj)) {
+    return obj.map(ensureComponentIds);
+  }
+
+  if (obj && typeof obj === 'object' && obj !== null) {
+    // 如果对象有tag属性，说明是组件，需要添加ID
+    if (obj.tag && !obj.id) {
+      obj.id = generateId();
+      console.log('🆔 为组件添加ID:', { tag: obj.tag, id: obj.id });
+    }
+
+    // 递归处理所有属性
+    const result: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = ensureComponentIds(value);
+    }
+    return result;
+  }
+
+  return obj;
+};
+
 // 从JSON导入配置 - 支持旧格式和新格式
 export const importFromJSON = (jsonString: string): DesignData | null => {
   try {
@@ -1332,12 +1369,16 @@ export const importFromJSON = (jsonString: string): DesignData | null => {
       Array.isArray(parsed.dsl.body.elements)
     ) {
       console.log('✅ 检测到新格式卡片数据，转换为旧格式');
-      // 新格式转换为旧格式
-      return {
+      // 新格式转换为旧格式，确保为组件添加ID
+      const oldFormatData = {
         direction: parsed.dsl.body.direction || 'vertical',
         vertical_spacing: parsed.dsl.body.vertical_spacing || 5,
         elements: parsed.dsl.body.elements || [],
       };
+
+      // 先确保所有组件都有ID
+      const dataWithIds = ensureComponentIds(oldFormatData);
+      return convertFromTargetFormat(dataWithIds);
     }
 
     // 验证旧格式数据结构
@@ -1348,7 +1389,9 @@ export const importFromJSON = (jsonString: string): DesignData | null => {
       Array.isArray(parsed.elements)
     ) {
       console.log('✅ 检测到旧格式数据，直接使用');
-      return convertFromTargetFormat(parsed);
+      // 先确保所有组件都有ID
+      const dataWithIds = ensureComponentIds(parsed);
+      return convertFromTargetFormat(dataWithIds);
     }
 
     console.error('❌ 不支持的数据格式:', parsed);

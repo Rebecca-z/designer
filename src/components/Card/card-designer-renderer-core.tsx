@@ -1638,7 +1638,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         backgroundColor: 'transparent', // 始终使用透明背景
         cursor: 'pointer',
         transition: 'all 0.2s ease',
-        opacity,
+        opacity: 1, // 固定透明度为1，因为这里不需要拖拽状态
       };
 
       const selectableWrapper = (
