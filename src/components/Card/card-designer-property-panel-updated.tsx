@@ -787,8 +787,16 @@ export const PropertyPanel: React.FC<{
     selectedPath[0] === 'dsl' &&
     selectedPath[1] === 'body';
 
-  // 使用真实组件数据
-  const currentComponent = realComponent || selectedComponent;
+  // 总是使用从cardData中获取的真实组件数据
+  const currentComponent = realComponent;
+
+  // 如果没有找到真实组件，记录警告
+  if (selectedPath && selectedPath.length >= 4 && !currentComponent) {
+    console.warn('⚠️ 无法找到组件:', {
+      selectedPath,
+      cardDataElements: cardData?.dsl?.body?.elements?.length,
+    });
+  }
 
   // 检查是否为交互组件
   const isInteractiveComponent = useMemo(() => {
@@ -913,14 +921,69 @@ export const PropertyPanel: React.FC<{
 
   const handleValueChange = (field: string, value: any) => {
     if (currentComponent) {
-      const updated = { ...currentComponent, [field]: value };
-      console.log('📝 更新组件属性:', {
-        componentId: updated.id,
+      // 样式相关字段需要保存到style对象中
+      const styleFields = [
+        'fontSize',
+        'fontWeight',
+        'textAlign',
+        'textColor',
+        'numberOfLines',
+        'width',
+        'height',
+        'backgroundColor',
+        'borderColor',
+        'borderRadius',
+        'padding',
+        'margin',
+        'type',
+        'size',
+      ];
+
+      console.log('🔧 开始处理组件更新:', {
+        componentId: (currentComponent as any).id,
+        componentTag: currentComponent.tag,
         field,
         value,
+        isStyleField: styleFields.includes(field),
+        currentStyle: (currentComponent as any).style,
         realPath,
       });
-      onUpdateComponent(updated);
+
+      if (styleFields.includes(field)) {
+        const updatedComponent = {
+          ...currentComponent,
+          style: {
+            ...((currentComponent as any).style || {}),
+            [field]: value,
+          },
+        };
+        console.log('📝 更新组件样式属性:', {
+          componentId: (updatedComponent as any).id,
+          field,
+          value,
+          newStyle: (updatedComponent as any).style,
+          realPath,
+        });
+        onUpdateComponent(updatedComponent);
+      } else {
+        const updatedComponent = {
+          ...currentComponent,
+          [field]: value,
+        };
+        console.log('📝 更新组件属性:', {
+          componentId: (updatedComponent as any).id,
+          field,
+          value,
+          realPath,
+        });
+        onUpdateComponent(updatedComponent);
+      }
+    } else {
+      console.warn('⚠️ 无法更新组件，currentComponent为空:', {
+        selectedPath,
+        realPath,
+        cardDataExists: !!cardData,
+      });
     }
   };
 
@@ -1246,7 +1309,7 @@ export const PropertyPanel: React.FC<{
                     <Form form={form} layout="vertical">
                       <Form.Item label="字体大小">
                         <Select
-                          value={comp.fontSize || 14}
+                          value={(comp as any).style?.fontSize || 14}
                           onChange={(value) =>
                             handleValueChange('fontSize', value)
                           }
@@ -1257,22 +1320,9 @@ export const PropertyPanel: React.FC<{
                           <Option value={12}>辅助信息12px</Option>
                         </Select>
                       </Form.Item>
-                      <Form.Item label="字体粗细">
-                        <Select
-                          value={comp.fontWeight || 'normal'}
-                          onChange={(value) =>
-                            handleValueChange('fontWeight', value)
-                          }
-                          style={{ width: '100%' }}
-                        >
-                          <Option value="normal">正常</Option>
-                          <Option value="bold">粗体</Option>
-                          <Option value="lighter">细体</Option>
-                        </Select>
-                      </Form.Item>
                       <Form.Item label="文本对齐">
                         <Select
-                          value={comp.textAlign || 'left'}
+                          value={(comp as any).style?.textAlign || 'left'}
                           onChange={(value) =>
                             handleValueChange('textAlign', value)
                           }
@@ -1285,9 +1335,9 @@ export const PropertyPanel: React.FC<{
                       </Form.Item>
                       <Form.Item label="最大显示行数">
                         <InputNumber
-                          value={comp.maxLines || 1}
+                          value={(comp as any).style?.numberOfLines || 1}
                           onChange={(value) =>
-                            handleValueChange('maxLines', value || 1)
+                            handleValueChange('numberOfLines', value || 1)
                           }
                           min={1}
                           max={10}
@@ -1447,7 +1497,7 @@ export const PropertyPanel: React.FC<{
                     <Form form={form} layout="vertical">
                       <Form.Item label="按钮类型">
                         <Select
-                          value={comp.type || 'primary'}
+                          value={(comp as any).style?.type || 'primary'}
                           onChange={(value) => handleValueChange('type', value)}
                           style={{ width: '100%' }}
                         >
@@ -1460,7 +1510,7 @@ export const PropertyPanel: React.FC<{
                       </Form.Item>
                       <Form.Item label="按钮尺寸">
                         <Select
-                          value={comp.size || 'middle'}
+                          value={(comp as any).style?.size || 'middle'}
                           onChange={(value) => handleValueChange('size', value)}
                           style={{ width: '100%' }}
                         >
@@ -1852,7 +1902,7 @@ export const PropertyPanel: React.FC<{
                     <Form form={form} layout="vertical">
                       <Form.Item label="宽度">
                         <InputNumber
-                          value={comp.width}
+                          value={(comp as any).style?.width}
                           onChange={(value) =>
                             handleValueChange('width', value)
                           }
@@ -1863,7 +1913,7 @@ export const PropertyPanel: React.FC<{
                       </Form.Item>
                       <Form.Item label="高度">
                         <InputNumber
-                          value={comp.height}
+                          value={(comp as any).style?.height}
                           onChange={(value) =>
                             handleValueChange('height', value)
                           }
@@ -2038,7 +2088,7 @@ export const PropertyPanel: React.FC<{
                     <Form form={form} layout="vertical">
                       <Form.Item label="字体大小">
                         <Select
-                          value={comp.fontSize || 14}
+                          value={(comp as any).style?.fontSize || 14}
                           onChange={(value) =>
                             handleValueChange('fontSize', value)
                           }
@@ -2051,7 +2101,7 @@ export const PropertyPanel: React.FC<{
                       </Form.Item>
                       <Form.Item label="字体粗细">
                         <Select
-                          value={comp.fontWeight || 'normal'}
+                          value={(comp as any).style?.fontWeight || 'normal'}
                           onChange={(value) =>
                             handleValueChange('fontWeight', value)
                           }
@@ -2064,7 +2114,7 @@ export const PropertyPanel: React.FC<{
                       </Form.Item>
                       <Form.Item label="文本对齐">
                         <Select
-                          value={comp.textAlign || 'left'}
+                          value={(comp as any).style?.textAlign || 'left'}
                           onChange={(value) =>
                             handleValueChange('textAlign', value)
                           }
@@ -2077,9 +2127,9 @@ export const PropertyPanel: React.FC<{
                       </Form.Item>
                       <Form.Item label="最大显示行数">
                         <InputNumber
-                          value={comp.maxLines || 1}
+                          value={(comp as any).style?.numberOfLines || 1}
                           onChange={(value) =>
-                            handleValueChange('maxLines', value || 1)
+                            handleValueChange('numberOfLines', value || 1)
                           }
                           min={1}
                           max={10}

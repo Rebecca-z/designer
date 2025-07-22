@@ -1957,7 +1957,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         fontSize: comp.fontSize,
         fontWeight: comp.fontWeight,
         textAlign: comp.textAlign,
-        maxLines: comp.maxLines,
+        numberOfLines: comp.numberOfLines,
         path,
         isPreview,
         enableDrag,
@@ -1975,7 +1975,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         borderRadius: '4px',
         // 添加最大行数限制
         display: '-webkit-box',
-        WebkitLineClamp: comp.maxLines || 1,
+        WebkitLineClamp: comp.numberOfLines || 1,
         WebkitBoxOrient: 'vertical',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
@@ -2017,7 +2017,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         lineHeight: 1.5,
         // 添加最大行数限制
         display: '-webkit-box',
-        WebkitLineClamp: comp.maxLines || 1,
+        WebkitLineClamp: comp.numberOfLines || 1,
         WebkitBoxOrient: 'vertical',
         overflow: 'hidden',
         textOverflow: 'ellipsis',

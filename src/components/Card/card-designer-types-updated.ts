@@ -69,7 +69,7 @@ export interface TextComponent extends ComponentBase {
   content: string | any;
   i18n_content?: { [key: string]: string | any };
   fontSize?: 12 | 14 | 16; // 新增：字体大小
-  maxLines?: number; // 新增：最大显示行数
+  numberOfLines?: number; // 新增：最大显示行数
 }
 
 export interface PlainTextComponent extends ComponentBase {

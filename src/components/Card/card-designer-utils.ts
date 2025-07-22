@@ -590,8 +590,11 @@ export const createDefaultComponent = (type: string): ComponentType => {
         id: generateId(),
         tag: 'plain_text',
         content: '这是一段普通文本，以默认的字号、字色、行高、行数展示',
-        fontSize: 14, // 默认字体大小
-        maxLines: 1, // 默认最大行数
+        style: {
+          fontSize: 14, // 默认字体大小
+          numberOfLines: 1, // 默认最大行数
+          textAlign: 'left', // 默认左对齐
+        },
         i18n_content: {
           'en-US': 'this is a plaintext rendered with the default styles',
         },
@@ -615,8 +618,11 @@ export const createDefaultComponent = (type: string): ComponentType => {
             },
           ],
         },
-        fontSize: 14, // 默认字体大小
-        maxLines: 1, // 默认最大行数
+        style: {
+          fontSize: 14, // 默认字体大小
+          numberOfLines: 1, // 默认最大行数
+          textAlign: 'left', // 默认左对齐
+        },
         i18n_content: {
           'en-US': {
             type: 'doc',
@@ -861,38 +867,126 @@ export const migrateTitleStyle = (cardData: any): any => {
     });
   }
 
+  // 迁移组件样式字段（保留id字段用于渲染）
+  const migrateComponentStyles = (obj: any): any => {
+    if (Array.isArray(obj)) {
+      return obj.map(migrateComponentStyles);
+    }
+
+    if (obj && typeof obj === 'object' && obj !== null) {
+      const result: any = {};
+      for (const [key, value] of Object.entries(obj)) {
+        // 保留id字段，不在这里移除
+
+        // 处理组件样式字段迁移
+        if (
+          [
+            'fontSize',
+            'fontWeight',
+            'textAlign',
+            'textColor',
+            'numberOfLines',
+            'width',
+            'height',
+            'backgroundColor',
+            'borderColor',
+            'borderRadius',
+            'padding',
+            'margin',
+            'type',
+            'size',
+          ].includes(key)
+        ) {
+          // 这些是样式字段，需要移动到style对象中
+          if (!result.style) {
+            result.style = {};
+          }
+          result.style[key] = value;
+        } else if (
+          key === 'style' &&
+          typeof value === 'object' &&
+          value !== null
+        ) {
+          // 处理样式对象
+          const styleObj: any = {};
+          for (const [styleKey, styleValue] of Object.entries(value)) {
+            if (styleKey === 'id') {
+              continue; // 跳过样式对象中的id字段
+            }
+
+            styleObj[styleKey] = styleValue;
+          }
+          result[key] = styleObj;
+        } else {
+          result[key] = migrateComponentStyles(value);
+        }
+      }
+      return result;
+    }
+
+    return obj;
+  };
+
+  // 只迁移组件样式字段，不移除id字段
+  const migratedData = migrateComponentStyles(cardData);
+
   if (needsMigration) {
-    const migratedData = {
-      ...cardData,
+    const finalData = {
+      ...migratedData,
       dsl: {
-        ...cardData.dsl,
+        ...migratedData.dsl,
         header: {
-          ...header,
+          ...migratedData.dsl.header,
           style: newStyle,
         },
       },
     };
 
     // 删除旧的字段
-    delete migratedData.dsl.header.titleStyle;
+    delete finalData.dsl.header.titleStyle;
     if (
-      migratedData.dsl.header.style &&
-      typeof migratedData.dsl.header.style === 'object'
+      finalData.dsl.header.style &&
+      typeof finalData.dsl.header.style === 'object'
     ) {
-      delete migratedData.dsl.header.style.themeStyle;
+      delete finalData.dsl.header.style.themeStyle;
     }
 
-    return migratedData;
+    return finalData;
   }
 
-  return cardData;
+  return migratedData;
 };
 
 // 转换为目标数据结构 - 更新为新的卡片数据结构
 export const convertToTargetFormat = (data: any): any => {
-  // 如果传入的是完整的卡片数据，先进行数据迁移，然后直接返回
+  // 如果传入的是完整的卡片数据，先进行数据迁移，然后移除id字段
   if (data.name && data.dsl && data.variables) {
-    return migrateTitleStyle(data);
+    const migratedData = migrateTitleStyle(data);
+
+    // 移除id字段的函数
+    const removeIds = (obj: any): any => {
+      if (Array.isArray(obj)) {
+        return obj.map(removeIds);
+      }
+
+      if (obj && typeof obj === 'object' && obj !== null) {
+        const result: any = {};
+        for (const [key, value] of Object.entries(obj)) {
+          if (key === 'id') {
+            continue; // 跳过id字段
+          }
+          result[key] = removeIds(value);
+        }
+        return result;
+      }
+
+      return obj;
+    };
+
+    // 移除所有id字段
+    const cleanedData = removeIds(migratedData);
+
+    return cleanedData;
   }
 
   // 如果是旧的DesignData格式，转换为新的卡片格式
@@ -922,12 +1016,38 @@ export const convertToTargetFormat = (data: any): any => {
         if (component.i18n_content) {
           converted.i18n_content = component.i18n_content;
         }
+        // 处理样式字段
+        if (component.style) {
+          converted.style = { ...component.style };
+          // 确保textAlign有默认值
+          if (!converted.style.textAlign) {
+            converted.style.textAlign = 'left';
+          }
+        } else {
+          // 如果没有style对象，创建默认的style对象
+          converted.style = {
+            textAlign: 'left',
+          };
+        }
         break;
 
       case 'rich_text':
         converted.content = component.content;
         if (component.i18n_content) {
           converted.i18n_content = component.i18n_content;
+        }
+        // 处理样式字段
+        if (component.style) {
+          converted.style = { ...component.style };
+          // 确保textAlign有默认值
+          if (!converted.style.textAlign) {
+            converted.style.textAlign = 'left';
+          }
+        } else {
+          // 如果没有style对象，创建默认的style对象
+          converted.style = {
+            textAlign: 'left',
+          };
         }
         break;
 

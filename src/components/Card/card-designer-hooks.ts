@@ -2,7 +2,11 @@
 
 import { message } from 'antd';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ComponentType, DesignData, Variable } from './card-designer-types';
+import {
+  ComponentType,
+  DesignData,
+  Variable,
+} from './card-designer-types-updated';
 import {
   convertToTargetFormat,
   generateId,

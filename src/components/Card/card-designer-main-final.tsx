@@ -286,20 +286,30 @@ const CardDesigner: React.FC = () => {
     const path = selection.selectedPath;
     let newData = JSON.parse(JSON.stringify(safeCardData));
 
-    console.log('🔄 更新组件:', {
+    console.log('🔄 开始更新组件:', {
       componentId: updatedComponent.id,
       componentTag: updatedComponent.tag,
       path,
       pathLength: path.length,
+      hasStyle: !!(updatedComponent as any).style,
+      styleFields: (updatedComponent as any).style
+        ? Object.keys((updatedComponent as any).style)
+        : [],
     });
 
     if (path.length === 4) {
       // 根级组件: ['dsl', 'body', 'elements', index]
       const index = path[3] as number;
+      const oldComponent = newData.dsl.body.elements[index];
       newData.dsl.body.elements[index] = updatedComponent;
       console.log('📝 更新根级组件:', {
         index,
         componentTag: updatedComponent.tag,
+        oldStyle: (oldComponent as any).style,
+        newStyle: (updatedComponent as any).style,
+        styleChanged:
+          JSON.stringify((oldComponent as any).style) !==
+          JSON.stringify((updatedComponent as any).style),
       });
     } else if (path.length === 6 && path[4] === 'elements') {
       // 表单内组件: ['dsl', 'body', 'elements', formIndex, 'elements', componentIndex]
@@ -311,11 +321,14 @@ const CardDesigner: React.FC = () => {
         if (!formComponent.elements) {
           formComponent.elements = [];
         }
+        const oldComponent = formComponent.elements[componentIndex];
         formComponent.elements[componentIndex] = updatedComponent;
         console.log('📋 更新表单内组件:', {
           formIndex,
           componentIndex,
           componentTag: updatedComponent.tag,
+          oldStyle: (oldComponent as any).style,
+          newStyle: (updatedComponent as any).style,
         });
       }
     } else if (
@@ -338,12 +351,15 @@ const CardDesigner: React.FC = () => {
           if (!column.elements) {
             column.elements = [];
           }
+          const oldComponent = column.elements[componentIndex];
           column.elements[componentIndex] = updatedComponent;
           console.log('📐 更新分栏内组件:', {
             columnSetIndex,
             columnIndex,
             componentIndex,
             componentTag: updatedComponent.tag,
+            oldStyle: (oldComponent as any).style,
+            newStyle: (updatedComponent as any).style,
           });
         }
       }
@@ -352,6 +368,7 @@ const CardDesigner: React.FC = () => {
       return;
     }
 
+    console.log('💾 保存更新后的数据到历史记录');
     history.updateData(newData as any);
     // 移除这行代码，避免重新设置选择状态
     // selection.selectComponent(updatedComponent, selection.selectedPath);
