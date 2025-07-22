@@ -2204,7 +2204,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                   | 'orange'
                   | 'red',
               };
-              onSelectComponent(titleComponent, ['dsl', 'body', 'elements', 0]);
+              onSelectComponent(titleComponent, ['dsl', 'header']);
               onCanvasFocus();
             }}
             onClick={(e) => {
@@ -2223,7 +2223,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                   | 'orange'
                   | 'red',
               };
-              onSelectComponent(titleComponent, ['dsl', 'body', 'elements', 0]);
+              onSelectComponent(titleComponent, ['dsl', 'header']);
               onCanvasFocus();
             }}
           >
@@ -2231,12 +2231,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
             <div
               style={{
                 padding: '16px',
-                borderWidth: isSamePath(selectedPath, [
-                  'dsl',
-                  'body',
-                  'elements',
-                  0,
-                ])
+                borderWidth: isSamePath(selectedPath, ['dsl', 'header'])
                   ? '2px'
                   : '1px',
                 borderStyle: 'solid',
@@ -2259,74 +2254,71 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                       case 'wathet':
                         return {
                           backgroundColor: '#f0f9ff',
-                          borderColor: '#bae6fd',
-                          titleColor: '#0369a1',
-                          subtitleColor: '#0c4a6e',
+                          borderColor: '#7dd3fc',
+                          titleColor: '#0ea5e9',
+                          subtitleColor: '#0284c7',
                         };
                       case 'turquoise':
                         return {
                           backgroundColor: '#f0fdfa',
-                          borderColor: '#99f6e4',
-                          titleColor: '#0d9488',
+                          borderColor: '#5eead4',
+                          titleColor: '#14b8a6',
                           subtitleColor: '#0f766e',
                         };
                       case 'green':
                         return {
-                          backgroundColor: '#f6ffed',
-                          borderColor: '#b7eb8f',
-                          titleColor: '#52c41a',
-                          subtitleColor: '#389e0d',
+                          backgroundColor: '#f0fdf4',
+                          borderColor: '#86efac',
+                          titleColor: '#22c55e',
+                          subtitleColor: '#15803d',
                         };
                       case 'yellow':
                         return {
-                          backgroundColor: '#fffbe6',
-                          borderColor: '#ffe58f',
-                          titleColor: '#faad14',
-                          subtitleColor: '#d48806',
+                          backgroundColor: '#fefce8',
+                          borderColor: '#fde047',
+                          titleColor: '#eab308',
+                          subtitleColor: '#a16207',
                         };
                       case 'orange':
                         return {
-                          backgroundColor: '#fff7e6',
-                          borderColor: '#ffd591',
-                          titleColor: '#fa8c16',
-                          subtitleColor: '#d46b08',
+                          backgroundColor: '#fff7ed',
+                          borderColor: '#fdba74',
+                          titleColor: '#f97316',
+                          subtitleColor: '#ea580c',
                         };
                       case 'red':
                         return {
-                          backgroundColor: '#fff2f0',
-                          borderColor: '#ffccc7',
-                          titleColor: '#ff4d4f',
-                          subtitleColor: '#cf1322',
+                          backgroundColor: '#fef2f2',
+                          borderColor: '#fca5a5',
+                          titleColor: '#ef4444',
+                          subtitleColor: '#dc2626',
                         };
                       default:
                         return {
-                          backgroundColor: '#fff',
-                          borderColor: '#f0f0f0',
-                          titleColor: '#333',
-                          subtitleColor: '#666',
+                          backgroundColor: '#e6f7ff',
+                          borderColor: '#91d5ff',
+                          titleColor: '#1890ff',
+                          subtitleColor: '#096dd9',
                         };
                     }
                   };
-                  const themeStyles = getThemeStyles(themeStyle);
-                  const isTitleSelected = isSamePath(selectedPath, [
-                    'dsl',
-                    'body',
-                    'elements',
-                    0,
-                  ]);
+                  const styles = getThemeStyles(themeStyle);
                   return {
-                    backgroundColor: isTitleSelected
+                    backgroundColor: isSamePath(selectedPath, ['dsl', 'header'])
                       ? 'rgba(24, 144, 255, 0.05)'
-                      : themeStyles.backgroundColor,
-                    borderColor: isTitleSelected
+                      : styles.backgroundColor,
+                    borderColor: isSamePath(selectedPath, ['dsl', 'header'])
                       ? '#1890ff'
-                      : themeStyles.borderColor,
+                      : styles.borderColor,
+                    boxShadow: isSamePath(selectedPath, ['dsl', 'header'])
+                      ? '0 0 8px rgba(24, 144, 255, 0.3)'
+                      : 'none',
                   };
                 })(),
               }}
             >
               {/* 操作菜单 - 只在标题被选中时显示 */}
-              {isSamePath(selectedPath, ['dsl', 'body', 'elements', 0]) && (
+              {isSamePath(selectedPath, ['dsl', 'header']) && (
                 <div
                   style={{
                     position: 'absolute',

@@ -845,6 +845,19 @@ const DraggableWrapper: React.FC<{
 
   // 处理组件点击选中
   const handleWrapperClick = (e: React.MouseEvent) => {
+    // 检查点击的是否是包装器本身，而不是子组件
+    const target = e.target as HTMLElement;
+    const currentTarget = e.currentTarget as HTMLElement;
+
+    // 如果点击的是子组件（有 data-component-wrapper 属性），不处理包装器的选中
+    if (
+      target.closest('[data-component-wrapper]') &&
+      target !== currentTarget
+    ) {
+      console.log('🎯 DraggableWrapper 检测到子组件点击，跳过包装器选中');
+      return;
+    }
+
     // 阻止事件冒泡，防止触发父级选中
     e.stopPropagation();
     e.preventDefault();
@@ -1946,16 +1959,24 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         fontWeight: comp.fontWeight,
         textAlign: comp.textAlign,
         numberOfLines: comp.numberOfLines,
+        style: comp.style,
         path,
         isPreview,
         enableDrag,
       });
 
+      // 从 style 对象中读取样式属性，如果没有则从根属性读取
+      const fontSize = comp.style?.fontSize || comp.fontSize || 14;
+      const fontWeight = comp.style?.fontWeight || comp.fontWeight || 'normal';
+      const textAlign = comp.style?.textAlign || comp.textAlign || 'left';
+      const numberOfLines =
+        comp.style?.numberOfLines || comp.numberOfLines || 1;
+
       const defaultStyles: React.CSSProperties = {
-        color: comp.textColor || '#000000',
-        fontSize: `${comp.fontSize || 14}px`,
-        fontWeight: comp.fontWeight || 'normal',
-        textAlign: comp.textAlign || 'left',
+        color: '#000000', // 使用默认黑色
+        fontSize: `${fontSize}px`,
+        fontWeight: fontWeight,
+        textAlign: textAlign,
         lineHeight: 1.5,
         padding: '8px 12px',
         backgroundColor: '#fff',
@@ -1963,7 +1984,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         borderRadius: '4px',
         // 添加最大行数限制
         display: '-webkit-box',
-        WebkitLineClamp: comp.numberOfLines || 1,
+        WebkitLineClamp: numberOfLines,
         WebkitBoxOrient: 'vertical',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
@@ -1982,13 +2003,41 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           path,
         });
 
+        console.log('📝 检查 onSelect 回调:', {
+          onSelectExists: !!onSelect,
+          onSelectType: typeof onSelect,
+        });
+
         // 处理组件选中
-        onSelect?.(component, path);
-        onCanvasFocus?.();
+        if (onSelect) {
+          console.log('📝 调用 onSelect 回调:', {
+            component,
+            path,
+          });
+          onSelect(component, path);
+        } else {
+          console.log('❌ onSelect 回调不存在');
+        }
+
+        if (onCanvasFocus) {
+          console.log('📝 调用 onCanvasFocus 回调');
+          onCanvasFocus();
+        } else {
+          console.log('❌ onCanvasFocus 回调不存在');
+        }
       };
 
       // 检查当前组件是否被选中
       const isCurrentSelected = isSamePath(selectedPath, path);
+
+      console.log('📝 文本组件选中状态检查:', {
+        componentId: comp.id,
+        componentTag: comp.tag,
+        path,
+        selectedPath,
+        isCurrentSelected,
+        isPreview,
+      });
 
       // 选中状态样式
       const selectedStyles: React.CSSProperties = {
@@ -2023,6 +2072,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           containerPath={containerPath}
           onComponentMove={onComponentMove}
           enableSort={enableSort}
+          onSelect={onSelect}
+          selectedPath={selectedPath}
+          onCanvasFocus={onCanvasFocus}
         >
           {textContent}
         </DraggableWrapper>
@@ -2032,20 +2084,36 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
     }
 
     case 'rich_text': {
+      console.log('📝 渲染 rich_text 组件:', {
+        componentId: comp.id,
+        content: comp.content,
+        style: comp.style,
+        path,
+        isPreview,
+        enableDrag,
+      });
+
+      // 从 style 对象中读取样式属性，如果没有则从根属性读取
+      const fontSize = comp.style?.fontSize || comp.fontSize || 14;
+      const fontWeight = comp.style?.fontWeight || comp.fontWeight || 'normal';
+      const textAlign = comp.style?.textAlign || comp.textAlign || 'left';
+      const numberOfLines =
+        comp.style?.numberOfLines || comp.numberOfLines || 1;
+
       const defaultStyles: React.CSSProperties = {
         padding: '12px',
         border: '1px solid #f0f0f0',
         borderRadius: '4px',
         backgroundColor: '#fff7e6',
         position: 'relative',
-        color: comp.textColor || '#000000',
-        fontSize: `${comp.fontSize || 14}px`,
-        fontWeight: comp.fontWeight || 'normal',
-        textAlign: comp.textAlign || 'left',
+        color: '#000000', // 使用默认黑色
+        fontSize: `${fontSize}px`,
+        fontWeight: fontWeight,
+        textAlign: textAlign,
         lineHeight: 1.5,
         // 添加最大行数限制
         display: '-webkit-box',
-        WebkitLineClamp: comp.numberOfLines || 1,
+        WebkitLineClamp: numberOfLines,
         WebkitBoxOrient: 'vertical',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
@@ -2064,13 +2132,41 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           path,
         });
 
+        console.log('📝 检查 onSelect 回调:', {
+          onSelectExists: !!onSelect,
+          onSelectType: typeof onSelect,
+        });
+
         // 处理组件选中
-        onSelect?.(component, path);
-        onCanvasFocus?.();
+        if (onSelect) {
+          console.log('📝 调用 onSelect 回调:', {
+            component,
+            path,
+          });
+          onSelect(component, path);
+        } else {
+          console.log('❌ onSelect 回调不存在');
+        }
+
+        if (onCanvasFocus) {
+          console.log('📝 调用 onCanvasFocus 回调');
+          onCanvasFocus();
+        } else {
+          console.log('❌ onCanvasFocus 回调不存在');
+        }
       };
 
       // 检查当前组件是否被选中
       const isCurrentSelected = isSamePath(selectedPath, path);
+
+      console.log('📝 富文本组件选中状态检查:', {
+        componentId: comp.id,
+        componentTag: comp.tag,
+        path,
+        selectedPath,
+        isCurrentSelected,
+        isPreview,
+      });
 
       // 选中状态样式
       const selectedStyles: React.CSSProperties = {
@@ -2126,6 +2222,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           containerPath={containerPath}
           onComponentMove={onComponentMove}
           enableSort={enableSort}
+          onSelect={onSelect}
+          selectedPath={selectedPath}
+          onCanvasFocus={onCanvasFocus}
         >
           {richTextContent}
         </DraggableWrapper>

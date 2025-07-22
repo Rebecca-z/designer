@@ -161,12 +161,9 @@ const CardDesigner: React.FC = () => {
 
       // 如果是标题组件选择路径，检查headerData是否存在
       if (
-        selection.selectedPath.length === 4 &&
+        selection.selectedPath.length === 2 &&
         selection.selectedPath[0] === 'dsl' &&
-        selection.selectedPath[1] === 'body' &&
-        selection.selectedPath[2] === 'elements' &&
-        selection.selectedPath[3] === 0 &&
-        selection.selectedComponent?.tag === 'title'
+        selection.selectedPath[1] === 'header'
       ) {
         // 标题组件特殊处理：检查headerData是否存在
         if (

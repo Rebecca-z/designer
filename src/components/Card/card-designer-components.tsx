@@ -617,6 +617,11 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             )
           } // 根级别组件禁用内部拖拽，让DragSortableItem处理
           enableSort={!isPreview}
+          onSelect={onSelect}
+          selectedPath={selectedPath}
+          onDelete={onDelete}
+          onCopy={onCopy}
+          onCanvasFocus={onCanvasFocus}
           headerData={headerData}
         />
 
