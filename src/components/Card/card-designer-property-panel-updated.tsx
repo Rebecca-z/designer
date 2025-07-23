@@ -1018,6 +1018,17 @@ export const PropertyPanel: React.FC<{
     setIsAddVariableModalVisible(true);
   };
 
+  // 根据变量名称查找变量在数组中的索引
+  const findVariableIndexByName = (variableName: string): number => {
+    return variables.findIndex((v) => {
+      if (typeof v === 'object' && v !== null) {
+        const keys = Object.keys(v as VariableObject);
+        return keys.length > 0 && keys[0] === variableName;
+      }
+      return false;
+    });
+  };
+
   // 处理删除变量
   const handleDeleteVariable = (index: number) => {
     const newVariables = variables.filter((_, i) => i !== index);
@@ -1051,19 +1062,32 @@ export const PropertyPanel: React.FC<{
     };
 
     if (editingVariable) {
-      // 编辑模式：更新现有变量
-      const newVariables = variables.map((v) => {
-        if (v === editingVariable) {
-          return variableObject;
-        }
-        return v;
-      });
-      onUpdateVariables(newVariables);
-      console.log('🔄 更新变量:', {
-        oldVariable: editingVariable,
-        newVariable: variableObject,
-        allVariables: newVariables,
-      });
+      // 编辑模式：通过变量名称查找并更新现有变量
+      const variableIndex = findVariableIndexByName(editingVariable.name);
+
+      if (variableIndex !== -1) {
+        // 找到变量，更新它
+        const newVariables = [...variables];
+        newVariables[variableIndex] = variableObject;
+        onUpdateVariables(newVariables);
+
+        console.log('🔄 更新变量:', {
+          variableName: editingVariable.name,
+          variableIndex,
+          oldVariable: variables[variableIndex],
+          newVariable: variableObject,
+          allVariables: newVariables,
+        });
+      } else {
+        // 没找到变量，作为新变量添加
+        const newVariables = [...variables, variableObject];
+        onUpdateVariables(newVariables);
+        console.log('⚠️ 未找到要编辑的变量，作为新变量添加:', {
+          variableName: editingVariable.name,
+          newVariable: variableObject,
+          allVariables: newVariables,
+        });
+      }
     } else {
       // 新增模式：添加新变量
       const newVariables = [...variables, variableObject];
@@ -1081,6 +1105,46 @@ export const PropertyPanel: React.FC<{
   const handleCancelAddVariableModal = () => {
     setIsAddVariableModalVisible(false);
     setEditingVariable(null);
+  };
+
+  // 将VariableItem[]转换为Variable[]用于EventEditModal
+  const convertToVariableArray = (
+    variableItems: VariableItem[],
+  ): Variable[] => {
+    return variableItems.map((item) => {
+      if (typeof item === 'object' && item !== null) {
+        // 新的格式：{变量名: 模拟数据值}
+        const keys = Object.keys(item as VariableObject);
+        if (keys.length > 0) {
+          const variableName = keys[0];
+          const variableValue = (item as VariableObject)[variableName];
+
+          // 推断类型
+          let variableType: 'text' | 'number' | 'boolean' | 'object';
+          if (typeof variableValue === 'string') {
+            variableType = 'text';
+          } else if (typeof variableValue === 'number') {
+            variableType = 'number';
+          } else if (typeof variableValue === 'boolean') {
+            variableType = 'boolean';
+          } else {
+            variableType = 'object';
+          }
+
+          return {
+            name: variableName,
+            value:
+              typeof variableValue === 'object'
+                ? JSON.stringify(variableValue)
+                : String(variableValue),
+            type: variableType,
+          };
+        }
+      }
+
+      // 兼容旧的Variable格式
+      return item as Variable;
+    });
   };
 
   // 获取类型标签
@@ -2352,13 +2416,14 @@ export const PropertyPanel: React.FC<{
             ? mapVariableTypeToInitialType(editingVariable.type)
             : undefined
         }
+        editingVariable={editingVariable}
       />
 
       {/* 事件编辑弹窗 */}
       <EventEditModal
         visible={isEventEditModalVisible}
         eventAction={currentEventAction}
-        variables={variables}
+        variables={convertToVariableArray(variables)}
         onOk={saveActionEdit}
         onCancel={() => {
           setIsEventEditModalVisible(false);

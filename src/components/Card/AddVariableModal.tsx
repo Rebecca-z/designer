@@ -1,8 +1,7 @@
 import { Button, Form, Input, InputNumber, Modal, Select } from 'antd';
 import React, { useEffect, useState } from 'react';
 import { Variable } from './card-designer-types-updated';
-
-const { TextArea } = Input;
+import JSONEditor from './JSONEditor';
 const { Option } = Select;
 
 export interface AddVariableModalProps {
@@ -10,6 +9,7 @@ export interface AddVariableModalProps {
   onOk: (variable: Variable) => void;
   onCancel: () => void;
   initialType?: 'text' | 'number' | 'image' | 'array';
+  editingVariable?: Variable | null; // 新增：编辑的变量
 }
 
 export interface VariableFormData {
@@ -24,11 +24,13 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
   onOk,
   onCancel,
   initialType = 'text',
+  editingVariable = null, // 新增：编辑的变量
 }) => {
   const [form] = Form.useForm<VariableFormData>();
   const [selectedType, setSelectedType] = useState<
     'text' | 'number' | 'image' | 'array'
   >(initialType);
+  const [jsonData, setJsonData] = useState<string>(''); // 新增：JSON编辑器数据
 
   // 获取默认模拟数据
   const getDefaultMockData = (
@@ -79,24 +81,86 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
     }
   };
 
-  // 当弹窗打开时重置表单
+  // 将Variable类型映射到表单类型
+  const mapVariableTypeToFormType = (
+    variableType: string,
+  ): 'text' | 'number' | 'image' | 'array' => {
+    switch (variableType) {
+      case 'text':
+        return 'text';
+      case 'number':
+        return 'number';
+      case 'boolean':
+        return 'text'; // 布尔值用文本表示
+      case 'object':
+        // 尝试判断是图片还是数组
+        try {
+          const parsed = JSON.parse(editingVariable?.value || '{}');
+          if (parsed.img_key) {
+            return 'image';
+          } else if (Array.isArray(parsed)) {
+            return 'array';
+          }
+        } catch (e) {
+          // 解析失败，默认为图片
+        }
+        return 'image';
+      default:
+        return 'text';
+    }
+  };
+
+  // 当弹窗打开时重置表单或回显编辑数据
   useEffect(() => {
     if (visible) {
-      form.resetFields();
-      setSelectedType(initialType);
-      form.setFieldsValue({
-        type: initialType,
-        mockData: getDefaultMockData(initialType),
-      });
+      if (editingVariable) {
+        // 编辑模式：回显数据
+        const formType = mapVariableTypeToFormType(editingVariable.type);
+        setSelectedType(formType);
+
+        // 设置表单数据
+        form.setFieldsValue({
+          type: formType,
+          name: editingVariable.name,
+          description: '', // 描述字段暂时为空
+          mockData: editingVariable.value,
+        });
+
+        // 设置JSON编辑器数据
+        setJsonData(editingVariable.value);
+
+        console.log('🔄 回显编辑数据:', {
+          editingVariable,
+          formType,
+          mockData: editingVariable.value,
+        });
+      } else {
+        // 新增模式：重置表单
+        form.resetFields();
+        setSelectedType(initialType);
+        const defaultData = getDefaultMockData(initialType);
+        form.setFieldsValue({
+          type: initialType,
+          mockData: defaultData,
+        });
+        setJsonData(defaultData);
+
+        console.log('➕ 重置新增表单:', {
+          initialType,
+          defaultData,
+        });
+      }
     }
-  }, [visible, initialType, form]);
+  }, [visible, initialType, editingVariable, form]);
 
   // 处理类型变化
   const handleTypeChange = (value: 'text' | 'number' | 'image' | 'array') => {
     setSelectedType(value);
+    const defaultData = getDefaultMockData(value);
     form.setFieldsValue({
-      mockData: getDefaultMockData(value),
+      mockData: defaultData,
     });
+    setJsonData(defaultData);
   };
 
   // 验证变量名称
@@ -137,6 +201,12 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
     try {
       const values = await form.validateFields();
 
+      // 获取实际的模拟数据（优先使用JSON编辑器的数据）
+      let actualMockData = values.mockData;
+      if (selectedType === 'image' || selectedType === 'array') {
+        actualMockData = jsonData;
+      }
+
       // 将自定义类型映射到Variable接口支持的类型
       const mapTypeToVariableType = (
         type: 'text' | 'number' | 'image' | 'array',
@@ -158,11 +228,19 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
       const variable: Variable = {
         name: values.name,
         type: mapTypeToVariableType(values.type),
-        value: values.mockData,
+        value: actualMockData,
       };
+
+      console.log('💾 提交变量数据:', {
+        isEditing: !!editingVariable,
+        variable,
+        formValues: values,
+        jsonData,
+      });
 
       onOk(variable);
       form.resetFields();
+      setJsonData('');
     } catch (error) {
       console.error('表单验证失败:', error);
     }
@@ -171,7 +249,14 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
   // 处理取消
   const handleCancel = () => {
     form.resetFields();
+    setJsonData('');
     onCancel();
+  };
+
+  // 处理JSON编辑器数据变化
+  const handleJSONChange = (newData: string) => {
+    setJsonData(newData);
+    console.log('📝 JSON数据变化:', newData);
   };
 
   // 渲染模拟数据输入组件
@@ -214,10 +299,14 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
               { validator: validateJSON },
             ]}
           >
-            <TextArea
-              rows={6}
-              placeholder="请输入JSON格式的图片数据"
-              style={{ fontFamily: 'monospace' }}
+            <JSONEditor
+              json={jsonData}
+              title="图片数据"
+              onJSONChange={handleJSONChange}
+              editable={true}
+              height={200}
+              showLineNumbers={false}
+              showCopyButton={false}
             />
           </Form.Item>
         );
@@ -232,10 +321,14 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
               { validator: validateJSON },
             ]}
           >
-            <TextArea
-              rows={8}
-              placeholder="请输入JSON格式的数组数据"
-              style={{ fontFamily: 'monospace' }}
+            <JSONEditor
+              json={jsonData}
+              title="数组数据"
+              onJSONChange={handleJSONChange}
+              editable={true}
+              height={300}
+              showLineNumbers={false}
+              showCopyButton={false}
             />
           </Form.Item>
         );
@@ -247,7 +340,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
 
   return (
     <Modal
-      title="添加变量"
+      title={editingVariable ? '编辑变量' : '添加变量'}
       open={visible}
       onCancel={handleCancel}
       footer={[
@@ -255,11 +348,11 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
           取消
         </Button>,
         <Button key="submit" type="primary" onClick={handleSubmit}>
-          提交
+          {editingVariable ? '更新' : '提交'}
         </Button>,
       ]}
       width={600}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form
         form={form}
@@ -277,7 +370,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         >
           <Select
             onChange={handleTypeChange}
-            disabled={!!initialType && initialType !== 'text'}
+            disabled={!!editingVariable} // 编辑模式下不允许修改类型
           >
             <Option value="text">文本</Option>
             <Option value="number">正数</Option>
@@ -295,6 +388,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
           <Input
             placeholder="变量名称应以字母开头、仅支持字母、数字下划线的组合"
             maxLength={50}
+            disabled={!!editingVariable} // 编辑模式下不允许修改名称
           />
         </Form.Item>
 
