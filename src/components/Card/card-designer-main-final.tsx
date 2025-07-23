@@ -44,13 +44,14 @@ import {
   CardPadding,
   ComponentType,
   Variable,
+  VariableItem,
 } from './card-designer-types-updated';
 
 const CardDesigner: React.FC = () => {
   // 基础状态
   const [device, setDevice] = useState<keyof typeof DEVICE_SIZES>('desktop');
   const [previewVisible, setPreviewVisible] = useState<boolean>(false);
-  const [variables, setVariables] = useState<Variable[]>([]);
+  const [variables, setVariables] = useState<VariableItem[]>([]);
 
   // 使用自定义Hooks - 现在使用新的卡片数据结构
   const history = useHistory(DEFAULT_CARD_DATA as any);
@@ -89,6 +90,115 @@ const CardDesigner: React.FC = () => {
 
     return migratedData;
   }, [history.data]);
+
+  // 处理变量更新 - 同时更新本地状态和卡片数据结构
+  const handleUpdateVariables = (newVariables: VariableItem[]) => {
+    console.log('🔄 更新变量:', {
+      oldVariables: variables,
+      newVariables: newVariables,
+      timestamp: new Date().toISOString(),
+    });
+
+    // 更新本地状态
+    setVariables(newVariables);
+
+    // 将变量转换为卡片数据结构格式并更新
+    const cardVariables: { [key: string]: any } = {};
+
+    newVariables.forEach((variable) => {
+      if (typeof variable === 'object' && variable !== null) {
+        // 新的格式：{变量名: 模拟数据值}
+        const keys = Object.keys(variable as { [key: string]: any });
+        if (keys.length > 0) {
+          const variableName = keys[0];
+          cardVariables[variableName] = (variable as { [key: string]: any })[
+            variableName
+          ];
+        }
+      } else {
+        // 兼容旧的Variable格式
+        const varAsVariable = variable as Variable;
+        cardVariables[varAsVariable.name] = varAsVariable.value;
+      }
+    });
+
+    // 更新卡片数据结构中的variables字段
+    const updatedCardData = {
+      ...safeCardData,
+      variables: cardVariables,
+    };
+
+    console.log('📝 更新卡片数据结构:', {
+      cardVariables: cardVariables,
+      updatedCardData: updatedCardData,
+      timestamp: new Date().toISOString(),
+    });
+
+    history.updateData(updatedCardData);
+  };
+
+  // 从卡片数据结构初始化变量
+  React.useEffect(() => {
+    if (
+      safeCardData.variables &&
+      Object.keys(safeCardData.variables).length > 0
+    ) {
+      const cardVariables = safeCardData.variables;
+      const variableItems: VariableItem[] = Object.entries(cardVariables).map(
+        ([name, value]) => ({
+          [name]: value,
+        }),
+      );
+
+      console.log('🔄 从卡片数据结构初始化变量:', {
+        cardVariables: cardVariables,
+        variableItems: variableItems,
+        timestamp: new Date().toISOString(),
+      });
+
+      setVariables(variableItems);
+    }
+  }, [safeCardData.variables]);
+
+  // 将VariableItem[]转换为Variable[]用于config函数
+  const convertToVariableArray = (
+    variableItems: VariableItem[],
+  ): Variable[] => {
+    return variableItems.map((item) => {
+      if (typeof item === 'object' && item !== null) {
+        // 新的格式：{变量名: 模拟数据值}
+        const keys = Object.keys(item as { [key: string]: any });
+        if (keys.length > 0) {
+          const variableName = keys[0];
+          const variableValue = (item as { [key: string]: any })[variableName];
+
+          // 推断类型
+          let variableType: 'text' | 'number' | 'boolean' | 'object';
+          if (typeof variableValue === 'string') {
+            variableType = 'text';
+          } else if (typeof variableValue === 'number') {
+            variableType = 'number';
+          } else if (typeof variableValue === 'boolean') {
+            variableType = 'boolean';
+          } else {
+            variableType = 'object';
+          }
+
+          return {
+            name: variableName,
+            value:
+              typeof variableValue === 'object'
+                ? JSON.stringify(variableValue)
+                : String(variableValue),
+            type: variableType,
+          };
+        }
+      }
+
+      // 兼容旧的Variable格式
+      return item as Variable;
+    });
+  };
 
   // 根据路径获取组件的辅助函数 - 支持嵌套组件
   const getComponentByPath = (
@@ -586,11 +696,17 @@ const CardDesigner: React.FC = () => {
   };
 
   const handleSaveConfig = () => {
-    config.saveConfig(safeCardData, variables);
+    config.saveConfig(safeCardData, convertToVariableArray(variables));
   };
 
   const handleLoadConfig = () => {
-    config.loadConfig(history.updateData, setVariables);
+    config.loadConfig(history.updateData, (newVariables: Variable[]) => {
+      // 将Variable[]转换为VariableItem[]
+      const variableItems: VariableItem[] = newVariables.map((variable) => ({
+        [variable.name]: variable.value,
+      }));
+      setVariables(variableItems);
+    });
   };
 
   const handleFileUpload = (file: File) => {
@@ -700,7 +816,7 @@ const CardDesigner: React.FC = () => {
               onUpdateComponent={handleUpdateSelectedComponent}
               onUpdateCard={handleUpdateCard}
               variables={variables}
-              onUpdateVariables={setVariables}
+              onUpdateVariables={handleUpdateVariables}
               cardVerticalSpacing={safeCardData.dsl.body.vertical_spacing}
               cardPadding={
                 safeCardData.dsl.body.padding || {
@@ -733,7 +849,7 @@ const CardDesigner: React.FC = () => {
             elements: safeCardData.dsl.body.elements,
           }}
           device={device}
-          variables={variables}
+          variables={convertToVariableArray(variables)}
           historyLength={history.historyLength}
           canvasFocused={focus.canvasFocused}
           onClearCanvas={clearCanvas}

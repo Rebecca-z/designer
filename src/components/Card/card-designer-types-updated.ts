@@ -313,6 +313,12 @@ export interface Variable {
   type: 'text' | 'number' | 'boolean' | 'object';
 }
 
+// 新的变量格式：{变量名: 模拟数据值}
+export type VariableObject = { [key: string]: any };
+
+// 兼容两种格式的变量类型
+export type VariableItem = Variable | VariableObject;
+
 export interface DragItem {
   type: string;
   component?: ComponentType;

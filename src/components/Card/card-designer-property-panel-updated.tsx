@@ -26,6 +26,7 @@ import {
 } from 'antd';
 import React, { useMemo, useState } from 'react';
 import { useDrag } from 'react-dnd';
+import AddVariableModal from './AddVariableModal';
 import {
   COMPONENT_CATEGORIES,
   COMPONENT_TYPES,
@@ -36,6 +37,8 @@ import {
   CardPadding,
   ComponentType,
   Variable,
+  VariableItem,
+  VariableObject,
 } from './card-designer-types-updated';
 
 const { Option } = Select;
@@ -117,7 +120,7 @@ const ComponentLibrary: React.FC = () => {
   }));
 
   return (
-    <div style={{ padding: '16px' }}>
+    <div style={{ padding: '8px' }}>
       <Collapse
         defaultActiveKey={categories.map((cat) => cat.key)}
         ghost
@@ -595,71 +598,6 @@ export const ComponentPanel: React.FC<{
   );
 };
 
-// 新增变量弹窗组件
-const AddVariableModal: React.FC<{
-  visible: boolean;
-  newVariable: {
-    name: string;
-    type: 'text' | 'object';
-    description: string;
-    mockData: string;
-  };
-  onOk: () => void;
-  onCancel: () => void;
-  onChange: (field: string, value: any) => void;
-}> = ({ visible, newVariable, onOk, onCancel, onChange }) => {
-  return (
-    <Modal
-      title="新增变量"
-      open={visible}
-      onOk={onOk}
-      onCancel={onCancel}
-      okText="确定"
-      cancelText="取消"
-      width={500}
-    >
-      <Form layout="vertical">
-        <Form.Item label="类型" required>
-          <Select
-            value={newVariable.type}
-            onChange={(value) => onChange('type', value)}
-            style={{ width: '100%' }}
-          >
-            <Option value="text">文本</Option>
-            <Option value="object">数组对象</Option>
-          </Select>
-        </Form.Item>
-
-        <Form.Item label="变量名称" required>
-          <Input
-            value={newVariable.name}
-            onChange={(e) => onChange('name', e.target.value)}
-            placeholder="请输入变量名称"
-          />
-        </Form.Item>
-
-        <Form.Item label="变量描述">
-          <Input.TextArea
-            value={newVariable.description}
-            onChange={(e) => onChange('description', e.target.value)}
-            placeholder="请输入变量描述"
-            rows={3}
-          />
-        </Form.Item>
-
-        <Form.Item label="模拟数据" required>
-          <Input.TextArea
-            value={newVariable.mockData}
-            onChange={(e) => onChange('mockData', e.target.value)}
-            placeholder="请输入模拟数据"
-            rows={3}
-          />
-        </Form.Item>
-      </Form>
-    </Modal>
-  );
-};
-
 // 事件管理相关类型定义
 interface EventAction {
   id: string;
@@ -743,8 +681,8 @@ export const PropertyPanel: React.FC<{
   selectedPath: (string | number)[] | null;
   onUpdateComponent: (component: ComponentType) => void;
   onUpdateCard: (updates: any) => void;
-  variables: Variable[];
-  onUpdateVariables: (variables: Variable[]) => void;
+  variables: VariableItem[];
+  onUpdateVariables: (variables: VariableItem[]) => void;
   cardVerticalSpacing: number;
   cardPadding: CardPadding;
   // 新增：标题数据
@@ -771,32 +709,22 @@ export const PropertyPanel: React.FC<{
   const [activeTab, setActiveTab] = useState<string>('properties');
   const [topLevelTab, setTopLevelTab] = useState<string>('component'); // 新增顶层Tab状态
 
-  // 新增变量弹窗状态
+  // 变量管理相关状态
   const [isAddVariableModalVisible, setIsAddVariableModalVisible] =
     useState(false);
-  const [newVariable, setNewVariable] = useState<{
-    name: string;
-    type: 'text' | 'object';
-    description: string;
-    mockData: string;
-  }>({
-    name: '',
-    type: 'text',
-    description: '',
-    mockData: '',
-  });
+  const [editingVariable, setEditingVariable] = useState<Variable | null>(null);
 
   // 事件管理相关状态
   const [isEventEditModalVisible, setIsEventEditModalVisible] = useState(false);
   const [currentEventAction, setCurrentEventAction] = useState<EventAction>({
     id: '',
     type: 'callback',
-    action: 'callback',
+    action: '',
     paramType: 'string',
     paramValue: '',
     confirmDialog: false,
   });
-  const [editingActionIndex, setEditingActionIndex] = useState<number>(-1);
+  const [editingActionIndex, setEditingActionIndex] = useState(-1);
 
   // 获取真实的组件和路径
   const { component: realComponent, realPath } = getComponentRealPath(
@@ -1078,43 +1006,129 @@ export const PropertyPanel: React.FC<{
     onUpdateCard({ cardData: updatedCardData });
   };
 
+  // 处理添加变量
   const handleAddVariable = () => {
-    const newVariable: Variable = {
-      name: `变量${variables.length + 1}`,
-      value: '',
-      type: 'text',
-    };
-    onUpdateVariables([...variables, newVariable]);
+    setEditingVariable(null); // 清空编辑状态
+    setIsAddVariableModalVisible(true);
   };
 
-  // 新增变量相关函数
-  const handleAddVariableFromModal = () => {
-    const variable: Variable = {
-      name: newVariable.name,
-      value: newVariable.mockData,
-      type: newVariable.type,
+  // 处理编辑变量
+  const handleEditVariable = (variable: Variable) => {
+    setEditingVariable(variable);
+    setIsAddVariableModalVisible(true);
+  };
+
+  // 处理删除变量
+  const handleDeleteVariable = (index: number) => {
+    const newVariables = variables.filter((_, i) => i !== index);
+    onUpdateVariables(newVariables);
+  };
+
+  // 处理从弹窗添加/编辑变量
+  const handleAddVariableFromModal = (variable: Variable) => {
+    // 解析模拟数据值
+    let parsedValue: any;
+    try {
+      // 尝试解析JSON格式的数据
+      if (
+        variable.type === 'object' ||
+        variable.value.startsWith('{') ||
+        variable.value.startsWith('[')
+      ) {
+        parsedValue = JSON.parse(variable.value);
+      } else {
+        // 对于文本和数字类型，直接使用字符串值
+        parsedValue = variable.value;
+      }
+    } catch (error) {
+      // 如果解析失败，使用原始字符串值
+      parsedValue = variable.value;
+    }
+
+    // 创建{变量名:模拟数据值}格式的对象
+    const variableObject = {
+      [variable.name]: parsedValue,
     };
 
-    onUpdateVariables([...variables, variable]);
-
-    // 重置表单并关闭弹窗
-    setNewVariable({
-      name: '',
-      type: 'text',
-      description: '',
-      mockData: '',
-    });
+    if (editingVariable) {
+      // 编辑模式：更新现有变量
+      const newVariables = variables.map((v) => {
+        if (v === editingVariable) {
+          return variableObject;
+        }
+        return v;
+      });
+      onUpdateVariables(newVariables);
+      console.log('🔄 更新变量:', {
+        oldVariable: editingVariable,
+        newVariable: variableObject,
+        allVariables: newVariables,
+      });
+    } else {
+      // 新增模式：添加新变量
+      const newVariables = [...variables, variableObject];
+      onUpdateVariables(newVariables);
+      console.log('➕ 添加新变量:', {
+        newVariable: variableObject,
+        allVariables: newVariables,
+      });
+    }
     setIsAddVariableModalVisible(false);
+    setEditingVariable(null);
   };
 
+  // 处理取消添加变量
   const handleCancelAddVariableModal = () => {
-    setNewVariable({
-      name: '',
-      type: 'text',
-      description: '',
-      mockData: '',
-    });
     setIsAddVariableModalVisible(false);
+    setEditingVariable(null);
+  };
+
+  // 获取类型标签
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case 'text':
+        return '文本';
+      case 'number':
+        return '数字';
+      case 'boolean':
+        return '布尔';
+      case 'object':
+        return '对象';
+      default:
+        return type;
+    }
+  };
+
+  // 获取类型颜色
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'text':
+        return { bg: '#e6f7ff', text: '#1890ff' };
+      case 'number':
+        return { bg: '#f6ffed', text: '#52c41a' };
+      case 'boolean':
+        return { bg: '#fff7e6', text: '#fa8c16' };
+      case 'object':
+        return { bg: '#f9f0ff', text: '#722ed1' };
+      default:
+        return { bg: '#f5f5f5', text: '#8c8c8c' };
+    }
+  };
+
+  // 映射Variable类型到AddVariableModal的初始类型
+  const mapVariableTypeToInitialType = (
+    type: string,
+  ): 'text' | 'number' | 'image' | 'array' => {
+    switch (type) {
+      case 'text':
+        return 'text';
+      case 'number':
+        return 'number';
+      case 'object':
+        return 'array'; // 默认映射为array
+      default:
+        return 'text';
+    }
   };
 
   const renderProperties = () => {
@@ -1740,46 +1754,182 @@ export const PropertyPanel: React.FC<{
             </div>
           ) : (
             <div>
-              {variables.map((variable, index) => (
-                <div
-                  key={index}
-                  style={{
-                    padding: '8px 12px',
-                    border: '1px solid #d9d9d9',
-                    borderRadius: '4px',
-                    marginBottom: '8px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 500, marginBottom: '4px' }}>
-                      {variable.name}
+              {variables.map((variable, index) => {
+                // 处理新的变量格式 {变量名: 模拟数据值}
+                let variableName: string;
+                let variableValue: any;
+                let variableType: string;
+
+                if (typeof variable === 'object' && variable !== null) {
+                  // 新的格式：{变量名: 模拟数据值}
+                  const keys = Object.keys(variable as VariableObject);
+                  if (keys.length > 0) {
+                    variableName = keys[0];
+                    variableValue = (variable as VariableObject)[variableName];
+
+                    // 根据值的类型推断变量类型
+                    if (typeof variableValue === 'string') {
+                      variableType = 'text';
+                    } else if (typeof variableValue === 'number') {
+                      variableType = 'number';
+                    } else if (typeof variableValue === 'boolean') {
+                      variableType = 'boolean';
+                    } else if (Array.isArray(variableValue)) {
+                      variableType = 'array';
+                    } else if (typeof variableValue === 'object') {
+                      variableType = 'object';
+                    } else {
+                      variableType = 'text';
+                    }
+                  } else {
+                    // 空对象，使用默认值
+                    variableName = '未命名变量';
+                    variableValue = '';
+                    variableType = 'text';
+                  }
+                } else {
+                  // 兼容旧的Variable格式
+                  const varAsVariable = variable as Variable;
+                  variableName = varAsVariable.name || '未命名变量';
+                  variableValue = varAsVariable.value || '';
+                  variableType = varAsVariable.type || 'text';
+                }
+
+                return (
+                  <div
+                    key={`${variableName}-${index}`}
+                    className="variable-item"
+                    style={{
+                      padding: '12px 16px',
+                      border: '1px solid #f0f0f0',
+                      borderRadius: '8px',
+                      marginBottom: '8px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      backgroundColor: '#fff',
+                      transition: 'all 0.2s ease',
+                      cursor: 'pointer',
+                      position: 'relative',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = '#d9d9d9';
+                      e.currentTarget.style.boxShadow =
+                        '0 2px 8px rgba(0,0,0,0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = '#f0f0f0';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  >
+                    {/* 左侧：变量信息 */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontWeight: 500,
+                          marginBottom: '4px',
+                          fontSize: '14px',
+                          color: '#262626',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                        title={variableName}
+                      >
+                        {variableName}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '12px',
+                          color: '#8c8c8c',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                        title={
+                          typeof variableValue === 'object'
+                            ? JSON.stringify(variableValue)
+                            : String(variableValue)
+                        }
+                      >
+                        {typeof variableValue === 'object'
+                          ? JSON.stringify(variableValue)
+                          : String(variableValue) || '暂无描述'}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '12px', color: '#666' }}>
-                      类型:{' '}
-                      {variable.type === 'text'
-                        ? '文本'
-                        : variable.type === 'object'
-                        ? '数组对象'
-                        : variable.type}
+
+                    {/* 中间：变量类型 */}
+                    <div style={{ margin: '0 12px' }}>
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          fontSize: '11px',
+                          fontWeight: 500,
+                          backgroundColor: getTypeColor(variableType).bg,
+                          color: getTypeColor(variableType).text,
+                        }}
+                      >
+                        {getTypeLabel(variableType)}
+                      </span>
+                    </div>
+
+                    {/* 右侧：操作按钮 */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: '4px',
+                        opacity: 0,
+                        transition: 'opacity 0.2s ease',
+                      }}
+                      className="variable-actions"
+                    >
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<EditOutlined />}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // 创建兼容的Variable对象用于编辑
+                          const editVariable: Variable = {
+                            name: variableName,
+                            value:
+                              typeof variableValue === 'object'
+                                ? JSON.stringify(variableValue)
+                                : String(variableValue),
+                            type: variableType as
+                              | 'text'
+                              | 'number'
+                              | 'boolean'
+                              | 'object',
+                          };
+                          handleEditVariable(editVariable);
+                        }}
+                        style={{
+                          padding: '4px 8px',
+                          height: '24px',
+                          minWidth: '24px',
+                        }}
+                      />
+                      <Button
+                        type="text"
+                        size="small"
+                        danger
+                        icon={<DeleteOutlined />}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteVariable(index);
+                        }}
+                        style={{
+                          padding: '4px 8px',
+                          height: '24px',
+                          minWidth: '24px',
+                        }}
+                      />
                     </div>
                   </div>
-                  <Button
-                    type="text"
-                    size="small"
-                    danger
-                    icon={<DeleteOutlined />}
-                    onClick={() => {
-                      const newVariables = variables.filter(
-                        (_, i) => i !== index,
-                      );
-                      onUpdateVariables(newVariables);
-                    }}
-                  />
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </Card>
@@ -1983,12 +2133,6 @@ export const PropertyPanel: React.FC<{
           activeKey={activeTab}
           onChange={setActiveTab}
           style={{ flex: 1 }}
-          tabBarStyle={{
-            padding: '0 16px',
-            backgroundColor: '#fff',
-            margin: 0,
-            borderBottom: '1px solid #d9d9d9',
-          }}
           size="small"
           items={[
             {
@@ -2028,8 +2172,7 @@ export const PropertyPanel: React.FC<{
               ),
             },
           ]}
-          tabBarGutter={8}
-          className="custom-tabs"
+          className="component-config-tabs"
         />
       ),
     },
@@ -2108,6 +2251,81 @@ export const PropertyPanel: React.FC<{
           .custom-tabs .ant-tabs-tab-btn:focus {
             color: inherit !important;
           }
+
+          /* 组件配置下的嵌套Tab样式优化 */
+          .component-config-tabs .ant-tabs-nav {
+            padding: 8px 12px 0 12px !important;
+            background: #fafafa !important;
+            border-bottom: 1px solid #f0f0f0 !important;
+            margin-bottom: 0 !important;
+          }
+          
+          .component-config-tabs .ant-tabs-nav::before {
+            border-bottom: none !important;
+          }
+          
+          .component-config-tabs .ant-tabs-ink-bar {
+            display: none !important;
+          }
+          
+          .component-config-tabs .ant-tabs-tab {
+            background: transparent !important;
+            border: none !important;
+            border-radius: 8px 8px 0 0 !important;
+            padding: 10px 20px !important;
+            margin: 0 4px 0 0 !important;
+            transition: all 0.3s ease !important;
+            position: relative !important;
+            color: #666 !important;
+            font-weight: 500 !important;
+          }
+          
+          .component-config-tabs .ant-tabs-tab:hover {
+            background: rgba(24, 144, 255, 0.05) !important;
+            color: #1890ff !important;
+          }
+          
+          .component-config-tabs .ant-tabs-tab.ant-tabs-tab-active {
+            background: #fff !important;
+            color: #1890ff !important;
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06) !important;
+          }
+          
+          .component-config-tabs .ant-tabs-tab.ant-tabs-tab-active::after {
+            content: '' !important;
+            position: absolute !important;
+            bottom: -1px !important;
+            left: 0 !important;
+            right: 0 !important;
+            height: 2px !important;
+            background: #1890ff !important;
+            border-radius: 1px !important;
+          }
+          
+          .component-config-tabs .ant-tabs-tab.ant-tabs-tab-disabled {
+            color: #ccc !important;
+            cursor: not-allowed !important;
+            background: transparent !important;
+          }
+          
+          .component-config-tabs .ant-tabs-tab.ant-tabs-tab-disabled:hover {
+            background: transparent !important;
+            color: #ccc !important;
+          }
+          
+          .component-config-tabs .ant-tabs-content-holder {
+            background: #fff !important;
+            border-radius: 0 0 8px 8px !important;
+          }
+          
+          .component-config-tabs .ant-tabs-tabpane {
+            padding: 16px !important;
+          }
+
+          /* 变量列表hover效果 */
+          .variable-item:hover .variable-actions {
+            opacity: 1 !important;
+          }
         `}
       </style>
       <Tabs
@@ -2127,11 +2345,12 @@ export const PropertyPanel: React.FC<{
       {/* 新增变量弹窗 */}
       <AddVariableModal
         visible={isAddVariableModalVisible}
-        newVariable={newVariable}
         onOk={handleAddVariableFromModal}
         onCancel={handleCancelAddVariableModal}
-        onChange={(field, value) =>
-          setNewVariable((prev) => ({ ...prev, [field]: value }))
+        initialType={
+          editingVariable
+            ? mapVariableTypeToInitialType(editingVariable.type)
+            : undefined
         }
       />
 

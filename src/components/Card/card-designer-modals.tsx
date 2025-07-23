@@ -127,34 +127,6 @@ const Modals: React.FC<ModalsProps> = ({
         centered
         destroyOnHidden
       >
-        <div style={{ marginBottom: '16px' }}>
-          {/* 统计信息 */}
-          {/* <div
-            style={{
-              padding: '8px 12px',
-              backgroundColor: '#f0fdf4',
-              border: '1px solid #bbf7d0',
-              borderRadius: '4px',
-              marginBottom: '12px',
-            }}
-          >
-            <div
-              style={{
-                fontSize: '12px',
-                color: '#166534',
-                display: 'flex',
-                justifyContent: 'space-between',
-              }}
-            >
-              <span>📊 配置统计：</span>
-              <span>
-                组件数量: {data.elements?.length || 0} | 变量数量:{' '}
-                {variables.length} | 历史记录: {historyLength}
-              </span>
-            </div>
-          </div> */}
-        </div>
-
         {/* JSON 配置内容 */}
         <pre
           style={{
@@ -172,22 +144,6 @@ const Modals: React.FC<ModalsProps> = ({
         >
           {exportData}
         </pre>
-
-        {/* 底部提示 */}
-        <div
-          style={{
-            marginTop: '12px',
-            padding: '8px 12px',
-            backgroundColor: '#f3f4f6',
-            border: '1px solid #d1d5db',
-            borderRadius: '4px',
-            fontSize: '11px',
-            color: '#374151',
-          }}
-        >
-          <strong>使用说明：</strong>{' '}
-          复制JSON配置后，可以在其他项目中导入使用，或直接调用API接口
-        </div>
       </Modal>
 
       {/* 导入配置模态框 */}

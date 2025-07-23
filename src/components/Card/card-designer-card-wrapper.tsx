@@ -2094,7 +2094,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
 
   const cardStyle: React.CSSProperties = {
     backgroundColor: '#fff',
-    borderRadius: '12px',
+    borderRadius: '4px',
     border: isCardSelected ? '2px solid #1890ff' : '2px solid transparent',
     boxShadow: isCardSelected
       ? '0 0 8px rgba(24, 144, 255, 0.3)'
@@ -2233,7 +2233,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                 padding: '16px',
                 borderWidth: isSamePath(selectedPath, ['dsl', 'header'])
                   ? '2px'
-                  : '1px',
+                  : '2px',
                 borderStyle: 'solid',
                 borderRadius: '4px',
                 cursor: 'pointer',
