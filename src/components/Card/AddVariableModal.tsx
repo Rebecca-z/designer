@@ -53,23 +53,30 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         return JSON.stringify(
           [
             {
-              text: '选项 1',
+              text: {
+                content: '选项 1',
+                i18n_content: {
+                  'en-US': 'Option 1',
+                },
+              },
               value: '1',
-              icon: {
-                tag: 'standard_icon',
-                token: 'chat-forbidden_outlined',
-              },
             },
             {
-              text: '选项 2',
+              text: {
+                content: '选项 2',
+                i18n_content: {
+                  'en-US': 'Option 2',
+                },
+              },
               value: '2',
-              icon: {
-                tag: 'custom_icon',
-                img_key: 'img_v2_9dd98485-2900-4d65-ada9-e31d1408dcfg',
-              },
             },
             {
-              text: '选项 3',
+              text: {
+                content: '选项 3',
+                i18n_content: {
+                  'en-US': 'Option 3',
+                },
+              },
               value: '3',
             },
           ],

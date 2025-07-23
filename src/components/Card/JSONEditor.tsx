@@ -21,6 +21,8 @@ export interface JSONNode {
   isCollapsible: boolean;
   children?: JSONNode[];
   parentKey?: string;
+  propertyName?: string; // 新增：属性名称
+  arrayIndex?: number; // 新增：数组索引
 }
 
 export interface JSONEditorProps {
@@ -95,6 +97,8 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
       level: number = 0,
       path: string = '',
       parentKey: string = '',
+      propertyName?: string,
+      arrayIndex?: number,
     ): JSONNode[] => {
       const nodes: JSONNode[] = [];
 
@@ -109,6 +113,8 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
           isCollapsible: obj.length > 0,
           children: [],
           parentKey,
+          propertyName,
+          arrayIndex,
         };
 
         obj.forEach((item, index) => {
@@ -121,6 +127,8 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
               level + 1,
               childPath,
               arrayNode.key,
+              undefined,
+              index,
             );
             arrayNode.children!.push(...childNodes);
           } else {
@@ -132,6 +140,8 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
               path: childPath,
               isCollapsible: false,
               parentKey: arrayNode.key,
+              propertyName: undefined,
+              arrayIndex: index,
             });
           }
         });
@@ -148,6 +158,8 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
           isCollapsible: Object.keys(obj).length > 0,
           children: [],
           parentKey,
+          propertyName,
+          arrayIndex,
         };
 
         Object.entries(obj).forEach(([key, value]) => {
@@ -160,6 +172,7 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
               level + 1,
               childPath,
               objectNode.key,
+              key,
             );
             objectNode.children!.push(...childNodes);
           } else {
@@ -171,6 +184,8 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
               path: childPath,
               isCollapsible: false,
               parentKey: objectNode.key,
+              propertyName: key,
+              arrayIndex: undefined,
             });
           }
         });
@@ -186,6 +201,8 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
           path,
           isCollapsible: false,
           parentKey,
+          propertyName,
+          arrayIndex,
         });
       }
 
@@ -352,6 +369,26 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
     }
   };
 
+  // 获取节点类型颜色
+  const getTypeColor = (type: string): string => {
+    switch (type) {
+      case 'string':
+        return '#28a745';
+      case 'number':
+        return '#007bff';
+      case 'boolean':
+        return '#fd7e14';
+      case 'null':
+        return '#6c757d';
+      case 'object':
+        return '#6f42c1';
+      case 'array':
+        return '#e83e8c';
+      default:
+        return '#6c757d';
+    }
+  };
+
   // 渲染可编辑的值
   const renderEditableValue = (node: JSONNode) => {
     if (!editable || readOnly || node.isCollapsible) {
@@ -362,7 +399,8 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
             fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
             fontSize: '13px',
             lineHeight: '1.5',
-            color: '#495057',
+            color: getTypeColor(node.type),
+            fontWeight: node.type === 'string' ? 'normal' : '500',
           }}
         >
           {getValueDisplay(node)}
@@ -386,6 +424,7 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
             border: '1px solid #ced4da',
             borderRadius: '3px',
             padding: '2px 6px',
+            color: getTypeColor(node.type),
           }}
           size="small"
         />
@@ -406,6 +445,7 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
             border: '1px solid #ced4da',
             borderRadius: '3px',
             padding: '2px 6px',
+            color: getTypeColor(node.type),
           }}
           size="small"
         />
@@ -424,6 +464,7 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
             borderRadius: '3px',
             padding: '2px 6px',
             backgroundColor: '#ffffff',
+            color: getTypeColor(node.type),
           }}
         >
           <option value="true">true</option>
@@ -438,7 +479,7 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
             fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
             fontSize: '13px',
             lineHeight: '1.5',
-            color: '#495057',
+            color: getTypeColor(node.type),
           }}
         >
           {getValueDisplay(node)}
@@ -455,12 +496,12 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
     const isEditingThisNode = editingValues.has(node.key);
 
     return (
-      <div key={node.key} style={{ marginLeft: node.level * 24 }}>
+      <div key={node.key} style={{ marginLeft: node.level * 20 }}>
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            padding: '4px 8px',
+            padding: '6px 8px',
             cursor: isCollapsible ? 'pointer' : 'default',
             backgroundColor: isEditingThisNode
               ? '#e3f2fd'
@@ -471,6 +512,7 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
             borderRadius: '4px',
             marginBottom: '2px',
             transition: 'all 0.2s ease',
+            minHeight: '28px',
           }}
           onClick={() => isCollapsible && handleToggleNode(node.key)}
           onMouseEnter={(e) => {
@@ -488,7 +530,9 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
         >
           {/* 折叠图标 */}
           {isCollapsible && (
-            <span style={{ marginRight: 8, color: '#0d6efd' }}>
+            <span
+              style={{ marginRight: 8, color: '#0d6efd', fontSize: '12px' }}
+            >
               {isExpanded ? <CaretDownOutlined /> : <CaretRightOutlined />}
             </span>
           )}
@@ -498,11 +542,12 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
             <span
               style={{
                 color: '#6c757d',
-                fontSize: '12px',
-                minWidth: '40px',
+                fontSize: '11px',
+                minWidth: '30px',
                 textAlign: 'right',
                 marginRight: '12px',
                 userSelect: 'none',
+                fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
               }}
             >
               {index + 1}
@@ -513,15 +558,34 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
           <span style={{ width: node.level * 16 }} />
 
           {/* 键名（如果是对象属性） */}
-          {node.path.includes('.') && (
+          {node.propertyName && (
             <span
               style={{
                 color: '#212529',
-                fontWeight: '500',
+                fontWeight: '600',
                 marginRight: '8px',
+                fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
+                fontSize: '13px',
+                minWidth: 'fit-content',
               }}
             >
-              {node.path.split('.').pop()}:
+              &quot;{node.propertyName}&quot;:
+            </span>
+          )}
+
+          {/* 数组索引（如果是数组元素） */}
+          {node.arrayIndex !== undefined && (
+            <span
+              style={{
+                color: '#6c757d',
+                fontWeight: '500',
+                marginRight: '8px',
+                fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
+                fontSize: '12px',
+                minWidth: 'fit-content',
+              }}
+            >
+              [{node.arrayIndex}]:
             </span>
           )}
 
@@ -543,14 +607,15 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
           <div
             style={{
               padding: '4px 8px',
-              marginLeft: 24,
+              marginLeft: 20,
               color: '#6c757d',
-              fontSize: '12px',
+              fontSize: '11px',
               fontStyle: 'italic',
               backgroundColor: '#e9ecef',
               borderRadius: '4px',
               cursor: 'pointer',
               marginBottom: '4px',
+              fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
             }}
             onClick={() => handleToggleNode(node.key)}
           >
@@ -590,6 +655,7 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
           borderRadius: '6px',
           overflow: 'auto',
           padding: '8px 0',
+          fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
         }}
       >
         {jsonNodes.map((node, index) => renderJSONNode(node, index))}
