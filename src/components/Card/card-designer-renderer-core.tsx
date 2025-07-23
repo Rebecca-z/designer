@@ -582,7 +582,7 @@ const DraggableWrapper: React.FC<{
   isChildComponent = false, // 新增参数
   // 新增：选中相关 props
   onSelect,
-  // selectedPath,
+  selectedPath,
   onCanvasFocus,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
@@ -874,17 +874,23 @@ const DraggableWrapper: React.FC<{
     onCanvasFocus?.();
   };
 
+  // 检查当前组件是否被选中
+  const isCurrentSelected = isSamePath(selectedPath || null, path);
+
   // 包装器样式
   const wrapperStyle: React.CSSProperties = {
     position: 'relative',
-    border: '1px solid transparent', // 始终使用透明边框，避免双边框
+    border: isCurrentSelected ? '2px solid #1890ff' : '1px solid transparent', // 选中时显示蓝色边框
     borderRadius: '4px',
     padding: '4px',
     margin: '2px 0',
-    backgroundColor: 'transparent', // 始终使用透明背景
+    backgroundColor: isCurrentSelected
+      ? 'rgba(24, 144, 255, 0.05)'
+      : 'transparent', // 选中时显示蓝色背景
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     opacity,
+    boxShadow: isCurrentSelected ? '0 0 8px rgba(24, 144, 255, 0.3)' : 'none', // 选中时显示阴影
   };
 
   // 拖拽时的样式调整
@@ -1764,22 +1770,36 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       const formElements = comp.elements || [];
       const formPath = [...path, 'elements'];
 
+      // 检查当前组件是否被选中
+      const isCurrentSelected = isSamePath(selectedPath, path);
+
       console.log('📋 渲染表单容器:', {
         formName: comp.name,
         elementsCount: formElements.length,
         formPath,
         elements: formElements.map((el: any) => ({ id: el?.id, tag: el?.tag })),
+        isCurrentSelected,
       });
 
       const formContent = (
         <div
           style={{
-            border: '2px solid #e6f7ff',
+            border:
+              isCurrentSelected && !isPreview
+                ? '2px solid #1890ff'
+                : '2px solid #e6f7ff',
             padding: '16px',
             minHeight: '120px',
             borderRadius: '8px',
-            backgroundColor: '#f6ffed',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            backgroundColor:
+              isCurrentSelected && !isPreview
+                ? 'rgba(24, 144, 255, 0.05)'
+                : '#f6ffed',
+            boxShadow:
+              isCurrentSelected && !isPreview
+                ? '0 0 8px rgba(24, 144, 255, 0.3)'
+                : '0 2px 8px rgba(0,0,0,0.1)',
+            transition: 'all 0.2s ease',
           }}
         >
           {/* 表单标题 */}
@@ -1842,6 +1862,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
     case 'column_set': {
       const columns = comp.columns || [];
 
+      // 检查当前组件是否被选中
+      const isCurrentSelected = isSamePath(selectedPath, path);
+
       console.log('📐 渲染分栏容器:', {
         columnsCount: columns.length,
         columns: columns.map((col: any, idx: number) => ({
@@ -1851,16 +1874,27 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             col.elements?.map((el: any) => ({ id: el?.id, tag: el?.tag })) ||
             [],
         })),
+        isCurrentSelected,
       });
 
       const columnContent = (
         <div
           style={{
-            border: '2px solid #f0e6ff',
+            border:
+              isCurrentSelected && !isPreview
+                ? '2px solid #1890ff'
+                : '2px solid #f0e6ff',
             padding: '16px',
             borderRadius: '8px',
-            backgroundColor: '#fafafa',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            backgroundColor:
+              isCurrentSelected && !isPreview
+                ? 'rgba(24, 144, 255, 0.05)'
+                : '#fafafa',
+            boxShadow:
+              isCurrentSelected && !isPreview
+                ? '0 0 8px rgba(24, 144, 255, 0.3)'
+                : '0 2px 8px rgba(0,0,0,0.1)',
+            transition: 'all 0.2s ease',
           }}
         >
           {/* 分栏标题 */}
@@ -2305,14 +2339,25 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
     }
 
     case 'img': {
+      // 检查当前组件是否被选中
+      const isCurrentSelected = isSamePath(selectedPath, path);
+
       const imgContent = (
         <div
           style={{
             textAlign: 'center',
             // padding: '12px',
             backgroundColor: '#fff',
-            border: '1px solid #f0f0f0',
+            border:
+              isCurrentSelected && !isPreview
+                ? '2px solid #1890ff'
+                : '1px solid #f0f0f0',
             borderRadius: '4px',
+            boxShadow:
+              isCurrentSelected && !isPreview
+                ? '0 0 8px rgba(24, 144, 255, 0.3)'
+                : 'none',
+            transition: 'all 0.2s ease',
           }}
         >
           <img
@@ -2325,7 +2370,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               maxHeight: comp.height ? `${comp.height}px` : '200px',
               objectFit: 'cover',
               borderRadius: '4px',
-              border: '1px solid #f0f0f0',
+              border: 'none', // 移除图片本身的边框，避免双边框
             }}
             onError={(e) => {
               (e.target as HTMLImageElement).src = '/demo.png';
@@ -2354,8 +2399,30 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
     }
 
     case 'input': {
+      // 检查当前组件是否被选中
+      const isCurrentSelected = isSamePath(selectedPath, path);
+
       const inputContent = (
-        <div style={{ marginBottom: '12px' }}>
+        <div
+          style={{
+            marginBottom: '12px',
+            border:
+              isCurrentSelected && !isPreview
+                ? '2px solid #1890ff'
+                : '1px solid transparent',
+            borderRadius: '6px',
+            padding: '8px',
+            backgroundColor:
+              isCurrentSelected && !isPreview
+                ? 'rgba(24, 144, 255, 0.05)'
+                : 'transparent',
+            boxShadow:
+              isCurrentSelected && !isPreview
+                ? '0 0 8px rgba(24, 144, 255, 0.3)'
+                : 'none',
+            transition: 'all 0.2s ease',
+          }}
+        >
           <label
             style={{
               display: 'block',
@@ -2405,8 +2472,30 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
     }
 
     case 'button': {
+      // 检查当前组件是否被选中
+      const isCurrentSelected = isSamePath(selectedPath, path);
+
       const buttonContent = (
-        <div style={{ marginBottom: '12px' }}>
+        <div
+          style={{
+            marginBottom: '12px',
+            border:
+              isCurrentSelected && !isPreview
+                ? '2px solid #1890ff'
+                : '1px solid transparent',
+            borderRadius: '6px',
+            padding: '8px',
+            backgroundColor:
+              isCurrentSelected && !isPreview
+                ? 'rgba(24, 144, 255, 0.05)'
+                : 'transparent',
+            boxShadow:
+              isCurrentSelected && !isPreview
+                ? '0 0 8px rgba(24, 144, 255, 0.3)'
+                : 'none',
+            transition: 'all 0.2s ease',
+          }}
+        >
           <Button
             type={comp.type || 'primary'}
             size={comp.size || 'middle'}
@@ -2445,8 +2534,30 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
     }
 
     case 'select_static': {
+      // 检查当前组件是否被选中
+      const isCurrentSelected = isSamePath(selectedPath, path);
+
       const selectContent = (
-        <div style={{ marginBottom: '12px' }}>
+        <div
+          style={{
+            marginBottom: '12px',
+            border:
+              isCurrentSelected && !isPreview
+                ? '2px solid #1890ff'
+                : '1px solid transparent',
+            borderRadius: '6px',
+            padding: '8px',
+            backgroundColor:
+              isCurrentSelected && !isPreview
+                ? 'rgba(24, 144, 255, 0.05)'
+                : 'transparent',
+            boxShadow:
+              isCurrentSelected && !isPreview
+                ? '0 0 8px rgba(24, 144, 255, 0.3)'
+                : 'none',
+            transition: 'all 0.2s ease',
+          }}
+        >
           <label
             style={{
               display: 'block',
@@ -2499,8 +2610,30 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
     }
 
     case 'multi_select_static': {
+      // 检查当前组件是否被选中
+      const isCurrentSelected = isSamePath(selectedPath, path);
+
       const multiSelectContent = (
-        <div style={{ marginBottom: '12px' }}>
+        <div
+          style={{
+            marginBottom: '12px',
+            border:
+              isCurrentSelected && !isPreview
+                ? '2px solid #1890ff'
+                : '1px solid transparent',
+            borderRadius: '6px',
+            padding: '8px',
+            backgroundColor:
+              isCurrentSelected && !isPreview
+                ? 'rgba(24, 144, 255, 0.05)'
+                : 'transparent',
+            boxShadow:
+              isCurrentSelected && !isPreview
+                ? '0 0 8px rgba(24, 144, 255, 0.3)'
+                : 'none',
+            transition: 'all 0.2s ease',
+          }}
+        >
           <label
             style={{
               display: 'block',
@@ -2557,13 +2690,24 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
     }
 
     case 'img_combination': {
+      // 检查当前组件是否被选中
+      const isCurrentSelected = isSamePath(selectedPath, path);
+
       const imgCombContent = (
         <div
           style={{
             // padding: '12px',
             backgroundColor: '#fff',
-            border: '1px solid #f0f0f0',
+            border:
+              isCurrentSelected && !isPreview
+                ? '2px solid #1890ff'
+                : '1px solid #f0f0f0',
             borderRadius: '4px',
+            boxShadow:
+              isCurrentSelected && !isPreview
+                ? '0 0 8px rgba(24, 144, 255, 0.3)'
+                : 'none',
+            transition: 'all 0.2s ease',
           }}
         >
           <div
@@ -2596,10 +2740,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               (comp.img_list || []).map((img: any, imgIndex: number) => (
                 <img
                   key={`img-${component.id}-${imgIndex}`}
-                  src={
-                    img.img_url ||
-                    'https://via.placeholder.com/150x150?text=图片'
-                  }
+                  src={img.img_url || '/demo.png'}
                   alt={`图片${imgIndex + 1}`}
                   style={{
                     width: '100%',
@@ -2609,8 +2750,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                     border: '1px solid #f0f0f0',
                   }}
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src =
-                      'https://via.placeholder.com/150x150?text=加载失败';
+                    (e.target as HTMLImageElement).src = '/demo.png';
                   }}
                 />
               ))
