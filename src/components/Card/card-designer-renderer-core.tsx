@@ -1983,7 +1983,8 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         textOverflow: 'ellipsis',
         wordBreak: 'break-word',
         whiteSpace: 'normal',
-        maxHeight: `${numberOfLines * 1.5 * fontSize}px`,
+        minHeight: '25px',
+        // maxHeight: `${numberOfLines * 1.5 * fontSize}px`,
       };
 
       const mergedStyles = mergeStyles(component, defaultStyles);
@@ -2040,7 +2041,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         border:
           isCurrentSelected && !isPreview
             ? '2px solid #1890ff'
-            : '1px solid #f0f0f0',
+            : '2px solid transparent',
         backgroundColor:
           isCurrentSelected && !isPreview ? 'rgba(24, 144, 255, 0.05)' : '#fff',
         boxShadow:
@@ -2114,7 +2115,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         textOverflow: 'ellipsis',
         wordBreak: 'break-word',
         whiteSpace: 'normal',
-        maxHeight: `${numberOfLines * 1.5 * fontSize}px`,
+        // maxHeight: `${numberOfLines * 1.5 * fontSize}px`,
       };
 
       const mergedStyles = mergeStyles(component, defaultStyles);
@@ -2171,7 +2172,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         border:
           isCurrentSelected && !isPreview
             ? '2px solid #1890ff'
-            : '1px solid #f0f0f0',
+            : '2px solid #f0f0f0',
         backgroundColor:
           isCurrentSelected && !isPreview
             ? 'rgba(24, 144, 255, 0.05)'
@@ -2189,23 +2190,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           data-component-wrapper="true"
           data-component-id={comp.id}
         >
-          {!isPreview && (
-            <div
-              style={{
-                position: 'absolute',
-                top: '4px',
-                right: '8px',
-                fontSize: '10px',
-                color: '#fa8c16',
-                backgroundColor: '#fff2e8',
-                padding: '2px 6px',
-                borderRadius: '4px',
-                border: '1px solid #ffbb96',
-              }}
-            >
-              📝 富文本
-            </div>
-          )}
           <div style={{ minHeight: '50px' }}>
             {comp.content?.content?.[0]?.content?.[0]?.text || '富文本内容'}
           </div>
@@ -2240,13 +2224,62 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         enableSort,
       });
 
+      // 检查当前组件是否被选中
+      const isCurrentSelected = isSamePath(selectedPath, path);
+
+      // 选中样式
+      const selectedStyles: React.CSSProperties = isCurrentSelected
+        ? {
+            border: '2px solid #1890ff',
+            borderRadius: '4px',
+            backgroundColor: 'rgba(24, 144, 255, 0.05)',
+            // boxShadow: '0 0 0 1px rgba(24, 144, 255, 0.2)',
+          }
+        : {};
+
       const hrContent = (
-        <div style={{ margin: '12px 0' }}>
+        <div
+          style={{
+            // margin: '12px 0',
+            padding: '8px 0', // 扩大可选范围
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            ...selectedStyles,
+          }}
+          onClick={(e) => {
+            // 立即阻止事件冒泡，防止触发父级选中
+            e.stopPropagation();
+            e.preventDefault();
+
+            console.log('📏 分割线组件被点击:', {
+              componentId: comp.id,
+              componentTag: comp.tag,
+              path,
+            });
+
+            // 处理组件选中
+            if (onSelect) {
+              console.log('📏 调用 onSelect 回调:', {
+                component,
+                path,
+              });
+              onSelect(component, path);
+            }
+
+            if (onCanvasFocus) {
+              console.log('📏 调用 onCanvasFocus 回调');
+              onCanvasFocus();
+            }
+          }}
+          data-component-wrapper="true"
+          data-component-id={comp.id}
+        >
           <Divider
             style={{
               margin: '0',
-              borderColor: '#d9d9d9',
-              borderWidth: '2px',
+              borderColor: isCurrentSelected ? '#1890ff' : '#d9d9d9',
+              borderWidth: isCurrentSelected ? '3px' : '2px',
+              transition: 'all 0.2s ease',
             }}
           />
         </div>

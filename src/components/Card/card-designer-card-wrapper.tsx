@@ -2095,7 +2095,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
   const cardStyle: React.CSSProperties = {
     backgroundColor: '#fff',
     borderRadius: '12px',
-    border: isCardSelected ? '2px solid #1890ff' : '1px solid #e8e8e8',
+    border: isCardSelected ? '2px solid #1890ff' : '2px solid transparent',
     boxShadow: isCardSelected
       ? '0 0 8px rgba(24, 144, 255, 0.3)'
       : '0 2px 8px rgba(0, 0, 0, 0.1)',
