@@ -884,7 +884,7 @@ export const PropertyPanel: React.FC<{
         'fontSize',
         'textAlign',
         'numberOfLines',
-        'text_color', // ✅ 新增text_color到样式字段
+        'color', // ✅ 将text_color改为color
         'width',
         'height',
         'backgroundColor',
@@ -1694,12 +1694,12 @@ export const PropertyPanel: React.FC<{
                         <Form.Item label="字色">
                           <ColorPicker
                             value={
-                              (currentComponent as any).style?.text_color ||
+                              (currentComponent as any).style?.color ||
                               '#000000'
                             }
                             onChange={(color: any) => {
                               const rgbaValue = color.toRgbString();
-                              handleValueChange('text_color', rgbaValue);
+                              handleValueChange('color', rgbaValue);
                             }}
                             showText
                             format="rgb"
@@ -1746,12 +1746,12 @@ export const PropertyPanel: React.FC<{
                         <Form.Item label="字色">
                           <ColorPicker
                             value={
-                              (currentComponent as any).style?.text_color ||
+                              (currentComponent as any).style?.color ||
                               '#000000'
                             }
                             onChange={(color: any) => {
                               const rgbaValue = color.toRgbString();
-                              handleValueChange('text_color', rgbaValue);
+                              handleValueChange('color', rgbaValue);
                             }}
                             showText
                             format="rgb"

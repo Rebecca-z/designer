@@ -593,7 +593,7 @@ export const createDefaultComponent = (type: string): ComponentType => {
           fontSize: 14, // 默认字体大小
           numberOfLines: 1, // 默认最大行数
           textAlign: 'left', // 默认左对齐
-          text_color: 'rgba(51, 51, 51, 1)', // ✅ 默认字色：深灰色
+          color: 'rgba(51, 51, 51, 1)', // ✅ 默认字色：深灰色
         },
         i18n_content: {
           'en-US': 'this is a plaintext rendered with the default styles',
@@ -622,7 +622,7 @@ export const createDefaultComponent = (type: string): ComponentType => {
           fontSize: 14, // 默认字体大小
           numberOfLines: 1, // 默认最大行数
           textAlign: 'left', // 默认左对齐
-          text_color: 'rgba(51, 51, 51, 1)', // ✅ 默认字色：深灰色
+          color: 'rgba(51, 51, 51, 1)', // ✅ 默认字色：深灰色
         },
         i18n_content: {
           'en-US': {
@@ -1141,15 +1141,15 @@ export const convertToTargetFormat = (data: any): any => {
           if (!converted.style.textAlign) {
             converted.style.textAlign = 'left';
           }
-          // 确保text_color有默认值
-          if (!converted.style.text_color) {
-            converted.style.text_color = 'rgba(51, 51, 51, 1)';
+          // 确保color有默认值
+          if (!converted.style.color) {
+            converted.style.color = 'rgba(51, 51, 51, 1)';
           }
         } else {
           // 如果没有style对象，创建默认的style对象
           converted.style = {
             textAlign: 'left',
-            text_color: 'rgba(51, 51, 51, 1)', // ✅ 默认字色
+            color: 'rgba(51, 51, 51, 1)', // ✅ 默认字色
           };
         }
         break;
@@ -1166,15 +1166,15 @@ export const convertToTargetFormat = (data: any): any => {
           if (!converted.style.textAlign) {
             converted.style.textAlign = 'left';
           }
-          // 确保text_color有默认值
-          if (!converted.style.text_color) {
-            converted.style.text_color = 'rgba(51, 51, 51, 1)';
+          // 确保color有默认值
+          if (!converted.style.color) {
+            converted.style.color = 'rgba(51, 51, 51, 1)';
           }
         } else {
           // 如果没有style对象，创建默认的style对象
           converted.style = {
             textAlign: 'left',
-            text_color: 'rgba(51, 51, 51, 1)', // ✅ 默认字色
+            color: 'rgba(51, 51, 51, 1)', // ✅ 默认字色
           };
         }
         break;

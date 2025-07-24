@@ -2002,7 +2002,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         comp.style?.numberOfLines || comp.numberOfLines || 1;
 
       const defaultStyles: React.CSSProperties = {
-        color: comp.style?.text_color || '#000000', // 使用配置的字色或默认黑色
+        color: comp.style?.color || '#000000', // 使用配置的字色或默认黑色
         fontSize: `${fontSize}px`,
         fontWeight: fontWeight,
         textAlign: textAlign,
@@ -2136,7 +2136,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         borderRadius: '4px',
         backgroundColor: '#fff7e6',
         position: 'relative',
-        color: comp.style?.text_color || '#000000', // 使用配置的字色或默认黑色
+        color: comp.style?.color || '#000000', // 使用配置的字色或默认黑色
         fontSize: `${fontSize}px`,
         fontWeight: fontWeight,
         textAlign: textAlign,
