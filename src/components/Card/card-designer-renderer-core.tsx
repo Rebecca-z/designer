@@ -4,7 +4,12 @@ import { CopyOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons';
 import { Button, Divider, Dropdown, Input, Select } from 'antd';
 import React, { useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
-import { ComponentType, DragItem } from './card-designer-types-updated';
+import {
+  ComponentType,
+  DragItem,
+  VariableItem,
+} from './card-designer-types-updated';
+import { replaceVariables } from './card-designer-utils';
 
 const { Option } = Select;
 // const { Text } = Typography;
@@ -45,6 +50,8 @@ interface ComponentRendererCoreProps {
     subtitle?: { content: string };
     style?: string; // 改为字符串类型
   };
+  // 新增：变量数据，用于变量替换
+  variables?: VariableItem[];
 }
 
 // 检查组件是否为容器类型
@@ -1517,6 +1524,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
   onCopy,
   onCanvasFocus,
   headerData,
+  variables = [],
 }) => {
   // 安全检查
   if (!component || !component.tag) {
@@ -2063,6 +2071,27 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             : 'none',
       };
 
+      // 处理变量替换
+      console.log('🔍 文本组件变量替换检查:', {
+        componentId: comp.id,
+        originalContent: comp.content || '文本内容',
+        variablesCount: variables.length,
+        variables: variables,
+        hasVariables: variables.length > 0,
+      });
+
+      const displayContent = replaceVariables(
+        comp.content || '文本内容',
+        variables,
+      );
+
+      console.log('✅ 文本组件变量替换结果:', {
+        componentId: comp.id,
+        originalContent: comp.content || '文本内容',
+        displayContent: displayContent,
+        replaced: comp.content !== displayContent,
+      });
+
       const textContent = (
         <div
           style={{ ...mergedStyles, ...selectedStyles }}
@@ -2070,7 +2099,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           data-component-wrapper="true"
           data-component-id={comp.id}
         >
-          {comp.content || '文本内容'}
+          {displayContent}
         </div>
       );
 
@@ -2196,16 +2225,38 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             : 'none',
       };
 
-      const richTextContent = (
+      // 处理富文本变量替换
+      const richTextContent =
+        comp.content?.content?.[0]?.content?.[0]?.text || '富文本内容';
+
+      console.log('🔍 富文本组件变量替换检查:', {
+        componentId: comp.id,
+        originalContent: richTextContent,
+        variablesCount: variables.length,
+        variables: variables,
+        hasVariables: variables.length > 0,
+      });
+
+      const displayRichTextContent = replaceVariables(
+        richTextContent,
+        variables,
+      );
+
+      console.log('✅ 富文本组件变量替换结果:', {
+        componentId: comp.id,
+        originalContent: richTextContent,
+        displayContent: displayRichTextContent,
+        replaced: richTextContent !== displayRichTextContent,
+      });
+
+      const richTextContentElement = (
         <div
           style={{ ...mergedStyles, ...selectedStyles }}
           onClick={handleRichTextClick}
           data-component-wrapper="true"
           data-component-id={comp.id}
         >
-          <div style={{ minHeight: '50px' }}>
-            {comp.content?.content?.[0]?.content?.[0]?.text || '富文本内容'}
-          </div>
+          <div style={{ minHeight: '50px' }}>{displayRichTextContent}</div>
         </div>
       );
 
@@ -2221,10 +2272,10 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           selectedPath={selectedPath}
           onCanvasFocus={onCanvasFocus}
         >
-          {richTextContent}
+          {richTextContentElement}
         </DraggableWrapper>
       ) : (
-        richTextContent
+        richTextContentElement
       );
     }
 

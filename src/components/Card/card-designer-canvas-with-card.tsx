@@ -253,6 +253,34 @@ const Canvas: React.FC<CanvasProps> = ({
             })()}
             onHeaderDataChange={onHeaderDataChange}
             layoutMode={data.dsl.body.direction || 'vertical'}
+            variables={(() => {
+              // 将卡片数据结构中的变量转换为VariableItem[]格式
+              console.log('🔍 Canvas变量数据检查:', {
+                hasDataVariables: !!data.variables,
+                dataVariables: data.variables,
+                variablesKeys: data.variables
+                  ? Object.keys(data.variables)
+                  : [],
+                variablesLength: data.variables
+                  ? Object.keys(data.variables).length
+                  : 0,
+              });
+
+              if (data.variables && Object.keys(data.variables).length > 0) {
+                const convertedVariables = Object.entries(data.variables).map(
+                  ([name, value]) => ({
+                    [name]: value,
+                  }),
+                );
+                console.log('✅ Canvas变量转换结果:', {
+                  convertedVariables: convertedVariables,
+                  convertedLength: convertedVariables.length,
+                });
+                return convertedVariables;
+              }
+              console.log('⚠️ Canvas没有变量数据');
+              return [];
+            })()}
           />
         </div>
 

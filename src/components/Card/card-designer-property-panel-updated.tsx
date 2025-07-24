@@ -28,6 +28,7 @@ import {
 import React, { useMemo, useState } from 'react';
 import { useDrag } from 'react-dnd';
 import AddVariableModal from './AddVariableModal';
+import VariableTextEditor from './VariableTextEditor';
 import {
   COMPONENT_CATEGORIES,
   COMPONENT_TYPES,
@@ -1895,9 +1896,13 @@ export const PropertyPanel: React.FC<{
                 children: (
                   <Form form={form} layout="vertical">
                     <Form.Item label="文本内容">
-                      <Input.TextArea
+                      <VariableTextEditor
                         value={getTextContent()}
-                        onChange={(e) => updateTextContent(e.target.value)}
+                        onChange={updateTextContent}
+                        variables={variables}
+                        onAddVariable={() => {
+                          setIsAddVariableModalVisible(true);
+                        }}
                         placeholder="请输入文本内容"
                         rows={4}
                       />

@@ -51,6 +51,8 @@ interface ChatInterfaceProps {
   }) => void;
   // 新增：布局方式
   layoutMode?: 'vertical' | 'flow';
+  // 新增：变量数据
+  variables?: VariableItem[];
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -72,6 +74,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   headerData,
   onHeaderDataChange,
   layoutMode = 'vertical',
+  variables = [],
 }) => {
   // 合并卡片样式
   const mergedCardStyles: React.CSSProperties = {
@@ -150,6 +153,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             headerData={headerData} // 只有当header存在时才传递
             onHeaderDataChange={onHeaderDataChange}
             layoutMode={layoutMode}
+            variables={variables}
           />
         </div>
       </div>

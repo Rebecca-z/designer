@@ -122,19 +122,21 @@ const CardDesigner: React.FC = () => {
       }
     });
 
-    // 更新卡片数据结构中的variables字段
+    // 获取当前的历史数据并更新
+    const currentData = history.data as unknown as CardDesignData;
     const updatedCardData = {
-      ...safeCardData,
+      ...currentData,
       variables: cardVariables,
     };
 
     console.log('📝 更新卡片数据结构:', {
+      currentData: currentData,
       cardVariables: cardVariables,
       updatedCardData: updatedCardData,
       timestamp: new Date().toISOString(),
     });
 
-    history.updateData(updatedCardData);
+    history.updateData(updatedCardData as any);
   };
 
   // 从卡片数据结构初始化变量

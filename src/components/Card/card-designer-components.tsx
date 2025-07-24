@@ -46,6 +46,8 @@ interface ComponentRendererProps {
     subtitle?: { content: string };
     style?: string; // 改为字符串类型
   };
+  // 新增：变量数据
+  variables?: VariableItem[];
 }
 
 // 检查组件是否为容器类型
@@ -221,6 +223,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
   // onUpdateComponent,
   onCanvasFocus,
   headerData,
+  variables = [],
 }) => {
   // 安全检查 - 防止组件为 undefined 或 null
   if (!component) {
@@ -472,6 +475,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             onCopy={onCopy}
             onCanvasFocus={onCanvasFocus}
             headerData={headerData}
+            variables={variables}
           />
           {/* 选中状态标签 */}
           {isCurrentSelected && !isPreview && (
@@ -618,6 +622,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
           onCopy={onCopy}
           onCanvasFocus={onCanvasFocus}
           headerData={headerData}
+          variables={variables}
         />
         {/* 组件标签 */}
         {isCurrentSelected && !isPreview && (

@@ -1,6 +1,7 @@
 // card-designer-utils.ts - 更新的工具函数文件
 
 import { ComponentType, DesignData } from './card-designer-types';
+import { VariableItem } from './card-designer-types-updated';
 
 const selectHtml = (comp: any) => {
   const selectOptions = (comp.options || [])
@@ -1809,4 +1810,65 @@ export const findComponentById = (
   };
 
   return search(data.elements);
+};
+
+// 变量替换工具函数
+export const replaceVariables = (
+  text: string,
+  variables: VariableItem[],
+): string => {
+  console.log('🔧 replaceVariables 函数调用:', {
+    text: text,
+    variablesCount: variables.length,
+    variables: variables,
+    hasText: !!text,
+    hasVariables: variables.length > 0,
+  });
+
+  if (!text || !variables || variables.length === 0) {
+    console.log('⚠️ replaceVariables 提前返回:', {
+      reason: !text ? 'no text' : 'no variables',
+      text: text,
+      variablesCount: variables.length,
+    });
+    return text;
+  }
+
+  // 创建变量映射
+  const variableMap: { [key: string]: string } = {};
+  variables.forEach((variable) => {
+    if (typeof variable === 'object' && variable !== null) {
+      const keys = Object.keys(variable as Record<string, any>);
+      if (keys.length > 0) {
+        const variableName = keys[0];
+        const variableValue = (variable as Record<string, any>)[variableName];
+        variableMap[variableName] = String(variableValue);
+      }
+    }
+  });
+
+  console.log('📋 变量映射表:', {
+    variableMap: variableMap,
+    mapKeys: Object.keys(variableMap),
+  });
+
+  // 替换变量占位符
+  const result = text.replace(/\{\{([^}]+)\}\}/g, (match, variableName) => {
+    const replacement = variableMap[variableName] || match;
+    console.log('🔄 变量替换:', {
+      match: match,
+      variableName: variableName,
+      replacement: replacement,
+      found: !!variableMap[variableName],
+    });
+    return replacement;
+  });
+
+  console.log('✅ replaceVariables 结果:', {
+    originalText: text,
+    resultText: result,
+    changed: text !== result,
+  });
+
+  return result;
 };

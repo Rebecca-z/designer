@@ -333,6 +333,8 @@ interface CardWrapperProps {
   }) => void;
   // 新增：布局方式
   layoutMode?: 'vertical' | 'flow';
+  // 新增：变量数据
+  variables?: VariableItem[];
 }
 
 const CardWrapper: React.FC<CardWrapperProps> = ({
@@ -351,6 +353,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
   headerData,
   onHeaderDataChange,
   layoutMode = 'vertical', // 默认垂直布局
+  variables = [],
 }) => {
   // 工具函数：检查画布中是否已存在标题组件
   const hasExistingTitle = (elements: ComponentType[]): boolean => {
@@ -2513,6 +2516,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                         onComponentSort={handleComponentSort}
                         isPreview={false}
                         headerData={headerData}
+                        variables={variables}
                       />
                     </div>
                   </ErrorBoundary>
