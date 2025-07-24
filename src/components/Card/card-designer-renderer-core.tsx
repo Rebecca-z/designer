@@ -733,14 +733,19 @@ const DraggableWrapper: React.FC<{
           return;
         }
 
+        // 获取拖拽路径
+        const draggedPath = item.path;
+
         // 安全检查：确保路径有效
         if (
+          draggedPath &&
           draggedPath.length >= 4 &&
           path.length >= 4 &&
           draggedPath[0] === 'dsl' &&
           draggedPath[1] === 'body' &&
           path[0] === 'dsl' &&
-          path[1] === 'body'
+          path[1] === 'body' &&
+          item.component
         ) {
           console.log('🔄 执行同容器排序:', {
             draggedComponent: {
@@ -754,12 +759,14 @@ const DraggableWrapper: React.FC<{
           });
 
           // 执行排序
-          onComponentMove(item.component, draggedPath, path, targetIndex);
+          if (onComponentMove) {
+            onComponentMove(item.component, draggedPath, path, targetIndex);
+          }
         } else {
           console.warn('⚠️ 跳过无效的排序操作:', {
             draggedPath,
             targetPath: path,
-            reason: '路径格式不正确',
+            reason: '路径格式不正确或缺少必要数据',
           });
         }
       }, 50); // 50ms防抖延迟
