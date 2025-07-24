@@ -430,7 +430,6 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
               </Dropdown>
             </div>
           )}
-
           {/* 选中状态指示器 */}
           {isCurrentSelected && !isPreview && (
             <div
@@ -446,7 +445,6 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
               }}
             />
           )}
-
           {/* 使用 ComponentRendererCore 渲染容器组件 */}
           <ComponentRendererCore
             component={component}
@@ -475,7 +473,6 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             onCanvasFocus={onCanvasFocus}
             headerData={headerData}
           />
-
           {/* 选中状态标签 */}
           {isCurrentSelected && !isPreview && (
             <div
@@ -583,7 +580,6 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             </Dropdown>
           </div>
         )}
-
         {/* 选中状态指示器 */}
         {isCurrentSelected && !isPreview && (
           <div
@@ -599,7 +595,6 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             }}
           />
         )}
-
         {/* 组件内容渲染 - 使用 ComponentRendererCore */}
         <ComponentRendererCore
           component={component}
@@ -624,7 +619,6 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
           onCanvasFocus={onCanvasFocus}
           headerData={headerData}
         />
-
         {/* 组件标签 */}
         {isCurrentSelected && !isPreview && (
           <div

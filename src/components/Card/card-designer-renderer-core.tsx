@@ -1,13 +1,13 @@
 // 修复后的 ComponentRendererCore.tsx - 完整解决表单嵌套显示问题
 
 import { CopyOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons';
-import { Button, Divider, Dropdown, Input, Select, Typography } from 'antd';
+import { Button, Divider, Dropdown, Input, Select } from 'antd';
 import React, { useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { ComponentType, DragItem } from './card-designer-types-updated';
 
 const { Option } = Select;
-const { Text } = Typography;
+// const { Text } = Typography;
 
 interface ComponentRendererCoreProps {
   component: ComponentType;
@@ -880,17 +880,17 @@ const DraggableWrapper: React.FC<{
   // 包装器样式
   const wrapperStyle: React.CSSProperties = {
     position: 'relative',
-    border: isCurrentSelected ? '2px solid #1890ff' : '1px solid transparent', // 选中时显示蓝色边框
+    // border: isCurrentSelected ? '2px solid #1890ff' : '1px solid transparent', // 只有DraggableWrapper显示选中边框
     borderRadius: '4px',
-    padding: '4px',
-    margin: '2px 0',
+    padding: '2px',
+    margin: '1px 0',
     backgroundColor: isCurrentSelected
-      ? 'rgba(24, 144, 255, 0.05)'
-      : 'transparent', // 选中时显示蓝色背景
+      ? 'rgba(24, 144, 255, 0.02)'
+      : 'transparent',
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     opacity,
-    boxShadow: isCurrentSelected ? '0 0 8px rgba(24, 144, 255, 0.3)' : 'none', // 选中时显示阴影
+    boxShadow: isCurrentSelected ? '0 0 4px rgba(24, 144, 255, 0.2)' : 'none',
   };
 
   // 拖拽时的样式调整
@@ -927,9 +927,7 @@ const DraggableWrapper: React.FC<{
           }}
         />
       )}
-
       {children}
-
       {/* 拖拽限制提示 */}
       {isOver && !canDrop && (
         <div
@@ -1275,15 +1273,12 @@ const SmartDropZone: React.FC<{
   const hasContent = children && React.Children.count(children) > 0;
 
   const dropZoneStyle: React.CSSProperties = {
-    minHeight: hasContent
-      ? 'auto'
-      : containerType === 'form'
-      ? '100px'
-      : '80px',
-    padding: '8px',
-    border: isOver && canDrop ? '2px dashed #1890ff' : '1px dashed #ccc',
-    borderRadius: '4px',
-    backgroundColor: isOver && canDrop ? 'rgba(24, 144, 255, 0.05)' : '#fafafa',
+    minHeight: hasContent ? 'auto' : containerType === 'form' ? '60px' : '50px',
+    padding: '4px',
+    border: isOver && canDrop ? '1px dashed #1890ff' : '1px dashed #e0e0e0',
+    borderRadius: '2px',
+    backgroundColor:
+      isOver && canDrop ? 'rgba(24, 144, 255, 0.02)' : 'transparent',
     position: 'relative',
     transition: 'all 0.15s ease', // 减少过渡时间，提高响应速度
     flex: containerType === 'column' ? 1 : 'none',
@@ -1331,22 +1326,23 @@ const SmartDropZone: React.FC<{
 
   return (
     <div ref={drop} style={dropZoneStyle} onClick={handleContainerClick}>
-      {/* 分栏标题 */}
+      {/* 简约的分栏列标题 */}
       {containerType === 'column' && (
         <div
           style={{
-            fontSize: '12px',
-            color: '#666',
-            marginBottom: hasContent ? '8px' : '8px',
+            fontSize: '10px',
+            color: '#999',
+            marginBottom: hasContent ? '4px' : '4px',
             textAlign: 'center',
-            fontWeight: 'bold',
-            padding: '4px',
-            backgroundColor: '#f0f0f0',
-            borderRadius: '4px',
+            fontWeight: 'normal',
+            padding: '2px 4px',
+            backgroundColor: 'transparent',
+            borderRadius: '2px',
+            border: '1px dashed #e0e0e0',
           }}
           onClick={(e) => e.stopPropagation()} // 阻止标题点击冒泡
         >
-          📐 第{(columnIndex ?? 0) + 1}列
+          第{(columnIndex ?? 0) + 1}列
         </div>
       )}
 
@@ -1707,7 +1703,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               </Dropdown>
             </div>
           )}
-
           {/* 选中状态指示器 */}
           {isSelected && !isPreview && (
             <div
@@ -1723,7 +1718,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               }}
             />
           )}
-
           {componentContent}
         </div>
       );
@@ -1784,59 +1778,46 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       const formContent = (
         <div
           style={{
-            border:
-              isCurrentSelected && !isPreview
-                ? '2px solid #1890ff'
-                : '2px solid #e6f7ff',
-            padding: '16px',
-            minHeight: '120px',
-            borderRadius: '8px',
-            backgroundColor:
-              isCurrentSelected && !isPreview
-                ? 'rgba(24, 144, 255, 0.05)'
-                : '#f6ffed',
-            boxShadow:
-              isCurrentSelected && !isPreview
-                ? '0 0 8px rgba(24, 144, 255, 0.3)'
-                : '0 2px 8px rgba(0,0,0,0.1)',
+            border: 'none', // 移除容器边框，只保留DraggableWrapper的边框
+            borderRadius: '4px',
+            backgroundColor: '#fff',
             transition: 'all 0.2s ease',
+            position: 'relative',
           }}
         >
-          {/* 表单标题 */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '12px',
-              padding: '8px 12px',
-              backgroundColor: '#fff',
-              borderRadius: '6px',
-              border: '1px solid #e8e8e8',
-            }}
-          >
-            <Text
-              style={{ fontSize: '14px', fontWeight: 'bold', color: '#52c41a' }}
+          {/* 简约的表单标题 */}
+          {isCurrentSelected && !isPreview && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '-8px',
+                left: '8px',
+                backgroundColor: '#1890ff',
+                color: 'white',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                fontSize: '11px',
+                fontWeight: '500',
+                zIndex: 10,
+              }}
             >
-              📋 表单容器 {comp.name && `(${comp.name})`}
-            </Text>
-            <Text type="secondary" style={{ fontSize: '12px' }}>
-              {formElements.length} 个组件
-            </Text>
-          </div>
-
+              📋 表单 {comp.name && `(${comp.name})`}
+            </div>
+          )}
           {/* 表单拖拽区域 */}
-          <SmartDropZone
-            targetPath={formPath}
-            containerType="form"
-            onContainerDrop={onContainerDrop}
-            onComponentMove={onComponentMove}
-            childElements={formElements}
-          >
-            {formElements.length > 0
-              ? renderChildElements(formElements, formPath)
-              : null}
-          </SmartDropZone>
+          <div style={{ padding: '12px', minHeight: '60px' }}>
+            <SmartDropZone
+              targetPath={formPath}
+              containerType="form"
+              onContainerDrop={onContainerDrop}
+              onComponentMove={onComponentMove}
+              childElements={formElements}
+            >
+              {formElements.length > 0
+                ? renderChildElements(formElements, formPath)
+                : null}
+            </SmartDropZone>
+          </div>
         </div>
       );
 
@@ -1880,49 +1861,40 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       const columnContent = (
         <div
           style={{
-            border:
-              isCurrentSelected && !isPreview
-                ? '2px solid #1890ff'
-                : '2px solid #f0e6ff',
-            padding: '16px',
-            borderRadius: '8px',
-            backgroundColor:
-              isCurrentSelected && !isPreview
-                ? 'rgba(24, 144, 255, 0.05)'
-                : '#fafafa',
-            boxShadow:
-              isCurrentSelected && !isPreview
-                ? '0 0 8px rgba(24, 144, 255, 0.3)'
-                : '0 2px 8px rgba(0,0,0,0.1)',
+            border: 'none', // 移除容器边框，只保留DraggableWrapper的边框
+            borderRadius: '4px',
+            backgroundColor: '#fff',
             transition: 'all 0.2s ease',
+            position: 'relative',
           }}
         >
-          {/* 分栏标题 */}
-          <div
-            style={{
-              marginBottom: '16px',
-              padding: '8px 12px',
-              backgroundColor: '#fff',
-              borderRadius: '6px',
-              border: '1px solid #e8e8e8',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <Text
-              style={{ fontSize: '14px', fontWeight: 'bold', color: '#722ed1' }}
+          {/* 简约的分栏标题 */}
+          {isCurrentSelected && !isPreview && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '-8px',
+                left: '8px',
+                backgroundColor: '#1890ff',
+                color: 'white',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                fontSize: '11px',
+                fontWeight: '500',
+                zIndex: 10,
+              }}
             >
-              📐 分栏容器 ({columns.length}列)
-            </Text>
-          </div>
+              📐 分栏 ({columns.length}列)
+            </div>
+          )}
 
           {/* 分栏内容区域 */}
           <div
             style={{
               display: 'flex',
               gap: `${comp.gap || 16}px`,
-              minHeight: '100px',
+              padding: '12px',
+              minHeight: '60px',
             }}
           >
             {columns.map((column: any, columnIndex: number) => {
@@ -2203,10 +2175,10 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
       // 选中状态样式
       const selectedStyles: React.CSSProperties = {
-        border:
-          isCurrentSelected && !isPreview
-            ? '2px solid #1890ff'
-            : '2px solid #f0f0f0',
+        // border:
+        //   isCurrentSelected && !isPreview
+        //     ? '2px solid #1890ff'
+        //     : '2px solid #f0f0f0',
         backgroundColor:
           isCurrentSelected && !isPreview
             ? 'rgba(24, 144, 255, 0.05)'
@@ -2314,7 +2286,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             style={{
               margin: '0',
               borderColor: isCurrentSelected ? '#1890ff' : '#d9d9d9',
-              borderWidth: isCurrentSelected ? '3px' : '2px',
+              borderWidth: isCurrentSelected ? '2px' : '2px',
               transition: 'all 0.2s ease',
             }}
           />
