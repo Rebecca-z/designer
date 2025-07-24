@@ -213,7 +213,7 @@ export interface CardPadding {
 }
 
 export interface CardBody {
-  direction: 'vertical';
+  direction: 'vertical' | 'flow'; // 修改：支持垂直和流式布局
   vertical_spacing: number;
   padding?: CardPadding;
   elements: ComponentType[];

@@ -331,6 +331,8 @@ interface CardWrapperProps {
     subtitle?: { content: string };
     style?: string;
   }) => void;
+  // 新增：布局方式
+  layoutMode?: 'vertical' | 'flow';
 }
 
 const CardWrapper: React.FC<CardWrapperProps> = ({
@@ -348,6 +350,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
   onCardSelect,
   headerData,
   onHeaderDataChange,
+  layoutMode = 'vertical', // 默认垂直布局
 }) => {
   // 工具函数：检查画布中是否已存在标题组件
   const hasExistingTitle = (elements: ComponentType[]): boolean => {
@@ -2158,9 +2161,10 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       {/* 卡片内容 */}
       <div
         style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: `${verticalSpacing}px`,
+          display: layoutMode === 'flow' ? 'flex' : 'flex',
+          flexDirection: layoutMode === 'flow' ? 'row' : 'column',
+          flexWrap: layoutMode === 'flow' ? 'wrap' : 'nowrap',
+          gap: layoutMode === 'flow' ? '8px' : `${verticalSpacing}px`,
           position: 'relative',
         }}
       >
@@ -2484,24 +2488,33 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                   onMove={handleCanvasComponentSort}
                 >
                   <ErrorBoundary>
-                    <ComponentRenderer
-                      component={component}
-                      onSelect={onSelectComponent}
-                      isSelected={isSelected}
-                      selectedComponent={null}
-                      selectedPath={selectedPath}
-                      onUpdate={() => {}}
-                      onDelete={onDeleteComponent}
-                      onCopy={onCopyComponent}
-                      path={componentPath}
-                      onCanvasFocus={onCanvasFocus}
-                      hoveredPath={hoveredPath}
-                      isHovered={isHovered}
-                      onContainerDrop={handleContainerDrop}
-                      onComponentSort={handleComponentSort}
-                      isPreview={false}
-                      headerData={headerData}
-                    />
+                    <div
+                      style={{
+                        display:
+                          layoutMode === 'flow' ? 'inline-block' : 'block',
+                        marginBottom: layoutMode === 'flow' ? '0' : '8px',
+                        marginRight: layoutMode === 'flow' ? '8px' : '0',
+                      }}
+                    >
+                      <ComponentRenderer
+                        component={component}
+                        onSelect={onSelectComponent}
+                        isSelected={isSelected}
+                        selectedComponent={null}
+                        selectedPath={selectedPath}
+                        onUpdate={() => {}}
+                        onDelete={onDeleteComponent}
+                        onCopy={onCopyComponent}
+                        path={componentPath}
+                        onCanvasFocus={onCanvasFocus}
+                        hoveredPath={hoveredPath}
+                        isHovered={isHovered}
+                        onContainerDrop={handleContainerDrop}
+                        onComponentSort={handleComponentSort}
+                        isPreview={false}
+                        headerData={headerData}
+                      />
+                    </div>
                   </ErrorBoundary>
                 </DragSortableItem>
               );

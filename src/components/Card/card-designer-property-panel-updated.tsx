@@ -1202,6 +1202,244 @@ export const PropertyPanel: React.FC<{
     if (isCardSelected) {
       return (
         <div style={{ padding: '16px' }}>
+          {/* 布局方式设置 */}
+          <Card
+            title="📐 布局方式"
+            size="small"
+            style={{ marginBottom: '12px' }}
+          >
+            <Form layout="vertical" size="small">
+              <Form.Item
+                label="布局模式"
+                help="选择卡片的布局方式，影响组件的排列方式"
+              >
+                <Select
+                  value={cardData?.dsl?.body?.direction || 'vertical'}
+                  onChange={(value) => {
+                    console.log('🎯 更新布局方式:', {
+                      oldValue: cardData?.dsl?.body?.direction,
+                      newValue: value,
+                      timestamp: new Date().toISOString(),
+                    });
+                    onUpdateCard({ direction: value });
+                  }}
+                  style={{ width: '100%' }}
+                >
+                  <Option value="vertical">
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '16px',
+                          height: '16px',
+                          backgroundColor: '#1890ff',
+                          borderRadius: '2px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
+                          padding: '2px',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '100%',
+                            height: '2px',
+                            backgroundColor: 'white',
+                          }}
+                        ></div>
+                        <div
+                          style={{
+                            width: '100%',
+                            height: '2px',
+                            backgroundColor: 'white',
+                          }}
+                        ></div>
+                        <div
+                          style={{
+                            width: '100%',
+                            height: '2px',
+                            backgroundColor: 'white',
+                          }}
+                        ></div>
+                      </div>
+                      <span>垂直布局</span>
+                    </div>
+                  </Option>
+                  <Option value="flow">
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '16px',
+                          height: '16px',
+                          backgroundColor: '#52c41a',
+                          borderRadius: '2px',
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          gap: '1px',
+                          padding: '1px',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '6px',
+                            height: '6px',
+                            backgroundColor: 'white',
+                          }}
+                        ></div>
+                        <div
+                          style={{
+                            width: '6px',
+                            height: '6px',
+                            backgroundColor: 'white',
+                          }}
+                        ></div>
+                        <div
+                          style={{
+                            width: '6px',
+                            height: '6px',
+                            backgroundColor: 'white',
+                          }}
+                        ></div>
+                        <div
+                          style={{
+                            width: '6px',
+                            height: '6px',
+                            backgroundColor: 'white',
+                          }}
+                        ></div>
+                      </div>
+                      <span>流式布局</span>
+                    </div>
+                  </Option>
+                </Select>
+              </Form.Item>
+
+              {/* 布局预览 */}
+              <Form.Item label="布局预览">
+                <div
+                  style={{
+                    padding: '12px',
+                    backgroundColor: '#f5f5f5',
+                    borderRadius: '6px',
+                    border: '1px solid #d9d9d9',
+                  }}
+                >
+                  {(cardData?.dsl?.body?.direction || 'vertical') ===
+                  'vertical' ? (
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                        minHeight: '60px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          height: '12px',
+                          backgroundColor: '#1890ff',
+                          borderRadius: '2px',
+                          opacity: 0.7,
+                        }}
+                      ></div>
+                      <div
+                        style={{
+                          height: '12px',
+                          backgroundColor: '#1890ff',
+                          borderRadius: '2px',
+                          opacity: 0.7,
+                        }}
+                      ></div>
+                      <div
+                        style={{
+                          height: '12px',
+                          backgroundColor: '#1890ff',
+                          borderRadius: '2px',
+                          opacity: 0.7,
+                        }}
+                      ></div>
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '4px',
+                        minHeight: '60px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '30px',
+                          height: '20px',
+                          backgroundColor: '#52c41a',
+                          borderRadius: '2px',
+                          opacity: 0.7,
+                        }}
+                      ></div>
+                      <div
+                        style={{
+                          width: '40px',
+                          height: '20px',
+                          backgroundColor: '#52c41a',
+                          borderRadius: '2px',
+                          opacity: 0.7,
+                        }}
+                      ></div>
+                      <div
+                        style={{
+                          width: '25px',
+                          height: '20px',
+                          backgroundColor: '#52c41a',
+                          borderRadius: '2px',
+                          opacity: 0.7,
+                        }}
+                      ></div>
+                      <div
+                        style={{
+                          width: '35px',
+                          height: '20px',
+                          backgroundColor: '#52c41a',
+                          borderRadius: '2px',
+                          opacity: 0.7,
+                        }}
+                      ></div>
+                      <div
+                        style={{
+                          width: '20px',
+                          height: '20px',
+                          backgroundColor: '#52c41a',
+                          borderRadius: '2px',
+                          opacity: 0.7,
+                        }}
+                      ></div>
+                      <div
+                        style={{
+                          width: '45px',
+                          height: '20px',
+                          backgroundColor: '#52c41a',
+                          borderRadius: '2px',
+                          opacity: 0.7,
+                        }}
+                      ></div>
+                    </div>
+                  )}
+                </div>
+              </Form.Item>
+            </Form>
+          </Card>
+
           {/* 间距设置 */}
           <Card
             title="📏 间距设置"

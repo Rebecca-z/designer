@@ -252,6 +252,7 @@ const Canvas: React.FC<CanvasProps> = ({
               return data.dsl.header;
             })()}
             onHeaderDataChange={onHeaderDataChange}
+            layoutMode={data.dsl.body.direction || 'vertical'}
           />
         </div>
 

@@ -2182,10 +2182,10 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
       // 选中状态样式
       const selectedStyles: React.CSSProperties = {
-        // border:
-        //   isCurrentSelected && !isPreview
-        //     ? '2px solid #1890ff'
-        //     : '2px solid #f0f0f0',
+        border:
+          isCurrentSelected && !isPreview
+            ? '2px solid #1890ff'
+            : '2px solid #f0f0f0',
         backgroundColor:
           isCurrentSelected && !isPreview
             ? 'rgba(24, 144, 255, 0.05)'
