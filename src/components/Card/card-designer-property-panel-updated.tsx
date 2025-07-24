@@ -13,6 +13,7 @@ import {
   Button,
   Card,
   Collapse,
+  ColorPicker,
   Form,
   Input,
   InputNumber,
@@ -883,6 +884,7 @@ export const PropertyPanel: React.FC<{
         'fontSize',
         'textAlign',
         'numberOfLines',
+        'text_color', // ✅ 新增text_color到样式字段
         'width',
         'height',
         'backgroundColor',
@@ -1689,6 +1691,21 @@ export const PropertyPanel: React.FC<{
                             <Option value={12}>辅助信息 12px</Option>
                           </Select>
                         </Form.Item>
+                        <Form.Item label="字色">
+                          <ColorPicker
+                            value={
+                              (currentComponent as any).style?.text_color ||
+                              '#000000'
+                            }
+                            onChange={(color: any) => {
+                              const rgbaValue = color.toRgbString();
+                              handleValueChange('text_color', rgbaValue);
+                            }}
+                            showText
+                            format="rgb"
+                            style={{ width: '100%' }}
+                          />
+                        </Form.Item>
                         <Form.Item label="对齐方式">
                           <Select
                             value={
@@ -1726,6 +1743,21 @@ export const PropertyPanel: React.FC<{
                     )}
                     {isRichText && (
                       <>
+                        <Form.Item label="字色">
+                          <ColorPicker
+                            value={
+                              (currentComponent as any).style?.text_color ||
+                              '#000000'
+                            }
+                            onChange={(color: any) => {
+                              const rgbaValue = color.toRgbString();
+                              handleValueChange('text_color', rgbaValue);
+                            }}
+                            showText
+                            format="rgb"
+                            style={{ width: '100%' }}
+                          />
+                        </Form.Item>
                         <Form.Item label="字体大小">
                           <Select
                             value={

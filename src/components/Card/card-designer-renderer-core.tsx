@@ -1637,7 +1637,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       // 包装器样式
       const wrapperStyle: React.CSSProperties = {
         position: 'relative',
-        border: '1px solid transparent', // 始终使用透明边框，避免双边框
+        border: '2px solid transparent', // 始终使用透明边框，避免双边框
         borderRadius: '4px',
         padding: '4px',
         margin: '2px 0',
@@ -2002,7 +2002,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         comp.style?.numberOfLines || comp.numberOfLines || 1;
 
       const defaultStyles: React.CSSProperties = {
-        color: '#000000', // 使用默认黑色
+        color: comp.style?.text_color || '#000000', // 使用配置的字色或默认黑色
         fontSize: `${fontSize}px`,
         fontWeight: fontWeight,
         textAlign: textAlign,
@@ -2136,7 +2136,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         borderRadius: '4px',
         backgroundColor: '#fff7e6',
         position: 'relative',
-        color: '#000000', // 使用默认黑色
+        color: comp.style?.text_color || '#000000', // 使用配置的字色或默认黑色
         fontSize: `${fontSize}px`,
         fontWeight: fontWeight,
         textAlign: textAlign,
@@ -2269,7 +2269,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             backgroundColor: 'rgba(24, 144, 255, 0.05)',
             // boxShadow: '0 0 0 1px rgba(24, 144, 255, 0.2)',
           }
-        : {};
+        : {
+            border: '2px solid transparent',
+          };
 
       const hrContent = (
         <div
@@ -2351,7 +2353,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             border:
               isCurrentSelected && !isPreview
                 ? '2px solid #1890ff'
-                : '1px solid #f0f0f0',
+                : '2px solid #f0f0f0',
             borderRadius: '4px',
             boxShadow:
               isCurrentSelected && !isPreview
@@ -2409,7 +2411,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             border:
               isCurrentSelected && !isPreview
                 ? '2px solid #1890ff'
-                : '1px solid transparent',
+                : '2px solid transparent',
             borderRadius: '6px',
             padding: '8px',
             backgroundColor:
@@ -2482,7 +2484,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             border:
               isCurrentSelected && !isPreview
                 ? '2px solid #1890ff'
-                : '1px solid transparent',
+                : '2px solid transparent',
             borderRadius: '6px',
             padding: '8px',
             backgroundColor:
@@ -2544,7 +2546,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             border:
               isCurrentSelected && !isPreview
                 ? '2px solid #1890ff'
-                : '1px solid transparent',
+                : '2px solid transparent',
             borderRadius: '6px',
             padding: '8px',
             backgroundColor:
@@ -2620,7 +2622,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             border:
               isCurrentSelected && !isPreview
                 ? '2px solid #1890ff'
-                : '1px solid transparent',
+                : '2px solid transparent',
             borderRadius: '6px',
             padding: '8px',
             backgroundColor:
@@ -2701,7 +2703,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             border:
               isCurrentSelected && !isPreview
                 ? '2px solid #1890ff'
-                : '1px solid #f0f0f0',
+                : '2px solid #f0f0f0',
             borderRadius: '4px',
             boxShadow:
               isCurrentSelected && !isPreview
