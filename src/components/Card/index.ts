@@ -21,6 +21,7 @@ export { default as Modals } from './card-designer-modals';
 export { default as RichTextEditor } from './RichTextEditor';
 export { default as RichTextEditorExample } from './RichTextEditorExample';
 export { default as RichTextStyles } from './RichTextStyles';
+export * from './RichTextUtils';
 // export { default as Toolbar } from './card-designer-toolbar';
 
 // ==================== 面板组件 ====================

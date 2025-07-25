@@ -1966,6 +1966,11 @@
   resolved "https://registry.yarnpkg.com/@tiptap/extensions/-/extensions-3.0.7.tgz#510daa0c683e82631a0b3c2989c42ba9c4a99c5d"
   integrity sha512-GkXX5l7Q/543BKsC14j8M3qT+75ILb7138zy7cZoHm/s1ztV1XTknpEswBZIRZA9n6qq+Wd9g5qkbR879s6xhA==
 
+"@tiptap/html@^3.0.7":
+  version "3.0.7"
+  resolved "https://registry.yarnpkg.com/@tiptap/html/-/html-3.0.7.tgz#6f7bba16ce94c1bcb097b23a9db67ce987b44445"
+  integrity sha512-GsOcJiTnOfUpIN8W/ZTjxME0H2R4qW9chFPvL/UpZrGUyDw4u1qEr9rZAl+Slhxl+wJP04i90BLofMj6W6X2jg==
+
 "@tiptap/pm@^3.0.7":
   version "3.0.7"
   resolved "https://registry.yarnpkg.com/@tiptap/pm/-/pm-3.0.7.tgz#131836ced943762237a93c3f8ecae4830e4c77f6"

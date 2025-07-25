@@ -1927,13 +1927,30 @@ export const PropertyPanel: React.FC<{
         if (isPlainText) {
           return (currentComponent as any).content || '';
         } else if (isRichText) {
-          return (currentComponent as any).content || '<p>请输入富文本内容</p>';
+          const content = (currentComponent as any).content;
+          // 如果是JSON格式，直接返回；如果是字符串，也直接返回（向后兼容）
+          return (
+            content || {
+              type: 'doc',
+              content: [
+                {
+                  type: 'paragraph',
+                  content: [
+                    {
+                      type: 'text',
+                      text: '请输入富文本内容',
+                    },
+                  ],
+                },
+              ],
+            }
+          );
         }
         return '';
       };
 
       // 更新文本内容
-      const updateTextContent = (value: string) => {
+      const updateTextContent = (value: any) => {
         console.log('📝 更新文本内容:', {
           componentId: currentComponent?.id,
           componentTag: currentComponent?.tag,
@@ -1945,6 +1962,7 @@ export const PropertyPanel: React.FC<{
         if (isPlainText) {
           handleValueChange('content', value);
         } else if (isRichText) {
+          // 富文本直接保存JSON格式
           handleValueChange('content', value);
         }
       };

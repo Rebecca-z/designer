@@ -171,8 +171,8 @@ export interface HrComponent extends ComponentBase {
 export interface RichTextComponent extends ComponentBase {
   tag: 'rich_text';
   name: string;
-  content: string; // HTML 格式的富文本内容
-  i18n_content?: { [key: string]: string };
+  content: any; // TipTap JSON 格式的富文本内容或HTML字符串(向后兼容)
+  i18n_content?: { [key: string]: any };
 }
 
 export interface ImageCombinationComponent extends ComponentBase {

@@ -11,6 +11,7 @@ import {
 } from './card-designer-types-updated';
 import { replaceVariables } from './card-designer-utils';
 import RichTextStyles from './RichTextStyles';
+import { convertJSONToHTML } from './RichTextUtils';
 
 const { Option } = Select;
 // const { Text } = Typography;
@@ -2161,7 +2162,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           >
             <div
               dangerouslySetInnerHTML={{
-                __html: comp.content || '<p>请输入富文本内容</p>',
+                __html: convertJSONToHTML(comp.content),
               }}
             />
           </RichTextStyles>

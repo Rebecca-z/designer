@@ -37,8 +37,8 @@ import RichTextStyles from './RichTextStyles';
 const { Option } = Select;
 
 interface RichTextEditorProps {
-  value?: string;
-  onChange?: (html: string) => void;
+  value?: any; // 支持JSON格式或HTML字符串
+  onChange?: (json: any) => void; // 输出JSON格式
   placeholder?: string;
   height?: number;
   disabled?: boolean;
@@ -86,8 +86,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     ],
     content: value,
     onUpdate: ({ editor }) => {
-      const html = editor.getHTML();
-      onChange?.(html);
+      const json = editor.getJSON();
+      onChange?.(json);
     },
     editable: !disabled,
     editorProps: {

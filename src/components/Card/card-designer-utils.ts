@@ -609,11 +609,71 @@ export const createDefaultComponent = (type: string): ComponentType => {
         id: generateId(),
         tag: 'rich_text',
         name: `RichText_${generateId()}`,
-        content:
-          '<p>这是富文本内容示例，支持<strong>加粗</strong>、<em>斜体</em>等格式。</p>',
+        content: {
+          type: 'doc',
+          content: [
+            {
+              type: 'paragraph',
+              content: [
+                {
+                  type: 'text',
+                  text: '这是富文本内容示例，支持',
+                },
+                {
+                  type: 'text',
+                  marks: [{ type: 'bold' }],
+                  text: '加粗',
+                },
+                {
+                  type: 'text',
+                  text: '、',
+                },
+                {
+                  type: 'text',
+                  marks: [{ type: 'italic' }],
+                  text: '斜体',
+                },
+                {
+                  type: 'text',
+                  text: '等格式。',
+                },
+              ],
+            },
+          ],
+        },
         i18n_content: {
-          'en-US':
-            '<p>This is a rich text content example that supports <strong>bold</strong>, <em>italic</em> and other formats.</p>',
+          'en-US': {
+            type: 'doc',
+            content: [
+              {
+                type: 'paragraph',
+                content: [
+                  {
+                    type: 'text',
+                    text: 'This is a rich text content example that supports ',
+                  },
+                  {
+                    type: 'text',
+                    marks: [{ type: 'bold' }],
+                    text: 'bold',
+                  },
+                  {
+                    type: 'text',
+                    text: ', ',
+                  },
+                  {
+                    type: 'text',
+                    marks: [{ type: 'italic' }],
+                    text: 'italic',
+                  },
+                  {
+                    type: 'text',
+                    text: ' and other formats.',
+                  },
+                ],
+              },
+            ],
+          },
         },
       } as ComponentType;
 
@@ -1129,12 +1189,126 @@ export const convertToTargetFormat = (data: any): any => {
         }
         break;
 
-      case 'rich_text':
-        converted.content = component.content;
+      case 'rich_text': {
+        // 导入时处理富文本格式转换
+        const content = component.content;
+        if (typeof content === 'string') {
+          // 如果是HTML字符串，转换为JSON格式
+          try {
+            // 简单的HTML内容检测和转换
+            if (content.includes('<') && content.includes('>')) {
+              // 使用临时编辑器转换HTML为JSON
+              const { normalizeRichTextContent } = require('./RichTextUtils');
+              converted.content = normalizeRichTextContent(content);
+            } else {
+              // 纯文本内容，创建基础的JSON结构
+              converted.content = {
+                type: 'doc',
+                content: [
+                  {
+                    type: 'paragraph',
+                    content: [
+                      {
+                        type: 'text',
+                        text: content || '请输入富文本内容',
+                      },
+                    ],
+                  },
+                ],
+              };
+            }
+          } catch (error) {
+            console.warn('富文本内容转换失败:', error);
+            // 转换失败时使用默认内容
+            converted.content = {
+              type: 'doc',
+              content: [
+                {
+                  type: 'paragraph',
+                  content: [
+                    {
+                      type: 'text',
+                      text: '富文本内容',
+                    },
+                  ],
+                },
+              ],
+            };
+          }
+        } else {
+          // 如果已经是JSON格式，直接使用
+          converted.content = content || {
+            type: 'doc',
+            content: [
+              {
+                type: 'paragraph',
+                content: [
+                  {
+                    type: 'text',
+                    text: '请输入富文本内容',
+                  },
+                ],
+              },
+            ],
+          };
+        }
+
+        // 处理多语言内容
         if (component.i18n_content) {
-          converted.i18n_content = component.i18n_content;
+          const i18nContent: any = {};
+          for (const [lang, langContent] of Object.entries(
+            component.i18n_content,
+          )) {
+            if (typeof langContent === 'string') {
+              // HTML字符串转JSON
+              try {
+                if (langContent.includes('<') && langContent.includes('>')) {
+                  const {
+                    normalizeRichTextContent,
+                  } = require('./RichTextUtils');
+                  i18nContent[lang] = normalizeRichTextContent(langContent);
+                } else {
+                  i18nContent[lang] = {
+                    type: 'doc',
+                    content: [
+                      {
+                        type: 'paragraph',
+                        content: [
+                          {
+                            type: 'text',
+                            text: langContent || 'Rich text content',
+                          },
+                        ],
+                      },
+                    ],
+                  };
+                }
+              } catch (error) {
+                console.warn(`多语言富文本内容转换失败 (${lang}):`, error);
+                i18nContent[lang] = {
+                  type: 'doc',
+                  content: [
+                    {
+                      type: 'paragraph',
+                      content: [
+                        {
+                          type: 'text',
+                          text: 'Rich text content',
+                        },
+                      ],
+                    },
+                  ],
+                };
+              }
+            } else {
+              // 已经是JSON格式
+              i18nContent[lang] = langContent;
+            }
+          }
+          converted.i18n_content = i18nContent;
         }
         break;
+      }
 
       case 'img':
         converted.img_url = component.img_url;
