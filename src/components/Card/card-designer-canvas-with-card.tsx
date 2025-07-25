@@ -249,6 +249,18 @@ const Canvas: React.FC<CanvasProps> = ({
                 subtitleContent: data.dsl.header?.subtitle?.content,
                 style: data.dsl.header?.style,
               });
+
+              // 检查header是否存在且有有效内容
+              if (
+                !data.dsl.header ||
+                (!data.dsl.header.title?.content &&
+                  !data.dsl.header.subtitle?.content)
+              ) {
+                console.log('❌ headerData为空，不传递给渲染器');
+                return undefined;
+              }
+
+              console.log('✅ headerData有效，传递给渲染器');
               return data.dsl.header;
             })()}
             onHeaderDataChange={onHeaderDataChange}

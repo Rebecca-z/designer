@@ -9,6 +9,7 @@ import {
 } from './card-designer-types-updated';
 import {
   convertToTargetFormat,
+  ensureComponentIds,
   generateId,
   importFromJSON,
   migrateCardLink,
@@ -468,10 +469,117 @@ export const useConfigManagement = () => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const jsonData = importFromJSON(e.target?.result as string);
+        const jsonString = e.target?.result as string;
+        const parsed = JSON.parse(jsonString);
+
+        console.log('🔍 原始导入数据检查:', {
+          parsed,
+          hasDsl: !!parsed.dsl,
+          hasHeader: !!(parsed.dsl && parsed.dsl.header),
+          headerContent: parsed.dsl?.header,
+        });
+
+        // 检查是否是新格式的完整卡片数据
+        if (
+          parsed &&
+          parsed.dsl &&
+          parsed.dsl.body &&
+          Array.isArray(parsed.dsl.body.elements)
+        ) {
+          console.log('✅ 检测到新格式完整卡片数据，直接使用');
+
+          // 创建新的卡片数据，保留原始的header信息
+          const newCardData: any = {
+            id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+            name: parsed.name || '导入的卡片',
+            dsl: {
+              schema: parsed.dsl.schema || 0.1,
+              config: parsed.dsl.config || {},
+              card_link: parsed.dsl.card_link || {
+                multi_url: {
+                  url: '',
+                  android_url: '',
+                  ios_url: '',
+                  pc_url: '',
+                },
+              },
+              body: {
+                direction: parsed.dsl.body.direction || 'vertical',
+                vertical_spacing: parsed.dsl.body.vertical_spacing || 8,
+                padding: parsed.dsl.body.padding || {
+                  top: 16,
+                  right: 16,
+                  bottom: 16,
+                  left: 16,
+                },
+                elements: parsed.dsl.body.elements || [],
+              },
+            },
+            variables: parsed.variables || {},
+          };
+
+          // 如果原始数据包含header，则保留header
+          if (parsed.dsl.header) {
+            console.log('✅ 保留原始header数据:', parsed.dsl.header);
+            newCardData.dsl.header = parsed.dsl.header;
+          } else {
+            console.log('❌ 原始数据无header，不创建header');
+          }
+
+          console.log('🔍 导入前元素检查:', {
+            elementsCount: newCardData.dsl.body.elements.length,
+            sampleElement: newCardData.dsl.body.elements[0],
+            hasIds: newCardData.dsl.body.elements.map((el: any) => ({
+              tag: el.tag,
+              hasId: !!el.id,
+            })),
+          });
+
+          // 确保所有组件都有ID
+          newCardData.dsl.body.elements = ensureComponentIds(
+            newCardData.dsl.body.elements,
+          );
+
+          console.log('✅ ID检查完成:', {
+            elementsCount: newCardData.dsl.body.elements.length,
+            sampleElement: newCardData.dsl.body.elements[0],
+            allHaveIds: newCardData.dsl.body.elements.every(
+              (el: any) => !!el.id,
+            ),
+          });
+
+          console.log('✅ 新格式数据处理完成:', newCardData);
+
+          // 进行数据迁移
+          const migratedData = migrateTitleStyle(migrateCardLink(newCardData));
+          updateData(migratedData);
+          setImportModalVisible(false);
+          message.success('配置导入成功');
+          return;
+        }
+
+        // 处理旧格式数据
+        const jsonData = importFromJSON(jsonString);
         if (jsonData) {
+          // 检查原始数据是否包含header信息
+          const jsonAny = jsonData as any;
+          const hasHeaderData =
+            jsonAny.header ||
+            jsonAny.title ||
+            jsonAny.subtitle ||
+            (jsonAny.dsl && jsonAny.dsl.header);
+
+          console.log('🔍 旧格式数据header检查:', {
+            hasHeaderData,
+            hasHeader: !!jsonAny.header,
+            hasTitle: !!jsonAny.title,
+            hasSubtitle: !!jsonAny.subtitle,
+            hasDslHeader: !!(jsonAny.dsl && jsonAny.dsl.header),
+            originalData: jsonData,
+          });
+
           // 将旧格式数据转换为新格式的卡片数据
-          const newCardData = {
+          const newCardData: any = {
             id: Date.now().toString(36) + Math.random().toString(36).substr(2),
             name: '导入的卡片',
             dsl: {
@@ -483,21 +591,6 @@ export const useConfigManagement = () => {
                   android_url: '',
                   ios_url: '',
                   pc_url: '',
-                },
-              },
-              header: {
-                style: 'blue', // 直接存储主题样式字符串
-                title: {
-                  content: '标题',
-                  i18n_content: {
-                    'en-US': 'Title',
-                  },
-                },
-                subtitle: {
-                  content: '副标题',
-                  i18n_content: {
-                    'en-US': 'Subtitle',
-                  },
                 },
               },
               body: {
@@ -515,7 +608,29 @@ export const useConfigManagement = () => {
             variables: {},
           };
 
-          console.log('✅ 导入数据转换完成:', {
+          // 只有当原始数据包含header信息时才创建header
+          if (hasHeaderData) {
+            console.log('✅ 检测到旧格式header数据，创建header对象');
+            newCardData.dsl.header = {
+              style: 'blue', // 直接存储主题样式字符串
+              title: {
+                content: '标题',
+                i18n_content: {
+                  'en-US': 'Title',
+                },
+              },
+              subtitle: {
+                content: '副标题',
+                i18n_content: {
+                  'en-US': 'Subtitle',
+                },
+              },
+            };
+          } else {
+            console.log('❌ 未检测到旧格式header数据，不创建header对象');
+          }
+
+          console.log('✅ 旧格式数据转换完成:', {
             originalFormat: jsonData,
             newCardFormat: newCardData,
           });

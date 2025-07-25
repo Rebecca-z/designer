@@ -1475,7 +1475,7 @@ const getEmptyContent = (): string => {
 };
 
 // 递归为所有组件添加ID的辅助函数
-const ensureComponentIds = (obj: any): any => {
+export const ensureComponentIds = (obj: any): any => {
   if (Array.isArray(obj)) {
     return obj.map(ensureComponentIds);
   }

@@ -2730,6 +2730,14 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
     }
 
     case 'title': {
+      // 检查是否有headerData，没有则不渲染标题
+      if (
+        !headerData ||
+        (!headerData.title?.content && !headerData.subtitle?.content)
+      ) {
+        return null;
+      }
+
       // 从CardHeader中读取标题信息
       const headerTitle = headerData?.title?.content || '主标题';
       const headerSubtitle = headerData?.subtitle?.content || '副标题';
