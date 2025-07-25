@@ -8,6 +8,7 @@ import {
   ComponentType,
   DesignData,
   DragItem,
+  VariableItem,
 } from './card-designer-types-updated';
 import ErrorBoundary from './ErrorBoundary';
 
@@ -220,7 +221,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
   isPreview = false,
   onContainerDrop,
   onComponentSort,
-  // onUpdateComponent,
+  onUpdateComponent,
   onCanvasFocus,
   headerData,
   variables = [],
@@ -454,6 +455,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             isPreview={isPreview}
             onContainerDrop={onContainerDrop}
             onComponentMove={onComponentSort}
+            onUpdateComponent={onUpdateComponent}
             path={path}
             index={0}
             containerPath={path.slice(0, -1)}
@@ -603,6 +605,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
         <ComponentRendererCore
           component={component}
           isPreview={isPreview}
+          onUpdateComponent={onUpdateComponent}
           path={path}
           index={0}
           containerPath={path.slice(0, -1)}

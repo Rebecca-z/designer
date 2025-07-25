@@ -28,6 +28,10 @@ interface ComponentRendererCoreProps {
     targetPath: (string | number)[],
     dropIndex: number,
   ) => void;
+  onUpdateComponent?: (
+    componentPath: (string | number)[],
+    updatedComponent: ComponentType,
+  ) => void;
   path?: (string | number)[];
   index?: number;
   containerPath?: (string | number)[];
@@ -1512,6 +1516,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
   isPreview = false,
   onContainerDrop,
   onComponentMove,
+  onUpdateComponent,
   path = [],
   index = 0,
   containerPath = [],
@@ -2558,6 +2563,17 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       // 检查当前组件是否被选中
       const isCurrentSelected = isSamePath(selectedPath, path);
 
+      // 处理单选组件的值变化
+      const handleSelectChange = (selectedValue: string) => {
+        if (!isPreview && onUpdateComponent) {
+          const updatedComponent = {
+            ...component,
+            value: selectedValue,
+          };
+          onUpdateComponent(path, updatedComponent);
+        }
+      };
+
       const selectContent = (
         <div
           style={{
@@ -2579,20 +2595,10 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             transition: 'all 0.2s ease',
           }}
         >
-          <label
-            style={{
-              display: 'block',
-              marginBottom: '6px',
-              fontWeight: 500,
-              color: '#333',
-              fontSize: '14px',
-            }}
-          >
-            {comp.name || 'Select'}{' '}
-            {comp.required ? <span style={{ color: '#ff4d4f' }}>*</span> : ''}
-          </label>
           <Select
             placeholder="请选择"
+            value={typeof comp.value === 'string' ? comp.value : undefined}
+            onChange={handleSelectChange}
             style={{
               width: '100%',
               fontSize: '14px',
@@ -2634,6 +2640,17 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       // 检查当前组件是否被选中
       const isCurrentSelected = isSamePath(selectedPath, path);
 
+      // 处理多选组件的值变化
+      const handleMultiSelectChange = (selectedValues: string[]) => {
+        if (!isPreview && onUpdateComponent) {
+          const updatedComponent = {
+            ...component,
+            value: selectedValues,
+          };
+          onUpdateComponent(path, updatedComponent);
+        }
+      };
+
       const multiSelectContent = (
         <div
           style={{
@@ -2655,21 +2672,11 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             transition: 'all 0.2s ease',
           }}
         >
-          <label
-            style={{
-              display: 'block',
-              marginBottom: '6px',
-              fontWeight: 500,
-              color: '#333',
-              fontSize: '14px',
-            }}
-          >
-            {comp.name || 'MultiSelect'} (多选){' '}
-            {comp.required ? <span style={{ color: '#ff4d4f' }}>*</span> : ''}
-          </label>
           <Select
             mode="multiple"
             placeholder="请选择"
+            value={Array.isArray(comp.value) ? comp.value : []}
+            onChange={handleMultiSelectChange}
             style={{
               width: '100%',
               fontSize: '14px',

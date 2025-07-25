@@ -1503,10 +1503,10 @@ export const PropertyPanel: React.FC<{
             size="small"
             style={{ marginBottom: '12px' }}
           >
-            <PaddingEditor
-              value={cardPadding}
-              onChange={(padding) => onUpdateCard({ padding })}
-            />
+                <PaddingEditor
+                  value={cardPadding}
+                  onChange={(padding) => onUpdateCard({ padding })}
+                />
           </Card> */}
         </div>
       );
@@ -2231,7 +2231,10 @@ export const PropertyPanel: React.FC<{
             }}
           >
             <Text style={{ fontSize: '12px', color: '#0369a1' }}>
-              🎯 当前选中：下拉单选组件
+              🎯 当前选中：
+              {selectedComponent.tag === 'multi_select_static'
+                ? '下拉多选组件'
+                : '下拉单选组件'}
             </Text>
           </div>
           <Collapse

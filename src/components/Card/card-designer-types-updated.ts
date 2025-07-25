@@ -129,6 +129,7 @@ export interface SelectComponent extends ComponentBase {
   required?: boolean;
   optionSource: 'specified' | 'variable'; // 新增：选项来源 - 指定或绑定变量
   variableName?: string; // 新增：绑定的变量名
+  value?: string | string[]; // 新增：选中的值，单选为string，多选为string[]
   options: Array<{
     value: string;
     text: {
