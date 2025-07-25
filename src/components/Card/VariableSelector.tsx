@@ -151,6 +151,11 @@ const VariableSelector: React.FC<VariableSelectorProps> = ({
         type="text"
         size="small"
         icon={<ThunderboltOutlined />}
+        onClick={(e) => {
+          // 阻止事件冒泡，避免触发父容器的点击事件
+          e.stopPropagation();
+          e.preventDefault();
+        }}
         style={{
           position: 'absolute',
           bottom: '4px',

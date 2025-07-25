@@ -2455,18 +2455,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             transition: 'all 0.2s ease',
           }}
         >
-          <label
-            style={{
-              display: 'block',
-              marginBottom: '6px',
-              fontWeight: 500,
-              color: '#333',
-              fontSize: '14px',
-            }}
-          >
-            {comp.name || 'Input'}{' '}
-            {comp.required ? <span style={{ color: '#ff4d4f' }}>*</span> : ''}
-          </label>
           <Input
             placeholder={comp.placeholder?.content || '请输入'}
             defaultValue={comp.default_value?.content || ''}

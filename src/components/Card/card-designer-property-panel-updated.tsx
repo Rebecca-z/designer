@@ -1817,6 +1817,112 @@ export const PropertyPanel: React.FC<{
       (selectedComponent.tag === 'plain_text' ||
         selectedComponent.tag === 'rich_text');
 
+    // 检查是否选中了输入框组件
+    const isInputComponent =
+      selectedComponent && selectedComponent.tag === 'input';
+
+    // 如果选中了输入框组件，显示输入框编辑界面
+    if (isInputComponent) {
+      return (
+        <div style={{ padding: '16px' }}>
+          <div
+            style={{
+              marginBottom: '16px',
+              padding: '12px',
+              backgroundColor: '#f6ffed',
+              border: '1px solid #b7eb8f',
+              borderRadius: '6px',
+            }}
+          >
+            <Text style={{ fontSize: '12px', color: '#52c41a' }}>
+              🎯 当前选中：输入框组件
+            </Text>
+          </div>
+          <Collapse
+            defaultActiveKey={['basic', 'content']}
+            ghost
+            items={[
+              {
+                key: 'basic',
+                label: '🔧 基础设置',
+                children: (
+                  <Form form={form} layout="vertical">
+                    <Form.Item label="是否必填">
+                      <Switch
+                        checked={(currentComponent as any).required || false}
+                        onChange={(checked) =>
+                          handleValueChange('required', checked)
+                        }
+                      />
+                    </Form.Item>
+                    <Form.Item label="输入类型">
+                      <Select
+                        value={(currentComponent as any).inputType || 'text'}
+                        onChange={(value) =>
+                          handleValueChange('inputType', value)
+                        }
+                        style={{ width: '100%' }}
+                      >
+                        <Option value="text">文本</Option>
+                        <Option value="password">密码</Option>
+                        <Option value="number">数字</Option>
+                        <Option value="email">邮箱</Option>
+                        <Option value="tel">电话</Option>
+                      </Select>
+                    </Form.Item>
+                  </Form>
+                ),
+              },
+              {
+                key: 'content',
+                label: '📝 内容设置',
+                children: (
+                  <Form form={form} layout="vertical">
+                    <Form.Item label="占位文本">
+                      <Input
+                        value={
+                          (currentComponent as any).placeholder?.content || ''
+                        }
+                        onChange={(e) => {
+                          const newPlaceholder = {
+                            content: e.target.value,
+                            i18n_content: {
+                              'en-US': 'English placeholder',
+                            },
+                          };
+                          handleValueChange('placeholder', newPlaceholder);
+                        }}
+                        placeholder="请输入占位文本"
+                        maxLength={100}
+                      />
+                    </Form.Item>
+                    <Form.Item label="默认文本">
+                      <Input
+                        value={
+                          (currentComponent as any).default_value?.content || ''
+                        }
+                        onChange={(e) => {
+                          const newDefaultValue = {
+                            content: e.target.value,
+                            i18n_content: {
+                              'en-US': 'English default value',
+                            },
+                          };
+                          handleValueChange('default_value', newDefaultValue);
+                        }}
+                        placeholder="请输入默认文本"
+                        maxLength={100}
+                      />
+                    </Form.Item>
+                  </Form>
+                ),
+              },
+            ]}
+          />
+        </div>
+      );
+    }
+
     // 如果选中了文本组件，显示文本编辑界面
     if (isTextComponent) {
       const isPlainText = selectedComponent.tag === 'plain_text';
@@ -1896,16 +2002,58 @@ export const PropertyPanel: React.FC<{
                 children: (
                   <Form form={form} layout="vertical">
                     <Form.Item label="文本内容">
-                      <VariableTextEditor
-                        value={getTextContent()}
-                        onChange={updateTextContent}
-                        variables={variables}
-                        onAddVariable={() => {
-                          setIsAddVariableModalVisible(true);
-                        }}
-                        placeholder="请输入文本内容"
-                        rows={4}
-                      />
+                      {(() => {
+                        console.log('🎯 VariableTextEditor 渲染检查:', {
+                          componentId: currentComponent?.id,
+                          componentTag: currentComponent?.tag,
+                          textContent: getTextContent(),
+                          variablesCount: variables.length,
+                          timestamp: new Date().toISOString(),
+                        });
+                        return (
+                          <VariableTextEditor
+                            value={getTextContent()}
+                            onChange={updateTextContent}
+                            variables={variables}
+                            onAddVariable={() => {
+                              setIsAddVariableModalVisible(true);
+                            }}
+                            onEditVariable={(variableName) => {
+                              // 查找并编辑指定的变量
+                              const variable = variables.find((v) => {
+                                if (typeof v === 'object' && v !== null) {
+                                  const keys = Object.keys(
+                                    v as Record<string, any>,
+                                  );
+                                  return (
+                                    keys.length > 0 && keys[0] === variableName
+                                  );
+                                }
+                                return false;
+                              });
+
+                              if (variable) {
+                                // 转换为Variable格式用于编辑
+                                const keys = Object.keys(
+                                  variable as Record<string, any>,
+                                );
+                                const variableValue = (
+                                  variable as Record<string, any>
+                                )[keys[0]];
+                                const editingVariable = {
+                                  name: variableName,
+                                  type: 'text' as const,
+                                  value: String(variableValue),
+                                };
+                                setEditingVariable(editingVariable);
+                                setIsAddVariableModalVisible(true);
+                              }
+                            }}
+                            placeholder="请输入文本内容"
+                            rows={4}
+                          />
+                        );
+                      })()}
                     </Form.Item>
                   </Form>
                 ),

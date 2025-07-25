@@ -4,14 +4,13 @@ import React from 'react';
 
 export interface VariableButtonProps {
   variableName: string;
-  variableValue: string;
+  variableValue?: string; // 可选参数，保持向后兼容
   onEdit: (variableName: string) => void;
   size?: 'small' | 'middle' | 'large';
 }
 
 const VariableButton: React.FC<VariableButtonProps> = ({
   variableName,
-  variableValue,
   onEdit,
   size = 'small',
 }) => {
@@ -22,10 +21,7 @@ const VariableButton: React.FC<VariableButtonProps> = ({
   };
 
   return (
-    <Tooltip
-      title={`点击编辑变量 "${variableName}"，当前值: ${variableValue}`}
-      placement="top"
-    >
+    <Tooltip title={`点击编辑变量 "${variableName}"`} placement="top">
       <Button
         type="primary"
         size={size}
@@ -45,6 +41,7 @@ const VariableButton: React.FC<VariableButtonProps> = ({
           borderRadius: '12px',
           cursor: 'pointer',
           userSelect: 'none',
+          color: '#ffffff',
         }}
       >
         <span style={{ fontSize: '10px', fontWeight: 'bold' }}>Aa</span>
