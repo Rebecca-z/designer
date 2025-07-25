@@ -42,6 +42,7 @@ import {
   VariableItem,
   VariableObject,
 } from './card-designer-types-updated';
+import RichTextEditor from './RichTextEditor';
 import SelectOptionEditor from './SelectOptionEditor';
 import SelectVariableSelector from './SelectVariableSelector';
 import VariableTextEditor from './VariableTextEditor';
@@ -1926,10 +1927,7 @@ export const PropertyPanel: React.FC<{
         if (isPlainText) {
           return (currentComponent as any).content || '';
         } else if (isRichText) {
-          return (
-            (currentComponent as any).content?.content?.[0]?.content?.[0]
-              ?.text || ''
-          );
+          return (currentComponent as any).content || '<p>请输入富文本内容</p>';
         }
         return '';
       };
@@ -1947,21 +1945,7 @@ export const PropertyPanel: React.FC<{
         if (isPlainText) {
           handleValueChange('content', value);
         } else if (isRichText) {
-          const newContent = {
-            type: 'doc',
-            content: [
-              {
-                type: 'paragraph',
-                content: [
-                  {
-                    type: 'text',
-                    text: value,
-                  },
-                ],
-              },
-            ],
-          };
-          handleValueChange('content', newContent);
+          handleValueChange('content', value);
         }
       };
 
@@ -1981,7 +1965,7 @@ export const PropertyPanel: React.FC<{
             </Text>
           </div>
           <Collapse
-            defaultActiveKey={['content', 'style']}
+            defaultActiveKey={isRichText ? ['content'] : ['content', 'style']}
             ghost
             items={[
               {
@@ -1991,13 +1975,27 @@ export const PropertyPanel: React.FC<{
                   <Form form={form} layout="vertical">
                     <Form.Item label="文本内容">
                       {(() => {
-                        console.log('🎯 VariableTextEditor 渲染检查:', {
+                        console.log('🎯 文本编辑器渲染检查:', {
                           componentId: currentComponent?.id,
                           componentTag: currentComponent?.tag,
                           textContent: getTextContent(),
+                          isRichText,
                           variablesCount: variables.length,
                           timestamp: new Date().toISOString(),
                         });
+
+                        if (isRichText) {
+                          return (
+                            <RichTextEditor
+                              value={getTextContent()}
+                              onChange={updateTextContent}
+                              placeholder="请输入富文本内容..."
+                              height={300}
+                              showToolbar={true}
+                            />
+                          );
+                        }
+
                         return (
                           <VariableTextEditor
                             value={getTextContent()}
@@ -2046,136 +2044,85 @@ export const PropertyPanel: React.FC<{
                   </Form>
                 ),
               },
-              {
-                key: 'style',
-                label: '🎨 样式设置',
-                children: (
-                  <Form form={form} layout="vertical">
-                    {isPlainText && (
-                      <>
-                        <Form.Item label="字体大小">
-                          <Select
-                            value={
-                              (currentComponent as any).style?.fontSize ||
-                              (currentComponent as any).fontSize ||
-                              14
-                            }
-                            onChange={(value) =>
-                              handleValueChange('fontSize', value)
-                            }
-                            style={{ width: '100%' }}
-                          >
-                            <Option value={14}>正文 14px</Option>
-                            <Option value={16}>标题 16px</Option>
-                            <Option value={12}>辅助信息 12px</Option>
-                          </Select>
-                        </Form.Item>
-                        <Form.Item label="字色">
-                          <ColorPicker
-                            value={
-                              (currentComponent as any).style?.color ||
-                              '#000000'
-                            }
-                            onChange={(color: any) => {
-                              const rgbaValue = color.toRgbString();
-                              handleValueChange('color', rgbaValue);
-                            }}
-                            showText
-                            format="rgb"
-                            style={{ width: '100%' }}
-                          />
-                        </Form.Item>
-                        <Form.Item label="对齐方式">
-                          <Select
-                            value={
-                              (currentComponent as any).style?.textAlign ||
-                              (currentComponent as any).textAlign ||
-                              'left'
-                            }
-                            onChange={(value) =>
-                              handleValueChange('textAlign', value)
-                            }
-                            style={{ width: '100%' }}
-                          >
-                            <Option value="left">左对齐</Option>
-                            <Option value="center">居中对齐</Option>
-                            <Option value="right">右对齐</Option>
-                          </Select>
-                        </Form.Item>
-                        <Form.Item label="最大显示行数">
-                          <InputNumber
-                            value={
-                              (currentComponent as any).style?.numberOfLines ||
-                              (currentComponent as any).numberOfLines ||
-                              1
-                            }
-                            onChange={(value) =>
-                              handleValueChange('numberOfLines', value)
-                            }
-                            min={1}
-                            max={10}
-                            style={{ width: '100%' }}
-                            placeholder="设置最大显示行数"
-                          />
-                        </Form.Item>
-                      </>
-                    )}
-                    {isRichText && (
-                      <>
-                        <Form.Item label="字色">
-                          <ColorPicker
-                            value={
-                              (currentComponent as any).style?.color ||
-                              '#000000'
-                            }
-                            onChange={(color: any) => {
-                              const rgbaValue = color.toRgbString();
-                              handleValueChange('color', rgbaValue);
-                            }}
-                            showText
-                            format="rgb"
-                            style={{ width: '100%' }}
-                          />
-                        </Form.Item>
-                        <Form.Item label="字体大小">
-                          <Select
-                            value={
-                              (currentComponent as any).style?.fontSize ||
-                              (currentComponent as any).fontSize ||
-                              14
-                            }
-                            onChange={(value) =>
-                              handleValueChange('fontSize', value)
-                            }
-                            style={{ width: '100%' }}
-                          >
-                            <Option value={14}>正文 14px</Option>
-                            <Option value={16}>标题 16px</Option>
-                            <Option value={12}>辅助信息 12px</Option>
-                          </Select>
-                        </Form.Item>
-                        <Form.Item label="对齐方式">
-                          <Select
-                            value={
-                              (currentComponent as any).style?.textAlign ||
-                              (currentComponent as any).textAlign ||
-                              'left'
-                            }
-                            onChange={(value) =>
-                              handleValueChange('textAlign', value)
-                            }
-                            style={{ width: '100%' }}
-                          >
-                            <Option value="left">左对齐</Option>
-                            <Option value="center">居中对齐</Option>
-                            <Option value="right">右对齐</Option>
-                          </Select>
-                        </Form.Item>
-                      </>
-                    )}
-                  </Form>
-                ),
-              },
+              // 只有普通文本才显示样式设置
+              ...(isPlainText
+                ? [
+                    {
+                      key: 'style',
+                      label: '🎨 样式设置',
+                      children: (
+                        <Form form={form} layout="vertical">
+                          <Form.Item label="字体大小">
+                            <Select
+                              value={
+                                (currentComponent as any).style?.fontSize ||
+                                (currentComponent as any).fontSize ||
+                                14
+                              }
+                              onChange={(value) =>
+                                handleValueChange('fontSize', value)
+                              }
+                              style={{ width: '100%' }}
+                            >
+                              <Option value={14}>正文 14px</Option>
+                              <Option value={16}>标题 16px</Option>
+                              <Option value={12}>辅助信息 12px</Option>
+                            </Select>
+                          </Form.Item>
+                          <Form.Item label="字色">
+                            <ColorPicker
+                              value={
+                                (currentComponent as any).style?.color ||
+                                '#000000'
+                              }
+                              onChange={(color: any) => {
+                                const rgbaValue = color.toRgbString();
+                                handleValueChange('color', rgbaValue);
+                              }}
+                              showText
+                              format="rgb"
+                              style={{ width: '100%' }}
+                            />
+                          </Form.Item>
+                          <Form.Item label="对齐方式">
+                            <Select
+                              value={
+                                (currentComponent as any).style?.textAlign ||
+                                (currentComponent as any).textAlign ||
+                                'left'
+                              }
+                              onChange={(value) =>
+                                handleValueChange('textAlign', value)
+                              }
+                              style={{ width: '100%' }}
+                            >
+                              <Option value="left">左对齐</Option>
+                              <Option value="center">居中对齐</Option>
+                              <Option value="right">右对齐</Option>
+                            </Select>
+                          </Form.Item>
+                          <Form.Item label="最大显示行数">
+                            <InputNumber
+                              value={
+                                (currentComponent as any).style
+                                  ?.numberOfLines ||
+                                (currentComponent as any).numberOfLines ||
+                                1
+                              }
+                              onChange={(value) =>
+                                handleValueChange('numberOfLines', value)
+                              }
+                              min={1}
+                              max={10}
+                              style={{ width: '100%' }}
+                              placeholder="设置最大显示行数"
+                            />
+                          </Form.Item>
+                        </Form>
+                      ),
+                    },
+                  ]
+                : []),
             ]}
           />
         </div>

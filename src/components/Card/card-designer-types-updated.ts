@@ -170,18 +170,9 @@ export interface HrComponent extends ComponentBase {
 
 export interface RichTextComponent extends ComponentBase {
   tag: 'rich_text';
-  content: {
-    type: 'doc';
-    content: Array<{
-      type: 'paragraph';
-      content: Array<{
-        type: 'text' | 'mention';
-        text?: string;
-        attrs?: { id: string; label: string };
-      }>;
-    }>;
-  };
-  i18n_content?: { [key: string]: any };
+  name: string;
+  content: string; // HTML 格式的富文本内容
+  i18n_content?: { [key: string]: string };
 }
 
 export interface ImageCombinationComponent extends ComponentBase {

@@ -1,7 +1,10 @@
 // card-designer-utils.ts - 更新的工具函数文件
 
-import { ComponentType, DesignData } from './card-designer-types';
-import { VariableItem } from './card-designer-types-updated';
+import {
+  ComponentType,
+  DesignData,
+  VariableItem,
+} from './card-designer-types-updated';
 
 const selectHtml = (comp: any) => {
   const selectOptions = (comp.options || [])
@@ -605,41 +608,12 @@ export const createDefaultComponent = (type: string): ComponentType => {
       return {
         id: generateId(),
         tag: 'rich_text',
-        content: {
-          type: 'doc',
-          content: [
-            {
-              content: [
-                {
-                  type: 'text',
-                  text: '这是富文本内容示例',
-                },
-              ],
-              type: 'paragraph',
-            },
-          ],
-        },
-        style: {
-          fontSize: 14, // 默认字体大小
-          numberOfLines: 1, // 默认最大行数
-          textAlign: 'left', // 默认左对齐
-          color: 'rgba(51, 51, 51, 1)', // ✅ 默认字色：深灰色
-        },
+        name: `RichText_${generateId()}`,
+        content:
+          '<p>这是富文本内容示例，支持<strong>加粗</strong>、<em>斜体</em>等格式。</p>',
         i18n_content: {
-          'en-US': {
-            type: 'doc',
-            content: [
-              {
-                content: [
-                  {
-                    type: 'text',
-                    text: 'This is rich text content example',
-                  },
-                ],
-                type: 'paragraph',
-              },
-            ],
-          },
+          'en-US':
+            '<p>This is a rich text content example that supports <strong>bold</strong>, <em>italic</em> and other formats.</p>',
         },
       } as ComponentType;
 
@@ -1159,24 +1133,6 @@ export const convertToTargetFormat = (data: any): any => {
         converted.content = component.content;
         if (component.i18n_content) {
           converted.i18n_content = component.i18n_content;
-        }
-        // 处理样式字段
-        if (component.style) {
-          converted.style = { ...component.style };
-          // 确保textAlign有默认值
-          if (!converted.style.textAlign) {
-            converted.style.textAlign = 'left';
-          }
-          // 确保color有默认值
-          if (!converted.style.color) {
-            converted.style.color = 'rgba(51, 51, 51, 1)';
-          }
-        } else {
-          // 如果没有style对象，创建默认的style对象
-          converted.style = {
-            textAlign: 'left',
-            color: 'rgba(51, 51, 51, 1)', // ✅ 默认字色
-          };
         }
         break;
 

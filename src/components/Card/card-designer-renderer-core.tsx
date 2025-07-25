@@ -10,6 +10,7 @@ import {
   VariableItem,
 } from './card-designer-types-updated';
 import { replaceVariables } from './card-designer-utils';
+import RichTextStyles from './RichTextStyles';
 
 const { Option } = Select;
 // const { Text } = Typography;
@@ -2128,140 +2129,42 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
     }
 
     case 'rich_text': {
-      console.log('📝 渲染 rich_text 组件:', {
-        componentId: comp.id,
-        content: comp.content,
-        style: comp.style,
-        path,
-        isPreview,
-        enableDrag,
-      });
-
-      // 从 style 对象中读取样式属性，如果没有则从根属性读取
-      const fontSize = comp.style?.fontSize || comp.fontSize || 14;
-      const fontWeight = comp.style?.fontWeight || comp.fontWeight || 'normal';
-      const textAlign = comp.style?.textAlign || comp.textAlign || 'left';
-      const numberOfLines =
-        comp.style?.numberOfLines || comp.numberOfLines || 1;
-
-      const defaultStyles: React.CSSProperties = {
-        // padding: '12px',
-        borderRadius: '4px',
-        backgroundColor: '#fff7e6',
-        position: 'relative',
-        color: comp.style?.color || '#000000', // 使用配置的字色或默认黑色
-        fontSize: `${fontSize}px`,
-        fontWeight: fontWeight,
-        textAlign: textAlign,
-        lineHeight: 1.5,
-        // 添加最大行数限制
-        display: '-webkit-box',
-        WebkitLineClamp: numberOfLines,
-        WebkitBoxOrient: 'vertical',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        wordBreak: 'break-word',
-        whiteSpace: 'normal',
-        // maxHeight: `${numberOfLines * 1.5 * fontSize}px`,
-      };
-
-      const mergedStyles = mergeStyles(component, defaultStyles);
-
-      const handleRichTextClick = (e: React.MouseEvent) => {
-        // 立即阻止事件冒泡，防止触发父级选中
-        e.stopPropagation();
-        e.preventDefault();
-
-        console.log('📝 富文本组件被点击:', {
-          componentId: comp.id,
-          componentTag: comp.tag,
-          path,
-        });
-
-        console.log('📝 检查 onSelect 回调:', {
-          onSelectExists: !!onSelect,
-          onSelectType: typeof onSelect,
-        });
-
-        // 处理组件选中
-        if (onSelect) {
-          console.log('📝 调用 onSelect 回调:', {
-            component,
-            path,
-          });
-          onSelect(component, path);
-        } else {
-          console.log('❌ onSelect 回调不存在');
-        }
-
-        if (onCanvasFocus) {
-          console.log('📝 调用 onCanvasFocus 回调');
-          onCanvasFocus();
-        } else {
-          console.log('❌ onCanvasFocus 回调不存在');
-        }
-      };
-
       // 检查当前组件是否被选中
       const isCurrentSelected = isSamePath(selectedPath, path);
+      const comp = component as any;
 
-      console.log('📝 富文本组件选中状态检查:', {
-        componentId: comp.id,
-        componentTag: comp.tag,
-        path,
-        selectedPath,
-        isCurrentSelected,
-        isPreview,
-      });
-
-      // 选中状态样式
-      const selectedStyles: React.CSSProperties = {
-        border:
-          isCurrentSelected && !isPreview
-            ? '2px solid #1890ff'
-            : '2px solid #f0f0f0',
-        backgroundColor:
-          isCurrentSelected && !isPreview
-            ? 'rgba(24, 144, 255, 0.05)'
-            : '#fff7e6',
-        boxShadow:
-          isCurrentSelected && !isPreview
-            ? '0 0 8px rgba(24, 144, 255, 0.3)'
-            : 'none',
-      };
-
-      // 处理富文本变量替换
-      const richTextContent =
-        comp.content?.content?.[0]?.content?.[0]?.text || '富文本内容';
-
-      console.log('🔍 富文本组件变量替换检查:', {
-        componentId: comp.id,
-        originalContent: richTextContent,
-        variablesCount: variables.length,
-        variables: variables,
-        hasVariables: variables.length > 0,
-      });
-
-      const displayRichTextContent = replaceVariables(
-        richTextContent,
-        variables,
-      );
-
-      console.log('✅ 富文本组件变量替换结果:', {
-        componentId: comp.id,
-        originalContent: richTextContent,
-        displayContent: displayRichTextContent,
-        replaced: richTextContent !== displayRichTextContent,
-      });
-
-      const richTextContentElement = (
+      const richTextContent = (
         <div
-          style={{ ...mergedStyles, ...selectedStyles }}
-          onClick={handleRichTextClick}
-          data-component-wrapper="true"
-          data-component-id={comp.id}
+          style={{
+            marginBottom: '12px',
+            border:
+              isCurrentSelected && !isPreview
+                ? '2px solid #1890ff'
+                : '2px solid transparent',
+            borderRadius: '6px',
+            padding: '8px',
+            backgroundColor:
+              isCurrentSelected && !isPreview
+                ? 'rgba(24, 144, 255, 0.05)'
+                : 'transparent',
+            boxShadow:
+              isCurrentSelected && !isPreview
+                ? '0 0 8px rgba(24, 144, 255, 0.3)'
+                : 'none',
+            transition: 'all 0.2s ease',
+          }}
         >
-          <div style={{ minHeight: '50px' }}>{displayRichTextContent}</div>
+          <RichTextStyles
+            style={{
+              minHeight: '20px',
+            }}
+          >
+            <div
+              dangerouslySetInnerHTML={{
+                __html: comp.content || '<p>请输入富文本内容</p>',
+              }}
+            />
+          </RichTextStyles>
         </div>
       );
 
@@ -2277,10 +2180,10 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           selectedPath={selectedPath}
           onCanvasFocus={onCanvasFocus}
         >
-          {richTextContentElement}
+          {richTextContent}
         </DraggableWrapper>
       ) : (
-        richTextContentElement
+        richTextContent
       );
     }
 
