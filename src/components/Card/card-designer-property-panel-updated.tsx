@@ -1855,21 +1855,6 @@ export const PropertyPanel: React.FC<{
                         }
                       />
                     </Form.Item>
-                    <Form.Item label="输入类型">
-                      <Select
-                        value={(currentComponent as any).inputType || 'text'}
-                        onChange={(value) =>
-                          handleValueChange('inputType', value)
-                        }
-                        style={{ width: '100%' }}
-                      >
-                        <Option value="text">文本</Option>
-                        <Option value="password">密码</Option>
-                        <Option value="number">数字</Option>
-                        <Option value="email">邮箱</Option>
-                        <Option value="tel">电话</Option>
-                      </Select>
-                    </Form.Item>
                   </Form>
                 ),
               },

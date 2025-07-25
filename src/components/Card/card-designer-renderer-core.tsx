@@ -2457,8 +2457,8 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         >
           <Input
             placeholder={comp.placeholder?.content || '请输入'}
-            defaultValue={comp.default_value?.content || ''}
-            type={comp.inputType || 'text'}
+            value={comp.default_value?.content || ''}
+            type="text"
             style={{
               width: '100%',
               padding: '8px 12px',
@@ -2468,6 +2468,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               backgroundColor: 'white',
             }}
             disabled={isPreview}
+            readOnly={isPreview}
           />
         </div>
       );
