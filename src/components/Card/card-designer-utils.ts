@@ -294,20 +294,36 @@ const multiSelectHtml = (comp: any) => {
 const getTitleThemeStyle = (theme: string) => {
   const themes = {
     blue: {
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)',
       color: '#fff',
     },
-    wethet: {
-      background: 'linear-gradient(135deg, #74b9ff 0%, #0984e3 100%)',
+    wathet: {
+      background: 'linear-gradient(135deg, #0369a1 0%, #0c4a6e 100%)',
+      color: '#fff',
+    },
+    turquoise: {
+      background: 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)',
       color: '#fff',
     },
     green: {
-      background: 'linear-gradient(135deg, #00b894 0%, #00a085 100%)',
+      background: 'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)',
+      color: '#fff',
+    },
+    yellow: {
+      background: 'linear-gradient(135deg, #faad14 0%, #d48806 100%)',
+      color: '#fff',
+    },
+    orange: {
+      background: 'linear-gradient(135deg, #fa8c16 0%, #d46b08 100%)',
       color: '#fff',
     },
     red: {
-      background: 'linear-gradient(135deg, #fd79a8 0%, #e84393 100%)',
+      background: 'linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%)',
       color: '#fff',
+    },
+    default: {
+      background: 'linear-gradient(135deg, #f0f0f0 0%, #d9d9d9 100%)',
+      color: '#333',
     },
   };
   return themes[theme as keyof typeof themes] || themes.blue;
@@ -1826,18 +1842,111 @@ export const generatePreviewHTMLAsync = async (
 }; // card-designer-utils.ts - 工具函数文件
 
 // 生成预览HTML - 使用外部模板
-export const generatePreviewHTML = (data: DesignData): string => {
-  const bodyContent = data.elements.map(renderComponentToHTML).join('');
+export const generatePreviewHTML = (data: any): string => {
+  // 检查是否是新格式的卡片数据
+  const isNewFormat = data.dsl && data.dsl.body && data.dsl.body.elements;
 
-  // 统计信息
-  const stats = {
-    totalComponents: data.elements.length,
-    formCount: data.elements.filter((el) => el.tag === 'form').length,
-    columnCount: data.elements.filter((el) => el.tag === 'column_set').length,
-    verticalSpacing: data.vertical_spacing,
+  let bodyContent = '';
+  let stats = {
+    totalComponents: 0,
+    formCount: 0,
+    columnCount: 0,
+    verticalSpacing: 8,
   };
+  let direction = 'vertical';
+  let headerInfo = null;
+
+  if (isNewFormat) {
+    // 新格式卡片数据处理
+    const elements = data.dsl.body.elements || [];
+    bodyContent = elements.map(renderComponentToHTML).join('');
+
+    // 从header获取主题信息
+    headerInfo = data.dsl.header;
+
+    stats = {
+      totalComponents: elements.length,
+      formCount: elements.filter((el: any) => el.tag === 'form').length,
+      columnCount: elements.filter((el: any) => el.tag === 'column_set').length,
+      verticalSpacing: data.dsl.body.vertical_spacing || 8,
+    };
+    direction = data.dsl.body.direction || 'vertical';
+  } else {
+    // 旧格式数据处理（向后兼容）
+    const elements = data.elements || [];
+    bodyContent = elements.map(renderComponentToHTML).join('');
+
+    stats = {
+      totalComponents: elements.length,
+      formCount: elements.filter((el: any) => el.tag === 'form').length,
+      columnCount: elements.filter((el: any) => el.tag === 'column_set').length,
+      verticalSpacing: data.vertical_spacing || 8,
+    };
+    direction = data.direction || 'vertical';
+  }
 
   const timestamp = new Date().toLocaleString();
+
+  // 生成header HTML（如果存在）
+  let headerHTML = '';
+  if (
+    headerInfo &&
+    (headerInfo.title?.content || headerInfo.subtitle?.content)
+  ) {
+    const themeStyle = getTitleThemeStyle(headerInfo.style || 'blue');
+    headerHTML = `
+      <div style="
+        ${themeStyle.background ? `background: ${themeStyle.background};` : ''}
+        color: ${themeStyle.color};
+        padding: 24px 16px;
+        border-radius: 8px;
+        text-align: center;
+        margin: 0 0 24px 0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      ">
+        ${
+          headerInfo.title?.content
+            ? `
+          <h1 style="
+            margin: 0 0 8px 0;
+            font-size: 24px;
+            font-weight: bold;
+            color: ${themeStyle.color};
+          ">
+            ${headerInfo.title.content}
+          </h1>
+        `
+            : ''
+        }
+        ${
+          headerInfo.subtitle?.content
+            ? `
+          <p style="
+            margin: 0;
+            font-size: 14px;
+            opacity: 0.9;
+            color: ${themeStyle.color};
+          ">
+            ${headerInfo.subtitle.content}
+          </p>
+        `
+            : ''
+        }
+      </div>
+    `;
+  }
+
+  console.log('✅ 在线预览HTML生成:', {
+    isNewFormat,
+    hasHeader: !!headerInfo,
+    headerTheme: headerInfo?.style,
+    elementsCount: stats.totalComponents,
+    bodyContentLength: bodyContent.length,
+    headerHTMLLength: headerHTML.length,
+  });
+
+  // 组合最终的body内容
+  const finalBodyContent = headerHTML + (bodyContent || getEmptyContent());
 
   // 读取HTML模板并替换占位符
   return getHTMLTemplate()
@@ -1847,8 +1956,8 @@ export const generatePreviewHTML = (data: DesignData): string => {
     .replace('{{FORM_COUNT}}', stats.formCount.toString())
     .replace('{{COLUMN_COUNT}}', stats.columnCount.toString())
     .replace('{{VERTICAL_SPACING}}', stats.verticalSpacing.toString())
-    .replace('{{DIRECTION}}', data.direction)
-    .replace('{{BODY_CONTENT}}', bodyContent || getEmptyContent());
+    .replace('{{DIRECTION}}', direction)
+    .replace('{{BODY_CONTENT}}', finalBodyContent);
 };
 
 // 验证组件数据完整性

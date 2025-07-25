@@ -348,14 +348,35 @@ const Modals: React.FC<ModalsProps> = ({
               <Text type="secondary" style={{ fontSize: '12px' }}>
                 {DEVICE_SIZES[device].name} ({DEVICE_SIZES[device].width})
               </Text>
-              {data.elements.length > 0 && (
-                <Text
-                  type="secondary"
-                  style={{ fontSize: '11px', color: '#52c41a' }}
-                >
-                  • {data.elements.length} 个组件
-                </Text>
-              )}
+              {(() => {
+                // 检查数据格式并获取正确的组件数量
+                const isNewFormat =
+                  data.dsl && data.dsl.body && data.dsl.body.elements;
+                const elements = isNewFormat
+                  ? data.dsl.body.elements
+                  : data.elements || [];
+                const headerData = isNewFormat ? data.dsl.header : null;
+                const hasTitle =
+                  headerData &&
+                  (headerData.title?.content || headerData.subtitle?.content);
+                const totalComponents = elements.length + (hasTitle ? 1 : 0);
+
+                console.log('📊 预览工具栏组件统计:', {
+                  isNewFormat,
+                  elementsCount: elements.length,
+                  hasTitle,
+                  totalComponents,
+                });
+
+                return totalComponents > 0 ? (
+                  <Text
+                    type="secondary"
+                    style={{ fontSize: '11px', color: '#52c41a' }}
+                  >
+                    • {totalComponents} 个组件{hasTitle ? ' (含标题)' : ''}
+                  </Text>
+                ) : null;
+              })()}
             </Space>
             <Space>
               <Button size="small" onClick={onClearCanvas} danger>
@@ -380,76 +401,137 @@ const Modals: React.FC<ModalsProps> = ({
               border: '1px solid #e8e8e8',
             }}
           >
-            {data.elements.length > 0 ? (
-              data.elements.map((component, index) => {
-                if (!component) {
-                  return (
-                    <ErrorBoundary key={`preview-error-${index}`}>
-                      <div
-                        style={{
-                          padding: '16px',
-                          border: '1px dashed #faad14',
-                          borderRadius: '4px',
-                          textAlign: 'center',
-                          color: '#faad14',
-                          backgroundColor: '#fffbe6',
-                          margin: '4px',
-                        }}
-                      >
-                        ⚠️ 预览组件数据异常 (索引: {index})
-                      </div>
-                    </ErrorBoundary>
-                  );
-                }
+            {(() => {
+              // 检查数据格式并获取正确的elements
+              const isNewFormat =
+                data.dsl && data.dsl.body && data.dsl.body.elements;
+              const elements = isNewFormat
+                ? data.dsl.body.elements
+                : data.elements || [];
+              const headerData = isNewFormat ? data.dsl.header : null;
 
-                return (
-                  <ErrorBoundary key={`preview-${component.id}-${index}`}>
-                    <div style={{ marginBottom: '8px' }}>
-                      <ComponentRenderer
-                        component={component}
-                        onSelect={() => {}}
-                        isSelected={false}
-                        selectedComponent={null}
-                        selectedPath={null}
-                        onUpdate={() => {}}
-                        onDelete={() => {}}
-                        onCopy={() => {}}
-                        path={['elements', index]}
-                        isPreview={true}
-                        hoveredPath={null}
-                        isHovered={false}
-                      />
-                    </div>
-                  </ErrorBoundary>
+              console.log('🔍 预览模式数据检查:', {
+                isNewFormat,
+                hasHeader: !!headerData,
+                headerContent: headerData,
+                elementsCount: elements.length,
+                elementsData: elements,
+                fullData: data,
+              });
+
+              // 检查header数据的有效性
+              const hasValidTitle =
+                headerData?.title?.content &&
+                headerData.title.content.trim() !== '';
+              const hasValidSubtitle =
+                headerData?.subtitle?.content &&
+                headerData.subtitle.content.trim() !== '';
+              const hasValidHeader = hasValidTitle || hasValidSubtitle;
+
+              console.log('📋 Header数据详细检查:', {
+                hasValidTitle,
+                hasValidSubtitle,
+                hasValidHeader,
+                titleContent: headerData?.title?.content,
+                subtitleContent: headerData?.subtitle?.content,
+                headerStyle: headerData?.style,
+              });
+
+              // 创建要渲染的组件列表
+              const componentsToRender = [];
+
+              // 1. 如果有有效的header数据，先添加title组件
+              if (hasValidHeader) {
+                console.log('✅ 预览模式: 添加title组件到渲染列表');
+                componentsToRender.push({
+                  id: 'preview-title',
+                  tag: 'title',
+                  title: headerData.title?.content || '主标题',
+                  subtitle: headerData.subtitle?.content || '副标题',
+                  style: headerData.style || 'blue',
+                });
+              } else {
+                console.log('❌ 预览模式: header数据无效，不添加title组件');
+              }
+
+              // 2. 添加body中的所有elements
+              componentsToRender.push(...elements);
+
+              console.log('📝 预览模式最终渲染列表:', {
+                totalComponents: componentsToRender.length,
+                hasTitle: componentsToRender.some(
+                  (comp) => comp.tag === 'title',
+                ),
+                componentTypes: componentsToRender.map((comp) => comp.tag),
+                renderingComponents: componentsToRender,
+              });
+
+              if (componentsToRender.length > 0) {
+                return componentsToRender.map(
+                  (component: any, index: number) => {
+                    if (!component) {
+                      return (
+                        <ErrorBoundary key={`preview-error-${index}`}>
+                          <div
+                            style={{
+                              padding: '16px',
+                              border: '1px dashed #faad14',
+                              borderRadius: '4px',
+                              textAlign: 'center',
+                              color: '#faad14',
+                              backgroundColor: '#fffbe6',
+                              margin: '4px',
+                            }}
+                          >
+                            ⚠️ 预览组件数据异常 (索引: {index})
+                          </div>
+                        </ErrorBoundary>
+                      );
+                    }
+
+                    return (
+                      <ErrorBoundary key={`preview-${component.id}-${index}`}>
+                        <div
+                          style={{
+                            marginBottom:
+                              component.tag === 'title' ? '16px' : '8px',
+                          }}
+                        >
+                          <ComponentRenderer
+                            component={component}
+                            onSelect={() => {}}
+                            isSelected={false}
+                            selectedComponent={null}
+                            selectedPath={null}
+                            onUpdate={() => {}}
+                            onDelete={() => {}}
+                            onCopy={() => {}}
+                            path={['elements', index]}
+                            isPreview={true}
+                            hoveredPath={null}
+                            isHovered={false}
+                            headerData={headerData}
+                          />
+                        </div>
+                      </ErrorBoundary>
+                    );
+                  },
                 );
-              })
-            ) : (
-              <div
-                style={{
-                  textAlign: 'center',
-                  color: '#999',
-                  padding: '60px 0',
-                  border: '2px dashed #d9d9d9',
-                  borderRadius: '8px',
-                  backgroundColor: '#fafafa',
-                }}
-              >
-                <div style={{ fontSize: '48px', marginBottom: '16px' }}>📝</div>
-                <Text
-                  type="secondary"
-                  style={{
-                    fontSize: '16px',
-                    display: 'block',
-                    marginBottom: '8px',
-                  }}
-                >
-                  暂无内容
-                </Text>
-                <Text type="secondary" style={{ fontSize: '12px' }}>
-                  请在设计器中添加组件
-                </Text>
-              </div>
-            )}
+              } else {
+                return (
+                  <div
+                    style={{
+                      textAlign: 'center',
+                      color: '#999',
+                      padding: '40px',
+                      fontSize: '14px',
+                    }}
+                  >
+                    🎨 暂无组件，请在编辑区域添加组件后预览
+                  </div>
+                );
+              }
+            })()}
           </div>
 
           {/* 配置信息面板 */}
@@ -478,7 +560,9 @@ const Modals: React.FC<ModalsProps> = ({
             >
               <div>
                 <strong>组件数量:</strong>{' '}
-                <span style={{ color: '#52c41a' }}>{data.elements.length}</span>
+                <span style={{ color: '#52c41a' }}>
+                  {data?.elements?.length}
+                </span>
               </div>
               <div>
                 <strong>变量数量:</strong>{' '}

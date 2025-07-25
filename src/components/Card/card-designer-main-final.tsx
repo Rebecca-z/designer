@@ -845,11 +845,7 @@ const CardDesigner: React.FC = () => {
           onFileUpload={handleFileUpload}
           previewVisible={previewVisible}
           setPreviewVisible={setPreviewVisible}
-          data={{
-            direction: 'vertical' as const,
-            vertical_spacing: safeCardData.dsl.body.vertical_spacing,
-            elements: safeCardData.dsl.body.elements,
-          }}
+          data={safeCardData}
           device={device}
           variables={convertToVariableArray(variables)}
           historyLength={history.historyLength}
