@@ -1518,7 +1518,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
   isPreview = false,
   onContainerDrop,
   onComponentMove,
-  onUpdateComponent,
+  // onUpdateComponent,
   path = [],
   index = 0,
   containerPath = [],
@@ -2527,17 +2527,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       // 检查当前组件是否被选中
       const isCurrentSelected = isSamePath(selectedPath, path);
 
-      // 处理单选组件的值变化
-      const handleSelectChange = (selectedValue: string) => {
-        if (!isPreview && onUpdateComponent) {
-          const updatedComponent = {
-            ...component,
-            value: selectedValue,
-          };
-          onUpdateComponent(path, updatedComponent);
-        }
-      };
-
       const selectContent = (
         <div
           style={{
@@ -2561,13 +2550,14 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         >
           <Select
             placeholder="请选择"
-            value={typeof comp.value === 'string' ? comp.value : undefined}
-            onChange={handleSelectChange}
             style={{
               width: '100%',
               fontSize: '14px',
             }}
-            disabled={isPreview}
+            // 移除disabled状态，允许操作但不保存值
+            onChange={() => {
+              // 空的onChange处理，允许UI操作但不保存状态
+            }}
           >
             {(comp.options || []).map((option: any, optionIndex: number) => (
               <Option
@@ -2604,17 +2594,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       // 检查当前组件是否被选中
       const isCurrentSelected = isSamePath(selectedPath, path);
 
-      // 处理多选组件的值变化
-      const handleMultiSelectChange = (selectedValues: string[]) => {
-        if (!isPreview && onUpdateComponent) {
-          const updatedComponent = {
-            ...component,
-            value: selectedValues,
-          };
-          onUpdateComponent(path, updatedComponent);
-        }
-      };
-
       const multiSelectContent = (
         <div
           style={{
@@ -2639,13 +2618,14 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           <Select
             mode="multiple"
             placeholder="请选择"
-            value={Array.isArray(comp.value) ? comp.value : []}
-            onChange={handleMultiSelectChange}
             style={{
               width: '100%',
               fontSize: '14px',
             }}
-            disabled={isPreview}
+            // 移除disabled状态，允许操作但不保存值
+            onChange={() => {
+              // 空的onChange处理，允许UI操作但不保存状态
+            }}
           >
             {(comp.options || []).map((option: any, optionIndex: number) => (
               <Option

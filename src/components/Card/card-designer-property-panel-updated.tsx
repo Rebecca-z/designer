@@ -5,7 +5,6 @@ import {
   BgColorsOutlined,
   DeleteOutlined,
   EditOutlined,
-  MinusOutlined,
   PlusOutlined,
   SettingOutlined,
   ThunderboltOutlined,
@@ -45,8 +44,6 @@ import {
   VariableObject,
 } from './card-designer-types-updated';
 import RichTextEditor from './RichTextEditor';
-import SelectOptionEditor from './SelectOptionEditor';
-import SelectVariableSelector from './SelectVariableSelector';
 import VariableTextEditor from './VariableTextEditor';
 
 const { Option } = Select;
@@ -2184,31 +2181,49 @@ export const PropertyPanel: React.FC<{
     if (isSelectComponent) {
       const selectComponent = currentComponent as any;
       const options = selectComponent?.options || [];
-      const optionSource = selectComponent?.optionSource || 'specified';
 
       const handleAddOption = () => {
         const newOption = {
-          value: `option_${options.length + 1}`,
+          value: `option_${Date.now()}`,
           text: {
             content: `选项${options.length + 1}`,
             i18n_content: {
-              'en-US': `Option ${options.length + 1}`,
+              'en-US': `选项${options.length + 1}`,
             },
           },
         };
-        const newOptions = [...options, newOption];
-        handleValueChange('options', newOptions);
+        const updatedOptions = [...options, newOption];
+        handleValueChange('options', updatedOptions);
+      };
+
+      const handleUpdateOption = (index: number, field: string, value: any) => {
+        const updatedOptions = [...options];
+        if (field === 'content') {
+          updatedOptions[index] = {
+            ...updatedOptions[index],
+            text: {
+              ...updatedOptions[index].text,
+              content: value,
+              // 为单选和多选组件都同步更新国际化内容与content保持一致
+              i18n_content: {
+                'en-US': value,
+              },
+            },
+          };
+        } else if (field === 'value') {
+          updatedOptions[index] = {
+            ...updatedOptions[index],
+            value: value,
+          };
+        }
+        handleValueChange('options', updatedOptions);
       };
 
       const handleDeleteOption = (index: number) => {
-        const newOptions = options.filter((_: any, i: number) => i !== index);
-        handleValueChange('options', newOptions);
-      };
-
-      const handleUpdateOption = (index: number, updatedOption: any) => {
-        const newOptions = [...options];
-        newOptions[index] = updatedOption;
-        handleValueChange('options', newOptions);
+        const updatedOptions = options.filter(
+          (_: any, i: number) => i !== index,
+        );
+        handleValueChange('options', updatedOptions);
       };
 
       return (
@@ -2246,32 +2261,6 @@ export const PropertyPanel: React.FC<{
                         }
                       />
                     </Form.Item>
-                    <Form.Item label="选项来源">
-                      <Switch
-                        checked={optionSource === 'variable'}
-                        onChange={(checked) => {
-                          const newSource = checked ? 'variable' : 'specified';
-                          handleValueChange('optionSource', newSource);
-                        }}
-                        checkedChildren="绑定变量"
-                        unCheckedChildren="指定"
-                      />
-                    </Form.Item>
-                    {optionSource === 'variable' && (
-                      <Form.Item label="绑定变量">
-                        <SelectVariableSelector
-                          variables={variables}
-                          onSelectVariable={(variableName) => {
-                            handleValueChange('variableName', variableName);
-                          }}
-                          onAddVariable={() => {
-                            setIsAddVariableModalVisible(true);
-                          }}
-                          placeholder="请选择变量"
-                          selectedVariableName={selectComponent.variableName}
-                        />
-                      </Form.Item>
-                    )}
                   </Form>
                 ),
               },
@@ -2280,94 +2269,18 @@ export const PropertyPanel: React.FC<{
                 label: '📝 选项设置',
                 children: (
                   <div>
-                    {optionSource === 'specified' && (
-                      <>
-                        <div style={{ marginBottom: '12px' }}>
-                          <Button
-                            type="dashed"
-                            icon={<PlusOutlined />}
-                            onClick={handleAddOption}
-                            style={{ width: '100%' }}
-                            size="small"
-                          >
-                            添加选项
-                          </Button>
-                        </div>
-                        {options.length === 0 && (
-                          <div
-                            style={{
-                              textAlign: 'center',
-                              color: '#999',
-                              padding: '20px 0',
-                            }}
-                          >
-                            暂无选项，请点击上方按钮添加
-                          </div>
-                        )}
-                        {options.map((option: any, index: number) => (
-                          <div
-                            key={index}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              padding: '8px',
-                              border: '1px solid #d9d9d9',
-                              borderRadius: '4px',
-                              marginBottom: '8px',
-                              backgroundColor: '#fafafa',
-                            }}
-                          >
-                            <div
-                              style={{
-                                width: '24px',
-                                height: '24px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                backgroundColor: '#1890ff',
-                                color: 'white',
-                                borderRadius: '50%',
-                                fontSize: '12px',
-                                fontWeight: 'bold',
-                              }}
-                            >
-                              {index + 1}
-                            </div>
-                            <SelectOptionEditor
-                              option={option}
-                              onUpdate={(updatedOption) =>
-                                handleUpdateOption(index, updatedOption)
-                              }
-                            >
-                              <div
-                                style={{
-                                  flex: 1,
-                                  padding: '4px 8px',
-                                  border: '1px solid #d9d9d9',
-                                  borderRadius: '4px',
-                                  backgroundColor: 'white',
-                                  cursor: 'pointer',
-                                  minHeight: '32px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                }}
-                              >
-                                {option.text?.content || '点击编辑选项'}
-                              </div>
-                            </SelectOptionEditor>
-                            <Button
-                              type="text"
-                              icon={<MinusOutlined />}
-                              onClick={() => handleDeleteOption(index)}
-                              size="small"
-                              danger
-                            />
-                          </div>
-                        ))}
-                      </>
-                    )}
-                    {optionSource === 'variable' && (
+                    <div style={{ marginBottom: '12px' }}>
+                      <Button
+                        type="dashed"
+                        icon={<PlusOutlined />}
+                        onClick={handleAddOption}
+                        style={{ width: '100%' }}
+                        size="small"
+                      >
+                        添加选项
+                      </Button>
+                    </div>
+                    {options.length === 0 && (
                       <div
                         style={{
                           textAlign: 'center',
@@ -2375,9 +2288,71 @@ export const PropertyPanel: React.FC<{
                           padding: '20px 0',
                         }}
                       >
-                        选项来源于绑定的变量，无需手动设置
+                        暂无选项，请点击上方按钮添加
                       </div>
                     )}
+                    {options.map((option: any, index: number) => (
+                      <div
+                        key={index}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '8px',
+                          border: '1px solid #d9d9d9',
+                          borderRadius: '4px',
+                          marginBottom: '8px',
+                          backgroundColor: '#fafafa',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '24px',
+                            height: '24px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: '#1890ff',
+                            color: 'white',
+                            borderRadius: '50%',
+                            fontSize: '12px',
+                            fontWeight: 'bold',
+                          }}
+                        >
+                          {index + 1}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <Input
+                            placeholder="选项文本"
+                            value={option.text?.content || ''}
+                            onChange={(e) =>
+                              handleUpdateOption(
+                                index,
+                                'content',
+                                e.target.value,
+                              )
+                            }
+                            style={{ marginBottom: '4px' }}
+                            size="small"
+                          />
+                          <Input
+                            placeholder="选项值"
+                            value={option.value || ''}
+                            onChange={(e) =>
+                              handleUpdateOption(index, 'value', e.target.value)
+                            }
+                            size="small"
+                          />
+                        </div>
+                        <Button
+                          type="text"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={() => handleDeleteOption(index)}
+                          size="small"
+                        />
+                      </div>
+                    ))}
                   </div>
                 ),
               },

@@ -784,12 +784,18 @@ export const createDefaultComponent = (type: string): ComponentType => {
             value: '1',
             text: {
               content: '选项1',
+              i18n_content: {
+                'en-US': '选项1',
+              },
             },
           },
           {
             value: '2',
             text: {
               content: '选项2',
+              i18n_content: {
+                'en-US': '选项2',
+              },
             },
           },
         ],
@@ -806,6 +812,9 @@ export const createDefaultComponent = (type: string): ComponentType => {
             value: '1',
             text: {
               content: '选项1',
+              i18n_content: {
+                'en-US': '选项1',
+              },
             },
           },
           {
@@ -813,7 +822,7 @@ export const createDefaultComponent = (type: string): ComponentType => {
             text: {
               content: '选项2',
               i18n_content: {
-                'en-US': 'option2',
+                'en-US': '选项2',
               },
             },
           },
