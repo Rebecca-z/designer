@@ -697,6 +697,9 @@ export const createDefaultComponent = (type: string): ComponentType => {
       return {
         tag: 'hr',
         id: generateId(),
+        style: {
+          borderStyle: 'solid',
+        },
       } as ComponentType;
 
     case 'img':

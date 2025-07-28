@@ -166,6 +166,9 @@ export interface ColumnSetComponent extends ComponentBase {
 
 export interface HrComponent extends ComponentBase {
   tag: 'hr';
+  style?: {
+    borderStyle?: 'solid' | 'dashed' | 'dotted';
+  };
 }
 
 export interface RichTextComponent extends ComponentBase {

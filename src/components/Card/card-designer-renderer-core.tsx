@@ -1518,7 +1518,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
   isPreview = false,
   onContainerDrop,
   onComponentMove,
-  // onUpdateComponent,
+  onUpdateComponent,
   path = [],
   index = 0,
   containerPath = [],
@@ -1638,6 +1638,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           isPreview={isPreview}
           onContainerDrop={onContainerDrop}
           onComponentMove={onComponentMove}
+          onUpdateComponent={onUpdateComponent}
           path={childPath}
           index={elementIndex}
           containerPath={basePath}
@@ -1649,6 +1650,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           onCopy={onCopy}
           onCanvasFocus={onCanvasFocus}
           headerData={headerData}
+          variables={variables}
         />
       );
 
@@ -2195,10 +2197,14 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         isPreview,
         enableDrag,
         enableSort,
+        style: comp.style,
       });
 
       // 检查当前组件是否被选中
       const isCurrentSelected = isSamePath(selectedPath, path);
+
+      // 获取边框样式，默认为solid
+      const borderStyle = comp.style?.borderStyle || 'solid';
 
       // 选中样式
       const selectedStyles: React.CSSProperties = isCurrentSelected
@@ -2254,6 +2260,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               margin: '0',
               borderColor: isCurrentSelected ? '#1890ff' : '#d9d9d9',
               borderWidth: isCurrentSelected ? '2px' : '2px',
+              borderStyle: borderStyle, // 应用动态边框样式
               transition: 'all 0.2s ease',
             }}
           />

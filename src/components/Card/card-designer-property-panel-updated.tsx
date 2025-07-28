@@ -1848,6 +1848,10 @@ export const PropertyPanel: React.FC<{
       selectedComponent.tag === 'input' &&
       currentComponent;
 
+    // 检查是否选中了分割线组件
+    const isHrComponent =
+      selectedComponent && selectedComponent.tag === 'hr' && currentComponent;
+
     // 如果选中了输入框组件，显示输入框编辑界面
     if (isInputComponent) {
       return (
@@ -2164,6 +2168,118 @@ export const PropertyPanel: React.FC<{
                     },
                   ]
                 : []),
+            ]}
+          />
+        </div>
+      );
+    }
+
+    // 如果选中了分割线组件，显示分割线编辑界面
+    if (isHrComponent) {
+      const hrComponent = currentComponent as any;
+
+      return (
+        <div style={{ padding: '16px' }}>
+          <div
+            style={{
+              marginBottom: '16px',
+              padding: '12px',
+              backgroundColor: '#f0f9ff',
+              border: '1px solid #bae6fd',
+              borderRadius: '6px',
+            }}
+          >
+            <Text style={{ fontSize: '12px', color: '#0369a1' }}>
+              📏 当前选中：分割线组件
+            </Text>
+          </div>
+          <Collapse
+            defaultActiveKey={['style']}
+            ghost
+            items={[
+              {
+                key: 'style',
+                label: '🎨 样式设置',
+                children: (
+                  <Form form={form} layout="vertical">
+                    <Form.Item label="边框样式">
+                      <Select
+                        value={hrComponent.style?.borderStyle || 'solid'}
+                        onChange={(value) => {
+                          const updatedStyle = {
+                            ...hrComponent.style,
+                            borderStyle: value,
+                          };
+                          const updatedComponent = {
+                            ...currentComponent,
+                            style: updatedStyle,
+                          };
+                          onUpdateComponent(updatedComponent);
+                        }}
+                        style={{ width: '100%' }}
+                      >
+                        <Option value="solid">
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: '20px',
+                                height: '2px',
+                                backgroundColor: '#333',
+                                borderStyle: 'solid',
+                              }}
+                            />
+                            实线
+                          </div>
+                        </Option>
+                        <Option value="dashed">
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: '20px',
+                                height: '2px',
+                                borderTop: '2px dashed #333',
+                                backgroundColor: 'transparent',
+                              }}
+                            />
+                            虚线
+                          </div>
+                        </Option>
+                        <Option value="dotted">
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: '20px',
+                                height: '2px',
+                                borderTop: '2px dotted #333',
+                                backgroundColor: 'transparent',
+                              }}
+                            />
+                            点线
+                          </div>
+                        </Option>
+                      </Select>
+                    </Form.Item>
+                  </Form>
+                ),
+              },
             ]}
           />
         </div>
