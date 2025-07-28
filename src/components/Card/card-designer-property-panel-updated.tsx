@@ -1852,6 +1852,12 @@ export const PropertyPanel: React.FC<{
     const isHrComponent =
       selectedComponent && selectedComponent.tag === 'hr' && currentComponent;
 
+    // 检查是否选中了多图混排组件
+    const isImgCombinationComponent =
+      selectedComponent &&
+      selectedComponent.tag === 'img_combination' &&
+      currentComponent;
+
     // 如果选中了输入框组件，显示输入框编辑界面
     if (isInputComponent) {
       return (
@@ -2278,6 +2284,681 @@ export const PropertyPanel: React.FC<{
                       </Select>
                     </Form.Item>
                   </Form>
+                ),
+              },
+            ]}
+          />
+        </div>
+      );
+    }
+
+    // 如果选中了多图混排组件，显示多图混排编辑界面
+    if (isImgCombinationComponent) {
+      const imgCombComponent = currentComponent as any;
+
+      // 混排方式选项，按照新的设计分组
+      const combinationModes = [
+        // 双图模式
+        {
+          value: 'double',
+          label: '双图模式',
+          description: '左小右大',
+          category: 'double',
+        },
+        // 三图模式
+        {
+          value: 'triple',
+          label: '三图模式',
+          description: '左1右2',
+          category: 'triple',
+        },
+        // 等分双列模式
+        {
+          value: 'bisect_2',
+          label: '双列-2图',
+          description: '1行2列',
+          category: 'bisect',
+        },
+        {
+          value: 'bisect_4',
+          label: '双列-4图',
+          description: '2行2列',
+          category: 'bisect',
+        },
+        {
+          value: 'bisect_6',
+          label: '双列-6图',
+          description: '3行2列',
+          category: 'bisect',
+        },
+        // 等分三列模式
+        {
+          value: 'trisect_3',
+          label: '三列-3图',
+          description: '1行3列',
+          category: 'trisect',
+        },
+        {
+          value: 'trisect_6',
+          label: '三列-6图',
+          description: '2行3列',
+          category: 'trisect',
+        },
+        {
+          value: 'trisect_9',
+          label: '三列-9图',
+          description: '3行3列',
+          category: 'trisect',
+        },
+      ];
+
+      return (
+        <div style={{ padding: '16px' }}>
+          <div
+            style={{
+              marginBottom: '16px',
+              padding: '12px',
+              backgroundColor: '#f0f9ff',
+              border: '1px solid #bae6fd',
+              borderRadius: '6px',
+            }}
+          >
+            <Text style={{ fontSize: '12px', color: '#0369a1' }}>
+              🖼️ 当前选中：多图混排组件
+            </Text>
+          </div>
+          <Collapse
+            defaultActiveKey={['layout', 'images']}
+            ghost
+            items={[
+              {
+                key: 'layout',
+                label: '📐 混排方式',
+                children: (
+                  <div>
+                    <div style={{ marginBottom: '16px' }}>
+                      <Text
+                        style={{
+                          fontSize: '12px',
+                          color: '#666',
+                          marginBottom: '8px',
+                          display: 'block',
+                        }}
+                      >
+                        选择图片排列方式：
+                      </Text>
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(4, 1fr)',
+                          gap: '8px',
+                          marginTop: '8px',
+                        }}
+                      >
+                        {combinationModes.map((mode) => (
+                          <div
+                            key={mode.value}
+                            style={{
+                              border:
+                                imgCombComponent.combination_mode === mode.value
+                                  ? '2px solid #1890ff'
+                                  : '1px solid #d9d9d9',
+                              borderRadius: '4px',
+                              padding: '8px',
+                              textAlign: 'center',
+                              cursor: 'pointer',
+                              backgroundColor:
+                                imgCombComponent.combination_mode === mode.value
+                                  ? '#f0f9ff'
+                                  : '#fafafa',
+                              transition: 'all 0.2s ease',
+                            }}
+                            onClick={() => {
+                              // 根据选择的模式确定所需的图片数量
+                              const getRequiredImageCount = (mode: string) => {
+                                switch (mode) {
+                                  case 'double':
+                                    return 2;
+                                  case 'triple':
+                                    return 3;
+                                  case 'bisect_2':
+                                    return 2;
+                                  case 'bisect_4':
+                                    return 4;
+                                  case 'bisect_6':
+                                    return 6;
+                                  case 'trisect_3':
+                                    return 3;
+                                  case 'trisect_6':
+                                    return 6;
+                                  case 'trisect_9':
+                                    return 9;
+                                  default:
+                                    return 2;
+                                }
+                              };
+
+                              const requiredCount = getRequiredImageCount(
+                                mode.value,
+                              );
+                              const currentImages =
+                                imgCombComponent.img_list || [];
+
+                              // 调整图片列表数量
+                              let newImageList = [...currentImages];
+
+                              if (newImageList.length < requiredCount) {
+                                // 需要添加图片
+                                for (
+                                  let i = newImageList.length;
+                                  i < requiredCount;
+                                  i++
+                                ) {
+                                  newImageList.push({
+                                    img_url: '/demo.png',
+                                    i18n_img_url: {
+                                      'en-US': '/demo.png',
+                                    },
+                                  });
+                                }
+                              } else if (newImageList.length > requiredCount) {
+                                // 需要移除多余图片
+                                newImageList = newImageList.slice(
+                                  0,
+                                  requiredCount,
+                                );
+                              }
+
+                              const updatedComponent = {
+                                ...currentComponent,
+                                combination_mode: mode.value as any,
+                                img_list: newImageList,
+                              };
+
+                              console.log('🖼️ 切换混排方式:', {
+                                mode: mode.value,
+                                requiredCount,
+                                oldCount: currentImages.length,
+                                newCount: newImageList.length,
+                                component: updatedComponent,
+                              });
+
+                              onUpdateComponent(updatedComponent);
+                            }}
+                          >
+                            {/* 混排方式图标预览 */}
+                            {(() => {
+                              const renderModeIcon = (mode: string) => {
+                                switch (mode) {
+                                  case 'double':
+                                    return (
+                                      <div
+                                        style={{
+                                          width: '24px',
+                                          height: '16px',
+                                          display: 'flex',
+                                          gap: '1px',
+                                          margin: '0 auto 4px',
+                                        }}
+                                      >
+                                        <div
+                                          style={{
+                                            width: '8px',
+                                            height: '16px',
+                                            backgroundColor: '#1890ff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            width: '15px',
+                                            height: '16px',
+                                            backgroundColor: '#1890ff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                      </div>
+                                    );
+                                  case 'triple':
+                                    return (
+                                      <div
+                                        style={{
+                                          width: '24px',
+                                          height: '16px',
+                                          display: 'flex',
+                                          gap: '1px',
+                                          margin: '0 auto 4px',
+                                        }}
+                                      >
+                                        <div
+                                          style={{
+                                            width: '16px',
+                                            height: '16px',
+                                            backgroundColor: '#1890ff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            width: '7px',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '1px',
+                                          }}
+                                        >
+                                          <div
+                                            style={{
+                                              width: '7px',
+                                              height: '7.5px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                          <div
+                                            style={{
+                                              width: '7px',
+                                              height: '7.5px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                        </div>
+                                      </div>
+                                    );
+                                  case 'bisect_2':
+                                    return (
+                                      <div
+                                        style={{
+                                          width: '24px',
+                                          height: '12px',
+                                          display: 'flex',
+                                          gap: '1px',
+                                          margin: '0 auto 4px',
+                                        }}
+                                      >
+                                        <div
+                                          style={{
+                                            width: '11.5px',
+                                            height: '12px',
+                                            backgroundColor: '#1890ff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            width: '11.5px',
+                                            height: '12px',
+                                            backgroundColor: '#1890ff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                      </div>
+                                    );
+                                  case 'bisect_4':
+                                    return (
+                                      <div
+                                        style={{
+                                          width: '16px',
+                                          height: '16px',
+                                          display: 'grid',
+                                          gridTemplateColumns: '1fr 1fr',
+                                          gap: '1px',
+                                          margin: '0 auto 4px',
+                                          backgroundColor: '#1890ff',
+                                        }}
+                                      >
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                      </div>
+                                    );
+                                  case 'bisect_6':
+                                    return (
+                                      <div
+                                        style={{
+                                          width: '16px',
+                                          height: '24px',
+                                          display: 'grid',
+                                          gridTemplateColumns: '1fr 1fr',
+                                          gap: '1px',
+                                          margin: '0 auto 4px',
+                                          backgroundColor: '#1890ff',
+                                        }}
+                                      >
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                      </div>
+                                    );
+                                  case 'trisect_3':
+                                    return (
+                                      <div
+                                        style={{
+                                          width: '24px',
+                                          height: '8px',
+                                          display: 'grid',
+                                          gridTemplateColumns: '1fr 1fr 1fr',
+                                          gap: '1px',
+                                          margin: '0 auto 4px',
+                                          backgroundColor: '#1890ff',
+                                        }}
+                                      >
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                      </div>
+                                    );
+                                  case 'trisect_6':
+                                    return (
+                                      <div
+                                        style={{
+                                          width: '24px',
+                                          height: '16px',
+                                          display: 'grid',
+                                          gridTemplateColumns: '1fr 1fr 1fr',
+                                          gap: '1px',
+                                          margin: '0 auto 4px',
+                                          backgroundColor: '#1890ff',
+                                        }}
+                                      >
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                      </div>
+                                    );
+                                  case 'trisect_9':
+                                    return (
+                                      <div
+                                        style={{
+                                          width: '18px',
+                                          height: '18px',
+                                          display: 'grid',
+                                          gridTemplateColumns: '1fr 1fr 1fr',
+                                          gap: '1px',
+                                          margin: '0 auto 4px',
+                                          backgroundColor: '#1890ff',
+                                        }}
+                                      >
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                        <div
+                                          style={{
+                                            backgroundColor: '#fff',
+                                            borderRadius: '1px',
+                                          }}
+                                        />
+                                      </div>
+                                    );
+                                  default:
+                                    return (
+                                      <div
+                                        style={{
+                                          width: '24px',
+                                          height: '16px',
+                                          backgroundColor: '#d9d9d9',
+                                          borderRadius: '2px',
+                                          margin: '0 auto 4px',
+                                        }}
+                                      />
+                                    );
+                                }
+                              };
+                              return renderModeIcon(mode.value);
+                            })()}
+                            <div
+                              style={{
+                                fontSize: '10px',
+                                color: '#666',
+                                lineHeight: '1.2',
+                              }}
+                            >
+                              {mode.label}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: '9px',
+                                color: '#999',
+                                marginTop: '2px',
+                              }}
+                            >
+                              {mode.description}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                key: 'images',
+                label: '🖼️ 图片管理',
+                children: (
+                  <div>
+                    <div style={{ marginBottom: '12px' }}>
+                      <Text
+                        style={{
+                          fontSize: '12px',
+                          color: '#666',
+                          marginBottom: '8px',
+                          display: 'block',
+                        }}
+                      >
+                        当前混排方式:{' '}
+                        <strong>
+                          {(() => {
+                            const mode = imgCombComponent.combination_mode;
+                            const modeLabels = {
+                              double: '双图模式（左小右大）',
+                              triple: '三图模式（左1右2）',
+                              bisect_2: '双列-2图（1行2列）',
+                              bisect_4: '双列-4图（2行2列）',
+                              bisect_6: '双列-6图（3行2列）',
+                              trisect_3: '三列-3图（1行3列）',
+                              trisect_6: '三列-6图（2行3列）',
+                              trisect_9: '三列-9图（3行3列）',
+                            };
+                            return (
+                              modeLabels[mode as keyof typeof modeLabels] ||
+                              mode
+                            );
+                          })()}
+                        </strong>
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: '12px',
+                          color: '#52c41a',
+                          marginBottom: '8px',
+                          display: 'block',
+                        }}
+                      >
+                        图片数量:{' '}
+                        <strong>
+                          {(imgCombComponent.img_list || []).length}
+                        </strong>{' '}
+                        张
+                      </Text>
+                    </div>
+                    {/* 图片列表预览 */}
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(3, 1fr)',
+                        gap: '4px',
+                        marginTop: '8px',
+                      }}
+                    >
+                      {(imgCombComponent.img_list || []).map(
+                        (img: any, index: number) => (
+                          <div
+                            key={index}
+                            style={{
+                              aspectRatio: '1',
+                              backgroundColor: '#f5f5f5',
+                              border: '1px solid #d9d9d9',
+                              borderRadius: '4px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '10px',
+                              color: '#666',
+                            }}
+                          >
+                            图{index + 1}
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  </div>
                 ),
               },
             ]}

@@ -719,17 +719,26 @@ export const createDefaultComponent = (type: string): ComponentType => {
       return {
         id: generateId(),
         tag: 'img_combination',
-        combination_mode: 'trisect',
+        combination_mode: 'triple',
         combination_transparent: true,
         img_list: [
           {
-            img_url: 'img_v2_9dd98485-2900-4d65-ada9-e31d1408dcfg',
+            img_url: '/demo.png',
             i18n_img_url: {
-              'en-US': 'img_v2_9dd98485-2900-4d65-ada9-e31d1408dcfg',
+              'en-US': '/demo.png',
             },
           },
           {
-            img_url: 'img_v2_9dd98485-2900-4d65-ada9-e31d1408dcfg',
+            img_url: '/demo.png',
+            i18n_img_url: {
+              'en-US': '/demo.png',
+            },
+          },
+          {
+            img_url: '/demo.png',
+            i18n_img_url: {
+              'en-US': '/demo.png',
+            },
           },
         ],
       } as ComponentType;

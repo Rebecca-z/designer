@@ -2705,35 +2705,99 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           </div>
           <div
             style={{
-              display: 'grid',
-              gridTemplateColumns: `repeat(${
-                comp.combination_mode === 'trisect'
-                  ? 3
-                  : comp.combination_mode === 'bisect'
-                  ? 2
-                  : 2
-              }, 1fr)`,
-              gap: '8px',
+              display: comp.combination_mode === 'double' ? 'flex' : 'grid',
+              ...(comp.combination_mode === 'double'
+                ? {
+                    gap: '4px',
+                  }
+                : comp.combination_mode === 'triple'
+                ? {
+                    gridTemplateColumns: '66.5% 33%',
+                    gridTemplateRows: 'auto auto',
+                    gap: '4px',
+                  }
+                : comp.combination_mode === 'bisect_2'
+                ? {
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: '4px',
+                  }
+                : comp.combination_mode === 'bisect_4'
+                ? {
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gridTemplateRows: 'repeat(2, 1fr)',
+                    gap: '4px',
+                  }
+                : comp.combination_mode === 'bisect_6'
+                ? {
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gridTemplateRows: 'repeat(3, 1fr)',
+                    gap: '4px',
+                  }
+                : comp.combination_mode === 'trisect_3'
+                ? {
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gap: '4px',
+                  }
+                : comp.combination_mode === 'trisect_6'
+                ? {
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gridTemplateRows: 'repeat(2, 1fr)',
+                    gap: '4px',
+                  }
+                : comp.combination_mode === 'trisect_9'
+                ? {
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gridTemplateRows: 'repeat(3, 1fr)',
+                    gap: '4px',
+                  }
+                : {
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: '4px',
+                  }),
             }}
           >
             {(comp.img_list || []).length > 0 ? (
-              (comp.img_list || []).map((img: any, imgIndex: number) => (
-                <img
-                  key={`img-${component.id}-${imgIndex}`}
-                  src={img.img_url || '/demo.png'}
-                  alt={`图片${imgIndex + 1}`}
-                  style={{
-                    width: '100%',
-                    height: '100px',
-                    objectFit: 'cover',
-                    borderRadius: '4px',
-                    border: '1px solid #f0f0f0',
-                  }}
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/demo.png';
-                  }}
-                />
-              ))
+              (comp.img_list || []).map((img: any, imgIndex: number) => {
+                // 特殊模式的样式处理
+                let imageStyle: React.CSSProperties = {
+                  height: '100px',
+                  objectFit: 'cover',
+                  borderRadius: '4px',
+                  border: '1px solid #f0f0f0',
+                };
+
+                if (comp.combination_mode === 'double') {
+                  imageStyle.width =
+                    imgIndex === 0 ? '33.4%' : 'calc(100% - 33.4% - 4px)';
+                } else if (comp.combination_mode === 'triple') {
+                  if (imgIndex === 0) {
+                    imageStyle.width = '100%';
+                    imageStyle.height = '200px';
+                    imageStyle.gridRow = '1 / 3'; // 左边大图占据两行
+                  } else {
+                    imageStyle.width = '100%';
+                    imageStyle.height = '98px';
+                  }
+                } else if (comp.combination_mode?.startsWith('bisect_')) {
+                  imageStyle.width = 'calc(50% - 2px)';
+                } else if (comp.combination_mode?.startsWith('trisect_')) {
+                  imageStyle.width = 'calc(33.33% - 2.67px)';
+                } else {
+                  imageStyle.width = '100%';
+                }
+
+                return (
+                  <img
+                    key={`img-${component.id}-${imgIndex}`}
+                    src={img.img_url || '/demo.png'}
+                    alt={`图片${imgIndex + 1}`}
+                    style={imageStyle}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/demo.png';
+                    }}
+                  />
+                );
+              })
             ) : (
               <div
                 style={{

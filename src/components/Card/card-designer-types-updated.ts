@@ -180,7 +180,15 @@ export interface RichTextComponent extends ComponentBase {
 
 export interface ImageCombinationComponent extends ComponentBase {
   tag: 'img_combination';
-  combination_mode: 'trisect' | 'bisect' | 'quad';
+  combination_mode:
+    | 'double' // 双图模式（左小右大）
+    | 'triple' // 三图模式（左1右2）
+    | 'bisect_2' // 等分双列：2图（1行2列）
+    | 'bisect_4' // 等分双列：4图（2行2列）
+    | 'bisect_6' // 等分双列：6图（3行2列）
+    | 'trisect_3' // 等分三列：3图（1行3列）
+    | 'trisect_6' // 等分三列：6图（2行3列）
+    | 'trisect_9'; // 等分三列：9图（3行3列）
   combination_transparent?: boolean;
   img_list: Array<{
     img_url: string;
