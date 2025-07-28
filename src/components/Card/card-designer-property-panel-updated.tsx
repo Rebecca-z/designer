@@ -2598,39 +2598,62 @@ export const PropertyPanel: React.FC<{
                                     return (
                                       <div
                                         style={{
-                                          width: '16px',
-                                          height: '16px',
-                                          display: 'grid',
-                                          gridTemplateColumns: '1fr 1fr',
+                                          width: '20px',
+                                          height: '20px',
+                                          display: 'flex',
+                                          flexDirection: 'column',
                                           gap: '1px',
                                           margin: '0 auto 4px',
-                                          backgroundColor: '#1890ff',
                                         }}
                                       >
                                         <div
                                           style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: '1px',
+                                            display: 'flex',
+                                            gap: '1px',
+                                            height: '9.5px',
                                           }}
-                                        />
+                                        >
+                                          <div
+                                            style={{
+                                              width: '9.5px',
+                                              height: '9.5px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                          <div
+                                            style={{
+                                              width: '9.5px',
+                                              height: '9.5px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                        </div>
                                         <div
                                           style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: '1px',
+                                            display: 'flex',
+                                            gap: '1px',
+                                            height: '9.5px',
                                           }}
-                                        />
-                                        <div
-                                          style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: '1px',
-                                          }}
-                                        />
-                                        <div
-                                          style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: '1px',
-                                          }}
-                                        />
+                                        >
+                                          <div
+                                            style={{
+                                              width: '9.5px',
+                                              height: '9.5px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                          <div
+                                            style={{
+                                              width: '9.5px',
+                                              height: '9.5px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                        </div>
                                       </div>
                                     );
                                   case 'bisect_6':
@@ -2639,49 +2662,84 @@ export const PropertyPanel: React.FC<{
                                         style={{
                                           width: '16px',
                                           height: '24px',
-                                          display: 'grid',
-                                          gridTemplateColumns: '1fr 1fr',
+                                          display: 'flex',
+                                          flexDirection: 'column',
                                           gap: '1px',
                                           margin: '0 auto 4px',
-                                          backgroundColor: '#1890ff',
                                         }}
                                       >
                                         <div
                                           style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: '1px',
+                                            display: 'flex',
+                                            gap: '1px',
+                                            height: '7.33px',
                                           }}
-                                        />
+                                        >
+                                          <div
+                                            style={{
+                                              width: '7.5px',
+                                              height: '7.33px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                          <div
+                                            style={{
+                                              width: '7.5px',
+                                              height: '7.33px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                        </div>
                                         <div
                                           style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: '1px',
+                                            display: 'flex',
+                                            gap: '1px',
+                                            height: '7.33px',
                                           }}
-                                        />
+                                        >
+                                          <div
+                                            style={{
+                                              width: '7.5px',
+                                              height: '7.33px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                          <div
+                                            style={{
+                                              width: '7.5px',
+                                              height: '7.33px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                        </div>
                                         <div
                                           style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: '1px',
+                                            display: 'flex',
+                                            gap: '1px',
+                                            height: '7.33px',
                                           }}
-                                        />
-                                        <div
-                                          style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: '1px',
-                                          }}
-                                        />
-                                        <div
-                                          style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: '1px',
-                                          }}
-                                        />
-                                        <div
-                                          style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: '1px',
-                                          }}
-                                        />
+                                        >
+                                          <div
+                                            style={{
+                                              width: '7.5px',
+                                              height: '7.33px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                          <div
+                                            style={{
+                                              width: '7.5px',
+                                              height: '7.33px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                        </div>
                                       </div>
                                     );
                                   case 'trisect_3':
@@ -2690,28 +2748,32 @@ export const PropertyPanel: React.FC<{
                                         style={{
                                           width: '24px',
                                           height: '8px',
-                                          display: 'grid',
-                                          gridTemplateColumns: '1fr 1fr 1fr',
+                                          display: 'flex',
                                           gap: '1px',
                                           margin: '0 auto 4px',
-                                          backgroundColor: '#1890ff',
                                         }}
                                       >
                                         <div
                                           style={{
-                                            backgroundColor: '#fff',
+                                            width: '7.33px',
+                                            height: '8px',
+                                            backgroundColor: '#1890ff',
                                             borderRadius: '1px',
                                           }}
                                         />
                                         <div
                                           style={{
-                                            backgroundColor: '#fff',
+                                            width: '7.33px',
+                                            height: '8px',
+                                            backgroundColor: '#1890ff',
                                             borderRadius: '1px',
                                           }}
                                         />
                                         <div
                                           style={{
-                                            backgroundColor: '#fff',
+                                            width: '7.33px',
+                                            height: '8px',
+                                            backgroundColor: '#1890ff',
                                             borderRadius: '1px',
                                           }}
                                         />
@@ -2723,49 +2785,76 @@ export const PropertyPanel: React.FC<{
                                         style={{
                                           width: '24px',
                                           height: '16px',
-                                          display: 'grid',
-                                          gridTemplateColumns: '1fr 1fr 1fr',
+                                          display: 'flex',
+                                          flexDirection: 'column',
                                           gap: '1px',
                                           margin: '0 auto 4px',
-                                          backgroundColor: '#1890ff',
                                         }}
                                       >
                                         <div
                                           style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: '1px',
+                                            display: 'flex',
+                                            gap: '1px',
+                                            height: '7.5px',
                                           }}
-                                        />
+                                        >
+                                          <div
+                                            style={{
+                                              width: '7.33px',
+                                              height: '7.5px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                          <div
+                                            style={{
+                                              width: '7.33px',
+                                              height: '7.5px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                          <div
+                                            style={{
+                                              width: '7.33px',
+                                              height: '7.5px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                        </div>
                                         <div
                                           style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: '1px',
+                                            display: 'flex',
+                                            gap: '1px',
+                                            height: '7.5px',
                                           }}
-                                        />
-                                        <div
-                                          style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: '1px',
-                                          }}
-                                        />
-                                        <div
-                                          style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: '1px',
-                                          }}
-                                        />
-                                        <div
-                                          style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: '1px',
-                                          }}
-                                        />
-                                        <div
-                                          style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: '1px',
-                                          }}
-                                        />
+                                        >
+                                          <div
+                                            style={{
+                                              width: '7.33px',
+                                              height: '7.5px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                          <div
+                                            style={{
+                                              width: '7.33px',
+                                              height: '7.5px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                          <div
+                                            style={{
+                                              width: '7.33px',
+                                              height: '7.5px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                        </div>
                                       </div>
                                     );
                                   case 'trisect_9':
@@ -2774,67 +2863,108 @@ export const PropertyPanel: React.FC<{
                                         style={{
                                           width: '18px',
                                           height: '18px',
-                                          display: 'grid',
-                                          gridTemplateColumns: '1fr 1fr 1fr',
+                                          display: 'flex',
+                                          flexDirection: 'column',
                                           gap: '1px',
                                           margin: '0 auto 4px',
-                                          backgroundColor: '#1890ff',
                                         }}
                                       >
                                         <div
                                           style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: '1px',
+                                            display: 'flex',
+                                            gap: '1px',
+                                            height: '5.33px',
                                           }}
-                                        />
+                                        >
+                                          <div
+                                            style={{
+                                              width: '5.33px',
+                                              height: '5.33px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                          <div
+                                            style={{
+                                              width: '5.33px',
+                                              height: '5.33px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                          <div
+                                            style={{
+                                              width: '5.33px',
+                                              height: '5.33px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                        </div>
                                         <div
                                           style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: '1px',
+                                            display: 'flex',
+                                            gap: '1px',
+                                            height: '5.33px',
                                           }}
-                                        />
+                                        >
+                                          <div
+                                            style={{
+                                              width: '5.33px',
+                                              height: '5.33px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                          <div
+                                            style={{
+                                              width: '5.33px',
+                                              height: '5.33px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                          <div
+                                            style={{
+                                              width: '5.33px',
+                                              height: '5.33px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                        </div>
                                         <div
                                           style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: '1px',
+                                            display: 'flex',
+                                            gap: '1px',
+                                            height: '5.33px',
                                           }}
-                                        />
-                                        <div
-                                          style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: '1px',
-                                          }}
-                                        />
-                                        <div
-                                          style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: '1px',
-                                          }}
-                                        />
-                                        <div
-                                          style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: '1px',
-                                          }}
-                                        />
-                                        <div
-                                          style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: '1px',
-                                          }}
-                                        />
-                                        <div
-                                          style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: '1px',
-                                          }}
-                                        />
-                                        <div
-                                          style={{
-                                            backgroundColor: '#fff',
-                                            borderRadius: '1px',
-                                          }}
-                                        />
+                                        >
+                                          <div
+                                            style={{
+                                              width: '5.33px',
+                                              height: '5.33px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                          <div
+                                            style={{
+                                              width: '5.33px',
+                                              height: '5.33px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                          <div
+                                            style={{
+                                              width: '5.33px',
+                                              height: '5.33px',
+                                              backgroundColor: '#1890ff',
+                                              borderRadius: '1px',
+                                            }}
+                                          />
+                                        </div>
                                       </div>
                                     );
                                   default:
