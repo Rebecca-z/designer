@@ -501,7 +501,7 @@ const ContainerSortableItem: React.FC<{
         position: 'relative',
         transition: 'all 0.15s ease', // 减少过渡时间，提高响应速度
         cursor: component.tag === 'title' ? 'default' : 'grab',
-        marginBottom: '8px',
+        // marginBottom: '8px',
       }}
       onClick={handleContainerSortableClick}
       data-container-sortable-item="true"
@@ -1352,7 +1352,7 @@ const SmartDropZone: React.FC<{
           style={{
             fontSize: '10px',
             color: '#999',
-            marginBottom: hasContent ? '4px' : '4px',
+            // marginBottom: hasContent ? '4px' : '4px',
             textAlign: 'center',
             fontWeight: 'normal',
             padding: '2px 4px',
@@ -1771,7 +1771,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         return (
           <div
             key={`${element.id}-${elementIndex}-${childPath.join('-')}`}
-            style={{ marginBottom: '8px' }}
+            // style={{ marginBottom: '8px' }}
           >
             {selectableWrapper}
           </div>
@@ -2139,7 +2139,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       const richTextContent = (
         <div
           style={{
-            marginBottom: '12px',
+            // marginBottom: '12px',
             border:
               isCurrentSelected && !isPreview
                 ? '2px solid #1890ff'
@@ -2259,7 +2259,8 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             style={{
               margin: '0',
               borderColor: isCurrentSelected ? '#1890ff' : '#d9d9d9',
-              borderWidth: isCurrentSelected ? '2px' : '2px',
+              // borderWidth: isCurrentSelected ? '2px' : '2px',
+              borderWidth: '1px',
               borderStyle: borderStyle, // 应用动态边框样式
               transition: 'all 0.2s ease',
             }}
@@ -2413,7 +2414,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       const inputContent = (
         <div
           style={{
-            marginBottom: '12px',
+            // marginBottom: '12px',
             border:
               isCurrentSelected && !isPreview
                 ? '2px solid #1890ff'
@@ -2475,7 +2476,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       const buttonContent = (
         <div
           style={{
-            marginBottom: '12px',
+            // marginBottom: '12px',
             border:
               isCurrentSelected && !isPreview
                 ? '2px solid #1890ff'
@@ -2537,7 +2538,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       const selectContent = (
         <div
           style={{
-            marginBottom: '12px',
+            // marginBottom: '12px',
             border:
               isCurrentSelected && !isPreview
                 ? '2px solid #1890ff'
@@ -2604,7 +2605,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       const multiSelectContent = (
         <div
           style={{
-            marginBottom: '12px',
+            // marginBottom: '12px',
             border:
               isCurrentSelected && !isPreview
                 ? '2px solid #1890ff'
@@ -2691,7 +2692,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         >
           <div
             style={{
-              marginBottom: '12px',
+              // marginBottom: '12px',
               fontWeight: 'bold',
               color: '#495057',
               fontSize: '14px',
