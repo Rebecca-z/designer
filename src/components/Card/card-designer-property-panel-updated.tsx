@@ -1842,11 +1842,14 @@ export const PropertyPanel: React.FC<{
     const isTextComponent =
       selectedComponent &&
       (selectedComponent.tag === 'plain_text' ||
-        selectedComponent.tag === 'rich_text');
+        selectedComponent.tag === 'rich_text') &&
+      currentComponent;
 
     // 检查是否选中了输入框组件
     const isInputComponent =
-      selectedComponent && selectedComponent.tag === 'input';
+      selectedComponent &&
+      selectedComponent.tag === 'input' &&
+      currentComponent;
 
     // 如果选中了输入框组件，显示输入框编辑界面
     if (isInputComponent) {
@@ -2174,7 +2177,8 @@ export const PropertyPanel: React.FC<{
     const isSelectComponent =
       selectedComponent &&
       (selectedComponent.tag === 'select_static' ||
-        selectedComponent.tag === 'multi_select_static');
+        selectedComponent.tag === 'multi_select_static') &&
+      currentComponent;
 
     // 如果选中了下拉组件，显示下拉编辑界面
     if (isSelectComponent) {
@@ -2385,11 +2389,25 @@ export const PropertyPanel: React.FC<{
 
     // 检查是否选中了图片组件
     const isImageComponent =
-      selectedComponent && selectedComponent.tag === 'img';
+      selectedComponent && selectedComponent.tag === 'img' && currentComponent;
 
     // 如果选中了图片组件，显示图片编辑界面
     if (isImageComponent) {
       const imageComponent = currentComponent as any;
+
+      // 添加空值检查，防止删除组件时的报错
+      if (!imageComponent) {
+        console.warn('⚠️ 图片组件数据为空，可能已被删除');
+        return (
+          <div style={{ padding: '16px', textAlign: 'center', color: '#999' }}>
+            <div style={{ fontSize: '14px', marginBottom: '8px' }}>
+              🔄 组件数据正在更新...
+            </div>
+            <div style={{ fontSize: '12px' }}>请重新选择组件</div>
+          </div>
+        );
+      }
+
       const imgSource = imageComponent.img_source || 'upload';
       const cropMode = imageComponent.crop_mode || 'default';
 

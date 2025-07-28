@@ -44,7 +44,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
       case 'image':
         return JSON.stringify(
           {
-            img_key: 'img_v2_9dd98485-2900-4d65-ada9-e31d1408dcfg',
+            img_url: 'img_v2_9dd98485-2900-4d65-ada9-e31d1408dcfg',
           },
           null,
           2,
@@ -103,7 +103,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         // 尝试判断是图片还是数组
         try {
           const parsed = JSON.parse(editingVariable?.value || '{}');
-          if (parsed.img_key) {
+          if (parsed.img_url) {
             return 'image';
           } else if (Array.isArray(parsed)) {
             return 'array';
