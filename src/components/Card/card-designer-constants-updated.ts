@@ -87,10 +87,10 @@ export const DEFAULT_CARD_DATA: CardDesignData = {
     config: {},
     card_link: {
       multi_url: {
-        url: 'http://www.baidu.com',
-        android_url: 'http://www.baidu.com',
-        ios_url: 'http://www.baidu.com',
-        pc_url: 'http://www.baidu.com',
+        url: '',
+        android_url: '',
+        ios_url: '',
+        pc_url: '',
       },
     },
     // 移除默认的header，只有当用户添加标题组件时才创建

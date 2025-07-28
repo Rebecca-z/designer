@@ -3094,6 +3094,97 @@ export const PropertyPanel: React.FC<{
     );
   };
 
+  // 渲染卡片链接事件配置
+  const renderCardLinkEvents = () => {
+    // 获取当前卡片链接数据，使用类型断言避免类型错误
+    const cardLink = (cardData as any)?.dsl?.card_link || {};
+    const multiUrl = cardLink.multi_url || {};
+
+    console.log('🔗 卡片链接配置渲染:', {
+      cardData: cardData,
+      cardLink: cardLink,
+      multiUrl: multiUrl,
+      hasCardData: !!cardData,
+    });
+
+    // 更新卡片链接数据的函数
+    const updateCardLink = (field: string, value: string) => {
+      if (!cardData) {
+        console.warn('⚠️ cardData不存在，无法更新卡片链接');
+        return;
+      }
+
+      console.log('🔄 更新卡片链接:', {
+        field,
+        value,
+        oldValue: multiUrl[field],
+        currentCardLink: cardLink,
+        currentMultiUrl: multiUrl,
+      });
+
+      const updatedCardData = {
+        ...cardData,
+        dsl: {
+          ...(cardData as any).dsl,
+          card_link: {
+            ...cardLink,
+            multi_url: {
+              ...multiUrl,
+              [field]: value,
+            },
+          },
+        },
+      };
+
+      console.log('📝 更新后的卡片数据:', {
+        field,
+        value,
+        updatedCardLink: updatedCardData.dsl.card_link,
+        updatedMultiUrl: updatedCardData.dsl.card_link.multi_url,
+      });
+
+      onUpdateCard({ cardData: updatedCardData });
+    };
+
+    return (
+      <div style={{ padding: '16px' }}>
+        <Form layout="vertical">
+          <Form.Item label="url">
+            <Input
+              value={multiUrl.url || ''}
+              onChange={(e) => updateCardLink('url', e.target.value)}
+              placeholder="请输入通用链接"
+            />
+          </Form.Item>
+
+          <Form.Item label="android_url">
+            <Input
+              value={multiUrl.android_url || ''}
+              onChange={(e) => updateCardLink('android_url', e.target.value)}
+              placeholder="请输入Android链接"
+            />
+          </Form.Item>
+
+          <Form.Item label="ios_url">
+            <Input
+              value={multiUrl.ios_url || ''}
+              onChange={(e) => updateCardLink('ios_url', e.target.value)}
+              placeholder="请输入iOS链接"
+            />
+          </Form.Item>
+
+          <Form.Item label="pc_url">
+            <Input
+              value={multiUrl.pc_url || ''}
+              onChange={(e) => updateCardLink('pc_url', e.target.value)}
+              placeholder="请输入PC链接"
+            />
+          </Form.Item>
+        </Form>
+      </div>
+    );
+  };
+
   const renderEvents = () => {
     if (!currentComponent && !isCardSelected) {
       return (
@@ -3109,6 +3200,11 @@ export const PropertyPanel: React.FC<{
           </div>
         </div>
       );
+    }
+
+    // 如果选中了卡片，显示卡片链接配置
+    if (isCardSelected) {
+      return renderCardLinkEvents();
     }
 
     // 如果不是交互组件，显示禁用状态
@@ -3319,7 +3415,7 @@ export const PropertyPanel: React.FC<{
                   事件
                 </span>
               ),
-              disabled: isCardSelected || !isInteractiveComponent,
+              disabled: !isInteractiveComponent && !isCardSelected, // 修改：卡片选中时允许访问事件配置
               children: (
                 <div
                   style={{ height: 'calc(100vh - 180px)', overflow: 'auto' }}
