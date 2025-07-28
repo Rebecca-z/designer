@@ -8,6 +8,7 @@ import {
   PlusOutlined,
   SettingOutlined,
   ThunderboltOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import {
   Button,
@@ -2455,9 +2456,9 @@ export const PropertyPanel: React.FC<{
                                   i++
                                 ) {
                                   newImageList.push({
-                                    img_url: '/demo.png',
+                                    img_url: 'demo.png',
                                     i18n_img_url: {
-                                      'en-US': '/demo.png',
+                                      'en-US': 'demo.png',
                                     },
                                   });
                                 }
@@ -3058,36 +3059,161 @@ export const PropertyPanel: React.FC<{
                         张
                       </Text>
                     </div>
-                    {/* 图片列表预览 */}
-                    <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(3, 1fr)',
-                        gap: '4px',
-                        marginTop: '8px',
-                      }}
-                    >
-                      {(imgCombComponent.img_list || []).map(
-                        (img: any, index: number) => (
-                          <div
-                            key={index}
-                            style={{
-                              aspectRatio: '1',
-                              backgroundColor: '#f5f5f5',
-                              border: '1px solid #d9d9d9',
-                              borderRadius: '4px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '10px',
-                              color: '#666',
-                            }}
-                          >
-                            图{index + 1}
-                          </div>
-                        ),
-                      )}
-                    </div>
+                    {/* 所有混排模式都显示详细的图片管理界面 */}
+                    {true ? (
+                      // 所有混排模式 - 详细的图片管理
+                      <div style={{ marginTop: '12px' }}>
+                        {(imgCombComponent.img_list || []).map(
+                          (img: any, index: number) => (
+                            <div
+                              key={index}
+                              style={{
+                                marginBottom: '16px',
+                                padding: '12px',
+                                backgroundColor: '#fafafa',
+                                borderRadius: '6px',
+                                border: '1px solid #f0f0f0',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  marginBottom: '8px',
+                                  fontSize: '13px',
+                                  fontWeight: 600,
+                                  color: '#333',
+                                }}
+                              >
+                                图片{index + 1}
+                              </div>
+
+                              {/* 图片路径输入框 */}
+                              <div style={{ marginBottom: '8px' }}>
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                  }}
+                                >
+                                  <Input
+                                    value={img.img_url || ''}
+                                    disabled={
+                                      imgCombComponent.combination_mode ===
+                                        'double' ||
+                                      imgCombComponent.combination_mode ===
+                                        'triple' ||
+                                      imgCombComponent.combination_mode ===
+                                        'bisect_2' ||
+                                      imgCombComponent.combination_mode ===
+                                        'trisect_3'
+                                    }
+                                    onChange={(e) => {
+                                      const newImgList = [
+                                        ...(imgCombComponent.img_list || []),
+                                      ];
+                                      const newValue = e.target.value.trim();
+                                      newImgList[index] = {
+                                        ...newImgList[index],
+                                        img_url: newValue || '',
+                                        i18n_img_url: {
+                                          ...newImgList[index]?.i18n_img_url,
+                                          'en-US': newValue || '',
+                                        },
+                                      };
+                                      const updatedComponent = {
+                                        ...currentComponent,
+                                        img_list: newImgList,
+                                      };
+                                      onUpdateComponent(updatedComponent);
+                                    }}
+                                    placeholder={
+                                      imgCombComponent.combination_mode ===
+                                        'double' ||
+                                      imgCombComponent.combination_mode ===
+                                        'triple' ||
+                                      imgCombComponent.combination_mode ===
+                                        'bisect_2' ||
+                                      imgCombComponent.combination_mode ===
+                                        'trisect_3'
+                                        ? '只能通过上传替换图片'
+                                        : `请输入图片${index + 1}路径`
+                                    }
+                                    style={{ fontSize: '12px', flex: 1 }}
+                                  />
+
+                                  {/* 上传图标按钮 */}
+                                  <Upload
+                                    showUploadList={false}
+                                    beforeUpload={(file) => {
+                                      const reader = new FileReader();
+                                      reader.onload = (e) => {
+                                        const imageUrl = e.target
+                                          ?.result as string;
+                                        if (imageUrl) {
+                                          // 更新指定索引的图片
+                                          const newImgList = [
+                                            ...(imgCombComponent.img_list ||
+                                              []),
+                                          ];
+                                          newImgList[index] = {
+                                            ...newImgList[index],
+                                            img_url: imageUrl,
+                                            i18n_img_url: {
+                                              'en-US': imageUrl,
+                                              ...(newImgList[index]
+                                                ?.i18n_img_url || {}),
+                                            },
+                                          };
+
+                                          const updatedComponent = {
+                                            ...currentComponent,
+                                            img_list: newImgList,
+                                          };
+
+                                          console.log(
+                                            `🖼️ 上传图片${index + 1}:`,
+                                            {
+                                              fileName: file.name,
+                                              imageUrl:
+                                                imageUrl.substring(0, 50) +
+                                                '...',
+                                              component: updatedComponent,
+                                            },
+                                          );
+
+                                          onUpdateComponent(updatedComponent);
+                                          message.success(
+                                            `图片${index + 1}上传成功`,
+                                          );
+                                        }
+                                      };
+                                      reader.readAsDataURL(file);
+                                      return false; // 阻止默认上传行为
+                                    }}
+                                    accept="image/*"
+                                  >
+                                    <Button
+                                      type="text"
+                                      icon={<UploadOutlined />}
+                                      size="small"
+                                      style={{
+                                        color: '#666',
+                                        border: 'none',
+                                        boxShadow: 'none',
+                                        padding: '4px',
+                                        minWidth: 'auto',
+                                        height: 'auto',
+                                      }}
+                                      title="上传图片"
+                                    />
+                                  </Upload>
+                                </div>
+                              </div>
+                            </div>
+                          ),
+                        )}
+                      </div>
+                    ) : null}
                   </div>
                 ),
               },

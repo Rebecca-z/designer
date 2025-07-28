@@ -720,24 +720,23 @@ export const createDefaultComponent = (type: string): ComponentType => {
         id: generateId(),
         tag: 'img_combination',
         combination_mode: 'triple',
-        combination_transparent: true,
         img_list: [
           {
-            img_url: '/demo.png',
+            img_url: 'demo.png',
             i18n_img_url: {
-              'en-US': '/demo.png',
+              'en-US': 'demo.png',
             },
           },
           {
-            img_url: '/demo.png',
+            img_url: 'demo.png',
             i18n_img_url: {
-              'en-US': '/demo.png',
+              'en-US': 'demo.png',
             },
           },
           {
-            img_url: '/demo.png',
+            img_url: 'demo.png',
             i18n_img_url: {
-              'en-US': '/demo.png',
+              'en-US': 'demo.png',
             },
           },
         ],
@@ -1357,7 +1356,6 @@ export const convertToTargetFormat = (data: any): any => {
 
       case 'img_combination':
         converted.combination_mode = component.combination_mode;
-        converted.combination_transparent = component.combination_transparent;
         converted.img_list = component.img_list;
         break;
 

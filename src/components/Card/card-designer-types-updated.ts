@@ -189,7 +189,6 @@ export interface ImageCombinationComponent extends ComponentBase {
     | 'trisect_3' // 等分三列：3图（1行3列）
     | 'trisect_6' // 等分三列：6图（2行3列）
     | 'trisect_9'; // 等分三列：9图（3行3列）
-  combination_transparent?: boolean;
   img_list: Array<{
     img_url: string;
     i18n_img_url?: { [key: string]: string };

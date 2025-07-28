@@ -2786,14 +2786,68 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                   imageStyle.width = '100%';
                 }
 
-                return (
+                // 检查是否为空图片状态 (路径为空或空字符串)
+                const isEmpty = !img.img_url || img.img_url === '';
+
+                return isEmpty ? (
+                  // 空状态显示
+                  <div
+                    key={`empty-${component.id}-${imgIndex}`}
+                    style={{
+                      ...imageStyle,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: '#fafafa',
+                      border: '1px dashed #d9d9d9',
+                      color: '#999',
+                      fontSize: '12px',
+                      gap: '8px',
+                    }}
+                  >
+                    <div style={{ fontSize: '24px', opacity: 0.5 }}>📷</div>
+                    <div>请上传图片</div>
+                  </div>
+                ) : (
+                  // 正常图片显示
                   <img
                     key={`img-${component.id}-${imgIndex}`}
-                    src={img.img_url || '/demo.png'}
+                    src={img.img_url}
                     alt={`图片${imgIndex + 1}`}
                     style={imageStyle}
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/demo.png';
+                      // 图片加载失败时显示空状态
+                      const target = e.target as HTMLImageElement;
+                      const parent = target.parentElement;
+                      if (parent) {
+                        parent.innerHTML = `
+                          <div style="
+                            ${Object.entries({
+                              ...imageStyle,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              backgroundColor: '#fafafa',
+                              border: '1px dashed #d9d9d9',
+                              color: '#999',
+                              fontSize: '12px',
+                              gap: '8px',
+                            })
+                              .map(
+                                ([key, value]) =>
+                                  `${key
+                                    .replace(/([A-Z])/g, '-$1')
+                                    .toLowerCase()}: ${value}`,
+                              )
+                              .join('; ')}
+                          ">
+                            <div style="font-size: 24px; opacity: 0.5;">📷</div>
+                            <div>图片加载失败</div>
+                          </div>
+                        `;
+                      }
                     }}
                   />
                 );
