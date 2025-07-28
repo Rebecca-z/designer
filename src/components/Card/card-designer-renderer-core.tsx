@@ -2283,11 +2283,58 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       // 检查当前组件是否被选中
       const isCurrentSelected = isSamePath(selectedPath, path);
 
+      // 获取图片URL，支持变量绑定
+      const getImageUrl = () => {
+        if (comp.img_source === 'variable' && comp.variable_name) {
+          // 这里可以从全局变量中获取图片URL
+          // 暂时返回默认图片，实际应用中需要从变量系统获取
+          return comp.img_url || '/demo.png';
+        }
+        return comp.img_url || '/demo.png';
+      };
+
+      // 获取裁剪方式对应的样式
+      const getCropStyle = () => {
+        const cropMode = comp.crop_mode || 'default';
+        const baseStyle: React.CSSProperties = {
+          borderRadius: '4px',
+          border: 'none', // 移除图片本身的边框，避免双边框
+        };
+
+        switch (cropMode) {
+          case 'top':
+            return {
+              ...baseStyle,
+              width: '100%',
+              height: '200px', // 固定高度，实现4:3比例
+              objectFit: 'cover' as const,
+              objectPosition: 'top', // 显示图片顶部
+            };
+          case 'center':
+            return {
+              ...baseStyle,
+              width: '100%',
+              height: '200px', // 固定高度，实现4:3比例
+              objectFit: 'cover' as const,
+              objectPosition: 'center', // 显示图片中心
+            };
+          case 'default':
+          default:
+            return {
+              ...baseStyle,
+              maxWidth: '100%',
+              height: 'auto',
+              width: comp.width ? `${comp.width}px` : 'auto',
+              maxHeight: comp.height ? `${comp.height}px` : '200px',
+              objectFit: 'contain' as const, // 完整展示图片
+            };
+        }
+      };
+
       const imgContent = (
         <div
           style={{
             textAlign: 'center',
-            // padding: '12px',
             backgroundColor: '#fff',
             border:
               isCurrentSelected && !isPreview
@@ -2299,24 +2346,37 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                 ? '0 0 8px rgba(24, 144, 255, 0.3)'
                 : 'none',
             transition: 'all 0.2s ease',
+            overflow: 'hidden', // 确保裁剪效果正常
+            position: 'relative', // 为绝对定位的标签提供定位上下文
           }}
         >
           <img
-            src={comp.img_url || '/demo.png'}
-            alt="图片"
-            style={{
-              maxWidth: '100%',
-              height: 'auto',
-              width: comp.width ? `${comp.width}px` : 'auto',
-              maxHeight: comp.height ? `${comp.height}px` : '200px',
-              objectFit: 'cover',
-              borderRadius: '4px',
-              border: 'none', // 移除图片本身的边框，避免双边框
-            }}
+            src={getImageUrl()}
+            alt={comp.img_name || '图片'}
+            style={getCropStyle()}
             onError={(e) => {
               (e.target as HTMLImageElement).src = '/demo.png';
             }}
           />
+          {/* 显示图片信息（仅在编辑模式下） */}
+          {!isPreview && isCurrentSelected && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '4px',
+                left: '4px',
+                backgroundColor: 'rgba(24, 144, 255, 0.8)',
+                color: 'white',
+                padding: '2px 6px',
+                borderRadius: '2px',
+                fontSize: '10px',
+                fontWeight: 'bold',
+              }}
+            >
+              {comp.img_source === 'variable' ? '🔗' : '📁'}
+              {comp.img_name || 'demo.png'}
+            </div>
+          )}
         </div>
       );
 

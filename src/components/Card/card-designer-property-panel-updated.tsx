@@ -25,8 +25,10 @@ import {
   Tabs,
   Tree,
   Typography,
+  Upload,
+  message,
 } from 'antd';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useDrag } from 'react-dnd';
 import AddVariableModal from './AddVariableModal';
 import {
@@ -732,6 +734,9 @@ export const PropertyPanel: React.FC<{
   });
   const [editingActionIndex, setEditingActionIndex] = useState(-1);
 
+  // 添加强制重新渲染状态
+  const [, forceUpdate] = useState(0);
+
   // 获取真实的组件和路径
   const { component: realComponent, realPath } = getComponentRealPath(
     cardData || DEFAULT_CARD_DATA,
@@ -747,6 +752,24 @@ export const PropertyPanel: React.FC<{
 
   // 总是使用从cardData中获取的真实组件数据
   const currentComponent = realComponent;
+
+  // 监听currentComponent变化，强制重新渲染
+  useEffect(() => {
+    if (currentComponent && currentComponent.tag === 'img') {
+      console.log('🖼️ 图片组件数据变化，强制更新UI:', {
+        componentId: (currentComponent as any).id,
+        img_source: (currentComponent as any).img_source,
+        img_name: (currentComponent as any).img_name,
+        variable_name: (currentComponent as any).variable_name,
+      });
+      forceUpdate((prev) => prev + 1);
+    }
+  }, [
+    currentComponent?.id,
+    (currentComponent as any)?.img_source,
+    (currentComponent as any)?.img_name,
+    (currentComponent as any)?.variable_name,
+  ]);
 
   // 添加调试日志
   console.log('🎯 属性面板数据检查:', {
@@ -2352,6 +2375,378 @@ export const PropertyPanel: React.FC<{
                       </div>
                     )}
                   </div>
+                ),
+              },
+            ]}
+          />
+        </div>
+      );
+    }
+
+    // 检查是否选中了图片组件
+    const isImageComponent =
+      selectedComponent && selectedComponent.tag === 'img';
+
+    // 如果选中了图片组件，显示图片编辑界面
+    if (isImageComponent) {
+      const imageComponent = currentComponent as any;
+      const imgSource = imageComponent.img_source || 'upload';
+      const cropMode = imageComponent.crop_mode || 'default';
+
+      // 添加调试信息
+      console.log('🖼️ 图片组件属性面板数据:', {
+        componentId: imageComponent.id,
+        imgSource,
+        img_name: imageComponent.img_name,
+        variable_name: imageComponent.variable_name,
+        cropMode,
+        fullComponent: imageComponent,
+      });
+
+      return (
+        <div style={{ padding: '16px' }}>
+          <div
+            style={{
+              marginBottom: '16px',
+              padding: '12px',
+              backgroundColor: '#f6ffed',
+              border: '1px solid #b7eb8f',
+              borderRadius: '6px',
+            }}
+          >
+            <Text style={{ fontSize: '12px', color: '#52c41a' }}>
+              🎯 当前选中：图片组件 (来源: {imgSource})
+            </Text>
+          </div>
+          <Collapse
+            defaultActiveKey={['source', 'display']}
+            ghost
+            items={[
+              {
+                key: 'source',
+                label: '📁 图片来源',
+                children: (
+                  <Form form={form} layout="vertical">
+                    <Form.Item label="图片来源">
+                      <Switch
+                        checked={imgSource === 'variable'}
+                        onChange={(checked) => {
+                          console.log('🔄 切换图片来源:', {
+                            checked,
+                            currentSource: imgSource,
+                            newSource: checked ? 'variable' : 'upload',
+                            componentId: imageComponent.id,
+                          });
+
+                          const newSource = checked ? 'variable' : 'upload';
+
+                          // 创建更新后的组件
+                          const updatedComponent = {
+                            ...currentComponent,
+                            img_source: newSource,
+                            // 清除相关字段
+                            ...(checked
+                              ? { img_name: undefined }
+                              : { variable_name: undefined }),
+                          } as any;
+
+                          console.log('🔄 Switch更新组件:', {
+                            componentId: (updatedComponent as any).id,
+                            newSource,
+                            updatedFields: checked
+                              ? { img_source: newSource, img_name: undefined }
+                              : {
+                                  img_source: newSource,
+                                  variable_name: undefined,
+                                },
+                          });
+
+                          onUpdateComponent(updatedComponent);
+
+                          // 强制UI更新
+                          setTimeout(() => {
+                            forceUpdate((prev) => prev + 1);
+                          }, 50);
+                        }}
+                        checkedChildren="绑定变量"
+                        unCheckedChildren="文件"
+                      />
+                      {/* 显示当前状态调试信息 */}
+                      <div
+                        style={{
+                          fontSize: '12px',
+                          color: '#666',
+                          marginTop: '4px',
+                        }}
+                      >
+                        当前模式:{' '}
+                        {imgSource === 'variable'
+                          ? '🔗 变量绑定'
+                          : '📁 文件上传'}
+                      </div>
+                    </Form.Item>
+
+                    {imgSource === 'upload' && (
+                      <>
+                        <Form.Item label="图片Key">
+                          <Input
+                            value={imageComponent.img_name || ''}
+                            onChange={(e) => {
+                              handleValueChange('img_name', e.target.value);
+                            }}
+                            placeholder="请输入图片Key名称"
+                            addonAfter={
+                              <Upload
+                                accept="image/*"
+                                showUploadList={false}
+                                beforeUpload={(file) => {
+                                  console.log('📤 开始上传图片:', {
+                                    fileName: file.name,
+                                    fileSize: file.size,
+                                    fileType: file.type,
+                                    componentId: imageComponent.id,
+                                  });
+
+                                  // 处理文件上传逻辑
+                                  const reader = new FileReader();
+                                  reader.onload = (e) => {
+                                    const dataUrl = e.target?.result as string;
+                                    console.log('📷 图片读取完成:', {
+                                      fileName: file.name,
+                                      dataUrlLength: dataUrl.length,
+                                      componentId: imageComponent.id,
+                                    });
+
+                                    // 批量更新图片属性
+                                    const updatedComponent = {
+                                      ...currentComponent,
+                                      img_url: dataUrl,
+                                      img_name: file.name,
+                                    } as any;
+
+                                    console.log('🔄 批量更新图片组件:', {
+                                      componentId: (updatedComponent as any).id,
+                                      img_url: dataUrl.substring(0, 50) + '...',
+                                      img_name: file.name,
+                                      oldImgUrl:
+                                        imageComponent.img_url?.substring(
+                                          0,
+                                          50,
+                                        ) + '...',
+                                      oldImgName: imageComponent.img_name,
+                                    });
+
+                                    onUpdateComponent(updatedComponent);
+
+                                    // 强制UI更新
+                                    setTimeout(() => {
+                                      forceUpdate((prev) => prev + 1);
+                                    }, 100);
+                                  };
+
+                                  reader.onerror = (error) => {
+                                    console.error('❌ 图片读取失败:', error);
+                                    message.error('图片读取失败，请重试');
+                                  };
+
+                                  reader.readAsDataURL(file);
+                                  return false; // 阻止自动上传
+                                }}
+                              >
+                                <Button size="small" type="primary">
+                                  上传
+                                </Button>
+                              </Upload>
+                            }
+                          />
+                        </Form.Item>
+                      </>
+                    )}
+
+                    {imgSource === 'variable' && (
+                      <Form.Item label="绑定变量">
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <Select
+                            style={{ flex: 1 }}
+                            value={imageComponent.variable_name}
+                            onChange={(value) => {
+                              handleValueChange('variable_name', value);
+                              // 从变量中获取图片URL
+                              const selectedVariable = variables.find((v) => {
+                                if (typeof v === 'object' && v !== null) {
+                                  return Object.keys(v as any).includes(value);
+                                }
+                                return (v as any).name === value;
+                              });
+                              if (selectedVariable) {
+                                let imgUrl = '';
+                                if (
+                                  typeof selectedVariable === 'object' &&
+                                  selectedVariable !== null
+                                ) {
+                                  imgUrl = (selectedVariable as any)[value];
+                                } else {
+                                  imgUrl = (selectedVariable as any).value;
+                                }
+                                if (imgUrl) {
+                                  handleValueChange('img_url', imgUrl);
+                                }
+                              }
+                            }}
+                            placeholder="请选择变量"
+                            allowClear
+                          >
+                            {variables.map((variable, index) => {
+                              let variableName = '';
+                              if (
+                                typeof variable === 'object' &&
+                                variable !== null
+                              ) {
+                                const keys = Object.keys(variable as any);
+                                variableName =
+                                  keys.length > 0 ? keys[0] : '未命名变量';
+                              } else {
+                                variableName =
+                                  (variable as any).name || '未命名变量';
+                              }
+                              return (
+                                <Option
+                                  key={`${variableName}-${index}`}
+                                  value={variableName}
+                                >
+                                  {variableName}
+                                </Option>
+                              );
+                            })}
+                          </Select>
+                          <Button
+                            type="dashed"
+                            onClick={() => {
+                              setIsAddVariableModalVisible(true);
+                            }}
+                          >
+                            新增
+                          </Button>
+                        </div>
+                      </Form.Item>
+                    )}
+                  </Form>
+                ),
+              },
+              {
+                key: 'display',
+                label: '🎨 显示设置',
+                children: (
+                  <Form form={form} layout="vertical">
+                    <Form.Item label="裁剪方式">
+                      <Select
+                        value={cropMode}
+                        onChange={(value) => {
+                          handleValueChange('crop_mode', value);
+                        }}
+                        style={{ width: '100%' }}
+                      >
+                        <Option value="default">
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                            }}
+                          >
+                            <span>📐</span>
+                            <div>
+                              <div>完整展示</div>
+                              <div style={{ fontSize: '12px', color: '#999' }}>
+                                根据图片比例完整展示内容
+                              </div>
+                            </div>
+                          </div>
+                        </Option>
+                        <Option value="top">
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                            }}
+                          >
+                            <span>⬆️</span>
+                            <div>
+                              <div>顶部裁剪</div>
+                              <div style={{ fontSize: '12px', color: '#999' }}>
+                                4:3比例，显示图片顶部
+                              </div>
+                            </div>
+                          </div>
+                        </Option>
+                        <Option value="center">
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                            }}
+                          >
+                            <span>🎯</span>
+                            <div>
+                              <div>居中裁剪</div>
+                              <div style={{ fontSize: '12px', color: '#999' }}>
+                                4:3比例，显示图片中心
+                              </div>
+                            </div>
+                          </div>
+                        </Option>
+                      </Select>
+                    </Form.Item>
+
+                    <Form.Item label="尺寸设置">
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: '8px',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Input
+                          placeholder="宽度"
+                          value={imageComponent.width || ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            handleValueChange(
+                              'width',
+                              value ? parseInt(value) : undefined,
+                            );
+                          }}
+                          addonAfter="px"
+                          type="number"
+                        />
+                        <span>×</span>
+                        <Input
+                          placeholder="高度"
+                          value={imageComponent.height || ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            handleValueChange(
+                              'height',
+                              value ? parseInt(value) : undefined,
+                            );
+                          }}
+                          addonAfter="px"
+                          type="number"
+                        />
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '12px',
+                          color: '#999',
+                          marginTop: '4px',
+                        }}
+                      >
+                        留空则使用默认尺寸
+                      </div>
+                    </Form.Item>
+                  </Form>
                 ),
               },
             ]}

@@ -704,8 +704,9 @@ export const createDefaultComponent = (type: string): ComponentType => {
         id: generateId(),
         tag: 'img',
         img_url: '/demo.png', // 使用public目录下的demo.png文件
-        img_source: 'upload', // 新增：图片来源类型
-        img_name: 'demo.png', // 新增：图片名称
+        img_source: 'upload', // 默认使用文件上传
+        img_name: 'demo.png', // 默认图片名称
+        crop_mode: 'default', // 默认完整展示
         i18n_img_url: {
           'en-US': '/demo.png',
         },

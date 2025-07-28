@@ -142,8 +142,10 @@ export interface SelectComponent extends ComponentBase {
 export interface ImageComponent extends ComponentBase {
   tag: 'img';
   img_url: string;
-  img_source?: 'upload' | 'variable'; // 新增：图片来源类型
-  img_name?: string; // 新增：图片名称
+  img_source?: 'upload' | 'variable'; // 图片来源类型：文件上传 | 绑定变量
+  img_name?: string; // 图片名称/Key
+  variable_name?: string; // 绑定的变量名（当img_source为variable时）
+  crop_mode?: 'default' | 'top' | 'center'; // 裁剪方式：完整展示 | 顶部裁剪 | 居中裁剪
   width?: number;
   height?: number;
   i18n_img_url?: { [key: string]: string };
