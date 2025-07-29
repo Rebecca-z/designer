@@ -2101,30 +2101,45 @@ export const PropertyPanel: React.FC<{
       const getTextContent = () => {
         // 添加空值检查，防止删除组件时的报错
         if (!currentComponent) {
+          console.log('⚠️ getTextContent: 当前组件为空');
           return '';
         }
 
         if (isPlainText) {
-          return (currentComponent as any).content || '';
+          const content = (currentComponent as any).content || '';
+          console.log('📝 getTextContent (plain_text):', {
+            componentId: currentComponent.id,
+            content,
+          });
+          return content;
         } else if (isRichText) {
           const content = (currentComponent as any).content;
-          // 如果是JSON格式，直接返回；如果是字符串，也直接返回（向后兼容）
-          return (
-            content || {
-              type: 'doc',
-              content: [
-                {
-                  type: 'paragraph',
-                  content: [
-                    {
-                      type: 'text',
-                      text: '请输入富文本内容',
-                    },
-                  ],
-                },
-              ],
-            }
-          );
+          const defaultContent = {
+            type: 'doc',
+            content: [
+              {
+                type: 'paragraph',
+                content: [
+                  {
+                    type: 'text',
+                    text: '请输入富文本内容',
+                  },
+                ],
+              },
+            ],
+          };
+          const finalContent = content || defaultContent;
+
+          console.log('📝 getTextContent (rich_text):', {
+            componentId: currentComponent.id,
+            rawContent: content,
+            finalContent,
+            hasContent: !!content,
+            contentType: typeof content,
+            timestamp: new Date().toISOString(),
+          });
+
+          return finalContent;
         }
         return '';
       };
@@ -2185,6 +2200,9 @@ export const PropertyPanel: React.FC<{
                         if (isRichText) {
                           return (
                             <RichTextEditor
+                              key={`rich-text-${
+                                currentComponent?.id
+                              }-${selectedPath?.join('-')}`} // ✅ 修复：添加key确保组件重新渲染
                               value={getTextContent()}
                               onChange={updateTextContent}
                               placeholder="请输入富文本内容..."

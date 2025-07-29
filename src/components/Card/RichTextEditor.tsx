@@ -99,6 +99,37 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     },
   });
 
+  // ✅ 修复：监听value变化，更新编辑器内容
+  React.useEffect(() => {
+    if (editor && value !== undefined) {
+      // 获取当前编辑器的JSON内容
+      const currentContent = editor.getJSON();
+
+      // 比较新值和当前内容是否不同（避免不必要的更新）
+      const isSameContent =
+        JSON.stringify(currentContent) === JSON.stringify(value);
+
+      console.log('🔄 RichTextEditor value变化检查:', {
+        hasEditor: !!editor,
+        newValue: value,
+        currentContent,
+        isSameContent,
+        valueType: typeof value,
+        timestamp: new Date().toISOString(),
+      });
+
+      if (!isSameContent) {
+        console.log('✅ 更新富文本编辑器内容:', {
+          from: currentContent,
+          to: value,
+        });
+
+        // 使用setContent方法更新编辑器内容
+        editor.commands.setContent(value, { emitUpdate: false }); // 不触发onUpdate事件
+      }
+    }
+  }, [editor, value]);
+
   // 工具栏按钮样式
   const getButtonStyle = (isActive: boolean) => ({
     border: isActive ? '1px solid #1890ff' : '1px solid #d9d9d9',
