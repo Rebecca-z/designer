@@ -119,10 +119,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       {/* 右侧内容区域 */}
       <div
         style={{
-          flex: 1,
-          minWidth: 0,
+          // flex: 1,
+          // minWidth: 0,
           // 修复：确保内容区域能够正确显示
           boxSizing: 'border-box',
+          width: '680px',
         }}
       >
         {/* 用户名 */}

@@ -1489,6 +1489,76 @@ const SmartDropZone: React.FC<{
   );
 };
 
+const ImgRenderer: React.FC<{ item: any; style?: React.CSSProperties }> = (
+  props,
+) => {
+  return (
+    <>
+      {props.item.img_url ? (
+        <img
+          src={props.item.img_url}
+          onError={(e) => {
+            // 图片加载失败时显示空状态
+            const target = e.target as HTMLImageElement;
+            const parent = target.parentElement;
+            if (parent) {
+              parent.innerHTML = `
+                <div style="
+                  ${Object.entries({
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#fafafa',
+                    border: '1px dashed #d9d9d9',
+                    color: '#999',
+                    fontSize: '12px',
+                    gap: '8px',
+                  })
+                    .map(
+                      ([key, value]) =>
+                        `${key
+                          .replace(/([A-Z])/g, '-$1')
+                          .toLowerCase()}: ${value}`,
+                    )
+                    .join('; ')}
+                ">
+                  <div style="font-size: 24px; opacity: 0.5;">📷</div>
+                  <div>图片加载失败</div>
+                </div>
+              `;
+            }
+          }}
+          style={{
+            objectFit: 'cover',
+            border: '1px solid #f0f0f0',
+            borderRadius: '4px',
+            ...props.style,
+          }}
+        />
+      ) : (
+        <div
+          style={{
+            ...props.style,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#fafafa',
+            border: '1px dashed #d9d9d9',
+            color: '#999',
+            fontSize: '12px',
+            gap: '8px',
+          }}
+        >
+          <div style={{ fontSize: '24px', opacity: 0.5 }}>📷</div>
+          <div>请上传图片</div>
+        </div>
+      )}
+    </>
+  );
+};
+
 // 样式合并函数
 const mergeStyles = (
   component: ComponentType,
@@ -2676,7 +2746,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       const imgCombContent = (
         <div
           style={{
-            // padding: '12px',
             backgroundColor: '#fff',
             border:
               isCurrentSelected && !isPreview
@@ -2692,7 +2761,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         >
           <div
             style={{
-              // marginBottom: '12px',
               fontWeight: 'bold',
               color: '#495057',
               fontSize: '14px',
@@ -2703,156 +2771,93 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           >
             🖼️ 多图混排 ({comp.combination_mode})
           </div>
+
           <div
             style={{
-              display: comp.combination_mode === 'double' ? 'flex' : 'grid',
-              ...(comp.combination_mode === 'double'
-                ? {
-                    gap: '4px',
-                  }
-                : comp.combination_mode === 'triple'
-                ? {
-                    gridTemplateColumns: '66.5% 33%',
-                    gridTemplateRows: 'auto auto',
-                    gap: '4px',
-                  }
-                : comp.combination_mode === 'bisect_2'
-                ? {
-                    gridTemplateColumns: 'repeat(2, 1fr)',
-                    gap: '4px',
-                  }
-                : comp.combination_mode === 'bisect_4'
-                ? {
-                    gridTemplateColumns: 'repeat(2, 1fr)',
-                    gridTemplateRows: 'repeat(2, 1fr)',
-                    gap: '4px',
-                  }
-                : comp.combination_mode === 'bisect_6'
-                ? {
-                    gridTemplateColumns: 'repeat(2, 1fr)',
-                    gridTemplateRows: 'repeat(3, 1fr)',
-                    gap: '4px',
-                  }
-                : comp.combination_mode === 'trisect_3'
-                ? {
-                    gridTemplateColumns: 'repeat(3, 1fr)',
-                    gap: '4px',
-                  }
-                : comp.combination_mode === 'trisect_6'
-                ? {
-                    gridTemplateColumns: 'repeat(3, 1fr)',
-                    gridTemplateRows: 'repeat(2, 1fr)',
-                    gap: '4px',
-                  }
-                : comp.combination_mode === 'trisect_9'
-                ? {
-                    gridTemplateColumns: 'repeat(3, 1fr)',
-                    gridTemplateRows: 'repeat(3, 1fr)',
-                    gap: '4px',
-                  }
-                : {
-                    gridTemplateColumns: 'repeat(2, 1fr)',
-                    gap: '4px',
-                  }),
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '1px',
             }}
           >
-            {(comp.img_list || []).length > 0 ? (
-              (comp.img_list || []).map((img: any, imgIndex: number) => {
-                // 特殊模式的样式处理
-                let imageStyle: React.CSSProperties = {
-                  height: '100px',
-                  objectFit: 'cover',
-                  borderRadius: '4px',
-                  border: '1px solid #f0f0f0',
-                };
+            {/* 二图模式 */}
+            {comp.combination_mode === 'double' && (
+              <>
+                <ImgRenderer
+                  item={comp.img_list[0]}
+                  style={{
+                    width: '32.4%',
+                    aspectRatio: '24 / 33',
+                  }}
+                />
+                <ImgRenderer
+                  item={comp.img_list[0]}
+                  style={{
+                    width: 'calc(100% - 32.4% - 4px)',
+                    aspectRatio: '49.33 / 33',
+                  }}
+                />
+              </>
+            )}
 
-                if (comp.combination_mode === 'double') {
-                  imageStyle.width =
-                    imgIndex === 0 ? '33.4%' : 'calc(100% - 33.4% - 4px)';
-                } else if (comp.combination_mode === 'triple') {
-                  if (imgIndex === 0) {
-                    imageStyle.width = '100%';
-                    imageStyle.height = '200px';
-                    imageStyle.gridRow = '1 / 3'; // 左边大图占据两行
-                  } else {
-                    imageStyle.width = '100%';
-                    imageStyle.height = '98px';
-                  }
-                } else if (comp.combination_mode?.startsWith('bisect_')) {
-                  imageStyle.width = 'calc(50% - 2px)';
-                } else if (comp.combination_mode?.startsWith('trisect_')) {
-                  imageStyle.width = 'calc(33.33% - 2.67px)';
-                } else {
-                  imageStyle.width = '100%';
-                }
-
-                // 检查是否为空图片状态 (路径为空或空字符串)
-                const isEmpty = !img.img_url || img.img_url === '';
-
-                return isEmpty ? (
-                  // 空状态显示
-                  <div
-                    key={`empty-${component.id}-${imgIndex}`}
+            {/* 三图模式 */}
+            {comp.combination_mode === 'triple' && (
+              <>
+                <ImgRenderer
+                  item={comp.img_list[0]}
+                  style={{
+                    width: '66.5%',
+                    aspectRatio: 1,
+                  }}
+                />
+                <div
+                  style={{
+                    width: '33%',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    flexDirection: 'column',
+                  }}
+                >
+                  <ImgRenderer
+                    item={comp.img_list[1]}
                     style={{
-                      ...imageStyle,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: '#fafafa',
-                      border: '1px dashed #d9d9d9',
-                      color: '#999',
-                      fontSize: '12px',
-                      gap: '8px',
-                    }}
-                  >
-                    <div style={{ fontSize: '24px', opacity: 0.5 }}>📷</div>
-                    <div>请上传图片</div>
-                  </div>
-                ) : (
-                  // 正常图片显示
-                  <img
-                    key={`img-${component.id}-${imgIndex}`}
-                    src={img.img_url}
-                    alt={`图片${imgIndex + 1}`}
-                    style={imageStyle}
-                    onError={(e) => {
-                      // 图片加载失败时显示空状态
-                      const target = e.target as HTMLImageElement;
-                      const parent = target.parentElement;
-                      if (parent) {
-                        parent.innerHTML = `
-                          <div style="
-                            ${Object.entries({
-                              ...imageStyle,
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              backgroundColor: '#fafafa',
-                              border: '1px dashed #d9d9d9',
-                              color: '#999',
-                              fontSize: '12px',
-                              gap: '8px',
-                            })
-                              .map(
-                                ([key, value]) =>
-                                  `${key
-                                    .replace(/([A-Z])/g, '-$1')
-                                    .toLowerCase()}: ${value}`,
-                              )
-                              .join('; ')}
-                          ">
-                            <div style="font-size: 24px; opacity: 0.5;">📷</div>
-                            <div>图片加载失败</div>
-                          </div>
-                        `;
-                      }
+                      aspectRatio: '1',
                     }}
                   />
-                );
-              })
-            ) : (
+                  <ImgRenderer
+                    item={comp.img_list[2]}
+                    style={{
+                      aspectRatio: '1',
+                    }}
+                  />
+                </div>
+              </>
+            )}
+            {/* 两列模式 */}
+            {comp.combination_mode.includes('bisect') && (
+              <>
+                {(comp.img_list || []).map((item: any, imgIndex: number) => (
+                  <ImgRenderer
+                    item={item}
+                    key={imgIndex}
+                    style={{ width: 'calc(50% - 2px)', aspectRatio: 1 }}
+                  />
+                ))}
+              </>
+            )}
+            {/* 三列模式 */}
+            {comp.combination_mode.includes('trisect') && (
+              <>
+                {(comp.img_list || []).map((item: any, imgIndex: number) => (
+                  <ImgRenderer
+                    item={item}
+                    key={imgIndex}
+                    style={{ width: 'calc(33.33% - 2.67px)', aspectRatio: 1 }}
+                  />
+                ))}
+              </>
+            )}
+
+            {comp.img_list.length === 0 && (
               <div
                 style={{
                   gridColumn: `span ${
