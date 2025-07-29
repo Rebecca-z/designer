@@ -777,7 +777,11 @@ const DraggableWrapper: React.FC<{
       hoverTimeoutRef.current = setTimeout(() => {
         if (!ref.current) return;
 
-        const draggedIndex = item.path ? item.path[item.path.length - 1] : -1;
+        const draggedIndex = item.path
+          ? typeof item.path[item.path.length - 1] === 'number'
+            ? (item.path[item.path.length - 1] as number)
+            : -1
+          : -1;
         const targetIndex = index;
 
         // 检查是否是同一容器内的排序
@@ -2072,7 +2076,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       const formPath = [...path, 'elements'];
 
       // 检查当前组件是否被选中
-      const isCurrentSelected = isSamePath(selectedPath, path);
+      const isCurrentSelected = isSamePath(selectedPath || null, path);
 
       console.log('📋 渲染表单容器:', {
         formName: comp.name,
@@ -2156,7 +2160,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       const columns = comp.columns || [];
 
       // 检查当前组件是否被选中
-      const isCurrentSelected = isSamePath(selectedPath, path);
+      const isCurrentSelected = isSamePath(selectedPath || null, path);
 
       console.log('📐 渲染分栏容器:', {
         columnsCount: columns.length,
@@ -2343,7 +2347,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       };
 
       // 检查当前组件是否被选中
-      const isCurrentSelected = isSamePath(selectedPath, path);
+      const isCurrentSelected = isSamePath(selectedPath || null, path);
 
       console.log('📝 文本组件选中状态检查:', {
         componentId: comp.id,
@@ -2421,7 +2425,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
     case 'rich_text': {
       // 检查当前组件是否被选中
-      const isCurrentSelected = isSamePath(selectedPath, path);
+      const isCurrentSelected = isSamePath(selectedPath || null, path);
       const comp = component as any;
 
       const richTextContent = (
@@ -2489,7 +2493,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       });
 
       // 检查当前组件是否被选中
-      const isCurrentSelected = isSamePath(selectedPath, path);
+      const isCurrentSelected = isSamePath(selectedPath || null, path);
 
       // 获取边框样式，默认为solid
       const borderStyle = comp.style?.borderStyle || 'solid';
@@ -2577,7 +2581,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
     case 'img': {
       // 检查当前组件是否被选中
-      const isCurrentSelected = isSamePath(selectedPath, path);
+      const isCurrentSelected = isSamePath(selectedPath || null, path);
 
       // 获取图片URL，支持变量绑定
       const getImageUrl = () => {
@@ -2697,7 +2701,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
     case 'input': {
       // 检查当前组件是否被选中
-      const isCurrentSelected = isSamePath(selectedPath, path);
+      const isCurrentSelected = isSamePath(selectedPath || null, path);
 
       const inputContent = (
         <div
@@ -2759,7 +2763,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
     case 'button': {
       // 检查当前组件是否被选中
-      const isCurrentSelected = isSamePath(selectedPath, path);
+      const isCurrentSelected = isSamePath(selectedPath || null, path);
 
       const buttonContent = (
         <div
@@ -2821,7 +2825,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
     case 'select_static': {
       // 检查当前组件是否被选中
-      const isCurrentSelected = isSamePath(selectedPath, path);
+      const isCurrentSelected = isSamePath(selectedPath || null, path);
 
       const selectContent = (
         <div
@@ -2888,7 +2892,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
     case 'multi_select_static': {
       // 检查当前组件是否被选中
-      const isCurrentSelected = isSamePath(selectedPath, path);
+      const isCurrentSelected = isSamePath(selectedPath || null, path);
 
       const multiSelectContent = (
         <div
@@ -2959,7 +2963,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
     case 'img_combination': {
       // 检查当前组件是否被选中
-      const isCurrentSelected = isSamePath(selectedPath, path);
+      const isCurrentSelected = isSamePath(selectedPath || null, path);
 
       const imgCombContent = (
         <div

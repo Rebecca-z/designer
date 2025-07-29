@@ -200,7 +200,24 @@ const DragSortableItem: React.FC<{
         // 注意：这里我们修改了监视器项目，因为我们在移动时修改了索引
         // 一般来说，最好避免修改监视器项目，但这里是为了性能考虑
         // 对于插入式移动，需要调整索引
-        item.index = targetIndex > dragIndex ? targetIndex - 1 : targetIndex;
+        const newIndex =
+          targetIndex > dragIndex ? targetIndex - 1 : targetIndex;
+        item.index = newIndex;
+
+        // ✅ 修复：同时更新路径中的索引，确保路径与实际位置一致
+        if (
+          item.path &&
+          item.path.length === 4 &&
+          item.path[2] === 'elements'
+        ) {
+          item.path = [...item.path.slice(0, 3), newIndex];
+          console.log('🔄 更新拖拽项路径:', {
+            oldPath: path,
+            newPath: item.path,
+            oldIndex: dragIndex,
+            newIndex: newIndex,
+          });
+        }
       }, 50); // 50ms防抖延迟
     },
   });
@@ -1305,39 +1322,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     }
   };
 
-  // ✅ 新增：深度检查组件是否存在于数据结构中
-  const deepCheckComponentExists = (
-    elements: ComponentType[],
-    componentId: string,
-  ): boolean => {
-    for (const element of elements) {
-      // 直接匹配
-      if (element.id === componentId) {
-        return true;
-      }
-
-      // 检查表单内部
-      if (element.tag === 'form' && (element as any).elements) {
-        if (deepCheckComponentExists((element as any).elements, componentId)) {
-          return true;
-        }
-      }
-
-      // 检查分栏内部
-      if (element.tag === 'column_set' && (element as any).columns) {
-        for (const column of (element as any).columns) {
-          if (
-            column.elements &&
-            deepCheckComponentExists(column.elements, componentId)
-          ) {
-            return true;
-          }
-        }
-      }
-    }
-    return false;
-  };
-
   // 根据路径移除组件
   const removeComponentByPath = (
     elements: ComponentType[],
@@ -1352,6 +1336,12 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         index,
         item,
         type: typeof item,
+      })),
+      elementsBeforeRemove: elements.length,
+      elementsStructure: elements.map((el, idx) => ({
+        index: idx,
+        id: el.id,
+        tag: el.tag,
       })),
     });
 
@@ -1372,15 +1362,22 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       });
 
       if (index >= 0 && index < newElements.length) {
+        const removedComponent = newElements[index];
         newElements.splice(index, 1);
         console.log('✅ 根级别组件移除成功:', {
           removedIndex: index,
+          removedComponent: {
+            id: removedComponent.id,
+            tag: removedComponent.tag,
+          },
           newArrayLength: newElements.length,
           afterRemove: newElements.map((el, idx) => ({
             index: idx,
             id: el.id,
             tag: el.tag,
           })),
+          originalArrayLength: elements.length,
+          spliceResult: 'successful',
         });
       } else {
         console.error('❌ 根级别组件移除失败：索引无效', {
@@ -1388,6 +1385,14 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           arrayLength: newElements.length,
         });
       }
+      console.log('🔄 根级别组件移除 - 返回新数组:', {
+        returnArrayLength: newElements.length,
+        returnArrayStructure: newElements.map((el, idx) => ({
+          index: idx,
+          id: el.id,
+          tag: el.tag,
+        })),
+      });
       return newElements;
     }
 
@@ -1716,6 +1721,17 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
 
       // ✅ 修复：确保操作的原子性，避免重复引用
       // 先移除原位置的组件
+      console.log('🔄 开始移除组件 - 详细状态:', {
+        originalElementsCount: elements.length,
+        originalElements: elements.map((el, idx) => ({
+          index: idx,
+          id: el.id,
+          tag: el.tag,
+        })),
+        draggedComponentId: draggedComponent.id,
+        draggedPath,
+      });
+
       let newElements = removeComponentByPath(elements, draggedPath);
 
       console.log('🗑️ 组件移除完成，验证结果:', {
@@ -1723,21 +1739,72 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         newElementsLength: newElements.length,
         removedComponentId: draggedComponent.id,
         removedComponentTag: draggedComponent.tag,
-        elementsSummary: newElements.map((el, idx) => ({
+        originalElements: elements.map((el, idx) => ({
           index: idx,
           id: el.id,
           tag: el.tag,
         })),
+        newElements: newElements.map((el, idx) => ({
+          index: idx,
+          id: el.id,
+          tag: el.tag,
+        })),
+        arraysAreSame: elements === newElements,
+        deepEqual: JSON.stringify(elements) === JSON.stringify(newElements),
       });
 
       // ✅ 修复：验证组件确实被移除
-      const componentStillExists = deepCheckComponentExists(
-        newElements,
-        draggedComponent.id,
-      );
+      // 注意：这里只验证组件是否从原始位置被移除，而不是验证它完全不存在
+      // 因为组件将被添加到新位置，所以完全不存在的检查是错误的
+      let componentRemovedFromOriginalPosition = false;
 
-      if (componentStillExists) {
-        console.error('❌ 组件移除失败，组件仍然存在于数据中:', {
+      if (draggedPath.length === 4 && draggedPath[2] === 'elements') {
+        // 根级别组件：检查原始索引位置是否还有这个组件
+        const originalIndex = draggedPath[3] as number;
+        componentRemovedFromOriginalPosition =
+          originalIndex >= newElements.length ||
+          newElements[originalIndex]?.id !== draggedComponent.id;
+      } else if (draggedPath.length === 6 && draggedPath[4] === 'elements') {
+        // 表单内组件：检查表单的elements数组
+        const formIndex = draggedPath[3] as number;
+        const componentIndex = draggedPath[5] as number;
+        const formComponent = newElements[formIndex];
+        if (formComponent && formComponent.tag === 'form') {
+          const formElements = (formComponent as any).elements || [];
+          componentRemovedFromOriginalPosition =
+            componentIndex >= formElements.length ||
+            formElements[componentIndex]?.id !== draggedComponent.id;
+        }
+      } else if (
+        draggedPath.length === 8 &&
+        draggedPath[4] === 'columns' &&
+        draggedPath[6] === 'elements'
+      ) {
+        // 分栏内组件：检查分栏的elements数组
+        const columnSetIndex = draggedPath[3] as number;
+        const columnIndex = draggedPath[5] as number;
+        const componentIndex = draggedPath[7] as number;
+        const columnSetComponent = newElements[columnSetIndex];
+        if (columnSetComponent && columnSetComponent.tag === 'column_set') {
+          const columns = (columnSetComponent as any).columns || [];
+          if (columnIndex < columns.length && columns[columnIndex].elements) {
+            const columnElements = columns[columnIndex].elements;
+            componentRemovedFromOriginalPosition =
+              componentIndex >= columnElements.length ||
+              columnElements[componentIndex]?.id !== draggedComponent.id;
+          }
+        }
+      }
+
+      console.log('🔍 组件移除验证结果:', {
+        componentId: draggedComponent.id,
+        originalPath: draggedPath,
+        removedFromOriginalPosition: componentRemovedFromOriginalPosition,
+        verificationMethod: 'specific position check',
+      });
+
+      if (!componentRemovedFromOriginalPosition) {
+        console.error('❌ 组件移除失败，组件仍然在原始位置:', {
           componentId: draggedComponent.id,
           originalPath: draggedPath,
         });
@@ -2484,7 +2551,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
             <div
               style={{
                 padding: '16px',
-                borderWidth: isSamePath(selectedPath, ['dsl', 'header'])
+                borderWidth: isSamePath(selectedPath || null, ['dsl', 'header'])
                   ? '2px'
                   : '2px',
                 borderStyle: 'solid',
@@ -2557,13 +2624,22 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                   };
                   const styles = getThemeStyles(themeStyle);
                   return {
-                    backgroundColor: isSamePath(selectedPath, ['dsl', 'header'])
+                    backgroundColor: isSamePath(selectedPath || null, [
+                      'dsl',
+                      'header',
+                    ])
                       ? 'rgba(24, 144, 255, 0.05)'
                       : styles.backgroundColor,
-                    borderColor: isSamePath(selectedPath, ['dsl', 'header'])
+                    borderColor: isSamePath(selectedPath || null, [
+                      'dsl',
+                      'header',
+                    ])
                       ? '#1890ff'
                       : styles.borderColor,
-                    boxShadow: isSamePath(selectedPath, ['dsl', 'header'])
+                    boxShadow: isSamePath(selectedPath || null, [
+                      'dsl',
+                      'header',
+                    ])
                       ? '0 0 8px rgba(24, 144, 255, 0.3)'
                       : 'none',
                   };
@@ -2571,7 +2647,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
               }}
             >
               {/* 操作菜单 - 只在标题被选中时显示 */}
-              {isSamePath(selectedPath, ['dsl', 'header']) && (
+              {isSamePath(selectedPath || null, ['dsl', 'header']) && (
                 <div
                   style={{
                     position: 'absolute',
@@ -2725,7 +2801,10 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
               }
 
               const componentPath = ['dsl', 'body', 'elements', index];
-              const isSelected = isSamePath(selectedPath, componentPath);
+              const isSelected = isSamePath(
+                selectedPath || null,
+                componentPath,
+              );
               const isHovered = isSamePath(hoveredPath, componentPath);
 
               return (

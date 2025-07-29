@@ -3,7 +3,11 @@
 import { Avatar, Typography } from 'antd';
 import React from 'react';
 import CardWrapper from './card-designer-card-wrapper';
-import { CardPadding, ComponentType } from './card-designer-types-updated';
+import {
+  CardPadding,
+  ComponentType,
+  VariableItem,
+} from './card-designer-types-updated';
 
 const { Text } = Typography;
 

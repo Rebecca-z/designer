@@ -31,7 +31,9 @@ export const DeviceIndicator: React.FC<{
         zIndex: 100,
       }}
     >
-      <deviceConfig.icon style={{ marginRight: '4px' }} />
+      <span style={{ marginRight: '4px' }}>
+        <deviceConfig.icon />
+      </span>
       {deviceConfig.name}
       {canvasWidth !== '100%' && ` (${canvasWidth})`}
     </div>

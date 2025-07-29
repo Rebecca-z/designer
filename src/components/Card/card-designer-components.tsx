@@ -271,7 +271,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
   }
 
   // 检查当前组件是否被选中
-  const isCurrentSelected = isSamePath(selectedPath, path);
+  const isCurrentSelected = isSamePath(selectedPath || null, path);
 
   const handleClick = (e: React.MouseEvent) => {
     if (isPreview) return;
