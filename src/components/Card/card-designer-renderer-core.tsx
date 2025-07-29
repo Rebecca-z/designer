@@ -376,7 +376,24 @@ const ContainerSortableItem: React.FC<{
       }, 50); // 50ms防抖延迟
     },
     drop: (item: DragItem, monitor) => {
-      if (monitor.didDrop() || !enableSort) return;
+      if (monitor.didDrop() || !enableSort) {
+        console.log('🚫 ContainerSortableItem drop 跳过:', {
+          didDrop: monitor.didDrop(),
+          enableSort,
+          componentTag: component.tag,
+          componentId: component.id,
+        });
+        return;
+      }
+
+      console.log('✅ ContainerSortableItem drop 开始处理:', {
+        componentTag: component.tag,
+        componentId: component.id,
+        itemType: item.type,
+        isNew: item.isNew,
+        hasComponent: !!item.component,
+        enableSort,
+      });
 
       // 清除防抖定时器
       if (hoverTimeoutRef.current) {
@@ -440,6 +457,58 @@ const ContainerSortableItem: React.FC<{
           // 检查拖拽限制
           if (!canDropInContainer(item.component.tag, targetContainerPath)) {
             console.warn('容器组件不能嵌套到其他容器中');
+            return;
+          }
+
+          // 检查是否是根节点组件移动到容器
+          const isRootComponent =
+            draggedPath.length === 4 &&
+            draggedPath[0] === 'dsl' &&
+            draggedPath[1] === 'body' &&
+            draggedPath[2] === 'elements';
+
+          if (isRootComponent) {
+            console.log('🔄 ContainerSortableItem: 根节点组件移动到容器:', {
+              component: item.component.tag,
+              from: draggedPath,
+              to: targetContainerPath,
+              insertIndex,
+            });
+
+            // 对于根节点组件移动到容器，需要特殊处理路径
+            // targetContainerPath 已经是容器的路径，我们需要添加 'elements' 来指向容器的子元素数组
+            // 但是要检查路径是否已经包含 'elements'
+            let correctTargetPath;
+            if (
+              targetContainerPath[targetContainerPath.length - 1] === 'elements'
+            ) {
+              correctTargetPath = targetContainerPath;
+            } else {
+              correctTargetPath = [...targetContainerPath, 'elements'];
+            }
+
+            console.log(
+              '🎯 ContainerSortableItem 调用 onComponentMove 处理根节点移动:',
+              {
+                component: item.component.tag,
+                fromPath: draggedPath,
+                toPath: correctTargetPath,
+                insertIndex,
+                targetContainerPath,
+                pathAnalysis: {
+                  hasElements:
+                    targetContainerPath[targetContainerPath.length - 1] ===
+                    'elements',
+                  finalPath: correctTargetPath,
+                },
+              },
+            );
+            onComponentMove(
+              item.component,
+              draggedPath,
+              correctTargetPath,
+              insertIndex,
+            );
             return;
           }
 
@@ -760,6 +829,34 @@ const DraggableWrapper: React.FC<{
           path[1] === 'body' &&
           item.component
         ) {
+          // 检查是否是根节点组件拖拽到容器
+          const isRootComponentToContainer =
+            draggedPath.length === 4 &&
+            draggedPath[0] === 'dsl' &&
+            draggedPath[1] === 'body' &&
+            draggedPath[2] === 'elements' &&
+            // 拖拽到容器内子组件
+            (path.length === 6 ||
+              // 拖拽到根节点的容器组件本身
+              (path.length === 4 &&
+                path[0] === 'dsl' &&
+                path[1] === 'body' &&
+                path[2] === 'elements' &&
+                component.tag === 'form')); // 当前组件是表单容器
+
+          if (isRootComponentToContainer) {
+            console.log(
+              '🚫 ContainerSortableItem hover: 阻止根节点到容器的排序:',
+              {
+                draggedComponent: item.component.tag,
+                draggedPath,
+                targetPath: path,
+                reason: '这应该由drop处理器处理跨容器移动',
+              },
+            );
+            return; // 阻止在hover时处理，留给drop处理器
+          }
+
           console.log('🔄 执行同容器排序:', {
             draggedComponent: {
               id: item.component.id,
@@ -1217,6 +1314,16 @@ const SmartDropZone: React.FC<{
               containerType,
               insertIndex,
             });
+
+            // 对于根节点组件移动到容器，使用 onContainerDrop 来处理移动逻辑
+            // 这样会正确地移除原组件并添加到新位置
+            console.log('🎯 调用 onContainerDrop 处理根节点到容器的移动:', {
+              draggedItem: item,
+              targetPath,
+              insertIndex,
+            });
+            onContainerDrop?.(item, targetPath, insertIndex);
+            return;
           }
 
           // 子组件跨容器移动的特殊处理
@@ -1229,8 +1336,8 @@ const SmartDropZone: React.FC<{
             });
           }
 
-          // 移动到指定位置
-          console.log('🎯 调用 onComponentMove (同容器):', {
+          // 容器间移动到指定位置（非根节点组件）
+          console.log('🎯 调用 onComponentMove (跨容器):', {
             component: item.component.tag,
             fromPath: item.path,
             toPath: targetPath,
