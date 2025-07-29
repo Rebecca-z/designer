@@ -9,6 +9,7 @@ import {
   CardPadding,
   ComponentType,
   DragItem,
+  VariableItem,
 } from './card-designer-types-updated';
 import { createDefaultComponent } from './card-designer-utils';
 import ErrorBoundary from './ErrorBoundary';
@@ -1304,6 +1305,39 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     }
   };
 
+  // ✅ 新增：深度检查组件是否存在于数据结构中
+  const deepCheckComponentExists = (
+    elements: ComponentType[],
+    componentId: string,
+  ): boolean => {
+    for (const element of elements) {
+      // 直接匹配
+      if (element.id === componentId) {
+        return true;
+      }
+
+      // 检查表单内部
+      if (element.tag === 'form' && (element as any).elements) {
+        if (deepCheckComponentExists((element as any).elements, componentId)) {
+          return true;
+        }
+      }
+
+      // 检查分栏内部
+      if (element.tag === 'column_set' && (element as any).columns) {
+        for (const column of (element as any).columns) {
+          if (
+            column.elements &&
+            deepCheckComponentExists(column.elements, componentId)
+          ) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  };
+
   // 根据路径移除组件
   const removeComponentByPath = (
     elements: ComponentType[],
@@ -1590,10 +1624,10 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           message.success('标题组件已添加到卡片头部');
         } else {
           console.error('❌ 缺少onHeaderDataChange回调函数');
-          message.warning('无法更新标题数据，缺少回调函数');
+          message.warning('无法添加标题数据，缺少回调函数');
         }
       } else if (draggedItem.component) {
-        // 现有标题组件，提取标题数据
+        // 现有标题组件，从表单或其他位置移动到header
         const titleComponent = draggedItem.component as any;
         const headerData = {
           title: { content: titleComponent.title || '主标题' },
@@ -1655,6 +1689,15 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       const draggedComponent = draggedItem.component;
       const draggedPath = draggedItem.path;
 
+      console.log('🔄 现有组件移动 - 开始处理:', {
+        componentId: draggedComponent.id,
+        componentTag: draggedComponent.tag,
+        fromPath: draggedPath,
+        toPath: targetPath,
+        dropIndex,
+        elementsBeforeMove: elements.length,
+      });
+
       // 检查表单组件限制（只在移动到根级别时检查，且不是自身移动）
       const isRootLevel =
         targetPath.length === 3 && targetPath[2] === 'elements';
@@ -1671,8 +1714,37 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         return;
       }
 
+      // ✅ 修复：确保操作的原子性，避免重复引用
       // 先移除原位置的组件
       let newElements = removeComponentByPath(elements, draggedPath);
+
+      console.log('🗑️ 组件移除完成，验证结果:', {
+        originalElementsLength: elements.length,
+        newElementsLength: newElements.length,
+        removedComponentId: draggedComponent.id,
+        removedComponentTag: draggedComponent.tag,
+        elementsSummary: newElements.map((el, idx) => ({
+          index: idx,
+          id: el.id,
+          tag: el.tag,
+        })),
+      });
+
+      // ✅ 修复：验证组件确实被移除
+      const componentStillExists = deepCheckComponentExists(
+        newElements,
+        draggedComponent.id,
+      );
+
+      if (componentStillExists) {
+        console.error('❌ 组件移除失败，组件仍然存在于数据中:', {
+          componentId: draggedComponent.id,
+          originalPath: draggedPath,
+        });
+        message.error('组件移动失败：无法从原位置移除组件');
+        return;
+      }
+
       // 再添加到新位置
       newElements = addComponentByPath(
         newElements,
@@ -1680,6 +1752,17 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         draggedComponent,
         dropIndex,
       );
+
+      console.log('✅ 组件移动完成，最终验证:', {
+        finalElementsLength: newElements.length,
+        movedComponentId: draggedComponent.id,
+        targetPath,
+        finalElementsSummary: newElements.map((el, idx) => ({
+          index: idx,
+          id: el.id,
+          tag: el.tag,
+        })),
+      });
 
       onElementsChange(newElements);
     }

@@ -100,6 +100,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         margin: '0 auto',
         // 修复：确保容器能够正确显示内边距
         boxSizing: 'border-box',
+        justifyContent: 'center',
       }}
     >
       {/* 左侧头像 */}
