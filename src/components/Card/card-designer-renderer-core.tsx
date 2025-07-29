@@ -1705,28 +1705,64 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         onCopy?.(element);
       };
 
-      // 组件内容
-      const componentContent = (
-        <ComponentRendererCore
-          component={element}
-          isPreview={isPreview}
-          onContainerDrop={onContainerDrop}
-          onComponentMove={onComponentMove}
-          onUpdateComponent={onUpdateComponent}
-          path={childPath}
-          index={elementIndex}
-          containerPath={basePath}
-          enableDrag={enableDrag}
-          enableSort={enableSort}
-          onSelect={onSelect}
-          selectedPath={selectedPath}
-          onDelete={onDelete}
-          onCopy={onCopy}
-          onCanvasFocus={onCanvasFocus}
-          headerData={headerData}
-          variables={variables}
-        />
-      );
+      // 组件内容 - 对于非容器组件，直接渲染内容，避免双重包装
+      const componentContent = (() => {
+        // 如果是容器组件，需要递归调用 ComponentRendererCore
+        if (element.tag === 'form' || element.tag === 'column_set') {
+          return (
+            <ComponentRendererCore
+              component={element}
+              isPreview={isPreview}
+              onContainerDrop={onContainerDrop}
+              onComponentMove={onComponentMove}
+              onUpdateComponent={onUpdateComponent}
+              path={childPath}
+              index={elementIndex}
+              containerPath={basePath}
+              enableDrag={enableDrag}
+              enableSort={enableSort}
+              onSelect={onSelect}
+              selectedPath={selectedPath}
+              onDelete={onDelete}
+              onCopy={onCopy}
+              onCanvasFocus={onCanvasFocus}
+              headerData={headerData}
+              variables={variables}
+            />
+          );
+        } else {
+          // 对于非容器组件，使用简化的直接渲染，避免通过 ComponentRenderer
+          console.log(`🎯 直接渲染非容器子组件 ${element.tag}:`, {
+            elementId: element.id,
+            childPath,
+            enableDrag,
+            isPreview,
+          });
+
+          return (
+            <ComponentRendererCore
+              component={element}
+              isPreview={isPreview}
+              onContainerDrop={onContainerDrop}
+              onComponentMove={onComponentMove}
+              onUpdateComponent={onUpdateComponent}
+              path={childPath}
+              index={elementIndex}
+              containerPath={basePath}
+              enableDrag={false} // 禁用内部拖拽，避免冲突
+              enableSort={false} // 禁用内部排序，避免冲突
+              onSelect={onSelect}
+              selectedPath={selectedPath}
+              onDelete={onDelete}
+              onCopy={onCopy}
+              onCanvasFocus={onCanvasFocus}
+              headerData={headerData}
+              variables={variables}
+              renderChildren={undefined} // 使用默认渲染函数
+            />
+          );
+        }
+      })();
 
       // 包装器样式
       const wrapperStyle: React.CSSProperties = {
@@ -1876,32 +1912,37 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       const formContent = (
         <div
           style={{
-            border: 'none', // 移除容器边框，只保留DraggableWrapper的边框
+            // 移除内层选中边框，避免与外层ComponentRenderer的边框重复
+            border:
+              formElements.length === 0
+                ? '2px dashed #d9d9d9'
+                : '1px solid #f0f0f0',
             borderRadius: '4px',
-            backgroundColor: '#fff',
+            backgroundColor: formElements.length === 0 ? '#fafafa' : '#fff',
             transition: 'all 0.2s ease',
             position: 'relative',
+            minHeight: '80px', // 确保表单容器有最小高度
           }}
         >
-          {/* 简约的表单标题 */}
-          {isCurrentSelected && !isPreview && (
-            <div
-              style={{
-                position: 'absolute',
-                top: '-8px',
-                left: '8px',
-                backgroundColor: '#1890ff',
-                color: 'white',
-                padding: '2px 8px',
-                borderRadius: '4px',
-                fontSize: '11px',
-                fontWeight: '500',
-                zIndex: 10,
-              }}
-            >
-              📋 表单 {comp.name && `(${comp.name})`}
-            </div>
-          )}
+          {/* 表单标题 - 始终显示，但样式不同 */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '-10px',
+              left: '8px',
+              backgroundColor: '#52c41a', // 固定为绿色，避免与外层选中边框颜色冲突
+              color: 'white',
+              padding: '2px 8px',
+              borderRadius: '4px',
+              fontSize: '11px',
+              fontWeight: '500',
+              zIndex: 10,
+              opacity: isPreview ? 0 : 1, // 预览模式下隐藏
+            }}
+          >
+            📋 表单容器 {comp.name && `(${comp.name})`}
+          </div>
+
           {/* 表单拖拽区域 */}
           <div style={{ padding: '12px', minHeight: '60px' }}>
             <SmartDropZone

@@ -755,7 +755,7 @@ export const createDefaultComponent = (type: string): ComponentType => {
           },
         },
         placeholder: {
-          content: '请输入',
+          content: '请输入文本内容',
           i18n_content: {
             'en-US': 'input',
           },

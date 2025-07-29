@@ -493,6 +493,18 @@ const CardDesigner: React.FC = () => {
           formComponent.elements = [];
         }
         const oldComponent = formComponent.elements[componentIndex];
+
+        // 验证更新的组件不是表单组件，防止嵌套
+        if (updatedComponent.tag === 'form') {
+          console.error('❌ 阻止表单组件的嵌套更新 (main):', {
+            formIndex,
+            componentIndex,
+            updatedComponentTag: updatedComponent.tag,
+            expectedTag: oldComponent?.tag,
+          });
+          return; // 不进行更新
+        }
+
         formComponent.elements[componentIndex] = updatedComponent;
         console.log('📋 更新表单内组件:', {
           formIndex,

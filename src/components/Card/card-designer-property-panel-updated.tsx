@@ -217,8 +217,9 @@ const getComponentRealPath = (
     return { component: null, realPath: null };
   }
 
-  // 检查是否是卡片根元素路径：['dsl', 'body', 'elements', index]
+  // 检查是否是卡片根元素路径：['dsl', 'body', 'elements', index] (长度必须为4)
   if (
+    selectedPath.length === 4 &&
     selectedPath[0] === 'dsl' &&
     selectedPath[1] === 'body' &&
     selectedPath[2] === 'elements'
@@ -261,8 +262,19 @@ const getComponentRealPath = (
           componentIndex,
           selectedPath,
           realPath: selectedPath,
+          formComponentId: formComponent.id,
+          formComponentTag: formComponent.tag,
+          formElementsLength: formElements.length,
+          targetComponent: component,
         });
         return { component, realPath: selectedPath };
+      } else {
+        console.warn('⚠️ 表单内组件索引无效:', {
+          formIndex,
+          componentIndex,
+          formElementsLength: formElements.length,
+          formComponent: formComponent,
+        });
       }
     }
   }
@@ -783,6 +795,88 @@ export const PropertyPanel: React.FC<{
     selectedPath,
   );
 
+  // 添加详细调试信息
+  console.log('🔍 属性面板组件解析:', {
+    selectedPath,
+    realPath,
+    realComponentId: realComponent?.id,
+    realComponentTag: realComponent?.tag,
+    cardDataExists: !!cardData,
+    selectedPathLength: selectedPath?.length,
+  });
+
+  // 特别检查表单内组件的解析
+  if (
+    selectedPath &&
+    selectedPath.length === 6 &&
+    selectedPath[4] === 'elements'
+  ) {
+    const formIndex = selectedPath[3] as number;
+    const componentIndex = selectedPath[5] as number;
+    console.log('🔍 表单内组件详细调试:', {
+      selectedPath,
+      formIndex,
+      componentIndex,
+      cardDataElementsLength: cardData?.dsl?.body?.elements?.length,
+      formComponent: cardData?.dsl?.body?.elements?.[formIndex],
+      formElementsLength: (cardData?.dsl?.body?.elements?.[formIndex] as any)
+        ?.elements?.length,
+      targetComponent: (cardData?.dsl?.body?.elements?.[formIndex] as any)
+        ?.elements?.[componentIndex],
+      realComponentFromPath: realComponent,
+      isRealComponentForm: realComponent?.tag === 'form',
+    });
+  }
+
+  // 验证数据结构是否存在嵌套问题
+  if (selectedPath && selectedPath.length >= 6 && cardData) {
+    const formIndex = selectedPath[3] as number;
+    const componentIndex = selectedPath[5] as number;
+    const formComponent = cardData.dsl.body.elements[formIndex];
+
+    if (formComponent && formComponent.tag === 'form') {
+      const formElements = (formComponent as any).elements || [];
+      const targetElement = formElements[componentIndex];
+
+      console.log('🔍 验证表单内数据结构:', {
+        formIndex,
+        componentIndex,
+        formComponent: {
+          id: formComponent.id,
+          tag: formComponent.tag,
+          elementsCount: formElements.length,
+        },
+        targetElement: {
+          id: targetElement?.id,
+          tag: targetElement?.tag,
+        },
+        isNestedForm: targetElement?.tag === 'form',
+        fullFormData: formComponent,
+        fullTargetData: targetElement,
+      });
+
+      if (targetElement?.tag === 'form') {
+        console.error('❌ 发现数据中存在嵌套表单结构!', {
+          parentForm: formComponent,
+          childForm: targetElement,
+        });
+
+        // 提示用户需要修复数据结构
+        console.log('⚠️ 数据结构存在问题，建议重新导入正确的数据或手动修复');
+
+        // 显示修复建议
+        const nestedForm = targetElement as any;
+        if (nestedForm.elements && nestedForm.elements.length > 0) {
+          const actualComponent = nestedForm.elements[0];
+          console.log('💡 修复建议: 实际目标组件可能是:', {
+            componentId: actualComponent?.id,
+            componentTag: actualComponent?.tag,
+          });
+        }
+      }
+    }
+  }
+
   // 检查是否选中了卡片本身
   const isCardSelected =
     selectedPath &&
@@ -947,6 +1041,22 @@ export const PropertyPanel: React.FC<{
 
   const handleValueChange = (field: string, value: any) => {
     if (currentComponent) {
+      // 检查是否是错误的表单组件选中（应该选中表单内的子组件）
+      if (
+        currentComponent.tag === 'form' &&
+        selectedPath &&
+        selectedPath.length >= 6
+      ) {
+        console.error('❌ 阻止对嵌套表单组件的属性修改:', {
+          componentId: currentComponent.id,
+          componentTag: currentComponent.tag,
+          selectedPath,
+          field,
+          value,
+        });
+        console.log('💡 建议: 请重新选择正确的子组件，而非表单容器本身');
+        return; // 阻止更新
+      }
       // 样式相关字段需要保存到style对象中
       const styleFields = [
         'fontSize',
@@ -1878,28 +1988,22 @@ export const PropertyPanel: React.FC<{
       );
     }
 
-    // 检查是否选中了文本组件
+    // 检查是否选中了文本组件 - 使用currentComponent而不是selectedComponent
     const isTextComponent =
-      selectedComponent &&
-      (selectedComponent.tag === 'plain_text' ||
-        selectedComponent.tag === 'rich_text') &&
-      currentComponent;
+      currentComponent &&
+      (currentComponent.tag === 'plain_text' ||
+        currentComponent.tag === 'rich_text');
 
-    // 检查是否选中了输入框组件
+    // 检查是否选中了输入框组件 - 使用currentComponent而不是selectedComponent
     const isInputComponent =
-      selectedComponent &&
-      selectedComponent.tag === 'input' &&
-      currentComponent;
+      currentComponent && currentComponent.tag === 'input';
 
-    // 检查是否选中了分割线组件
-    const isHrComponent =
-      selectedComponent && selectedComponent.tag === 'hr' && currentComponent;
+    // 检查是否选中了分割线组件 - 使用currentComponent而不是selectedComponent
+    const isHrComponent = currentComponent && currentComponent.tag === 'hr';
 
-    // 检查是否选中了多图混排组件
+    // 检查是否选中了多图混排组件 - 使用currentComponent而不是selectedComponent
     const isImgCombinationComponent =
-      selectedComponent &&
-      selectedComponent.tag === 'img_combination' &&
-      currentComponent;
+      currentComponent && currentComponent.tag === 'img_combination';
 
     // 如果选中了输入框组件，显示输入框编辑界面
     if (isInputComponent) {
@@ -1990,8 +2094,8 @@ export const PropertyPanel: React.FC<{
 
     // 如果选中了文本组件，显示文本编辑界面
     if (isTextComponent) {
-      const isPlainText = selectedComponent.tag === 'plain_text';
-      const isRichText = selectedComponent.tag === 'rich_text';
+      const isPlainText = currentComponent.tag === 'plain_text';
+      const isRichText = currentComponent.tag === 'rich_text';
 
       // 获取文本内容
       const getTextContent = () => {
@@ -3282,12 +3386,11 @@ export const PropertyPanel: React.FC<{
       );
     }
 
-    // 检查是否选中了下拉组件
+    // 检查是否选中了下拉组件 - 使用currentComponent而不是selectedComponent
     const isSelectComponent =
-      selectedComponent &&
-      (selectedComponent.tag === 'select_static' ||
-        selectedComponent.tag === 'multi_select_static') &&
-      currentComponent;
+      currentComponent &&
+      (currentComponent.tag === 'select_static' ||
+        currentComponent.tag === 'multi_select_static');
 
     // 如果选中了下拉组件，显示下拉编辑界面
     if (isSelectComponent) {
@@ -3351,7 +3454,7 @@ export const PropertyPanel: React.FC<{
           >
             <Text style={{ fontSize: '12px', color: '#0369a1' }}>
               🎯 当前选中：
-              {selectedComponent.tag === 'multi_select_static'
+              {currentComponent.tag === 'multi_select_static'
                 ? '下拉多选组件'
                 : '下拉单选组件'}
             </Text>
@@ -3474,9 +3577,8 @@ export const PropertyPanel: React.FC<{
       );
     }
 
-    // 检查是否选中了图片组件
-    const isImageComponent =
-      selectedComponent && selectedComponent.tag === 'img' && currentComponent;
+    // 检查是否选中了图片组件 - 使用currentComponent而不是selectedComponent
+    const isImageComponent = currentComponent && currentComponent.tag === 'img';
 
     // 如果选中了图片组件，显示图片编辑界面
     if (isImageComponent) {
@@ -3860,6 +3962,28 @@ export const PropertyPanel: React.FC<{
       );
     }
 
+    // 如果没有选中的组件，显示提示信息
+    if (!currentComponent) {
+      return (
+        <div style={{ padding: '16px' }}>
+          <div
+            style={{
+              marginBottom: '16px',
+              padding: '12px',
+              backgroundColor: '#f5f5f5',
+              border: '1px solid #d9d9d9',
+              borderRadius: '6px',
+              textAlign: 'center',
+            }}
+          >
+            <Text style={{ fontSize: '12px', color: '#999' }}>
+              🎯 请选择一个组件进行配置
+            </Text>
+          </div>
+        </div>
+      );
+    }
+
     // 默认显示组件基本信息
     return (
       <div style={{ padding: '16px' }}>
@@ -3873,12 +3997,137 @@ export const PropertyPanel: React.FC<{
           }}
         >
           <Text style={{ fontSize: '12px', color: '#d46b08' }}>
-            🎯 当前选中：{selectedComponent?.tag || '未知'}组件
+            🎯 当前选中：{currentComponent?.tag || '未知'}组件
           </Text>
         </div>
-        <div style={{ color: '#999', fontSize: '12px' }}>
-          该组件的属性配置功能正在开发中...
-        </div>
+        {/* 通用组件属性配置 */}
+        <Collapse
+          defaultActiveKey={['basic', 'style']}
+          ghost
+          items={[
+            {
+              key: 'basic',
+              label: '🔧 基础设置',
+              children: (
+                <Form form={form} layout="vertical">
+                  <Form.Item label="组件名称">
+                    <Input
+                      value={(currentComponent as any)?.name || ''}
+                      onChange={(e) =>
+                        handleValueChange('name', e.target.value)
+                      }
+                      placeholder="请输入组件名称"
+                      maxLength={50}
+                    />
+                  </Form.Item>
+                  {(currentComponent as any)?.content !== undefined && (
+                    <Form.Item label="内容">
+                      <Input.TextArea
+                        value={(currentComponent as any)?.content || ''}
+                        onChange={(e) =>
+                          handleValueChange('content', e.target.value)
+                        }
+                        placeholder="请输入内容"
+                        maxLength={500}
+                        rows={4}
+                      />
+                    </Form.Item>
+                  )}
+                </Form>
+              ),
+            },
+            {
+              key: 'style',
+              label: '🎨 样式设置',
+              children: (
+                <Form form={form} layout="vertical">
+                  <Form.Item label="字体大小">
+                    <InputNumber
+                      value={
+                        (currentComponent as any)?.style?.fontSize ||
+                        (currentComponent as any)?.fontSize ||
+                        14
+                      }
+                      onChange={(value) => handleValueChange('fontSize', value)}
+                      min={8}
+                      max={72}
+                      addonAfter="px"
+                      style={{ width: '100%' }}
+                    />
+                  </Form.Item>
+                  <Form.Item label="文字颜色">
+                    <ColorPicker
+                      value={
+                        (currentComponent as any)?.style?.color ||
+                        (currentComponent as any)?.color ||
+                        '#000000'
+                      }
+                      onChange={(color) => {
+                        const colorString =
+                          typeof color === 'string'
+                            ? color
+                            : color.toHexString();
+                        handleValueChange('color', colorString);
+                      }}
+                      showText
+                      style={{ width: '100%' }}
+                    />
+                  </Form.Item>
+                  <Form.Item label="文字对齐">
+                    <Select
+                      value={
+                        (currentComponent as any)?.style?.textAlign ||
+                        (currentComponent as any)?.textAlign ||
+                        'left'
+                      }
+                      onChange={(value) =>
+                        handleValueChange('textAlign', value)
+                      }
+                      style={{ width: '100%' }}
+                    >
+                      <Option value="left">
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                          }}
+                        >
+                          <div style={{ fontSize: '16px' }}>⬅️</div>
+                          <span>左对齐</span>
+                        </div>
+                      </Option>
+                      <Option value="center">
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                          }}
+                        >
+                          <div style={{ fontSize: '16px' }}>⬆️</div>
+                          <span>居中对齐</span>
+                        </div>
+                      </Option>
+                      <Option value="right">
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                          }}
+                        >
+                          <div style={{ fontSize: '16px' }}>➡️</div>
+                          <span>右对齐</span>
+                        </div>
+                      </Option>
+                    </Select>
+                  </Form.Item>
+                </Form>
+              ),
+            },
+          ]}
+        />
       </div>
     );
   };
