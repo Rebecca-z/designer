@@ -1352,6 +1352,79 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       return newElements;
     }
 
+    // 表单容器内组件移除 (路径长度为6)
+    if (path.length === 6 && path[2] === 'elements' && path[4] === 'elements') {
+      const formIndex = path[3] as number;
+      const componentIndex = path[5] as number;
+
+      console.log('🗑️ 表单容器内组件移除:', {
+        formIndex,
+        componentIndex,
+        pathDetails: path,
+        elementsLength: newElements.length,
+      });
+
+      // 检查表单索引是否有效
+      if (formIndex >= 0 && formIndex < newElements.length) {
+        const formComponent = newElements[formIndex];
+
+        // 检查是否是表单组件且有elements数组
+        if (
+          formComponent &&
+          formComponent.tag === 'form' &&
+          Array.isArray((formComponent as any).elements)
+        ) {
+          const formElements = (formComponent as any).elements;
+
+          console.log('🔍 表单容器检查通过:', {
+            formId: formComponent.id,
+            formElementsLength: formElements.length,
+            componentIndex,
+            componentToRemove: formElements[componentIndex]
+              ? {
+                  id: formElements[componentIndex].id,
+                  tag: formElements[componentIndex].tag,
+                }
+              : 'undefined',
+          });
+
+          // 检查组件索引是否有效
+          if (componentIndex >= 0 && componentIndex < formElements.length) {
+            formElements.splice(componentIndex, 1);
+            console.log('✅ 表单容器内组件移除成功:', {
+              formIndex,
+              removedComponentIndex: componentIndex,
+              newFormElementsLength: formElements.length,
+            });
+          } else {
+            console.error('❌ 表单容器内组件移除失败：组件索引无效', {
+              componentIndex,
+              formElementsLength: formElements.length,
+            });
+          }
+        } else {
+          console.error('❌ 表单容器内组件移除失败：不是有效的表单组件', {
+            formComponent: formComponent
+              ? {
+                  id: formComponent.id,
+                  tag: formComponent.tag,
+                  hasElements: (formComponent as any).elements !== undefined,
+                  elementsIsArray: Array.isArray(
+                    (formComponent as any).elements,
+                  ),
+                }
+              : 'null',
+          });
+        }
+      } else {
+        console.error('❌ 表单容器内组件移除失败：表单索引无效', {
+          formIndex,
+          elementsLength: newElements.length,
+        });
+      }
+      return newElements;
+    }
+
     // 递归辅助函数，支持 columns 嵌套
     function recursiveRemove(
       target: any,
@@ -1382,12 +1455,37 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       }
       // 递归进入
       const key = p[0];
+
+      console.log('🔍 递归移除步骤:', {
+        key,
+        keyType: typeof key,
+        depth,
+        remainingPath: p,
+        targetType: Array.isArray(target) ? 'array' : typeof target,
+        targetTag: target?.tag,
+        targetId: target?.id,
+        hasElements: target?.elements !== undefined,
+        elementsIsArray: Array.isArray(target?.elements),
+        hasColumns: target?.columns !== undefined,
+        columnsIsArray: Array.isArray(target?.columns),
+      });
+
       if (key === 'elements' && Array.isArray(target.elements)) {
+        console.log('✅ 递归进入 elements 数组:', {
+          elementsLength: target.elements.length,
+          depth,
+          remainingPath: p.slice(1),
+        });
         return recursiveRemove(target.elements, p.slice(1), depth + 1);
       }
       if (key === 'columns' && Array.isArray(target.columns)) {
         const colIdx = p[1] as number;
         if (colIdx >= 0 && colIdx < target.columns.length) {
+          console.log('✅ 递归进入 columns 数组:', {
+            colIdx,
+            columnsLength: target.columns.length,
+            depth,
+          });
           return recursiveRemove(target.columns[colIdx], p.slice(2), depth + 1);
         } else {
           console.error('❌ 递归移除失败，columns索引无效', {
@@ -1399,13 +1497,35 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         }
       }
       if (typeof key === 'number' && Array.isArray(target)) {
+        console.log('✅ 递归进入数组索引:', {
+          key,
+          targetLength: target.length,
+          depth,
+          remainingPath: p.slice(1),
+        });
         return recursiveRemove(target[key], p.slice(1), depth + 1);
       }
       // 兜底
       if (target[key] !== undefined) {
+        console.log('⚠️ 使用兜底逻辑进入:', {
+          key,
+          targetKeyType: typeof target[key],
+          depth,
+          remainingPath: p.slice(1),
+        });
         return recursiveRemove(target[key], p.slice(1), depth + 1);
       }
-      console.error('❌ 递归移除失败，路径无效', { key, depth, target });
+      console.error('❌ 递归移除失败，路径无效', {
+        key,
+        depth,
+        target: {
+          type: Array.isArray(target) ? 'array' : typeof target,
+          tag: target?.tag,
+          id: target?.id,
+          keys: target ? Object.keys(target) : 'null',
+        },
+        remainingPath: p,
+      });
       return false;
     }
 

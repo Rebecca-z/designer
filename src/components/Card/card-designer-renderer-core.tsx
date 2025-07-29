@@ -868,10 +868,14 @@ const DraggableWrapper: React.FC<{
             isChildComponent,
           });
 
-          // 执行排序
-          if (onComponentMove) {
-            onComponentMove(item.component, draggedPath, path, targetIndex);
-          }
+          // ✅ 修复：hover事件不执行实际移动，只用于视觉反馈
+          // 实际的移动操作将在drop事件中处理
+          console.log('💡 hover检测到排序需求，等待drop事件执行实际移动:', {
+            component: item.component.tag,
+            fromPath: draggedPath,
+            targetPath: path,
+            targetIndex,
+          });
         } else {
           console.warn('⚠️ 跳过无效的排序操作:', {
             draggedPath,
@@ -889,14 +893,26 @@ const DraggableWrapper: React.FC<{
         clearTimeout(hoverTimeoutRef.current);
       }
 
-      // 处理跨容器移动
+      // 处理组件移动（包括同容器排序和跨容器移动）
       if (!item.isNew && item.path && item.component && onComponentMove) {
         const draggedPath = item.path;
         const draggedContainerPath = draggedPath.slice(0, -1);
         const targetContainerPath = containerPath;
+        const isSameContainer = isSamePath(
+          draggedContainerPath,
+          targetContainerPath,
+        );
 
-        // 只处理跨容器移动
-        if (!isSamePath(draggedContainerPath, targetContainerPath)) {
+        console.log('🎯 drop事件处理组件移动:', {
+          draggedComponent: item.component.tag,
+          draggedPath,
+          targetContainerPath,
+          isSameContainer,
+          isChildComponent,
+        });
+
+        if (!isSameContainer) {
+          // 跨容器移动
           // 确定插入位置
           const rect = ref.current?.getBoundingClientRect();
           const clientOffset = monitor.getClientOffset();
@@ -943,6 +959,56 @@ const DraggableWrapper: React.FC<{
               draggedPath,
               targetPath: path,
               reason: '路径格式不正确',
+            });
+          }
+        } else {
+          // 同容器内排序
+          console.log('🔄 同容器内排序 (drop事件):', {
+            draggedComponent: item.component.tag,
+            draggedPath,
+            targetPath: path,
+            index,
+          });
+
+          // 确定目标索引
+          const rect = ref.current?.getBoundingClientRect();
+          const clientOffset = monitor.getClientOffset();
+          let targetIndex = index;
+
+          if (rect && clientOffset) {
+            const hoverMiddleY = rect.top + rect.height / 2;
+            if (clientOffset.y > hoverMiddleY) {
+              targetIndex = index + 1;
+            }
+          }
+
+          // 安全检查：确保路径有效
+          if (
+            draggedPath.length >= 4 &&
+            path.length >= 4 &&
+            draggedPath[0] === 'dsl' &&
+            draggedPath[1] === 'body' &&
+            path[0] === 'dsl' &&
+            path[1] === 'body'
+          ) {
+            console.log('✅ 执行同容器排序:', {
+              draggedComponent: {
+                id: item.component.id,
+                tag: item.component.tag,
+              },
+              draggedPath,
+              targetPath: path,
+              targetIndex,
+              isChildComponent,
+            });
+
+            // 执行排序
+            onComponentMove(item.component, draggedPath, path, targetIndex);
+          } else {
+            console.warn('⚠️ 跳过无效的排序操作:', {
+              draggedPath,
+              targetPath: path,
+              reason: '路径格式不正确或缺少必要数据',
             });
           }
         }
