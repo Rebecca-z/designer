@@ -14,6 +14,7 @@ import {
   importFromJSON,
   migrateCardLink,
   migrateTitleStyle,
+  normalizeCombinationModes,
 } from './card-designer-utils';
 
 // 工具函数：根据路径更新组件
@@ -547,6 +548,11 @@ export const useConfigManagement = () => {
               (el: any) => !!el.id,
             ),
           });
+
+          // 处理多图混排组件的combination_mode
+          newCardData.dsl.body.elements = normalizeCombinationModes(
+            newCardData.dsl.body.elements,
+          );
 
           console.log('✅ 新格式数据处理完成:', newCardData);
 

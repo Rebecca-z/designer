@@ -719,7 +719,7 @@ export const createDefaultComponent = (type: string): ComponentType => {
       return {
         id: generateId(),
         tag: 'img_combination',
-        combination_mode: 'triple',
+        combination_mode: 'triple', // 保持原有的triple模式，不需要简化
         img_list: [
           {
             img_url: 'demo.png',
@@ -1534,6 +1534,63 @@ export const ensureComponentIds = (obj: any): any => {
   return obj;
 };
 
+// 处理多图混排组件的combination_mode智能推断
+export const normalizeCombinationModes = (obj: any): any => {
+  if (Array.isArray(obj)) {
+    return obj.map(normalizeCombinationModes);
+  }
+
+  if (obj && typeof obj === 'object' && obj !== null) {
+    // 如果是多图混排组件，需要处理combination_mode
+    if (obj.tag === 'img_combination' && obj.combination_mode && obj.img_list) {
+      const imageCount = Array.isArray(obj.img_list) ? obj.img_list.length : 0;
+
+      // 如果是bisect或trisect开头的模式，需要简化存储
+      if (obj.combination_mode.startsWith('bisect_')) {
+        console.log('🔄 简化bisect模式存储:', {
+          oldMode: obj.combination_mode,
+          newMode: 'bisect',
+          imageCount,
+        });
+        obj.combination_mode = 'bisect';
+      } else if (obj.combination_mode.startsWith('trisect_')) {
+        console.log('🔄 简化trisect模式存储:', {
+          oldMode: obj.combination_mode,
+          newMode: 'trisect',
+          imageCount,
+        });
+        obj.combination_mode = 'trisect';
+      }
+
+      // 如果导入的数据中combination_mode是简化的bisect或trisect，根据图片数量推断具体模式
+      else if (obj.combination_mode === 'bisect') {
+        console.log('🎯 推断bisect具体模式:', {
+          mode: 'bisect',
+          imageCount,
+          inferred: `根据${imageCount}张图片推断为具体模式`,
+        });
+        // 这里不修改存储的值，保持为'bisect'，由显示逻辑处理
+      } else if (obj.combination_mode === 'trisect') {
+        console.log('🎯 推断trisect具体模式:', {
+          mode: 'trisect',
+          imageCount,
+          inferred: `根据${imageCount}张图片推断为具体模式`,
+        });
+        // 这里不修改存储的值，保持为'trisect'，由显示逻辑处理
+      }
+    }
+
+    // 递归处理所有属性
+    const result: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = normalizeCombinationModes(value);
+    }
+    return result;
+  }
+
+  return obj;
+};
+
 // 从JSON导入配置 - 支持旧格式和新格式
 export const importFromJSON = (jsonString: string): DesignData | null => {
   try {
@@ -1555,9 +1612,10 @@ export const importFromJSON = (jsonString: string): DesignData | null => {
         elements: parsed.dsl.body.elements || [],
       };
 
-      // 先确保所有组件都有ID
+      // 先确保所有组件都有ID，然后处理combination_mode
       const dataWithIds = ensureComponentIds(oldFormatData);
-      return convertFromTargetFormat(dataWithIds);
+      const dataWithNormalizedModes = normalizeCombinationModes(dataWithIds);
+      return convertFromTargetFormat(dataWithNormalizedModes);
     }
 
     // 验证旧格式数据结构
@@ -1568,9 +1626,10 @@ export const importFromJSON = (jsonString: string): DesignData | null => {
       Array.isArray(parsed.elements)
     ) {
       console.log('✅ 检测到旧格式数据，直接使用');
-      // 先确保所有组件都有ID
+      // 先确保所有组件都有ID，然后处理combination_mode
       const dataWithIds = ensureComponentIds(parsed);
-      return convertFromTargetFormat(dataWithIds);
+      const dataWithNormalizedModes = normalizeCombinationModes(dataWithIds);
+      return convertFromTargetFormat(dataWithNormalizedModes);
     }
 
     console.error('❌ 不支持的数据格式:', parsed);

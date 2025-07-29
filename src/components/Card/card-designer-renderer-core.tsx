@@ -1492,11 +1492,15 @@ const SmartDropZone: React.FC<{
 const ImgRenderer: React.FC<{ item: any; style?: React.CSSProperties }> = (
   props,
 ) => {
+  // 安全处理 undefined 或 null 的 item
+  const item = props.item || {};
+  const hasValidImage = item.img_url && item.img_url.trim() !== '';
+
   return (
     <>
-      {props.item.img_url ? (
+      {hasValidImage ? (
         <img
-          src={props.item.img_url}
+          src={item.img_url}
           onError={(e) => {
             // 图片加载失败时显示空状态
             const target = e.target as HTMLImageElement;
@@ -2783,14 +2787,16 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             {comp.combination_mode === 'double' && (
               <>
                 <ImgRenderer
-                  item={comp.img_list[0]}
+                  item={comp.img_list?.[0]}
+                  key="double-img-0"
                   style={{
                     width: '32.4%',
                     aspectRatio: '24 / 33',
                   }}
                 />
                 <ImgRenderer
-                  item={comp.img_list[0]}
+                  item={comp.img_list?.[1]}
+                  key="double-img-1"
                   style={{
                     width: 'calc(100% - 32.4% - 4px)',
                     aspectRatio: '49.33 / 33',
@@ -2803,7 +2809,8 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             {comp.combination_mode === 'triple' && (
               <>
                 <ImgRenderer
-                  item={comp.img_list[0]}
+                  item={comp.img_list?.[0]}
+                  key="triple-img-0"
                   style={{
                     width: '66.5%',
                     aspectRatio: 1,
@@ -2818,13 +2825,15 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                   }}
                 >
                   <ImgRenderer
-                    item={comp.img_list[1]}
+                    item={comp.img_list?.[1]}
+                    key="triple-img-1"
                     style={{
                       aspectRatio: '1',
                     }}
                   />
                   <ImgRenderer
-                    item={comp.img_list[2]}
+                    item={comp.img_list?.[2]}
+                    key="triple-img-2"
                     style={{
                       aspectRatio: '1',
                     }}
@@ -2838,7 +2847,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                 {(comp.img_list || []).map((item: any, imgIndex: number) => (
                   <ImgRenderer
                     item={item}
-                    key={imgIndex}
+                    key={`bisect-img-${imgIndex}-${item?.img_url || 'empty'}`}
                     style={{ width: 'calc(50% - 2px)', aspectRatio: 1 }}
                   />
                 ))}
@@ -2850,7 +2859,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                 {(comp.img_list || []).map((item: any, imgIndex: number) => (
                   <ImgRenderer
                     item={item}
-                    key={imgIndex}
+                    key={`trisect-img-${imgIndex}-${item?.img_url || 'empty'}`}
                     style={{ width: 'calc(33.33% - 2.67px)', aspectRatio: 1 }}
                   />
                 ))}
@@ -2861,9 +2870,11 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               <div
                 style={{
                   gridColumn: `span ${
-                    comp.combination_mode === 'trisect'
+                    comp.combination_mode === 'trisect' ||
+                    comp.combination_mode.startsWith?.('trisect_')
                       ? 3
-                      : comp.combination_mode === 'bisect'
+                      : comp.combination_mode === 'bisect' ||
+                        comp.combination_mode.startsWith?.('bisect_')
                       ? 2
                       : 2
                   }`,

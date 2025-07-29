@@ -681,6 +681,48 @@ const EventEditModal: React.FC<{
   );
 };
 
+// 添加组合模式处理工具函数
+const getStorageCombinationMode = (mode: string): string => {
+  if (mode.startsWith('bisect_')) {
+    return 'bisect';
+  }
+  if (mode.startsWith('trisect_')) {
+    return 'trisect';
+  }
+  return mode;
+};
+
+const getDisplayCombinationMode = (
+  storageMode: string,
+  imageCount: number,
+): string => {
+  if (storageMode === 'bisect') {
+    switch (imageCount) {
+      case 2:
+        return 'bisect_2';
+      case 4:
+        return 'bisect_4';
+      case 6:
+        return 'bisect_6';
+      default:
+        return 'bisect_2'; // 默认双列2图
+    }
+  }
+  if (storageMode === 'trisect') {
+    switch (imageCount) {
+      case 3:
+        return 'trisect_3';
+      case 6:
+        return 'trisect_6';
+      case 9:
+        return 'trisect_9';
+      default:
+        return 'trisect_3'; // 默认三列3图
+    }
+  }
+  return storageMode;
+};
+
 // 右侧属性面板 - 修复数据更新逻辑
 export const PropertyPanel: React.FC<{
   selectedComponent: ComponentType | null;
@@ -2401,7 +2443,10 @@ export const PropertyPanel: React.FC<{
                             key={mode.value}
                             style={{
                               border:
-                                imgCombComponent.combination_mode === mode.value
+                                getDisplayCombinationMode(
+                                  imgCombComponent.combination_mode,
+                                  imgCombComponent.img_list?.length || 0,
+                                ) === mode.value
                                   ? '2px solid #1890ff'
                                   : '1px solid #d9d9d9',
                               borderRadius: '4px',
@@ -2409,7 +2454,10 @@ export const PropertyPanel: React.FC<{
                               textAlign: 'center',
                               cursor: 'pointer',
                               backgroundColor:
-                                imgCombComponent.combination_mode === mode.value
+                                getDisplayCombinationMode(
+                                  imgCombComponent.combination_mode,
+                                  imgCombComponent.img_list?.length || 0,
+                                ) === mode.value
                                   ? '#f0f9ff'
                                   : '#fafafa',
                               transition: 'all 0.2s ease',
@@ -2472,7 +2520,9 @@ export const PropertyPanel: React.FC<{
 
                               const updatedComponent = {
                                 ...currentComponent,
-                                combination_mode: mode.value as any,
+                                combination_mode: getStorageCombinationMode(
+                                  mode.value,
+                                ) as any,
                                 img_list: newImageList,
                               };
 
@@ -3026,7 +3076,10 @@ export const PropertyPanel: React.FC<{
                         当前混排方式:{' '}
                         <strong>
                           {(() => {
-                            const mode = imgCombComponent.combination_mode;
+                            const displayMode = getDisplayCombinationMode(
+                              imgCombComponent.combination_mode,
+                              imgCombComponent.img_list?.length || 0,
+                            );
                             const modeLabels = {
                               double: '双图模式（左小右大）',
                               triple: '三图模式（左1右2）',
@@ -3038,8 +3091,9 @@ export const PropertyPanel: React.FC<{
                               trisect_9: '三列-9图（3行3列）',
                             };
                             return (
-                              modeLabels[mode as keyof typeof modeLabels] ||
-                              mode
+                              modeLabels[
+                                displayMode as keyof typeof modeLabels
+                              ] || displayMode
                             );
                           })()}
                         </strong>
@@ -3097,16 +3151,17 @@ export const PropertyPanel: React.FC<{
                                 >
                                   <Input
                                     value={img.img_url || ''}
-                                    disabled={
-                                      imgCombComponent.combination_mode ===
-                                        'double' ||
-                                      imgCombComponent.combination_mode ===
-                                        'triple' ||
-                                      imgCombComponent.combination_mode ===
-                                        'bisect_2' ||
-                                      imgCombComponent.combination_mode ===
-                                        'trisect_3'
-                                    }
+                                    disabled={[
+                                      'double',
+                                      'triple',
+                                      'bisect_2',
+                                      'trisect_3',
+                                    ].includes(
+                                      getDisplayCombinationMode(
+                                        imgCombComponent.combination_mode,
+                                        imgCombComponent.img_list?.length || 0,
+                                      ),
+                                    )}
                                     onChange={(e) => {
                                       const newImgList = [
                                         ...(imgCombComponent.img_list || []),
@@ -3127,14 +3182,18 @@ export const PropertyPanel: React.FC<{
                                       onUpdateComponent(updatedComponent);
                                     }}
                                     placeholder={
-                                      imgCombComponent.combination_mode ===
-                                        'double' ||
-                                      imgCombComponent.combination_mode ===
-                                        'triple' ||
-                                      imgCombComponent.combination_mode ===
-                                        'bisect_2' ||
-                                      imgCombComponent.combination_mode ===
-                                        'trisect_3'
+                                      [
+                                        'double',
+                                        'triple',
+                                        'bisect_2',
+                                        'trisect_3',
+                                      ].includes(
+                                        getDisplayCombinationMode(
+                                          imgCombComponent.combination_mode,
+                                          imgCombComponent.img_list?.length ||
+                                            0,
+                                        ),
+                                      )
                                         ? '只能通过上传替换图片'
                                         : `请输入图片${index + 1}路径`
                                     }
