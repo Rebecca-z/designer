@@ -360,6 +360,11 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     return elements.some((component) => component.tag === 'title');
   };
 
+  // 工具函数：检查画布中是否已存在表单组件
+  const hasExistingForm = (elements: ComponentType[]): boolean => {
+    return elements.some((component) => component.tag === 'form');
+  };
+
   // 验证并修正路径，确保索引在有效范围内
   const validateAndCorrectPath = (
     elements: ComponentType[],
@@ -1611,6 +1616,18 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     }
 
     if (draggedItem.isNew) {
+      // 检查表单组件限制（只在拖拽到根级别时检查）
+      const isRootLevel =
+        targetPath.length === 3 && targetPath[2] === 'elements';
+      if (
+        draggedItem.type === 'form' &&
+        isRootLevel &&
+        hasExistingForm(elements)
+      ) {
+        message.warning('画布中已存在表单容器，每个画布只能有一个表单容器');
+        return;
+      }
+
       // 新组件
       const newComponent = createDefaultComponent(draggedItem.type);
 
@@ -1620,7 +1637,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         targetPath,
         dropIndex,
         pathAnalysis: {
-          isRoot: targetPath.length === 3 && targetPath[2] === 'elements',
+          isRoot: isRootLevel,
           isForm: targetPath.includes('elements') && targetPath.length > 3,
           isColumn: targetPath.includes('columns'),
         },
@@ -1637,6 +1654,22 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       // 现有组件移动
       const draggedComponent = draggedItem.component;
       const draggedPath = draggedItem.path;
+
+      // 检查表单组件限制（只在移动到根级别时检查，且不是自身移动）
+      const isRootLevel =
+        targetPath.length === 3 && targetPath[2] === 'elements';
+      const isMovingFormToRoot = draggedComponent.tag === 'form' && isRootLevel;
+      const isFormAlreadyAtRoot =
+        draggedPath.length === 4 && draggedPath[2] === 'elements';
+
+      if (
+        isMovingFormToRoot &&
+        !isFormAlreadyAtRoot &&
+        hasExistingForm(elements)
+      ) {
+        message.warning('画布中已存在表单容器，每个画布只能有一个表单容器');
+        return;
+      }
 
       // 先移除原位置的组件
       let newElements = removeComponentByPath(elements, draggedPath);
@@ -2108,6 +2141,10 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       if (item.type === 'title' && hasExistingTitle(elements)) {
         return false;
       }
+      // 如果是表单组件，检查是否已存在
+      if (item.type === 'form' && hasExistingForm(elements)) {
+        return false;
+      }
       return true;
     },
     drop: (item: DragItem, monitor) => {
@@ -2116,6 +2153,12 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       // 如果是标题组件且已存在，显示提示
       if (item.type === 'title' && hasExistingTitle(elements)) {
         message.warning('画布中已存在标题组件，每个画布只能有一个标题组件');
+        return;
+      }
+
+      // 如果是表单组件且已存在，显示提示
+      if (item.type === 'form' && hasExistingForm(elements)) {
+        message.warning('画布中已存在表单容器，每个画布只能有一个表单容器');
         return;
       }
 

@@ -1970,8 +1970,8 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               <Dropdown
                 menu={{
                   items: [
-                    // 标题组件不显示复制选项
-                    ...(element.tag !== 'title'
+                    // 标题组件和表单组件不显示复制选项
+                    ...(element.tag !== 'title' && element.tag !== 'form'
                       ? [
                           {
                             key: 'copy',

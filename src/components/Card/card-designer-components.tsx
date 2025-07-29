@@ -323,8 +323,8 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
 
   const contextMenu = {
     items: [
-      // 标题组件不显示复制选项
-      ...(component.tag !== 'title'
+      // 标题组件和表单组件不显示复制选项
+      ...(component.tag !== 'title' && component.tag !== 'form'
         ? [
             {
               key: 'copy',
