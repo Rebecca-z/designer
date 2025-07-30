@@ -697,6 +697,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           : 'null/undefined',
         remainingPath,
         nextPath,
+        originalTargetPath,
       });
 
       // 处理 'columns' 路径段
@@ -938,11 +939,37 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
 
           if (typeof nextKey === 'number') {
             // 下一个是数组索引
+            console.log('🔍 处理数字索引:', {
+              nextKey,
+              targetType: target ? typeof target : 'undefined',
+              isArray: Array.isArray(target),
+              targetLength: Array.isArray(target) ? target.length : 'N/A',
+              depth,
+              nextPath,
+              targetDetails: target
+                ? Array.isArray(target)
+                  ? target.map((item, idx) => ({
+                      index: idx,
+                      id: item?.id || 'no id',
+                      tag: item?.tag || 'no tag',
+                    }))
+                  : { id: target.id, tag: target.tag }
+                : 'null/undefined',
+            });
+
             if (
               Array.isArray(target) &&
               nextKey >= 0 &&
               nextKey < target.length
             ) {
+              console.log('✅ 数字索引有效，继续导航:', {
+                nextKey,
+                targetLength: target.length,
+                targetItem: target[nextKey]
+                  ? { id: target[nextKey].id, tag: target[nextKey].tag }
+                  : 'undefined',
+                nextPath: nextPath.slice(1),
+              });
               return navigateAndAdd(
                 target[nextKey],
                 nextPath.slice(1),
@@ -951,16 +978,117 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                 originalTargetPath,
               );
             } else {
+              // ✅ 修复：当数组为空时，直接添加组件
+              if (Array.isArray(target) && target.length === 0) {
+                console.log('✅ 目标数组为空，直接添加组件:', {
+                  nextKey,
+                  targetLength: target.length,
+                  depth,
+                  componentId: newComponent.id,
+                  componentTag: newComponent.tag,
+                });
+
+                if (insertIndex !== undefined) {
+                  target.splice(insertIndex, 0, newComponent);
+                } else {
+                  target.push(newComponent);
+                }
+
+                console.log('✅ 组件添加成功 (空数组):', {
+                  componentId: newComponent.id,
+                  componentTag: newComponent.tag,
+                  insertIndex,
+                  arrayLength: target.length,
+                });
+                return true;
+              }
+
+              // ✅ 修复：当目标不是数组时，尝试智能处理
+              if (!Array.isArray(target) && target && target.tag === 'form') {
+                console.log('✅ 目标不是数组而是表单组件，尝试智能处理:', {
+                  targetTag: target.tag,
+                  targetId: target.id,
+                  hasElements: target.elements ? 'yes' : 'no',
+                  elementsLength: target.elements
+                    ? target.elements.length
+                    : 'N/A',
+                  nextKey,
+                  depth,
+                });
+
+                // 如果表单有elements数组，尝试访问指定索引
+                if (target.elements && Array.isArray(target.elements)) {
+                  if (nextKey >= 0 && nextKey < target.elements.length) {
+                    console.log('✅ 从表单elements数组中获取组件:', {
+                      nextKey,
+                      elementsLength: target.elements.length,
+                      targetItem: target.elements[nextKey]
+                        ? {
+                            id: target.elements[nextKey].id,
+                            tag: target.elements[nextKey].tag,
+                          }
+                        : 'undefined',
+                    });
+                    return navigateAndAdd(
+                      target.elements[nextKey],
+                      nextPath.slice(1),
+                      depth + 1,
+                      rootElements,
+                      originalTargetPath,
+                    );
+                  } else {
+                    console.error('❌ 表单elements数组索引无效:', {
+                      nextKey,
+                      elementsLength: target.elements.length,
+                      availableIndices: target.elements.map(
+                        (_: any, idx: number) => idx,
+                      ),
+                      depth,
+                    });
+                    return false;
+                  }
+                } else {
+                  console.error('❌ 表单组件缺少elements数组:', {
+                    targetTag: target.tag,
+                    targetId: target.id,
+                    hasElements: target.elements ? 'yes' : 'no',
+                    depth,
+                  });
+                  return false;
+                }
+              }
+
               console.error('❌ elements数组索引无效:', {
                 nextKey,
                 targetLength: Array.isArray(target) ? target.length : 'N/A',
                 depth,
+                targetType: target ? typeof target : 'undefined',
+                isArray: Array.isArray(target),
+                availableIndices: Array.isArray(target)
+                  ? target.map((_, idx) => idx)
+                  : 'N/A',
               });
               return false;
             }
           } else if (nextKey === 'elements') {
+            console.log('🔍 处理elements路径段:', {
+              targetTag: target ? target.tag : 'undefined',
+              targetId: target ? target.id : 'undefined',
+              depth,
+              nextPath,
+              hasElements: target && target.elements ? 'yes' : 'no',
+              elementsIsArray:
+                target && target.elements
+                  ? Array.isArray(target.elements)
+                  : 'N/A',
+            });
+
             // 下一个也是elements，说明这是表单容器的结构
             if (target && target.elements && Array.isArray(target.elements)) {
+              console.log('✅ 找到表单elements数组，继续导航:', {
+                elementsLength: target.elements.length,
+                nextPath: nextPath.slice(1),
+              });
               return navigateAndAdd(
                 target.elements,
                 nextPath.slice(1),
@@ -980,6 +1108,11 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                   target.elements = [];
                 }
 
+                console.log('✅ 创建表单elements数组后继续导航:', {
+                  elementsLength: target.elements.length,
+                  nextPath: nextPath.slice(1),
+                });
+
                 return navigateAndAdd(
                   target.elements,
                   nextPath.slice(1),
@@ -993,6 +1126,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                   targetTag: target ? target.tag : 'undefined',
                   targetId: target ? target.id : 'undefined',
                   depth,
+                  nextPath,
                 });
 
                 // 如果当前目标是数组，说明我们已经到达了elements数组，直接在这里添加组件
@@ -1017,6 +1151,77 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                     arrayLength: target.length,
                   });
                   return true;
+                }
+
+                // ✅ 修复：如果当前目标是表单组件，但elements数组为空，需要创建分栏容器
+                if (
+                  target &&
+                  target.tag === 'form' &&
+                  (!target.elements || target.elements.length === 0)
+                ) {
+                  console.log('✅ 表单elements数组为空，创建分栏容器:', {
+                    formId: target.id,
+                    formTag: target.tag,
+                  });
+
+                  // 创建分栏容器
+                  const columnSetComponent = {
+                    id: `column_set_${Date.now()}_${Math.random()
+                      .toString(36)
+                      .substr(2, 9)}`,
+                    tag: 'column_set',
+                    name: 'ColumnSet',
+                    columns: [
+                      {
+                        id: `column_${Date.now()}_${Math.random()
+                          .toString(36)
+                          .substr(2, 9)}`,
+                        tag: 'column',
+                        name: 'Column',
+                        width: '33.33%',
+                        elements: [],
+                      },
+                      {
+                        id: `column_${Date.now()}_${Math.random()
+                          .toString(36)
+                          .substr(2, 9)}`,
+                        tag: 'column',
+                        name: 'Column',
+                        width: '33.33%',
+                        elements: [],
+                      },
+                      {
+                        id: `column_${Date.now()}_${Math.random()
+                          .toString(36)
+                          .substr(2, 9)}`,
+                        tag: 'column',
+                        name: 'Column',
+                        width: '33.33%',
+                        elements: [],
+                      },
+                    ],
+                  };
+
+                  // 将分栏容器添加到表单的elements数组中
+                  if (!target.elements) {
+                    target.elements = [];
+                  }
+                  target.elements.push(columnSetComponent);
+
+                  console.log('✅ 分栏容器创建成功:', {
+                    columnSetId: columnSetComponent.id,
+                    columnsCount: columnSetComponent.columns.length,
+                    formElementsLength: target.elements.length,
+                  });
+
+                  // 继续导航到分栏容器的第一列
+                  return navigateAndAdd(
+                    columnSetComponent.columns[0],
+                    ['elements'],
+                    depth + 1,
+                    rootElements,
+                    originalTargetPath,
+                  );
                 }
 
                 // 如果当前目标是组件对象，使用rootElements进行全局查找
@@ -1303,7 +1508,23 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         tag: el.tag,
         name: el.name || 'no name',
       })),
+      originalPath: path,
+      pathDetails: path.map((item, index) => ({
+        index,
+        item,
+        type: typeof item,
+      })),
     });
+
+    // 验证路径的有效性
+    if (path.length < 3) {
+      console.error('❌ 路径长度不足:', {
+        path,
+        pathLength: path.length,
+        expectedMinLength: 3,
+      });
+      return elements;
+    }
 
     const success = navigateAndAdd(
       newElements,
@@ -1462,6 +1683,206 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         }
       } else {
         console.error('❌ 表单容器内组件移除失败：表单索引无效', {
+          formIndex,
+          elementsLength: newElements.length,
+        });
+      }
+      return newElements;
+    }
+
+    // 分栏列删除 (路径长度为6，格式：['dsl', 'body', 'elements', columnSetIndex, 'columns', columnIndex])
+    if (path.length === 6 && path[2] === 'elements' && path[4] === 'columns') {
+      const columnSetIndex = path[3] as number;
+      const columnIndex = path[5] as number;
+
+      console.log('🗑️ 分栏列删除:', {
+        columnSetIndex,
+        columnIndex,
+        pathDetails: path,
+        elementsLength: newElements.length,
+      });
+
+      // 检查分栏容器索引是否有效
+      if (columnSetIndex >= 0 && columnSetIndex < newElements.length) {
+        const columnSetComponent = newElements[columnSetIndex];
+
+        // 检查是否是分栏容器组件且有columns数组
+        if (
+          columnSetComponent &&
+          columnSetComponent.tag === 'column_set' &&
+          Array.isArray((columnSetComponent as any).columns)
+        ) {
+          const columns = (columnSetComponent as any).columns;
+
+          console.log('🔍 分栏容器检查通过:', {
+            columnSetId: columnSetComponent.id,
+            columnsLength: columns.length,
+            columnIndex,
+            columnToRemove: columns[columnIndex]
+              ? {
+                  id: columns[columnIndex].id,
+                  tag: columns[columnIndex].tag,
+                }
+              : 'undefined',
+          });
+
+          // 检查列索引是否有效
+          if (columnIndex >= 0 && columnIndex < columns.length) {
+            columns.splice(columnIndex, 1);
+            console.log('✅ 分栏列删除成功:', {
+              columnSetIndex,
+              removedColumnIndex: columnIndex,
+              newColumnsLength: columns.length,
+            });
+
+            // 如果删除后没有列了，删除整个分栏容器
+            if (columns.length === 0) {
+              console.log('🗑️ 删除最后一个列，删除整个分栏容器');
+              newElements.splice(columnSetIndex, 1);
+            }
+          } else {
+            console.error('❌ 分栏列删除失败：列索引无效', {
+              columnIndex,
+              columnsLength: columns.length,
+            });
+          }
+        } else {
+          console.error('❌ 分栏列删除失败：不是有效的分栏容器组件', {
+            columnSetComponent: columnSetComponent
+              ? {
+                  id: columnSetComponent.id,
+                  tag: columnSetComponent.tag,
+                  hasColumns: (columnSetComponent as any).columns !== undefined,
+                  columnsIsArray: Array.isArray(
+                    (columnSetComponent as any).columns,
+                  ),
+                }
+              : 'null',
+          });
+        }
+      } else {
+        console.error('❌ 分栏列删除失败：分栏容器索引无效', {
+          columnSetIndex,
+          elementsLength: newElements.length,
+        });
+      }
+      return newElements;
+    }
+
+    // 表单内分栏列删除 (路径长度为8，格式：['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex])
+    if (
+      path.length === 8 &&
+      path[2] === 'elements' &&
+      path[4] === 'elements' &&
+      path[6] === 'columns'
+    ) {
+      const formIndex = path[3] as number;
+      const columnSetIndex = path[5] as number;
+      const columnIndex = path[7] as number;
+
+      console.log('🗑️ 表单内分栏列删除:', {
+        formIndex,
+        columnSetIndex,
+        columnIndex,
+        pathDetails: path,
+        elementsLength: newElements.length,
+      });
+
+      // 检查表单索引是否有效
+      if (formIndex >= 0 && formIndex < newElements.length) {
+        const formComponent = newElements[formIndex];
+
+        // 检查是否是表单组件且有elements数组
+        if (
+          formComponent &&
+          formComponent.tag === 'form' &&
+          Array.isArray((formComponent as any).elements)
+        ) {
+          const formElements = (formComponent as any).elements;
+
+          // 检查分栏容器索引是否有效
+          if (columnSetIndex >= 0 && columnSetIndex < formElements.length) {
+            const columnSetComponent = formElements[columnSetIndex];
+
+            // 检查是否是分栏容器组件且有columns数组
+            if (
+              columnSetComponent &&
+              columnSetComponent.tag === 'column_set' &&
+              Array.isArray((columnSetComponent as any).columns)
+            ) {
+              const columns = (columnSetComponent as any).columns;
+
+              console.log('🔍 表单内分栏容器检查通过:', {
+                formId: formComponent.id,
+                columnSetId: columnSetComponent.id,
+                columnsLength: columns.length,
+                columnIndex,
+                columnToRemove: columns[columnIndex]
+                  ? {
+                      id: columns[columnIndex].id,
+                      tag: columns[columnIndex].tag,
+                    }
+                  : 'undefined',
+              });
+
+              // 检查列索引是否有效
+              if (columnIndex >= 0 && columnIndex < columns.length) {
+                columns.splice(columnIndex, 1);
+                console.log('✅ 表单内分栏列删除成功:', {
+                  formIndex,
+                  columnSetIndex,
+                  removedColumnIndex: columnIndex,
+                  newColumnsLength: columns.length,
+                });
+
+                // 如果删除后没有列了，删除整个分栏容器
+                if (columns.length === 0) {
+                  console.log('🗑️ 删除最后一个列，删除整个分栏容器');
+                  formElements.splice(columnSetIndex, 1);
+                }
+              } else {
+                console.error('❌ 表单内分栏列删除失败：列索引无效', {
+                  columnIndex,
+                  columnsLength: columns.length,
+                });
+              }
+            } else {
+              console.error('❌ 表单内分栏列删除失败：不是有效的分栏容器组件', {
+                columnSetComponent: columnSetComponent
+                  ? {
+                      id: columnSetComponent.id,
+                      tag: columnSetComponent.tag,
+                      hasColumns:
+                        (columnSetComponent as any).columns !== undefined,
+                      columnsIsArray: Array.isArray(
+                        (columnSetComponent as any).columns,
+                      ),
+                    }
+                  : 'null',
+              });
+            }
+          } else {
+            console.error('❌ 表单内分栏列删除失败：分栏容器索引无效', {
+              columnSetIndex,
+              formElementsLength: formElements.length,
+            });
+          }
+        } else {
+          console.error('❌ 表单内分栏列删除失败：不是有效的表单组件', {
+            formComponent: formComponent
+              ? {
+                  id: formComponent.id,
+                  tag: formComponent.tag,
+                  hasElements: (formComponent as any).elements !== undefined,
+                  elementsIsArray: Array.isArray(
+                    (formComponent as any).elements,
+                  ),
+                }
+              : 'null',
+          });
+        }
+      } else {
+        console.error('❌ 表单内分栏列删除失败：表单索引无效', {
           formIndex,
           elementsLength: newElements.length,
         });

@@ -254,6 +254,40 @@ const CardDesigner: React.FC = () => {
           return column.elements[componentIndex] || null;
         }
       }
+    } else if (
+      path.length === 8 &&
+      path[4] === 'elements' &&
+      path[6] === 'columns'
+    ) {
+      // 表单内分栏列: ['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex]
+      const formIndex = path[3] as number;
+      const columnSetIndex = path[5] as number;
+      const columnIndex = path[7] as number;
+      const formComponent = data.dsl.body.elements[formIndex];
+
+      if (
+        formComponent &&
+        formComponent.tag === 'form' &&
+        (formComponent as any).elements
+      ) {
+        const columnSetComponent = (formComponent as any).elements[
+          columnSetIndex
+        ];
+        if (
+          columnSetComponent &&
+          columnSetComponent.tag === 'column_set' &&
+          (columnSetComponent as any).columns
+        ) {
+          const column = (columnSetComponent as any).columns[columnIndex];
+          if (column) {
+            return {
+              id: `${columnSetComponent.id}_column_${columnIndex}`,
+              tag: 'column',
+              ...column,
+            };
+          }
+        }
+      }
     }
 
     return null;
@@ -292,7 +326,7 @@ const CardDesigner: React.FC = () => {
         }
       }
 
-      // 特殊处理分栏列选择：['dsl', 'body', 'elements', columnSetIndex, 'columns', columnIndex]
+      // 特殊处理根级别分栏列选择：['dsl', 'body', 'elements', columnSetIndex, 'columns', columnIndex]
       if (
         selection.selectedPath.length === 6 &&
         selection.selectedPath[0] === 'dsl' &&
@@ -311,7 +345,7 @@ const CardDesigner: React.FC = () => {
           columnSetComponent.columns &&
           columnSetComponent.columns[columnIndex]
         ) {
-          console.log('✅ 分栏列选择状态有效:', {
+          console.log('✅ 根级别分栏列选择状态有效:', {
             columnSetIndex,
             columnIndex,
             columnSetId: columnSetComponent.id,
@@ -319,7 +353,54 @@ const CardDesigner: React.FC = () => {
           });
           return; // 分栏列选择状态有效
         } else {
-          console.log('❌ 分栏列选择状态无效，清除选择');
+          console.log('❌ 根级别分栏列选择状态无效，清除选择');
+          selection.clearSelection();
+          return;
+        }
+      }
+
+      // 特殊处理表单内分栏列选择：['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex]
+      if (
+        selection.selectedPath.length === 8 &&
+        selection.selectedPath[0] === 'dsl' &&
+        selection.selectedPath[1] === 'body' &&
+        selection.selectedPath[2] === 'elements' &&
+        selection.selectedPath[4] === 'elements' &&
+        selection.selectedPath[6] === 'columns'
+      ) {
+        const formIndex = selection.selectedPath[3] as number;
+        const columnSetIndex = selection.selectedPath[5] as number;
+        const columnIndex = selection.selectedPath[7] as number;
+        const formComponent = safeCardData.dsl.body.elements[formIndex];
+
+        if (
+          formComponent &&
+          formComponent.tag === 'form' &&
+          formComponent.elements
+        ) {
+          const columnSetComponent = formComponent.elements[columnSetIndex];
+          if (
+            columnSetComponent &&
+            columnSetComponent.tag === 'column_set' &&
+            columnSetComponent.columns &&
+            columnSetComponent.columns[columnIndex]
+          ) {
+            console.log('✅ 表单内分栏列选择状态有效:', {
+              formIndex,
+              columnSetIndex,
+              columnIndex,
+              formId: formComponent.id,
+              columnSetId: columnSetComponent.id,
+              selectedComponentId: selection.selectedComponent?.id,
+            });
+            return; // 表单内分栏列选择状态有效
+          } else {
+            console.log('❌ 表单内分栏列选择状态无效，清除选择');
+            selection.clearSelection();
+            return;
+          }
+        } else {
+          console.log('❌ 表单内分栏列选择状态无效，表单组件不存在');
           selection.clearSelection();
           return;
         }
@@ -466,6 +547,73 @@ const CardDesigner: React.FC = () => {
         ) {
           selection.clearSelection();
           console.log('🔄 重置选中状态，因为删除了当前选中的列或其后的列');
+        }
+      }
+    } else if (
+      path.length === 8 &&
+      path[4] === 'elements' &&
+      path[6] === 'columns'
+    ) {
+      // 删除表单内分栏列: ['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex]
+      const formIndex = path[3] as number;
+      const columnSetIndex = path[5] as number;
+      const columnIndex = path[7] as number;
+      const formComponent = newData.dsl.body.elements[formIndex];
+
+      if (
+        formComponent &&
+        formComponent.tag === 'form' &&
+        formComponent.elements
+      ) {
+        const columnSetComponent = formComponent.elements[columnSetIndex];
+        if (
+          columnSetComponent &&
+          columnSetComponent.tag === 'column_set' &&
+          columnSetComponent.columns
+        ) {
+          // 删除指定的分栏列
+          columnSetComponent.columns.splice(columnIndex, 1);
+          console.log('🗑️ 删除表单内分栏列:', {
+            formIndex,
+            columnSetIndex,
+            columnIndex,
+            remainingColumns: columnSetComponent.columns.length,
+          });
+
+          // 如果删除后没有列了，删除整个分栏组件
+          if (columnSetComponent.columns.length === 0) {
+            formComponent.elements.splice(columnSetIndex, 1);
+            console.log('🗑️ 表单内分栏列全部删除，删除整个分栏组件');
+          } else {
+            // 重新计算剩余列的宽度 - 确保每列都有width属性
+            columnSetComponent.columns = columnSetComponent.columns.map(
+              (col: any) => ({
+                ...col,
+                width: col.width || 1, // 确保每列都有width属性，默认为1
+              }),
+            );
+
+            console.log('🔄 删除表单内分栏列后重新计算列宽:', {
+              remainingColumns: columnSetComponent.columns.length,
+              columnWidths: columnSetComponent.columns.map(
+                (col: any) => col.width,
+              ),
+            });
+          }
+
+          // 如果当前选中的是被删除的列或之后的列，需要重置选中状态
+          if (
+            selection.selectedPath &&
+            selection.selectedPath.length >= 8 &&
+            selection.selectedPath[3] === formIndex &&
+            selection.selectedPath[4] === 'elements' &&
+            selection.selectedPath[5] === columnSetIndex &&
+            selection.selectedPath[6] === 'columns' &&
+            (selection.selectedPath[7] as number) >= columnIndex
+          ) {
+            selection.clearSelection();
+            console.log('🔄 重置选中状态，因为删除了当前选中的列或其后的列');
+          }
         }
       }
     } else if (

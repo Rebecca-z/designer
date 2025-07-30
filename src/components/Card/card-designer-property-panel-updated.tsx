@@ -279,7 +279,7 @@ const getComponentRealPath = (
     }
   }
 
-  // 检查是否是分栏列选中路径：['dsl', 'body', 'elements', columnSetIndex, 'columns', columnIndex]
+  // 检查是否是根级别分栏列选中路径：['dsl', 'body', 'elements', columnSetIndex, 'columns', columnIndex]
   if (
     selectedPath.length === 6 &&
     selectedPath[0] === 'dsl' &&
@@ -303,7 +303,7 @@ const getComponentRealPath = (
           ...column,
         };
 
-        console.log('📐 分栏列选中:', {
+        console.log('📐 根级别分栏列选中:', {
           componentId: columnComponent.id,
           componentTag: columnComponent.tag,
           columnSetIndex,
@@ -318,7 +318,55 @@ const getComponentRealPath = (
     }
   }
 
-  // 检查是否是分栏内的组件路径：['dsl', 'body', 'elements', columnSetIndex, 'columns', columnIndex, 'elements', componentIndex]
+  // 检查是否是表单内分栏列选中路径：['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex]
+  if (
+    selectedPath.length === 8 &&
+    selectedPath[0] === 'dsl' &&
+    selectedPath[1] === 'body' &&
+    selectedPath[2] === 'elements' &&
+    selectedPath[4] === 'elements' &&
+    selectedPath[6] === 'columns'
+  ) {
+    const formIndex = selectedPath[3] as number;
+    const columnSetIndex = selectedPath[5] as number;
+    const columnIndex = selectedPath[7] as number;
+
+    const formComponent = data.dsl.body.elements[formIndex];
+    if (formComponent && formComponent.tag === 'form') {
+      const formElements = (formComponent as any).elements || [];
+      const columnSetComponent = formElements[columnSetIndex];
+
+      if (columnSetComponent && columnSetComponent.tag === 'column_set') {
+        const columns = (columnSetComponent as any).columns || [];
+        const column = columns[columnIndex];
+
+        if (column) {
+          // 创建一个虚拟的分栏列组件用于属性编辑
+          const columnComponent: ComponentType = {
+            id: `${columnSetComponent.id}_column_${columnIndex}`,
+            tag: 'column',
+            ...column,
+          };
+
+          console.log('📐 表单内分栏列选中:', {
+            componentId: columnComponent.id,
+            componentTag: columnComponent.tag,
+            formIndex,
+            columnSetIndex,
+            columnIndex,
+            selectedPath,
+            realPath: selectedPath,
+            formComponentId: formComponent.id,
+            columnSetComponentId: columnSetComponent.id,
+            columnData: column,
+          });
+          return { component: columnComponent, realPath: selectedPath };
+        }
+      }
+    }
+  }
+
+  // 检查是否是根级别分栏内的组件路径：['dsl', 'body', 'elements', columnSetIndex, 'columns', columnIndex, 'elements', componentIndex]
   if (
     selectedPath.length >= 8 &&
     selectedPath[0] === 'dsl' &&
@@ -340,7 +388,7 @@ const getComponentRealPath = (
         const component = column.elements[componentIndex];
 
         if (component) {
-          console.log('📐 分栏内组件:', {
+          console.log('📐 根级别分栏内组件:', {
             componentId: component.id,
             componentTag: component.tag,
             columnSetIndex,
@@ -350,6 +398,51 @@ const getComponentRealPath = (
             realPath: selectedPath,
           });
           return { component, realPath: selectedPath };
+        }
+      }
+    }
+  }
+
+  // 检查是否是表单内分栏内的组件路径：['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', componentIndex]
+  if (
+    selectedPath.length >= 10 &&
+    selectedPath[0] === 'dsl' &&
+    selectedPath[1] === 'body' &&
+    selectedPath[2] === 'elements' &&
+    selectedPath[4] === 'elements' &&
+    selectedPath[6] === 'columns' &&
+    selectedPath[8] === 'elements'
+  ) {
+    const formIndex = selectedPath[3] as number;
+    const columnSetIndex = selectedPath[5] as number;
+    const columnIndex = selectedPath[7] as number;
+    const componentIndex = selectedPath[9] as number;
+
+    const formComponent = data.dsl.body.elements[formIndex];
+    if (formComponent && formComponent.tag === 'form') {
+      const formElements = (formComponent as any).elements || [];
+      const columnSetComponent = formElements[columnSetIndex];
+
+      if (columnSetComponent && columnSetComponent.tag === 'column_set') {
+        const columns = (columnSetComponent as any).columns || [];
+        const column = columns[columnIndex];
+
+        if (column && column.elements) {
+          const component = column.elements[componentIndex];
+
+          if (component) {
+            console.log('📐 表单内分栏内组件:', {
+              componentId: component.id,
+              componentTag: component.tag,
+              formIndex,
+              columnSetIndex,
+              columnIndex,
+              componentIndex,
+              selectedPath,
+              realPath: selectedPath,
+            });
+            return { component, realPath: selectedPath };
+          }
         }
       }
     }
@@ -2086,6 +2179,38 @@ export const PropertyPanel: React.FC<{
         onUpdateComponent(updatedComponent);
       };
 
+      // 删除单个列的函数
+      const handleDeleteColumn = (columnIndex: number) => {
+        const newColumns = [...columns];
+        newColumns.splice(columnIndex, 1);
+
+        // 如果删除后没有列了，删除整个分栏容器
+        if (newColumns.length === 0) {
+          // 这里需要通知父组件删除整个分栏容器
+          console.log('🗑️ 删除最后一个列，需要删除整个分栏容器');
+          return;
+        }
+
+        // 重新计算剩余列的宽度，保持总宽度不变
+        const totalWidth = newColumns.reduce(
+          (sum: number, col: any) => sum + (col.width || 1),
+          0,
+        );
+
+        // 如果总宽度为0，给所有列设置默认宽度1
+        if (totalWidth === 0) {
+          newColumns.forEach((col: any) => {
+            col.width = 1;
+          });
+        }
+
+        const updatedComponent = {
+          ...currentComponent,
+          columns: newColumns,
+        };
+        onUpdateComponent(updatedComponent);
+      };
+
       // 更新单个列宽的函数
       const handleColumnWidthChange = (columnIndex: number, width: number) => {
         const newColumns = columns.map((col: any, index: number) => {
@@ -2225,6 +2350,20 @@ export const PropertyPanel: React.FC<{
                             >
                               {columnWidths[index]}%
                             </Text>
+                            {/* 删除列按钮 */}
+                            <Button
+                              type="text"
+                              size="small"
+                              danger
+                              icon={<DeleteOutlined />}
+                              onClick={() => handleDeleteColumn(index)}
+                              style={{
+                                padding: '4px 8px',
+                                height: '24px',
+                                fontSize: '12px',
+                              }}
+                              title="删除此列"
+                            />
                           </div>
                         </Form.Item>
                       </div>
