@@ -1812,10 +1812,48 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         return;
       }
 
-      // 再添加到新位置
+      // 修复目标路径：当移除组件后，需要调整目标路径中的索引
+      let adjustedTargetPath = [...targetPath];
+
+      // 如果是根级别移动（从根级别到容器），需要调整目标容器的索引
+      if (
+        draggedPath.length === 4 &&
+        draggedPath[2] === 'elements' &&
+        targetPath.length >= 4 &&
+        targetPath[2] === 'elements'
+      ) {
+        const draggedIndex = draggedPath[3] as number;
+        const targetContainerIndex = targetPath[3] as number;
+
+        // 如果目标容器在被拖拽组件之后，索引需要减1
+        if (targetContainerIndex > draggedIndex) {
+          adjustedTargetPath[3] = targetContainerIndex - 1;
+          console.log('🔧 调整目标路径索引:', {
+            originalTargetPath: targetPath,
+            adjustedTargetPath,
+            draggedIndex,
+            originalTargetContainerIndex: targetContainerIndex,
+            adjustedTargetContainerIndex: targetContainerIndex - 1,
+            reason: '移除组件后目标容器索引前移',
+          });
+        }
+      }
+
+      // 再添加到新位置（使用调整后的路径）
+      console.log('🔄 使用调整后的路径添加组件:', {
+        originalTargetPath: targetPath,
+        adjustedTargetPath,
+        draggedComponent: {
+          id: draggedComponent.id,
+          tag: draggedComponent.tag,
+        },
+        dropIndex,
+        currentElementsCount: newElements.length,
+      });
+
       newElements = addComponentByPath(
         newElements,
-        targetPath,
+        adjustedTargetPath,
         draggedComponent,
         dropIndex,
       );

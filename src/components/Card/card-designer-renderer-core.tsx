@@ -722,6 +722,7 @@ const DraggableWrapper: React.FC<{
         hasComponent: !!item.component,
         componentTag: item.component?.tag,
         isChildComponent: item.isChildComponent,
+        currentComponentTag: component.tag,
         currentPath: path,
         containerPath,
       });
@@ -733,6 +734,26 @@ const DraggableWrapper: React.FC<{
 
       // 不能拖拽到自己的子元素上
       if (!item.isNew && item.path && isParentChild(item.path, path)) {
+        return false;
+      }
+
+      // 🚫 新增：不允许拖拽到表单内的非容器组件上
+      // 检查当前组件是否在表单容器内且不是容器组件
+      const isInFormContainer =
+        containerPath.length >= 4 &&
+        containerPath[containerPath.length - 1] === 'elements' &&
+        containerPath[containerPath.length - 3] === 'elements';
+
+      const isContainerComponent =
+        component.tag === 'form' || component.tag === 'column_set';
+
+      if (isInFormContainer && !isContainerComponent) {
+        console.log('🚫 不允许拖拽到表单内的非容器组件上:', {
+          currentComponentTag: component.tag,
+          isInFormContainer,
+          isContainerComponent,
+          containerPath,
+        });
         return false;
       }
 
@@ -955,8 +976,19 @@ const DraggableWrapper: React.FC<{
               targetContainerPath,
             });
 
-            // 执行跨容器移动
-            onComponentMove(item.component, draggedPath, path, insertIndex);
+            // 执行跨容器移动 - 使用正确的目标容器路径
+            const targetPath = [...targetContainerPath, insertIndex];
+            console.log('🔄 计算目标路径:', {
+              targetContainerPath,
+              insertIndex,
+              computedTargetPath: targetPath,
+            });
+            onComponentMove(
+              item.component,
+              draggedPath,
+              targetPath,
+              insertIndex,
+            );
           } else {
             console.warn('⚠️ 跳过无效的跨容器移动:', {
               draggedPath,
@@ -1472,15 +1504,10 @@ const SmartDropZone: React.FC<{
 
   const dropZoneStyle: React.CSSProperties = {
     minHeight: hasContent ? 'auto' : containerType === 'form' ? '60px' : '50px',
-    padding: containerType === 'column' ? '4px' : '4px', // 分栏列简化padding
-    border:
-      containerType === 'column'
-        ? 'none' // 分栏列完全不显示边框，由外层管理
-        : isOver && canDrop
-        ? '1px dashed #1890ff'
-        : '1px dashed #e0e0e0',
-    borderRadius: containerType === 'column' ? '0' : '2px', // 分栏列不要圆角
-    backgroundColor: 'transparent', // 分栏列背景完全透明
+    padding: '4px', // 统一简化padding
+    border: 'none', // 表单容器和分栏列都不显示内部边框，由外层管理
+    borderRadius: '0', // 不要圆角，由外层管理
+    backgroundColor: 'transparent', // 背景完全透明
     position: 'relative',
     transition: 'all 0.15s ease',
     flex: containerType === 'column' ? 1 : 'none',
@@ -1488,23 +1515,7 @@ const SmartDropZone: React.FC<{
     pointerEvents: 'auto',
   };
 
-  // 拖拽悬停效果
-  if (isOver && canDrop) {
-    dropZoneStyle.transform = 'scale(1.02)';
-    dropZoneStyle.boxShadow = '0 4px 12px rgba(24, 144, 255, 0.2)';
-  }
-
-  // 拖拽限制效果
-  if (isOver && !canDrop) {
-    dropZoneStyle.border = '2px dashed #ff4d4f';
-    dropZoneStyle.backgroundColor = 'rgba(255, 77, 79, 0.05)';
-    dropZoneStyle.transform = 'scale(0.98)';
-  }
-
-  const emptyStateMessage =
-    containerType === 'form'
-      ? '拖拽组件到表单中'
-      : `拖拽组件到第${(columnIndex ?? 0) + 1}列`;
+  // 移除拖拽视觉效果，由外层容器管理选中样式
 
   const dropMessage = (isChildComponent?: boolean) => {
     if (isChildComponent) {
@@ -1593,26 +1604,11 @@ const SmartDropZone: React.FC<{
         >
           <div style={{ pointerEvents: 'auto' }}>{children}</div>
         </div>
-      ) : containerType === 'form' ? (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '80px',
-            color: '#999',
-            fontSize: '12px',
-            textAlign: 'center',
-            border: '1px dashed #d9d9d9',
-            borderRadius: '4px',
-            backgroundColor: '#fafafa',
-          }}
-        >
-          {emptyStateMessage}
-        </div>
       ) : (
-        // 分栏列为空时不显示任何提示，只占位
-        <div style={{ minHeight: '60px' }} />
+        // 表单容器和分栏列为空时都不显示提示，只占位
+        <div
+          style={{ minHeight: containerType === 'form' ? '60px' : '60px' }}
+        />
       )}
 
       {/* 拖拽悬停提示 - 只在表单容器中显示 */}
@@ -2094,16 +2090,13 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       const formContent = (
         <div
           style={{
-            // 移除内层选中边框，避免与外层ComponentRenderer的边框重复
-            border:
-              formElements.length === 0
-                ? '2px dashed #d9d9d9'
-                : '1px solid #f0f0f0',
+            border: '2px dashed #d9d9d9',
             borderRadius: '4px',
-            backgroundColor: formElements.length === 0 ? '#fafafa' : '#fff',
+            backgroundColor: 'transparent',
             transition: 'all 0.2s ease',
             position: 'relative',
             minHeight: '80px', // 确保表单容器有最小高度
+            padding: '8px', // 内边距简化
           }}
         >
           {/* 表单标题 - 始终显示，但样式不同 */}
@@ -2125,20 +2118,18 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             📋 表单容器 {comp.name && `(${comp.name})`}
           </div>
 
-          {/* 表单拖拽区域 */}
-          <div style={{ padding: '12px', minHeight: '60px' }}>
-            <SmartDropZone
-              targetPath={formPath}
-              containerType="form"
-              onContainerDrop={onContainerDrop}
-              onComponentMove={onComponentMove}
-              childElements={formElements}
-            >
-              {formElements.length > 0
-                ? renderChildElements(formElements, formPath)
-                : null}
-            </SmartDropZone>
-          </div>
+          {/* 简化的拖拽区域 - 移除SmartDropZone的嵌套 */}
+          <SmartDropZone
+            targetPath={formPath}
+            containerType="form"
+            onContainerDrop={onContainerDrop}
+            onComponentMove={onComponentMove}
+            childElements={formElements}
+          >
+            {formElements.length > 0
+              ? renderChildElements(formElements, formPath)
+              : null}
+          </SmartDropZone>
         </div>
       );
 
