@@ -202,6 +202,9 @@ const ContainerSortableItem: React.FC<{
   enableSort = true,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
+  const [indicatorPosition, setIndicatorPosition] = React.useState<
+    'top' | 'bottom' | null
+  >(null);
   const insertTargetIndex = useRef<number>(index); // 记录最后一次hover的插入索引
 
   // 添加防抖和缓存机制
@@ -353,10 +356,12 @@ const ContainerSortableItem: React.FC<{
           // 鼠标在上半部分 - 插入到当前元素之前
           currentInsertPosition = 'before';
           targetIndex = hoverIndex;
+          setIndicatorPosition('top');
         } else {
           // 鼠标在下半部分 - 插入到当前元素之后
           currentInsertPosition = 'after';
           targetIndex = hoverIndex + 1;
+          setIndicatorPosition('bottom');
         }
 
         // 检查是否与上次状态相同，避免不必要的更新
@@ -445,6 +450,9 @@ const ContainerSortableItem: React.FC<{
       if (hoverTimeoutRef.current) {
         clearTimeout(hoverTimeoutRef.current);
       }
+
+      // 清除指示线位置
+      setIndicatorPosition(null);
 
       // 处理同容器内排序
       if (!item.isNew && item.path && item.component && onComponentMove) {
@@ -624,11 +632,11 @@ const ContainerSortableItem: React.FC<{
       data-container-sortable-item="true"
     >
       {/* 🎯 新增：拖拽悬停时的蓝色线条指示线 */}
-      {isOver && enableSort && (
+      {isOver && enableSort && indicatorPosition && (
         <div
           style={{
             position: 'absolute',
-            top: '50%',
+            top: indicatorPosition === 'top' ? '0' : '100%',
             left: '0',
             right: '0',
             height: '2px',
@@ -636,7 +644,10 @@ const ContainerSortableItem: React.FC<{
             borderRadius: '1px',
             zIndex: 1000,
             boxShadow: '0 0 4px rgba(24, 144, 255, 0.6)',
-            transform: 'translateY(-50%)',
+            transform:
+              indicatorPosition === 'top'
+                ? 'translateY(-50%)'
+                : 'translateY(50%)',
             pointerEvents: 'none',
           }}
         />
@@ -683,6 +694,9 @@ const DraggableWrapper: React.FC<{
   onCanvasFocus,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
+  const [indicatorPosition, setIndicatorPosition] = React.useState<
+    'top' | 'bottom' | null
+  >(null);
 
   // 添加防抖和缓存机制
   const lastHoverState = useRef<{
@@ -794,8 +808,23 @@ const DraggableWrapper: React.FC<{
 
       return true;
     },
-    hover: (item: DragItem) => {
+    hover: (item: DragItem, monitor) => {
       if (!enableSort || !ref.current) return;
+
+      // 获取鼠标位置
+      const clientOffset = monitor.getClientOffset();
+      if (!clientOffset) return;
+
+      // 获取元素位置
+      const rect = ref.current.getBoundingClientRect();
+      const hoverMiddleY = rect.top + rect.height / 2;
+
+      // 根据鼠标位置设置指示线位置
+      if (clientOffset.y < hoverMiddleY) {
+        setIndicatorPosition('top');
+      } else {
+        setIndicatorPosition('bottom');
+      }
 
       // 防抖处理
       if (hoverTimeoutRef.current) {
@@ -924,6 +953,9 @@ const DraggableWrapper: React.FC<{
       if (hoverTimeoutRef.current) {
         clearTimeout(hoverTimeoutRef.current);
       }
+
+      // 清除指示线位置
+      setIndicatorPosition(null);
 
       // 处理组件移动（包括同容器排序和跨容器移动）
       if (!item.isNew && item.path && item.component && onComponentMove) {
@@ -1165,11 +1197,11 @@ const DraggableWrapper: React.FC<{
       }}
     >
       {/* 🎯 新增：拖拽悬停时的蓝色线条指示线 */}
-      {isOver && enableSort && (
+      {isOver && enableSort && indicatorPosition && (
         <div
           style={{
             position: 'absolute',
-            top: '50%',
+            top: indicatorPosition === 'top' ? '0' : '100%',
             left: '0',
             right: '0',
             height: '2px',
@@ -1177,7 +1209,10 @@ const DraggableWrapper: React.FC<{
             borderRadius: '1px',
             zIndex: 1000,
             boxShadow: '0 0 4px rgba(24, 144, 255, 0.6)',
-            transform: 'translateY(-50%)',
+            transform:
+              indicatorPosition === 'top'
+                ? 'translateY(-50%)'
+                : 'translateY(50%)',
             pointerEvents: 'none',
           }}
         />
@@ -1219,6 +1254,9 @@ const SmartDropZone: React.FC<{
   const ref = useRef<HTMLDivElement>(null);
   const [insertPosition, setInsertPosition] = React.useState<
     'before' | 'after' | 'inside' | null
+  >(null);
+  const [indicatorPosition, setIndicatorPosition] = React.useState<
+    'top' | 'bottom' | null
   >(null);
   const [insertIndex, setInsertIndex] = React.useState<number>(0);
 
@@ -1334,6 +1372,14 @@ const SmartDropZone: React.FC<{
       const containerHeight = hoverBoundingRect.height;
       const containerWidth = hoverBoundingRect.width;
 
+      // 根据鼠标位置设置指示线位置
+      const hoverMiddleY = hoverBoundingRect.top + containerHeight / 2;
+      if (clientOffset.y < hoverMiddleY) {
+        setIndicatorPosition('top');
+      } else {
+        setIndicatorPosition('bottom');
+      }
+
       // 确定插入位置
       let currentInsertPosition: 'before' | 'after' | 'inside' | null = null;
       let currentInsertIndex = 0;
@@ -1396,6 +1442,9 @@ const SmartDropZone: React.FC<{
     },
     drop: (item: DragItem, monitor) => {
       if (monitor.didDrop()) return;
+
+      // 清除指示线位置
+      setIndicatorPosition(null);
 
       console.log('🎯 SmartDropZone 拖拽处理:', {
         containerType,
@@ -1593,11 +1642,11 @@ const SmartDropZone: React.FC<{
   return (
     <div ref={drop} style={dropZoneStyle} onClick={handleContainerClick}>
       {/* 🎯 新增：拖拽悬停时的蓝色线条指示线 */}
-      {isOver && canDrop && (
+      {isOver && canDrop && indicatorPosition && (
         <div
           style={{
             position: 'absolute',
-            top: '50%',
+            top: indicatorPosition === 'top' ? '0' : '100%',
             left: '0',
             right: '0',
             height: '2px',
@@ -1605,7 +1654,10 @@ const SmartDropZone: React.FC<{
             borderRadius: '1px',
             zIndex: 1000,
             boxShadow: '0 0 4px rgba(24, 144, 255, 0.6)',
-            transform: 'translateY(-50%)',
+            transform:
+              indicatorPosition === 'top'
+                ? 'translateY(-50%)'
+                : 'translateY(50%)',
             pointerEvents: 'none',
           }}
         />

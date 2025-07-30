@@ -2215,6 +2215,95 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
               columnElements[componentIndex]?.id !== draggedComponent.id;
           }
         }
+      } else if (
+        draggedPath.length === 10 &&
+        draggedPath[4] === 'elements' &&
+        draggedPath[6] === 'columns' &&
+        draggedPath[8] === 'elements'
+      ) {
+        console.log('✅ 进入分栏容器内普通组件验证分支');
+        // 分栏容器内普通组件：检查分栏的elements数组
+        // 路径格式：['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', componentIndex]
+        const formIndex = draggedPath[3] as number;
+        const columnSetIndex = draggedPath[5] as number;
+        const columnIndex = draggedPath[7] as number;
+        const componentIndex = draggedPath[9] as number;
+        const formComponent = newElements[formIndex];
+
+        console.log('🔍 分栏容器内普通组件验证 - 路径解析:', {
+          formIndex,
+          columnSetIndex,
+          columnIndex,
+          componentIndex,
+          formComponent: formComponent
+            ? {
+                id: formComponent.id,
+                tag: formComponent.tag,
+                hasElements: (formComponent as any).elements !== undefined,
+              }
+            : 'null',
+        });
+
+        if (formComponent && formComponent.tag === 'form') {
+          const formElements = (formComponent as any).elements || [];
+          const columnSetComponent = formElements[columnSetIndex];
+
+          console.log('🔍 分栏容器内普通组件验证:', {
+            columnSetIndex,
+            columnIndex,
+            componentIndex,
+            columnSetComponent: columnSetComponent
+              ? {
+                  id: columnSetComponent.id,
+                  tag: columnSetComponent.tag,
+                  hasColumns: (columnSetComponent as any).columns !== undefined,
+                }
+              : 'null',
+          });
+
+          if (columnSetComponent && columnSetComponent.tag === 'column_set') {
+            const columns = (columnSetComponent as any).columns || [];
+
+            console.log('🔍 分栏容器内普通组件验证 - 列检查:', {
+              columnsLength: columns.length,
+              columnIndex,
+              targetColumn:
+                columnIndex < columns.length
+                  ? {
+                      id: columns[columnIndex].id,
+                      tag: columns[columnIndex].tag,
+                      hasElements: columns[columnIndex].elements !== undefined,
+                      elementsLength:
+                        columns[columnIndex].elements?.length || 0,
+                    }
+                  : 'out of range',
+            });
+
+            if (columnIndex < columns.length && columns[columnIndex].elements) {
+              const columnElements = columns[columnIndex].elements;
+
+              console.log('🔍 分栏容器内普通组件验证 - 最终检查:', {
+                componentIndex,
+                columnElementsLength: columnElements.length,
+                componentAtPosition:
+                  componentIndex < columnElements.length
+                    ? {
+                        id: columnElements[componentIndex].id,
+                        tag: columnElements[componentIndex].tag,
+                      }
+                    : 'out of range',
+                expectedComponentId: draggedComponent.id,
+                isRemoved:
+                  componentIndex >= columnElements.length ||
+                  columnElements[componentIndex]?.id !== draggedComponent.id,
+              });
+
+              componentRemovedFromOriginalPosition =
+                componentIndex >= columnElements.length ||
+                columnElements[componentIndex]?.id !== draggedComponent.id;
+            }
+          }
+        }
       }
 
       console.log('🔍 组件移除验证结果:', {
