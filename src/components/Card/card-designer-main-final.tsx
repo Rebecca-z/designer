@@ -383,6 +383,31 @@ const CardDesigner: React.FC = () => {
           isTitle: isDeletingTitle,
         });
       }
+    } else if (path.length === 6 && path[4] === 'columns') {
+      // 删除分栏列: ['dsl', 'body', 'elements', columnSetIndex, 'columns', columnIndex]
+      const columnSetIndex = path[3] as number;
+      const columnIndex = path[5] as number;
+      const columnSetComponent = newData.dsl.body.elements[columnSetIndex];
+
+      if (
+        columnSetComponent &&
+        columnSetComponent.tag === 'column_set' &&
+        columnSetComponent.columns
+      ) {
+        // 删除指定的分栏列
+        columnSetComponent.columns.splice(columnIndex, 1);
+        console.log('🗑️ 删除分栏列:', {
+          columnSetIndex,
+          columnIndex,
+          remainingColumns: columnSetComponent.columns.length,
+        });
+
+        // 如果删除后没有列了，删除整个分栏组件
+        if (columnSetComponent.columns.length === 0) {
+          newData.dsl.body.elements.splice(columnSetIndex, 1);
+          console.log('🗑️ 分栏列全部删除，删除整个分栏组件');
+        }
+      }
     } else if (
       path.length === 8 &&
       path[4] === 'columns' &&

@@ -661,8 +661,7 @@ const DraggableWrapper: React.FC<{
   children,
   onComponentMove,
   enableSort = true,
-  isChildComponent = false, // 新增参数
-  // 新增：选中相关 props
+  isChildComponent = false,
   onSelect,
   selectedPath,
   onCanvasFocus,
@@ -1471,13 +1470,17 @@ const SmartDropZone: React.FC<{
 
   const dropZoneStyle: React.CSSProperties = {
     minHeight: hasContent ? 'auto' : containerType === 'form' ? '60px' : '50px',
-    padding: '4px',
-    border: isOver && canDrop ? '1px dashed #1890ff' : '1px dashed #e0e0e0',
-    borderRadius: '2px',
-    backgroundColor:
-      isOver && canDrop ? 'rgba(24, 144, 255, 0.02)' : 'transparent',
+    padding: containerType === 'column' ? '4px' : '4px', // 分栏列简化padding
+    border:
+      containerType === 'column'
+        ? 'none' // 分栏列完全不显示边框，由外层管理
+        : isOver && canDrop
+        ? '1px dashed #1890ff'
+        : '1px dashed #e0e0e0',
+    borderRadius: containerType === 'column' ? '0' : '2px', // 分栏列不要圆角
+    backgroundColor: 'transparent', // 分栏列背景完全透明
     position: 'relative',
-    transition: 'all 0.15s ease', // 减少过渡时间，提高响应速度
+    transition: 'all 0.15s ease',
     flex: containerType === 'column' ? 1 : 'none',
     // 确保拖拽区域始终可交互，即使有子组件
     pointerEvents: 'auto',
@@ -1523,26 +1526,6 @@ const SmartDropZone: React.FC<{
 
   return (
     <div ref={drop} style={dropZoneStyle} onClick={handleContainerClick}>
-      {/* 简约的分栏列标题 */}
-      {containerType === 'column' && (
-        <div
-          style={{
-            fontSize: '10px',
-            color: '#999',
-            // marginBottom: hasContent ? '4px' : '4px',
-            textAlign: 'center',
-            fontWeight: 'normal',
-            padding: '2px 4px',
-            backgroundColor: 'transparent',
-            borderRadius: '2px',
-            border: '1px dashed #e0e0e0',
-          }}
-          onClick={(e) => e.stopPropagation()} // 阻止标题点击冒泡
-        >
-          第{(columnIndex ?? 0) + 1}列
-        </div>
-      )}
-
       {/* 插入位置指示线 */}
       {isOver && canDrop && insertPosition === 'before' && (
         <div
@@ -1591,13 +1574,13 @@ const SmartDropZone: React.FC<{
         >
           <div style={{ pointerEvents: 'auto' }}>{children}</div>
         </div>
-      ) : (
+      ) : containerType === 'form' ? (
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            height: containerType === 'form' ? '80px' : '60px',
+            height: '80px',
             color: '#999',
             fontSize: '12px',
             textAlign: 'center',
@@ -1608,10 +1591,13 @@ const SmartDropZone: React.FC<{
         >
           {emptyStateMessage}
         </div>
+      ) : (
+        // 分栏列为空时不显示任何提示，只占位
+        <div style={{ minHeight: '60px' }} />
       )}
 
-      {/* 拖拽悬停提示 */}
-      {isOver && canDrop && (
+      {/* 拖拽悬停提示 - 只在表单容器中显示 */}
+      {isOver && canDrop && containerType === 'form' && (
         <div
           style={{
             position: 'absolute',
@@ -1626,7 +1612,7 @@ const SmartDropZone: React.FC<{
             fontWeight: 'bold',
             pointerEvents: 'none',
             zIndex: 1000,
-            transition: 'opacity 0.1s ease', // 快速显示/隐藏
+            transition: 'opacity 0.1s ease',
           }}
         >
           {dropMessage(draggedItem?.isChildComponent)}
@@ -2162,6 +2148,20 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       // 检查当前组件是否被选中
       const isCurrentSelected = isSamePath(selectedPath || null, path);
 
+      // 简单检查是否有分栏列被选中
+      let selectedColumnIndex = -1;
+      if (
+        selectedPath &&
+        selectedPath.length >= 6 &&
+        selectedPath[0] === path[0] &&
+        selectedPath[1] === path[1] &&
+        selectedPath[2] === path[2] &&
+        selectedPath[3] === path[3] &&
+        selectedPath[4] === 'columns'
+      ) {
+        selectedColumnIndex = selectedPath[5] as number;
+      }
+
       console.log('📐 渲染分栏容器:', {
         columnsCount: columns.length,
         columns: columns.map((col: any, idx: number) => ({
@@ -2172,55 +2172,57 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             [],
         })),
         isCurrentSelected,
+        selectedColumnIndex,
       });
 
       const columnContent = (
         <div
           style={{
-            border: 'none', // 移除容器边框，只保留DraggableWrapper的边框
+            border: 'none', // 分栏整体不显示边框
             borderRadius: '4px',
-            backgroundColor: '#fff',
+            backgroundColor: 'transparent',
             transition: 'all 0.2s ease',
             position: 'relative',
+            minHeight: '60px',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && onSelect) {
+              // 点击分栏容器整体时选中整个组件
+              onSelect(component, path);
+            }
           }}
         >
-          {/* 简约的分栏标题 */}
-          {isCurrentSelected && !isPreview && (
-            <div
-              style={{
-                position: 'absolute',
-                top: '-8px',
-                left: '8px',
-                backgroundColor: '#1890ff',
-                color: 'white',
-                padding: '2px 8px',
-                borderRadius: '4px',
-                fontSize: '11px',
-                fontWeight: '500',
-                zIndex: 10,
-              }}
-            >
-              📐 分栏 ({columns.length}列)
-            </div>
-          )}
-
           {/* 分栏内容区域 */}
           <div
             style={{
               display: 'flex',
               gap: `${comp.gap || 16}px`,
-              padding: '12px',
+              padding: '0', // 移除内边距
               minHeight: '60px',
             }}
           >
             {columns.map((column: any, columnIndex: number) => {
               const columnElements = column.elements || [];
               const columnPath = [...path, 'columns', columnIndex, 'elements'];
+              const columnSelectionPath = [...path, 'columns', columnIndex];
+              const isColumnSelected = selectedColumnIndex === columnIndex;
+
+              // 计算列宽比例
+              const columnWidth = column.width || 1;
+              const totalWidth = columns.reduce(
+                (sum: number, col: any) => sum + (col.width || 1),
+                0,
+              );
+              const flexValue = columnWidth / totalWidth;
 
               console.log(`📐 渲染第${columnIndex + 1}列:`, {
                 columnIndex,
                 elementsCount: columnElements.length,
                 columnPath,
+                isColumnSelected,
+                columnWidth,
+                totalWidth,
+                flexValue,
                 elements: columnElements.map((el: any) => ({
                   id: el?.id,
                   tag: el?.tag,
@@ -2228,19 +2230,106 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               });
 
               return (
-                <SmartDropZone
-                  key={`column-${columnIndex}-${columnPath.join('-')}`}
-                  targetPath={columnPath}
-                  containerType="column"
-                  columnIndex={columnIndex}
-                  onContainerDrop={onContainerDrop}
-                  onComponentMove={onComponentMove}
-                  childElements={columnElements}
+                <div
+                  key={`column-wrapper-${columnIndex}`}
+                  style={{
+                    flex: flexValue, // 使用计算出的flex比例
+                    position: 'relative',
+                    minHeight: '60px',
+                    border: isColumnSelected
+                      ? '2px solid #1890ff' // 选中时蓝色实线
+                      : '1px dashed #d9d9d9', // 默认灰色虚线
+                    borderRadius: '4px',
+                    backgroundColor: isColumnSelected
+                      ? 'rgba(24, 144, 255, 0.02)'
+                      : 'transparent',
+                    transition: 'all 0.2s ease',
+                    cursor: 'pointer',
+                  }}
+                  className="column-container"
+                  data-column-index={columnIndex}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onSelect) {
+                      // 选中这个分栏列
+                      onSelect(component, columnSelectionPath);
+                    }
+                  }}
+                  onMouseEnter={(e) => {
+                    const element = e.currentTarget;
+                    if (!isColumnSelected) {
+                      element.style.borderColor = '#1890ff';
+                      element.style.borderStyle = 'dashed';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    const element = e.currentTarget;
+                    if (!isColumnSelected) {
+                      element.style.borderColor = '#d9d9d9';
+                      element.style.borderStyle = 'dashed';
+                    }
+                  }}
                 >
-                  {columnElements.length > 0
-                    ? renderChildElements(columnElements, columnPath)
-                    : null}
-                </SmartDropZone>
+                  {/* 选中时显示删除按钮 */}
+                  {isColumnSelected && !isPreview && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '4px',
+                        right: '4px',
+                        zIndex: 100,
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Dropdown
+                        menu={{
+                          items: [
+                            {
+                              key: 'delete',
+                              label: '删除分栏',
+                              icon: <DeleteOutlined />,
+                              onClick: () => {
+                                // 删除这个分栏列
+                                if (onDelete) {
+                                  onDelete(columnSelectionPath);
+                                }
+                              },
+                            },
+                          ],
+                        }}
+                        placement="bottomRight"
+                      >
+                        <Button
+                          size="small"
+                          type="text"
+                          icon={<MoreOutlined />}
+                          style={{
+                            width: '20px',
+                            height: '20px',
+                            padding: '0',
+                            fontSize: '12px',
+                            color: '#1890ff',
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </Dropdown>
+                    </div>
+                  )}
+
+                  {/* SmartDropZone 拖拽区域 */}
+                  <SmartDropZone
+                    targetPath={columnPath}
+                    containerType="column"
+                    columnIndex={columnIndex}
+                    onContainerDrop={onContainerDrop}
+                    onComponentMove={onComponentMove}
+                    childElements={columnElements}
+                  >
+                    {columnElements.length > 0
+                      ? internalRenderChildren(columnElements, columnPath)
+                      : null}
+                  </SmartDropZone>
+                </div>
               );
             })}
           </div>

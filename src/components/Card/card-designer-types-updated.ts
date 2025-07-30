@@ -161,6 +161,7 @@ export interface ColumnSetComponent extends ComponentBase {
   columns: Array<{
     tag: 'column';
     elements: ComponentType[];
+    width?: number; // 列宽比例，默认为1，范围1-5
   }>;
 }
 

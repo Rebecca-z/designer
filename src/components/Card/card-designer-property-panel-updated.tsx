@@ -2005,6 +2005,213 @@ export const PropertyPanel: React.FC<{
     const isImgCombinationComponent =
       currentComponent && currentComponent.tag === 'img_combination';
 
+    // 检查是否选中了分栏组件 - 使用currentComponent而不是selectedComponent
+    const isColumnSetComponent =
+      currentComponent && currentComponent.tag === 'column_set';
+
+    // 如果选中了分栏组件，显示分栏编辑界面
+    if (isColumnSetComponent) {
+      const columnSetComp = currentComponent as any;
+      const columns = columnSetComp.columns || [];
+
+      // 列数选项生成函数
+      const generateColumnOptions = () => {
+        return Array.from({ length: 6 }, (_, i) => ({
+          value: i + 1,
+          label: `${i + 1}列`,
+        }));
+      };
+
+      // 更新列数的函数
+      const handleColumnCountChange = (count: number) => {
+        const newColumns = [...columns];
+
+        if (count > columns.length) {
+          // 增加列
+          for (let i = columns.length; i < count; i++) {
+            newColumns.push({
+              tag: 'column',
+              elements: [],
+              width: 1, // 默认宽度为1
+            });
+          }
+        } else if (count < columns.length) {
+          // 减少列
+          newColumns.splice(count);
+        }
+
+        const updatedComponent = {
+          ...currentComponent,
+          columns: newColumns,
+        };
+        onUpdateComponent(updatedComponent);
+      };
+
+      // 更新单个列宽的函数
+      const handleColumnWidthChange = (columnIndex: number, width: number) => {
+        const newColumns = columns.map((col: any, index: number) => {
+          if (index === columnIndex) {
+            return { ...col, width };
+          }
+          return col;
+        });
+
+        const updatedComponent = {
+          ...currentComponent,
+          columns: newColumns,
+        };
+        onUpdateComponent(updatedComponent);
+      };
+
+      // 计算列宽百分比
+      const calculateColumnWidths = () => {
+        const totalWidth = columns.reduce(
+          (sum: number, col: any) => sum + (col.width || 1),
+          0,
+        );
+        return columns.map((col: any) => {
+          const width = col.width || 1;
+          return Math.round((width / totalWidth) * 100);
+        });
+      };
+
+      const columnWidths = calculateColumnWidths();
+
+      return (
+        <div style={{ padding: '16px' }}>
+          <div
+            style={{
+              marginBottom: '16px',
+              padding: '12px',
+              backgroundColor: '#f6ffed',
+              border: '1px solid #b7eb8f',
+              borderRadius: '6px',
+            }}
+          >
+            <Text style={{ fontSize: '12px', color: '#52c41a' }}>
+              📐 当前选中：分栏组件 ({columns.length}列)
+            </Text>
+          </div>
+          <Collapse
+            defaultActiveKey={['basic', 'layout']}
+            ghost
+            items={[
+              {
+                key: 'basic',
+                label: '🔧 基础设置',
+                children: (
+                  <Form form={form} layout="vertical">
+                    <Form.Item label="列数">
+                      <Select
+                        value={columns.length}
+                        onChange={handleColumnCountChange}
+                        style={{ width: '100%' }}
+                        options={generateColumnOptions()}
+                      />
+                    </Form.Item>
+                    <Form.Item label="列间距">
+                      <InputNumber
+                        value={columnSetComp.gap || 16}
+                        onChange={(value) =>
+                          handleValueChange('gap', value || 16)
+                        }
+                        min={0}
+                        max={50}
+                        addonAfter="px"
+                        style={{ width: '100%' }}
+                      />
+                    </Form.Item>
+                  </Form>
+                ),
+              },
+              {
+                key: 'layout',
+                label: '📏 列宽设置',
+                children: (
+                  <div>
+                    <div style={{ marginBottom: '12px' }}>
+                      <Text type="secondary" style={{ fontSize: '12px' }}>
+                        调整各列宽度比例，总宽度按比例分配
+                      </Text>
+                    </div>
+                    {columns.map((column: any, index: number) => (
+                      <div key={index} style={{ marginBottom: '12px' }}>
+                        <Form.Item
+                          label={`第${index + 1}列宽度 (${
+                            columnWidths[index]
+                          }%)`}
+                          style={{ marginBottom: '8px' }}
+                        >
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                            }}
+                          >
+                            <InputNumber
+                              value={column.width || 1}
+                              onChange={(value) =>
+                                handleColumnWidthChange(index, value || 1)
+                              }
+                              min={1}
+                              max={5}
+                              step={1}
+                              style={{ width: '80px' }}
+                            />
+                            <div
+                              style={{
+                                flex: 1,
+                                height: '8px',
+                                backgroundColor: '#f0f0f0',
+                                borderRadius: '4px',
+                                overflow: 'hidden',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  height: '100%',
+                                  backgroundColor: '#1890ff',
+                                  width: `${columnWidths[index]}%`,
+                                  transition: 'width 0.3s ease',
+                                }}
+                              />
+                            </div>
+                            <Text
+                              style={{
+                                fontSize: '12px',
+                                color: '#666',
+                                minWidth: '35px',
+                              }}
+                            >
+                              {columnWidths[index]}%
+                            </Text>
+                          </div>
+                        </Form.Item>
+                      </div>
+                    ))}
+                    <div
+                      style={{
+                        marginTop: '16px',
+                        padding: '8px',
+                        backgroundColor: '#fafafa',
+                        borderRadius: '4px',
+                      }}
+                    >
+                      <Text style={{ fontSize: '11px', color: '#666' }}>
+                        💡 列宽值范围：1-5，数值越大占用宽度越大。例如：1:2:1
+                        的比例会产生 25%:50%:25% 的列宽分配。
+                      </Text>
+                    </div>
+                  </div>
+                ),
+              },
+            ]}
+          />
+        </div>
+      );
+    }
+
     // 如果选中了输入框组件，显示输入框编辑界面
     if (isInputComponent) {
       return (

@@ -592,14 +592,22 @@ export const createDefaultComponent = (type: string): ComponentType => {
       return {
         tag: 'column_set',
         id: generateId(),
+        gap: 16, // 默认列间距
         columns: [
           {
             tag: 'column',
             elements: [],
+            width: 1, // 默认列宽比例
           },
           {
             tag: 'column',
             elements: [],
+            width: 1, // 默认列宽比例
+          },
+          {
+            tag: 'column',
+            elements: [],
+            width: 1, // 默认列宽比例
           },
         ],
       } as ComponentType;
