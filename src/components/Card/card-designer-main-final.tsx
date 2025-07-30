@@ -292,6 +292,39 @@ const CardDesigner: React.FC = () => {
         }
       }
 
+      // 特殊处理分栏列选择：['dsl', 'body', 'elements', columnSetIndex, 'columns', columnIndex]
+      if (
+        selection.selectedPath.length === 6 &&
+        selection.selectedPath[0] === 'dsl' &&
+        selection.selectedPath[1] === 'body' &&
+        selection.selectedPath[2] === 'elements' &&
+        selection.selectedPath[4] === 'columns'
+      ) {
+        const columnSetIndex = selection.selectedPath[3] as number;
+        const columnIndex = selection.selectedPath[5] as number;
+        const columnSetComponent =
+          safeCardData.dsl.body.elements[columnSetIndex];
+
+        if (
+          columnSetComponent &&
+          columnSetComponent.tag === 'column_set' &&
+          columnSetComponent.columns &&
+          columnSetComponent.columns[columnIndex]
+        ) {
+          console.log('✅ 分栏列选择状态有效:', {
+            columnSetIndex,
+            columnIndex,
+            columnSetId: columnSetComponent.id,
+            selectedComponentId: selection.selectedComponent?.id,
+          });
+          return; // 分栏列选择状态有效
+        } else {
+          console.log('❌ 分栏列选择状态无效，清除选择');
+          selection.clearSelection();
+          return;
+        }
+      }
+
       // 对于其他组件选择路径，需要调整路径查找逻辑
       const component = getComponentByPath(
         safeCardData,
@@ -406,6 +439,33 @@ const CardDesigner: React.FC = () => {
         if (columnSetComponent.columns.length === 0) {
           newData.dsl.body.elements.splice(columnSetIndex, 1);
           console.log('🗑️ 分栏列全部删除，删除整个分栏组件');
+        } else {
+          // 重新计算剩余列的宽度 - 确保每列都有width属性
+          columnSetComponent.columns = columnSetComponent.columns.map(
+            (col: any) => ({
+              ...col,
+              width: col.width || 1, // 确保每列都有width属性，默认为1
+            }),
+          );
+
+          console.log('🔄 删除分栏列后重新计算列宽:', {
+            remainingColumns: columnSetComponent.columns.length,
+            columnWidths: columnSetComponent.columns.map(
+              (col: any) => col.width,
+            ),
+          });
+        }
+
+        // 如果当前选中的是被删除的列或之后的列，需要重置选中状态
+        if (
+          selection.selectedPath &&
+          selection.selectedPath.length >= 6 &&
+          selection.selectedPath[3] === columnSetIndex &&
+          selection.selectedPath[4] === 'columns' &&
+          (selection.selectedPath[5] as number) >= columnIndex
+        ) {
+          selection.clearSelection();
+          console.log('🔄 重置选中状态，因为删除了当前选中的列或其后的列');
         }
       }
     } else if (

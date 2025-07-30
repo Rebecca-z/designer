@@ -1157,6 +1157,7 @@ const SmartDropZone: React.FC<{
     dropIndex: number,
   ) => void;
   childElements?: ComponentType[];
+  onColumnSelect?: () => void; // 新增：分栏列选中回调
 }> = ({
   targetPath,
   containerType,
@@ -1165,6 +1166,7 @@ const SmartDropZone: React.FC<{
   onContainerDrop,
   onComponentMove,
   childElements = [],
+  onColumnSelect,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const [insertPosition, setInsertPosition] = React.useState<
@@ -1517,8 +1519,25 @@ const SmartDropZone: React.FC<{
 
   // 处理点击事件 - 确保不阻止子组件的选中
   const handleContainerClick = (e: React.MouseEvent) => {
-    // 只在点击容器本身（而非子组件）时阻止事件传播
+    console.log('🖱️ SmartDropZone 点击事件:', {
+      containerType,
+      target: e.target,
+      currentTarget: e.currentTarget,
+      clickedOnSelf: e.target === e.currentTarget,
+    });
+
+    // 对于分栏列，触发选中回调
+    if (containerType === 'column') {
+      console.log('✅ 分栏列点击 - 触发选中回调');
+      if (onColumnSelect) {
+        onColumnSelect();
+      }
+      return;
+    }
+
+    // 对于表单容器，只在点击容器本身（而非子组件）时阻止事件传播
     if (e.target === e.currentTarget) {
+      console.log('🛑 表单容器点击 - 阻止事件传播');
       e.stopPropagation();
     }
     // 允许子组件的点击事件正常冒泡
@@ -2148,18 +2167,23 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       // 检查当前组件是否被选中
       const isCurrentSelected = isSamePath(selectedPath || null, path);
 
-      // 简单检查是否有分栏列被选中
+      // 检查是否有分栏列被选中
       let selectedColumnIndex = -1;
       if (
         selectedPath &&
-        selectedPath.length >= 6 &&
-        selectedPath[0] === path[0] &&
-        selectedPath[1] === path[1] &&
-        selectedPath[2] === path[2] &&
-        selectedPath[3] === path[3] &&
+        selectedPath.length === 6 &&
+        selectedPath[0] === 'dsl' &&
+        selectedPath[1] === 'body' &&
+        selectedPath[2] === 'elements' &&
+        selectedPath[3] === path[3] && // 分栏组件的索引
         selectedPath[4] === 'columns'
       ) {
         selectedColumnIndex = selectedPath[5] as number;
+        console.log('🎯 检测到分栏列被选中:', {
+          selectedPath,
+          path,
+          selectedColumnIndex,
+        });
       }
 
       console.log('📐 渲染分栏容器:', {
@@ -2219,7 +2243,10 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                 columnIndex,
                 elementsCount: columnElements.length,
                 columnPath,
+                columnSelectionPath,
                 isColumnSelected,
+                selectedColumnIndex,
+                selectedPath,
                 columnWidth,
                 totalWidth,
                 flexValue,
@@ -2237,7 +2264,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                     position: 'relative',
                     minHeight: '60px',
                     border: isColumnSelected
-                      ? '2px solid #1890ff' // 选中时蓝色实线
+                      ? '1px solid #1890ff' // 选中时蓝色实线，粗细与虚线一致
                       : '1px dashed #d9d9d9', // 默认灰色虚线
                     borderRadius: '4px',
                     backgroundColor: isColumnSelected
@@ -2249,24 +2276,42 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                   className="column-container"
                   data-column-index={columnIndex}
                   onClick={(e) => {
+                    console.log('🖱️ 分栏列被点击:', {
+                      columnIndex,
+                      event: e,
+                      target: e.target,
+                      currentTarget: e.currentTarget,
+                      onSelectExists: !!onSelect,
+                    });
                     e.stopPropagation();
                     if (onSelect) {
-                      // 选中这个分栏列
-                      onSelect(component, columnSelectionPath);
+                      // 选中这个分栏列 - 传递列的虚拟组件数据
+                      const columnComponent = {
+                        id: `${component.id}_column_${columnIndex}`,
+                        tag: 'column',
+                        ...column,
+                      };
+                      console.log('🎯 执行选中分栏列:', {
+                        columnIndex,
+                        columnSelectionPath,
+                        columnComponent,
+                        onSelectCallback: onSelect,
+                      });
+                      onSelect(columnComponent, columnSelectionPath);
+                    } else {
+                      console.warn('❌ onSelect 回调不存在!');
                     }
                   }}
                   onMouseEnter={(e) => {
                     const element = e.currentTarget;
                     if (!isColumnSelected) {
-                      element.style.borderColor = '#1890ff';
-                      element.style.borderStyle = 'dashed';
+                      element.style.border = '1px dashed #1890ff'; // hover时蓝色虚线，粗细一致
                     }
                   }}
                   onMouseLeave={(e) => {
                     const element = e.currentTarget;
                     if (!isColumnSelected) {
-                      element.style.borderColor = '#d9d9d9';
-                      element.style.borderStyle = 'dashed';
+                      element.style.border = '1px dashed #d9d9d9'; // 恢复灰色虚线，粗细一致
                     }
                   }}
                 >
@@ -2324,6 +2369,21 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                     onContainerDrop={onContainerDrop}
                     onComponentMove={onComponentMove}
                     childElements={columnElements}
+                    onColumnSelect={() => {
+                      if (onSelect) {
+                        const columnComponent = {
+                          id: `${component.id}_column_${columnIndex}`,
+                          tag: 'column',
+                          ...column,
+                        };
+                        console.log('🎯 SmartDropZone 触发分栏列选中:', {
+                          columnIndex,
+                          columnSelectionPath,
+                          columnComponent,
+                        });
+                        onSelect(columnComponent, columnSelectionPath);
+                      }
+                    }}
                   >
                     {columnElements.length > 0
                       ? internalRenderChildren(columnElements, columnPath)

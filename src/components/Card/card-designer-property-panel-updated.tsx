@@ -279,6 +279,45 @@ const getComponentRealPath = (
     }
   }
 
+  // 检查是否是分栏列选中路径：['dsl', 'body', 'elements', columnSetIndex, 'columns', columnIndex]
+  if (
+    selectedPath.length === 6 &&
+    selectedPath[0] === 'dsl' &&
+    selectedPath[1] === 'body' &&
+    selectedPath[2] === 'elements' &&
+    selectedPath[4] === 'columns'
+  ) {
+    const columnSetIndex = selectedPath[3] as number;
+    const columnIndex = selectedPath[5] as number;
+    const columnSetComponent = data.dsl.body.elements[columnSetIndex];
+
+    if (columnSetComponent && columnSetComponent.tag === 'column_set') {
+      const columns = (columnSetComponent as any).columns || [];
+      const column = columns[columnIndex];
+
+      if (column) {
+        // 创建一个虚拟的分栏列组件用于属性编辑
+        const columnComponent: ComponentType = {
+          id: `${columnSetComponent.id}_column_${columnIndex}`,
+          tag: 'column',
+          ...column,
+        };
+
+        console.log('📐 分栏列选中:', {
+          componentId: columnComponent.id,
+          componentTag: columnComponent.tag,
+          columnSetIndex,
+          columnIndex,
+          selectedPath,
+          realPath: selectedPath,
+          columnSetComponentId: columnSetComponent.id,
+          columnData: column,
+        });
+        return { component: columnComponent, realPath: selectedPath };
+      }
+    }
+  }
+
   // 检查是否是分栏内的组件路径：['dsl', 'body', 'elements', columnSetIndex, 'columns', columnIndex, 'elements', componentIndex]
   if (
     selectedPath.length >= 8 &&
