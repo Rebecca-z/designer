@@ -2401,7 +2401,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                       }
                     }}
                   >
-                    {/* 选中时显示删除按钮 */}
+                    {/* 选中时显示操作菜单 */}
                     {isColumnSelected && !isPreview && (
                       <div
                         style={{
@@ -2409,39 +2409,48 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                           top: 4,
                           right: 4,
                           zIndex: 10,
-                          background: '#fff',
-                          borderRadius: 4,
-                          boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-                          padding: '2px 6px',
-                          cursor: 'pointer',
-                          color: '#ff4d4f',
-                          fontSize: 12,
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onDelete) {
-                            onDelete(columnSelectionPath);
-                          }
                         }}
                       >
-                        删除列
+                        <Dropdown
+                          menu={{
+                            items: [
+                              {
+                                key: 'delete',
+                                icon: <DeleteOutlined />,
+                                label: '删除列',
+                                onClick: () => {
+                                  if (onDelete) {
+                                    onDelete(columnSelectionPath);
+                                  }
+                                },
+                                danger: true,
+                              },
+                            ],
+                          }}
+                          trigger={['click']}
+                          placement="bottomRight"
+                        >
+                          <Button
+                            size="small"
+                            type="primary"
+                            icon={<MoreOutlined />}
+                            style={{
+                              borderRadius: '50%',
+                              width: '24px',
+                              height: '24px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </Dropdown>
                       </div>
                     )}
                     {/* 渲染列内组件 */}
-                    {columnElements.length > 0 ? (
-                      internalRenderChildren(columnElements, columnPath)
-                    ) : (
-                      <div
-                        style={{
-                          minHeight: 40,
-                          color: '#bbb',
-                          textAlign: 'center',
-                          lineHeight: '40px',
-                        }}
-                      >
-                        拖拽组件到此处
-                      </div>
-                    )}
+                    {columnElements.length > 0
+                      ? internalRenderChildren(columnElements, columnPath)
+                      : null}
                   </div>
                 </SmartDropZone>
               );
