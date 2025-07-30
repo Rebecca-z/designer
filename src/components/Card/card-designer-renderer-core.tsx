@@ -202,9 +202,6 @@ const ContainerSortableItem: React.FC<{
   enableSort = true,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
-  const [insertPosition, setInsertPosition] = React.useState<
-    'before' | 'after' | null
-  >(null);
   const insertTargetIndex = useRef<number>(index); // 记录最后一次hover的插入索引
 
   // 添加防抖和缓存机制
@@ -249,7 +246,7 @@ const ContainerSortableItem: React.FC<{
   });
 
   // 拖拽目标配置（用于排序）
-  const [{ isOver, canDrop }, drop] = useDrop({
+  const [{ isOver }, drop] = useDrop({
     accept: [
       'component',
       'existing-component',
@@ -400,8 +397,6 @@ const ContainerSortableItem: React.FC<{
           willProceed: 'checking...',
         });
 
-        // 更新插入位置状态，用于显示指示线
-        setInsertPosition(currentInsertPosition);
         insertTargetIndex.current = targetIndex; // 更新记录
 
         // 避免无意义的移动
@@ -586,7 +581,6 @@ const ContainerSortableItem: React.FC<{
           onComponentMove(item.component, draggedPath, targetPath, insertIndex);
         }
       }
-      setInsertPosition(null); // 清理
       lastHoverState.current = null; // 清理缓存状态
     },
     collect: (monitor) => ({
@@ -622,63 +616,34 @@ const ContainerSortableItem: React.FC<{
         transition: 'all 0.15s ease', // 减少过渡时间，提高响应速度
         cursor: component.tag === 'title' ? 'default' : 'grab',
         // marginBottom: '8px',
+        // 🎯 新增：拖拽悬停时显示蓝色线条指示线
+        boxShadow:
+          isOver && enableSort ? '0 0 8px rgba(24, 144, 255, 0.4)' : 'none',
       }}
       onClick={handleContainerSortableClick}
       data-container-sortable-item="true"
     >
-      {/* 插入位置指示线 */}
-      {isOver && insertPosition === 'before' && (
+      {/* 🎯 新增：拖拽悬停时的蓝色线条指示线 */}
+      {isOver && enableSort && (
         <div
           style={{
             position: 'absolute',
-            top: '-2px',
+            top: '50%',
             left: '0',
             right: '0',
-            height: '3px',
+            height: '2px',
             backgroundColor: '#1890ff',
-            borderRadius: '1.5px',
+            borderRadius: '1px',
             zIndex: 1000,
-            boxShadow: '0 0 6px rgba(24, 144, 255, 0.6)',
-            transition: 'opacity 0.1s ease', // 快速显示/隐藏
-          }}
-        />
-      )}
-
-      {isOver && insertPosition === 'after' && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '-2px',
-            left: '0',
-            right: '0',
-            height: '3px',
-            backgroundColor: '#1890ff',
-            borderRadius: '1.5px',
-            zIndex: 1000,
-            boxShadow: '0 0 6px rgba(24, 144, 255, 0.6)',
-            transition: 'opacity 0.1s ease', // 快速显示/隐藏
-          }}
-        />
-      )}
-
-      {/* 拖拽悬停样式 */}
-      {isOver && canDrop && enableSort && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '0',
-            left: '0',
-            right: '0',
-            bottom: '0',
-            border: '2px dashed #1890ff',
-            borderRadius: '4px',
-            backgroundColor: 'rgba(24, 144, 255, 0.05)',
+            boxShadow: '0 0 4px rgba(24, 144, 255, 0.6)',
+            transform: 'translateY(-50%)',
             pointerEvents: 'none',
-            zIndex: 999,
-            transition: 'all 0.1s ease', // 快速显示/隐藏
           }}
         />
       )}
+      {/* 移除插入位置指示线 */}
+
+      {/* 移除拖拽悬停样式 */}
 
       {children}
     </div>
@@ -762,7 +727,7 @@ const DraggableWrapper: React.FC<{
   });
 
   // 拖拽目标配置（用于排序）
-  const [{ isOver, canDrop }, drop] = useDrop({
+  const [{ isOver }, drop] = useDrop({
     accept: ['component', 'existing-component', 'canvas-component'], // 添加canvas-component类型
     canDrop: (item: DragItem) => {
       if (!enableSort) return false;
@@ -788,21 +753,13 @@ const DraggableWrapper: React.FC<{
         return false;
       }
 
-      // 🚫 新增：不允许拖拽到表单内的非容器组件上
-      // 检查当前组件是否在表单容器内且不是容器组件
-      const isInFormContainer =
-        containerPath.length >= 4 &&
-        containerPath[containerPath.length - 1] === 'elements' &&
-        containerPath[containerPath.length - 3] === 'elements';
-
+      // 🚫 新增：不允许拖拽到任何普通组件上
       const isContainerComponent =
         component.tag === 'form' || component.tag === 'column_set';
 
-      if (isInFormContainer && !isContainerComponent) {
-        console.log('🚫 不允许拖拽到表单内的非容器组件上:', {
+      if (!isContainerComponent) {
+        console.log('🚫 不允许拖拽到普通组件上:', {
           currentComponentTag: component.tag,
-          isInFormContainer,
-          isContainerComponent,
           containerPath,
         });
         return false;
@@ -1162,6 +1119,34 @@ const DraggableWrapper: React.FC<{
     boxShadow: isCurrentSelected ? '0 0 4px rgba(24, 144, 255, 0.2)' : 'none',
   };
 
+  // ✅ 修复：当作为分栏列或表单容器的子组件时，禁用 hover 效果
+  const isInColumnContainer = containerPath.some(
+    (segment) => segment === 'columns',
+  );
+  const isInFormContainer =
+    containerPath.some((segment) => segment === 'elements') &&
+    containerPath.length > 4; // 确保是在表单的 elements 数组中
+  if (isInColumnContainer || isInFormContainer) {
+    // 在分栏列或表单容器中，子组件不显示 hover 边框效果
+    wrapperStyle.border = 'none';
+    wrapperStyle.boxShadow = 'none';
+  }
+
+  // ✅ 修复：普通组件在任何情况下都不显示 hover 边框（待激活态）
+  const isContainerComponent =
+    component.tag === 'form' || component.tag === 'column_set';
+  if (!isContainerComponent) {
+    // 普通组件不显示 hover 边框效果
+    wrapperStyle.border = 'none';
+    wrapperStyle.boxShadow = 'none';
+  }
+
+  // 🎯 新增：拖拽悬停时显示蓝色线条指示线
+  if (isOver && enableSort) {
+    // 移除边框和背景，只保留阴影效果
+    wrapperStyle.boxShadow = '0 0 8px rgba(24, 144, 255, 0.4)';
+  }
+
   // 拖拽时的样式调整
   if (isDragging) {
     wrapperStyle.zIndex = 1000;
@@ -1179,45 +1164,25 @@ const DraggableWrapper: React.FC<{
         }
       }}
     >
-      {/* 拖拽排序提示线 - 顶部 */}
-      {isOver && canDrop && enableSort && (
+      {/* 🎯 新增：拖拽悬停时的蓝色线条指示线 */}
+      {isOver && enableSort && (
         <div
           style={{
             position: 'absolute',
-            top: '-2px',
+            top: '50%',
             left: '0',
             right: '0',
             height: '2px',
             backgroundColor: '#1890ff',
             borderRadius: '1px',
             zIndex: 1000,
-            boxShadow: '0 0 4px rgba(24, 144, 255, 0.5)',
-            transition: 'opacity 0.1s ease', // 快速显示/隐藏
+            boxShadow: '0 0 4px rgba(24, 144, 255, 0.6)',
+            transform: 'translateY(-50%)',
+            pointerEvents: 'none',
           }}
         />
       )}
       {children}
-      {/* 拖拽限制提示 */}
-      {isOver && !canDrop && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            backgroundColor: 'rgba(255, 77, 79, 0.9)',
-            color: 'white',
-            padding: '4px 8px',
-            borderRadius: '4px',
-            fontSize: '12px',
-            zIndex: 1000,
-            pointerEvents: 'none',
-            transition: 'opacity 0.1s ease', // 快速显示/隐藏
-          }}
-        >
-          ❌ 不能放置
-        </div>
-      )}
     </div>
   );
 };
@@ -1576,14 +1541,14 @@ const SmartDropZone: React.FC<{
   const dropZoneStyle: React.CSSProperties = {
     minHeight: hasContent ? 'auto' : containerType === 'form' ? '60px' : '50px',
     padding: '4px', // 统一简化padding
-    border: 'none', // 表单容器和分栏列都不显示内部边框，由外层管理
     borderRadius: '0', // 不要圆角，由外层管理
-    backgroundColor: 'transparent', // 背景完全透明
     position: 'relative',
     transition: 'all 0.15s ease',
     flex: containerType === 'column' ? 1 : 'none',
     // 确保拖拽区域始终可交互，即使有子组件
     pointerEvents: 'auto',
+    // 🎯 新增：拖拽悬停时显示蓝色线条指示线
+    boxShadow: isOver && canDrop ? '0 0 8px rgba(24, 144, 255, 0.4)' : 'none',
   };
 
   // 移除拖拽视觉效果，由外层容器管理选中样式
@@ -1627,6 +1592,24 @@ const SmartDropZone: React.FC<{
 
   return (
     <div ref={drop} style={dropZoneStyle} onClick={handleContainerClick}>
+      {/* 🎯 新增：拖拽悬停时的蓝色线条指示线 */}
+      {isOver && canDrop && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '0',
+            right: '0',
+            height: '2px',
+            backgroundColor: '#1890ff',
+            borderRadius: '1px',
+            zIndex: 1000,
+            boxShadow: '0 0 4px rgba(24, 144, 255, 0.6)',
+            transform: 'translateY(-50%)',
+            pointerEvents: 'none',
+          }}
+        />
+      )}
       {/* 插入位置指示线 */}
       {isOver && canDrop && insertPosition === 'before' && (
         <div
@@ -2025,6 +2008,30 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         transition: 'all 0.2s ease',
         opacity: 1, // 固定透明度为1，因为这里不需要拖拽状态
       };
+
+      // ✅ 修复：当在分栏列或表单容器中时，子组件不显示 hover 边框效果
+      const isInColumnContainer = basePath.some(
+        (segment) => segment === 'columns',
+      );
+      const isInFormContainer =
+        basePath.some((segment) => segment === 'elements') &&
+        basePath.length > 4; // 确保是在表单的 elements 数组中
+      if (isInColumnContainer || isInFormContainer) {
+        // 在分栏列或表单容器中，子组件不显示 hover 边框效果
+        wrapperStyle.border = 'none';
+        wrapperStyle.padding = '2px';
+        wrapperStyle.margin = '1px 0';
+      }
+
+      // ✅ 修复：普通组件在任何情况下都不显示 hover 边框（待激活态）
+      const isContainerComponent =
+        element.tag === 'form' || element.tag === 'column_set';
+      if (!isContainerComponent) {
+        // 普通组件不显示 hover 边框效果
+        wrapperStyle.border = 'none';
+        wrapperStyle.padding = '2px';
+        wrapperStyle.margin = '1px 0';
+      }
 
       const selectableWrapper = (
         <div
