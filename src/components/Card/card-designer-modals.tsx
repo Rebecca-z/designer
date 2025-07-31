@@ -494,7 +494,7 @@ const Modals: React.FC<ModalsProps> = ({
                         <div
                           style={{
                             marginBottom:
-                              component.tag === 'title' ? '16px' : '8px',
+                              component.tag === 'title' ? '16px' : '0',
                           }}
                         >
                           <ComponentRenderer

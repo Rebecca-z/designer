@@ -96,8 +96,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     <div
       style={{
         display: 'flex',
-        gap: '12px',
-        padding: '20px',
+        gap: '8px',
+        padding: '24px 12px',
         backgroundColor: '#f8f9fa',
         borderRadius: '8px',
         width: '100%',

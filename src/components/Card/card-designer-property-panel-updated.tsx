@@ -678,7 +678,7 @@ export const ComponentPanel: React.FC<{
   return (
     <div
       style={{
-        width: '280px',
+        width: '300px',
         height: 'calc(100vh - 60px)',
         backgroundColor: '#fafafa',
         borderRight: '1px solid #d9d9d9',
@@ -1643,7 +1643,7 @@ export const PropertyPanel: React.FC<{
                       style={{
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '8px',
+                        gap: '2px',
                         minHeight: '60px',
                       }}
                     >

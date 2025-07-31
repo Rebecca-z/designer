@@ -154,14 +154,13 @@ const Canvas: React.FC<CanvasProps> = ({
         ref={canvasRef}
         style={{
           width: canvasWidth,
-          minHeight: '600px',
+          minHeight: '400px',
           backgroundColor: 'white',
           boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          padding: '20px',
+          padding: '8px',
           borderRadius: '8px',
           border: '1px solid #e8e8e8',
           position: 'relative',
-          marginTop: '40px',
           transition: 'all 0.3s ease',
           outline: 'none',
         }}
@@ -214,7 +213,6 @@ const Canvas: React.FC<CanvasProps> = ({
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'flex-start',
-            paddingTop: '40px',
           }}
         >
           <ChatInterface

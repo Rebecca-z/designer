@@ -1140,7 +1140,8 @@ const DraggableWrapper: React.FC<{
     position: 'relative',
     // border: isCurrentSelected ? '2px solid #1890ff' : '1px solid transparent', // 只有DraggableWrapper显示选中边框
     borderRadius: '4px',
-    padding: '2px',
+    // padding: '2px',
+    padding: '0',
     margin: '1px 0',
     backgroundColor: isCurrentSelected
       ? 'rgba(24, 144, 255, 0.02)'
@@ -2229,34 +2230,15 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       const formContent = (
         <div
           style={{
-            border: '2px dashed #d9d9d9',
+            // border: '2px dashed #d9d9d9',
             borderRadius: '4px',
             backgroundColor: 'transparent',
             transition: 'all 0.2s ease',
             position: 'relative',
             minHeight: '80px', // 确保表单容器有最小高度
-            padding: '8px', // 内边距简化
+            // padding: '8px',
           }}
         >
-          {/* 表单标题 - 始终显示，但样式不同 */}
-          <div
-            style={{
-              position: 'absolute',
-              top: '-10px',
-              left: '8px',
-              backgroundColor: '#52c41a', // 固定为绿色，避免与外层选中边框颜色冲突
-              color: 'white',
-              padding: '2px 8px',
-              borderRadius: '4px',
-              fontSize: '11px',
-              fontWeight: '500',
-              zIndex: 10,
-              opacity: isPreview ? 0 : 1, // 预览模式下隐藏
-            }}
-          >
-            📋 表单容器 {comp.name && `(${comp.name})`}
-          </div>
-
           {/* 简化的拖拽区域 - 移除SmartDropZone的嵌套 */}
           <SmartDropZone
             targetPath={formPath}
@@ -2353,13 +2335,13 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       });
 
       // 检查是否为默认分栏容器
-      // const isDefaultColumnSet = comp.isDefault === true;
+      const isDefaultColumnSet = comp.isDefault === true;
 
       const columnContent = (
         <div
           style={{
             border:
-              isCurrentSelected && !isPreview
+              isCurrentSelected && !isPreview && isDefaultColumnSet
                 ? '2px solid #1890ff'
                 : '2px solid transparent',
             borderRadius: '4px',
@@ -2387,7 +2369,8 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           <div
             style={{
               display: 'flex',
-              gap: `${comp.gap || 16}px`,
+              // gap: `${comp.gap || 16}px`,
+              gap: '4px',
               padding: '0', // 移除内边距
               minHeight: '60px',
             }}

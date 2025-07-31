@@ -1,6 +1,6 @@
 // card-designer-card-wrapper.tsx - 会话卡片包装器组件
 
-import { DeleteOutlined, MoreOutlined, PlusOutlined } from '@ant-design/icons';
+import { DeleteOutlined, MoreOutlined } from '@ant-design/icons';
 import { Button, Dropdown, message } from 'antd';
 import React, { useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
@@ -358,7 +358,7 @@ interface CardWrapperProps {
 const CardWrapper: React.FC<CardWrapperProps> = ({
   elements,
   verticalSpacing,
-  padding,
+  // padding,
   selectedPath,
   hoveredPath,
   onElementsChange,
@@ -2966,7 +2966,8 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     boxShadow: isCardSelected
       ? '0 0 8px rgba(24, 144, 255, 0.3)'
       : '0 2px 8px rgba(0, 0, 0, 0.1)',
-    padding: `${padding.top}px ${padding.right}px ${padding.bottom}px ${padding.left}px`,
+    // padding: `${padding.top}px ${padding.right}px ${padding.bottom}px ${padding.left}px`,
+    padding: '4px',
     minHeight: '200px',
     cursor: 'pointer',
     transition: 'all 0.2s ease',
@@ -3368,7 +3369,8 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                       style={{
                         display:
                           layoutMode === 'flow' ? 'inline-block' : 'block',
-                        marginBottom: layoutMode === 'flow' ? '0' : '8px',
+                        // marginBottom: layoutMode === 'flow' ? '0' : '8px',
+                        marginBottom: '0',
                         marginRight: layoutMode === 'flow' ? '8px' : '0',
                       }}
                     >
@@ -3405,18 +3407,16 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              minHeight: '120px',
+              minHeight: '200px',
               color: '#999',
-              border: '2px dashed #d9d9d9',
+              border: '1px dashed #d9d9d9',
               borderRadius: '8px',
               backgroundColor: '#fafafa',
             }}
           >
-            <PlusOutlined style={{ fontSize: '32px', marginBottom: '12px' }} />
             <div style={{ fontSize: '16px', marginBottom: '8px' }}>
               拖拽组件到这里
             </div>
-            <div style={{ fontSize: '12px' }}>从左侧面板拖拽组件到卡片中</div>
           </div>
         )}
       </div>
