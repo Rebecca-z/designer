@@ -391,7 +391,7 @@ const CardDesigner: React.FC = () => {
       );
       if (component && component.id === selection.selectedComponent?.id) {
         // 组件仍然存在且匹配
-        console.log('✅ 组件选择状态有效');
+        // console.log('✅ 组件选择状态有效');
       } else {
         console.log('❌ 组件选择状态无效，清除选择');
         selection.clearSelection();
@@ -821,7 +821,7 @@ const CardDesigner: React.FC = () => {
       return;
     }
 
-    console.log('💾 保存更新后的数据到历史记录');
+    // console.log('💾 保存更新后的数据到历史记录');
     history.updateData(newData as any);
     // 移除这行代码，避免重新设置选择状态
     // selection.selectComponent(updatedComponent, selection.selectedPath);

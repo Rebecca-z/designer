@@ -161,7 +161,7 @@ export const CanvasToolbar: React.FC<{
   selectedComponent: any;
   canvasWidth: string;
   hoveredPath: any;
-}> = ({ selectedComponent, canvasWidth, hoveredPath }) => {
+}> = ({ hoveredPath }) => {
   return (
     <div
       style={{
@@ -182,35 +182,11 @@ export const CanvasToolbar: React.FC<{
     >
       <div
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
-          fontSize: '12px',
-          color: '#666',
-        }}
-      >
-        <div
-          style={{
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            backgroundColor: selectedComponent ? '#52c41a' : '#d9d9d9',
-          }}
-        />
-        {selectedComponent ? '已选中组件' : '未选中组件'}
-      </div>
-
-      <div
-        style={{
           width: '1px',
           height: '16px',
           backgroundColor: '#e8e8e8',
         }}
       />
-
-      <Text type="secondary" style={{ fontSize: '12px' }}>
-        {canvasWidth === '100%' ? '响应式' : canvasWidth}
-      </Text>
 
       {/* 悬停状态指示器 */}
       {hoveredPath && (

@@ -9,7 +9,11 @@ import FontSize from './FontSize';
 
 // 配置和编辑器一致的扩展
 const extensions = [
-  StarterKit,
+  StarterKit.configure({
+    // 禁用StarterKit中可能冲突的扩展
+    link: false,
+    underline: false,
+  }),
   Underline,
   Link.configure({
     openOnClick: false,

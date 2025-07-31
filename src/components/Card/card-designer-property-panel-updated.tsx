@@ -4228,8 +4228,7 @@ export const PropertyPanel: React.FC<{
             🎯 当前选中：{currentComponent?.tag || '未知'}组件
           </Text>
         </div>
-        {/* 通用组件属性配置 */}
-        <Collapse
+        {/* <Collapse
           defaultActiveKey={['basic', 'style']}
           ghost
           items={[
@@ -4355,7 +4354,7 @@ export const PropertyPanel: React.FC<{
               ),
             },
           ]}
-        />
+        /> */}
       </div>
     );
   };
