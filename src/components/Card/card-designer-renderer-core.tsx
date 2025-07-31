@@ -2309,7 +2309,8 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         selectedPath[2] === 'elements' &&
         selectedPath[4] === 'elements' &&
         selectedPath[6] === 'columns' &&
-        selectedPath[5] === path[3] // 分栏组件在表单内的索引
+        selectedPath[3] === path[3] && // 表单索引
+        selectedPath[5] === path[5] // 分栏组件在表单内的索引
       ) {
         selectedColumnIndex = selectedPath[7] as number;
         console.log('🎯 检测到表单内分栏列被选中:', {
