@@ -3113,7 +3113,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             value={comp.default_value?.content || ''}
             type="text"
             style={{
-              width: '100%',
+              width: '250px',
               padding: '8px 12px',
               border: '1px solid #d9d9d9',
               borderRadius: '6px',
@@ -3221,7 +3221,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                 ? '2px solid #1890ff'
                 : '2px solid transparent',
             borderRadius: '6px',
-            padding: '8px',
+            // padding: '8px',
             backgroundColor:
               isCurrentSelected && !isPreview
                 ? 'rgba(24, 144, 255, 0.05)'
@@ -3236,7 +3236,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           <Select
             placeholder="请选择"
             style={{
-              width: '100%',
+              width: '250px',
               fontSize: '14px',
             }}
             // 移除disabled状态，允许操作但不保存值
@@ -3288,7 +3288,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                 ? '2px solid #1890ff'
                 : '2px solid transparent',
             borderRadius: '6px',
-            padding: '8px',
+            // padding: '8px',
             backgroundColor:
               isCurrentSelected && !isPreview
                 ? 'rgba(24, 144, 255, 0.05)'
@@ -3304,7 +3304,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             mode="multiple"
             placeholder="请选择"
             style={{
-              width: '100%',
+              width: '250px',
               fontSize: '14px',
             }}
             // 移除disabled状态，允许操作但不保存值
@@ -3321,9 +3321,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               </Option>
             ))}
           </Select>
-          <div style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>
-            按住 Ctrl/Cmd 键可多选
-          </div>
         </div>
       );
 
