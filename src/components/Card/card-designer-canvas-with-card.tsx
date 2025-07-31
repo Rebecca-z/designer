@@ -76,25 +76,9 @@ const Canvas: React.FC<CanvasProps> = ({
     selectedPath[0] === 'dsl' &&
     selectedPath[1] === 'body';
 
-  console.log('🎯 卡片选中状态检查:', {
-    selectedPath,
-    selectedPathLength: selectedPath?.length,
-    isCardSelected,
-    selectedPath0: selectedPath?.[0],
-    selectedPath1: selectedPath?.[1],
-  });
-
   // 处理画布点击事件
   const handleCanvasClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
-
-    console.log('🎨 画布点击处理:', {
-      targetTag: target.tagName,
-      targetClass: target.className,
-      hasCardContainer: !!target.closest('[data-card-container]'),
-      hasComponentWrapper: !!target.closest('[data-component-wrapper]'),
-      hasDragSortableItem: !!target.closest('[data-drag-sortable-item]'),
-    });
 
     // 如果点击的是卡片容器、组件包装器或拖拽排序项，不处理画布点击
     if (
@@ -102,17 +86,14 @@ const Canvas: React.FC<CanvasProps> = ({
       target.closest('[data-component-wrapper]') ||
       target.closest('[data-drag-sortable-item]')
     ) {
-      console.log('🚫 阻止画布点击：点击的是卡片或组件区域');
       return;
     }
 
     // 如果点击的是操作按钮，不处理画布点击
     if (target.closest('.ant-dropdown') || target.closest('.ant-btn')) {
-      console.log('🚫 阻止画布点击：点击的是操作按钮');
       return;
     }
 
-    console.log('✅ 处理画布点击，清除选择状态');
     e.stopPropagation();
     onSelectComponent(null);
     onCanvasFocus?.();
@@ -125,9 +106,9 @@ const Canvas: React.FC<CanvasProps> = ({
 
   // 处理卡片选中
   const handleCardSelect = () => {
-    console.log(
-      '🎯 处理卡片选中，调用 onSelectComponent(null, ["dsl", "body"])',
-    );
+    // console.log(
+    //   '🎯 处理卡片选中，调用 onSelectComponent(null, ["dsl", "body"])',
+    // );
     onSelectComponent(null, ['dsl', 'body']);
   };
 
@@ -238,43 +219,21 @@ const Canvas: React.FC<CanvasProps> = ({
             username="用户名"
             cardStyles={data.dsl.body.styles}
             headerData={(() => {
-              console.log('🎯 Canvas传递headerData:', {
-                hasHeader: !!data.dsl.header,
-                headerData: data.dsl.header,
-                hasTitleContent: !!data.dsl.header?.title?.content,
-                hasSubtitleContent: !!data.dsl.header?.subtitle?.content,
-                titleContent: data.dsl.header?.title?.content,
-                subtitleContent: data.dsl.header?.subtitle?.content,
-                style: data.dsl.header?.style,
-              });
-
               // 检查header是否存在且有有效内容
               if (
                 !data.dsl.header ||
                 (!data.dsl.header.title?.content &&
                   !data.dsl.header.subtitle?.content)
               ) {
-                console.log('❌ headerData为空，不传递给渲染器');
                 return undefined;
               }
 
-              console.log('✅ headerData有效，传递给渲染器');
               return data.dsl.header;
             })()}
             onHeaderDataChange={onHeaderDataChange}
             layoutMode={data.dsl.body.direction || 'vertical'}
             variables={(() => {
               // 将卡片数据结构中的变量转换为VariableItem[]格式
-              console.log('🔍 Canvas变量数据检查:', {
-                hasDataVariables: !!data.variables,
-                dataVariables: data.variables,
-                variablesKeys: data.variables
-                  ? Object.keys(data.variables)
-                  : [],
-                variablesLength: data.variables
-                  ? Object.keys(data.variables).length
-                  : 0,
-              });
 
               if (data.variables && Object.keys(data.variables).length > 0) {
                 const convertedVariables = Object.entries(data.variables).map(
@@ -282,13 +241,8 @@ const Canvas: React.FC<CanvasProps> = ({
                     [name]: value,
                   }),
                 );
-                console.log('✅ Canvas变量转换结果:', {
-                  convertedVariables: convertedVariables,
-                  convertedLength: convertedVariables.length,
-                });
                 return convertedVariables;
               }
-              console.log('⚠️ Canvas没有变量数据');
               return [];
             })()}
           />

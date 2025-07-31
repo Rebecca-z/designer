@@ -77,11 +77,11 @@ const canDropInContainer = (
   draggedType: string,
   targetPath: (string | number)[],
 ): boolean => {
-  console.log('🔍 canDropInContainer 检查:', {
-    draggedType,
-    targetPath,
-    targetPathLength: targetPath.length,
-  });
+  // console.log('🔍 canDropInContainer 检查:', {
+  //   draggedType,
+  //   targetPath,
+  //   targetPathLength: targetPath.length,
+  // });
 
   // 特殊规则：分栏容器可以拖拽到表单容器内，但不能拖拽到表单容器下的分栏容器的列中
   if (draggedType === 'column_set') {
@@ -105,13 +105,13 @@ const canDropInContainer = (
       targetPath[6] === 'columns' &&
       targetPath[8] === 'elements';
 
-    console.log('🔍 分栏容器拖拽检查:', {
-      draggedType,
-      targetPath,
-      isTargetingFormElements,
-      isTargetingFormColumnElements,
-      canDrop: isTargetingFormElements && !isTargetingFormColumnElements,
-    });
+    // console.log('🔍 分栏容器拖拽检查:', {
+    //   draggedType,
+    //   targetPath,
+    //   isTargetingFormElements,
+    //   isTargetingFormColumnElements,
+    //   canDrop: isTargetingFormElements && !isTargetingFormColumnElements,
+    // });
 
     // 只允许拖拽到表单容器的 elements，不允许拖拽到表单容器下的分栏容器的列中
     return isTargetingFormElements && !isTargetingFormColumnElements;
@@ -140,11 +140,11 @@ const canDropInContainer = (
       (segment) => segment === 'elements' || segment === 'columns',
     );
 
-    console.log('🔍 容器组件嵌套检查:', {
-      draggedType,
-      hasContainerSegment,
-      canDrop: !hasContainerSegment,
-    });
+    // console.log('🔍 容器组件嵌套检查:', {
+    //   draggedType,
+    //   hasContainerSegment,
+    //   canDrop: !hasContainerSegment,
+    // });
 
     return !hasContainerSegment;
   }
@@ -163,27 +163,27 @@ const canDropInContainer = (
     !targetPath.includes('columns');
 
   if (isTargetingColumn) {
-    console.log('✅ 普通组件可以拖拽到分栏列:', {
-      draggedType,
-      targetPath,
-      canDrop: true,
-    });
+    // console.log('✅ 普通组件可以拖拽到分栏列:', {
+    //   draggedType,
+    //   targetPath,
+    //   canDrop: true,
+    // });
     return true;
   }
 
   if (isTargetingForm) {
-    console.log('✅ 普通组件可以拖拽到表单容器:', {
-      draggedType,
-      targetPath,
-      canDrop: true,
-    });
+    // console.log('✅ 普通组件可以拖拽到表单容器:', {
+    //   draggedType,
+    //   targetPath,
+    //   canDrop: true,
+    // });
     return true;
   }
 
-  console.log('✅ 非容器组件可以放置:', {
-    draggedType,
-    canDrop: true,
-  });
+  // console.log('✅ 非容器组件可以放置:', {
+  //   draggedType,
+  //   canDrop: true,
+  // });
   return true;
 };
 
@@ -251,12 +251,12 @@ const ContainerSortableItem: React.FC<{
   const [{ isDragging }, drag] = useDrag({
     type: 'existing-component', // 修复：使用统一的拖拽类型，确保其他组件能识别
     item: () => {
-      console.log('🟢 ContainerSortableItem 开始拖拽:', {
-        tag: component.tag,
-        path,
-        componentId: component.id,
-        index,
-      });
+      // console.log('🟢 ContainerSortableItem 开始拖拽:', {
+      //   tag: component.tag,
+      //   path,
+      //   componentId: component.id,
+      //   index,
+      // });
       return {
         type: component.tag,
         component,
@@ -270,10 +270,10 @@ const ContainerSortableItem: React.FC<{
     }),
     canDrag: () => {
       const canDrag = component.tag !== 'title';
-      console.log('🎯 ContainerSortableItem canDrag 检查:', {
-        componentTag: component.tag,
-        canDrag,
-      });
+      // console.log('🎯 ContainerSortableItem canDrag 检查:', {
+      //   componentTag: component.tag,
+      //   canDrag,
+      // });
       return canDrag;
     },
   });
@@ -289,55 +289,53 @@ const ContainerSortableItem: React.FC<{
     canDrop: (item: DragItem) => {
       if (!enableSort) return false;
 
-      console.log('🔍 ContainerSortableItem canDrop 检查:', {
-        itemType: item.type,
-        isNew: item.isNew,
-        hasComponent: !!item.component,
-        componentTag: item.component?.tag,
-        isChildComponent: item.isChildComponent,
-        currentPath: path,
-        containerPath,
-        currentComponentTag: component.tag,
-        currentComponentId: component.id,
-      });
+      // console.log('🔍 ContainerSortableItem canDrop 检查:', {
+      //   itemType: item.type,
+      //   isNew: item.isNew,
+      //   hasComponent: !!item.component,
+      //   componentTag: item.component?.tag,
+      //   isChildComponent: item.isChildComponent,
+      //   currentPath: path,
+      //   containerPath,
+      //   currentComponentTag: component.tag,
+      //   currentComponentId: component.id,
+      // });
 
       // 不能拖拽到自己身上
       if (!item.isNew && item.path && isSamePath(item.path, path)) {
-        console.log('❌ 不能拖拽到自己身上');
+        // console.log('❌ 不能拖拽到自己身上');
         return false;
       }
 
       // 不能拖拽到自己的子元素上
       if (!item.isNew && item.path && isParentChild(item.path, path)) {
-        console.log('❌ 不能拖拽到自己的子元素上');
+        // console.log('❌ 不能拖拽到自己的子元素上');
         return false;
       }
 
       // 检查是否是根节点组件拖拽到容器
-      if (!item.isNew && item.component && item.path) {
-        const isRootComponent =
-          item.path.length === 4 &&
-          item.path[0] === 'dsl' &&
-          item.path[1] === 'body' &&
-          item.path[2] === 'elements';
+      // if (!item.isNew && item.component && item.path) {
+      //   const isRootComponent =
+      //     item.path.length === 4 &&
+      //     item.path[0] === 'dsl' &&
+      //     item.path[1] === 'body' &&
+      //     item.path[2] === 'elements';
 
-        if (isRootComponent) {
-          console.log('🔍 根节点组件拖拽到容器检查:', {
-            componentTag: item.component.tag,
-            containerPath,
-          });
-        }
-      }
+      //   if (isRootComponent) {
+      //     console.log('🔍 根节点组件拖拽到容器检查:', {
+      //       componentTag: item.component.tag,
+      //       containerPath,
+      //     });
+      //   }
+      // }
 
       // 检查容器嵌套限制
       if (item.isNew) {
         // 左侧新组件的拖拽检查
         const canDrop = canDropInContainer(item.type, containerPath);
-        console.log('✅ 新组件拖拽检查结果:', canDrop);
         return canDrop;
       } else if (item.component) {
         const canDrop = canDropInContainer(item.component.tag, containerPath);
-        console.log('✅ 现有组件拖拽检查结果:', canDrop);
         return canDrop;
       }
 
@@ -417,20 +415,20 @@ const ContainerSortableItem: React.FC<{
         lastHoverState.current = currentHoverState;
 
         // 获取组件信息用于后续检查和日志
-        const draggedComponent = item.component;
-        const hoverComponent = component;
+        // const draggedComponent = item.component;
+        // const hoverComponent = component;
 
-        console.log('🎯 容器内插入式拖拽检测:', {
-          dragIndex,
-          hoverIndex,
-          hoverClientY,
-          hoverMiddleY,
-          insertPosition: currentInsertPosition,
-          targetIndex,
-          draggedComponent: draggedComponent?.tag,
-          hoverComponent: hoverComponent.tag,
-          willProceed: 'checking...',
-        });
+        // console.log('🎯 容器内插入式拖拽检测:', {
+        //   dragIndex,
+        //   hoverIndex,
+        //   hoverClientY,
+        //   hoverMiddleY,
+        //   insertPosition: currentInsertPosition,
+        //   targetIndex,
+        //   draggedComponent: draggedComponent?.tag,
+        //   hoverComponent: hoverComponent.tag,
+        //   willProceed: 'checking...',
+        // });
 
         insertTargetIndex.current = targetIndex; // 更新记录
 
@@ -467,14 +465,14 @@ const ContainerSortableItem: React.FC<{
         return;
       }
 
-      console.log('✅ ContainerSortableItem drop 开始处理:', {
-        componentTag: component.tag,
-        componentId: component.id,
-        itemType: item.type,
-        isNew: item.isNew,
-        hasComponent: !!item.component,
-        enableSort,
-      });
+      // console.log('✅ ContainerSortableItem drop 开始处理:', {
+      //   componentTag: component.tag,
+      //   componentId: component.id,
+      //   itemType: item.type,
+      //   isNew: item.isNew,
+      //   hasComponent: !!item.component,
+      //   enableSort,
+      // });
 
       // 清除防抖定时器
       if (hoverTimeoutRef.current) {
@@ -490,25 +488,25 @@ const ContainerSortableItem: React.FC<{
         const draggedContainerPath = draggedPath.slice(0, -1);
         const targetContainerPath = containerPath;
 
-        console.log('🔍 容器内排序检查:', {
-          draggedPath,
-          draggedContainerPath,
-          targetContainerPath,
-          isSameContainer: isSamePath(
-            draggedContainerPath,
-            targetContainerPath,
-          ),
-          insertTargetIndex: insertTargetIndex.current,
-        });
+        // console.log('🔍 容器内排序检查:', {
+        //   draggedPath,
+        //   draggedContainerPath,
+        //   targetContainerPath,
+        //   isSameContainer: isSamePath(
+        //     draggedContainerPath,
+        //     targetContainerPath,
+        //   ),
+        //   insertTargetIndex: insertTargetIndex.current,
+        // });
 
         // 检查是否在同一容器内
         if (isSamePath(draggedContainerPath, targetContainerPath)) {
-          console.log('✅ 执行容器内插入式排序 (drop):', {
-            from: item.path[item.path.length - 1],
-            insertAt: insertTargetIndex.current,
-            draggedComponent: item.component.tag,
-            hoverComponent: component.tag,
-          });
+          // console.log('✅ 执行容器内插入式排序 (drop):', {
+          //   from: item.path[item.path.length - 1],
+          //   insertAt: insertTargetIndex.current,
+          //   draggedComponent: item.component.tag,
+          //   hoverComponent: component.tag,
+          // });
 
           // 用最后一次hover的insertTargetIndex
           const targetPath = [
@@ -552,12 +550,12 @@ const ContainerSortableItem: React.FC<{
             draggedPath[2] === 'elements';
 
           if (isRootComponent) {
-            console.log('🔄 ContainerSortableItem: 根节点组件移动到容器:', {
-              component: item.component.tag,
-              from: draggedPath,
-              to: targetContainerPath,
-              insertIndex,
-            });
+            // console.log('🔄 ContainerSortableItem: 根节点组件移动到容器:', {
+            //   component: item.component.tag,
+            //   from: draggedPath,
+            //   to: targetContainerPath,
+            //   insertIndex,
+            // });
 
             // 对于根节点组件移动到容器，需要特殊处理路径
             // targetContainerPath 已经是容器的路径，我们需要添加 'elements' 来指向容器的子元素数组
@@ -571,22 +569,22 @@ const ContainerSortableItem: React.FC<{
               correctTargetPath = [...targetContainerPath, 'elements'];
             }
 
-            console.log(
-              '🎯 ContainerSortableItem 调用 onComponentMove 处理根节点移动:',
-              {
-                component: item.component.tag,
-                fromPath: draggedPath,
-                toPath: correctTargetPath,
-                insertIndex,
-                targetContainerPath,
-                pathAnalysis: {
-                  hasElements:
-                    targetContainerPath[targetContainerPath.length - 1] ===
-                    'elements',
-                  finalPath: correctTargetPath,
-                },
-              },
-            );
+            // console.log(
+            //   '🎯 ContainerSortableItem 调用 onComponentMove 处理根节点移动:',
+            //   {
+            //     component: item.component.tag,
+            //     fromPath: draggedPath,
+            //     toPath: correctTargetPath,
+            //     insertIndex,
+            //     targetContainerPath,
+            //     pathAnalysis: {
+            //       hasElements:
+            //         targetContainerPath[targetContainerPath.length - 1] ===
+            //         'elements',
+            //       finalPath: correctTargetPath,
+            //     },
+            //   },
+            // );
             onComponentMove(
               item.component,
               draggedPath,
@@ -596,26 +594,26 @@ const ContainerSortableItem: React.FC<{
             return;
           }
 
-          console.log('🔄 执行跨容器移动:', {
-            draggedComponent: {
-              id: item.component.id,
-              tag: item.component.tag,
-            },
-            draggedPath,
-            targetPath: path,
-            insertIndex,
-            draggedContainerPath,
-            targetContainerPath,
-          });
+          // console.log('🔄 执行跨容器移动:', {
+          //   draggedComponent: {
+          //     id: item.component.id,
+          //     tag: item.component.tag,
+          //   },
+          //   draggedPath,
+          //   targetPath: path,
+          //   insertIndex,
+          //   draggedContainerPath,
+          //   targetContainerPath,
+          // });
 
           // 执行跨容器移动 - 传递正确的目标路径
           const targetPath = [...targetContainerPath, insertIndex];
-          console.log('🎯 调用 onComponentMove 进行跨容器移动:', {
-            component: item.component.tag,
-            fromPath: draggedPath,
-            toPath: targetPath,
-            insertIndex,
-          });
+          // console.log('🎯 调用 onComponentMove 进行跨容器移动:', {
+          //   component: item.component.tag,
+          //   fromPath: draggedPath,
+          //   toPath: targetPath,
+          //   insertIndex,
+          // });
           onComponentMove(item.component, draggedPath, targetPath, insertIndex);
         }
       }
@@ -743,17 +741,8 @@ const DraggableWrapper: React.FC<{
   const [{ isDragging }, drag] = useDrag({
     type: 'existing-component',
     item: () => {
-      console.log('🟢 DraggableWrapper 开始拖拽:', {
-        tag: component.tag,
-        path,
-        componentId: component.id,
-        index,
-        isChildComponent,
-      });
-
       // 拖拽开始时清除选中状态
       if (onClearSelection) {
-        console.log('🗑️ DraggableWrapper 拖拽开始时清除选中状态');
         onClearSelection();
       }
 
@@ -770,11 +759,11 @@ const DraggableWrapper: React.FC<{
     }),
     canDrag: () => {
       const canDrag = component.tag !== 'title';
-      console.log('🎯 DraggableWrapper canDrag 检查:', {
-        componentTag: component.tag,
-        canDrag,
-        isChildComponent,
-      });
+      // console.log('🎯 DraggableWrapper canDrag 检查:', {
+      //   componentTag: component.tag,
+      //   canDrag,
+      //   isChildComponent,
+      // });
       return canDrag;
     },
   });
@@ -785,16 +774,16 @@ const DraggableWrapper: React.FC<{
     canDrop: (item: DragItem) => {
       if (!enableSort) return false;
 
-      console.log('🔍 DraggableWrapper canDrop 检查:', {
-        itemType: item.type,
-        isNew: item.isNew,
-        hasComponent: !!item.component,
-        componentTag: item.component?.tag,
-        isChildComponent: item.isChildComponent,
-        currentComponentTag: component.tag,
-        currentPath: path,
-        containerPath,
-      });
+      // console.log('🔍 DraggableWrapper canDrop 检查:', {
+      //   itemType: item.type,
+      //   isNew: item.isNew,
+      //   hasComponent: !!item.component,
+      //   componentTag: item.component?.tag,
+      //   isChildComponent: item.isChildComponent,
+      //   currentComponentTag: component.tag,
+      //   currentPath: path,
+      //   containerPath,
+      // });
 
       // 不能拖拽到自己身上
       if (!item.isNew && item.path && isSamePath(item.path, path)) {
@@ -831,19 +820,13 @@ const DraggableWrapper: React.FC<{
       }
 
       // 检查是否在同一容器中
-      const draggedContainerPath = item.path ? item.path.slice(0, -1) : [];
-      const currentContainerPath = containerPath;
+      // const draggedContainerPath = item.path ? item.path.slice(0, -1) : [];
+      // const currentContainerPath = containerPath;
 
-      const isSameContainer = isSamePath(
-        draggedContainerPath,
-        currentContainerPath,
-      );
-
-      console.log('✅ DraggableWrapper canDrop 通过:', {
-        isSameContainer,
-        draggedContainerPath,
-        currentContainerPath,
-      });
+      // const isSameContainer = isSamePath(
+      //   draggedContainerPath,
+      //   currentContainerPath,
+      // );
 
       return true;
     },
@@ -945,43 +928,43 @@ const DraggableWrapper: React.FC<{
                 component.tag === 'form')); // 当前组件是表单容器
 
           if (isRootComponentToContainer) {
-            console.log(
-              '🚫 ContainerSortableItem hover: 阻止根节点到容器的排序:',
-              {
-                draggedComponent: item.component.tag,
-                draggedPath,
-                targetPath: path,
-                reason: '这应该由drop处理器处理跨容器移动',
-              },
-            );
+            // console.log(
+            //   '🚫 ContainerSortableItem hover: 阻止根节点到容器的排序:',
+            //   {
+            //     draggedComponent: item.component.tag,
+            //     draggedPath,
+            //     targetPath: path,
+            //     reason: '这应该由drop处理器处理跨容器移动',
+            //   },
+            // );
             return; // 阻止在hover时处理，留给drop处理器
           }
 
-          console.log('🔄 执行同容器排序:', {
-            draggedComponent: {
-              id: item.component.id,
-              tag: item.component.tag,
-            },
-            draggedPath,
-            targetPath: path,
-            targetIndex,
-            isChildComponent,
-          });
+          // console.log('🔄 执行同容器排序:', {
+          //   draggedComponent: {
+          //     id: item.component.id,
+          //     tag: item.component.tag,
+          //   },
+          //   draggedPath,
+          //   targetPath: path,
+          //   targetIndex,
+          //   isChildComponent,
+          // });
 
           // ✅ 修复：hover事件不执行实际移动，只用于视觉反馈
           // 实际的移动操作将在drop事件中处理
-          console.log('💡 hover检测到排序需求，等待drop事件执行实际移动:', {
-            component: item.component.tag,
-            fromPath: draggedPath,
-            targetPath: path,
-            targetIndex,
-          });
+          // console.log('💡 hover检测到排序需求，等待drop事件执行实际移动:', {
+          //   component: item.component.tag,
+          //   fromPath: draggedPath,
+          //   targetPath: path,
+          //   targetIndex,
+          // });
         } else {
-          console.warn('⚠️ 跳过无效的排序操作:', {
-            draggedPath,
-            targetPath: path,
-            reason: '路径格式不正确或缺少必要数据',
-          });
+          // console.warn('⚠️ 跳过无效的排序操作:', {
+          //   draggedPath,
+          //   targetPath: path,
+          //   reason: '路径格式不正确或缺少必要数据',
+          // });
         }
       }, 50); // 50ms防抖延迟
     },
@@ -1006,13 +989,13 @@ const DraggableWrapper: React.FC<{
           targetContainerPath,
         );
 
-        console.log('🎯 drop事件处理组件移动:', {
-          draggedComponent: item.component.tag,
-          draggedPath,
-          targetContainerPath,
-          isSameContainer,
-          isChildComponent,
-        });
+        // console.log('🎯 drop事件处理组件移动:', {
+        //   draggedComponent: item.component.tag,
+        //   draggedPath,
+        //   targetContainerPath,
+        //   isSameContainer,
+        //   isChildComponent,
+        // });
 
         if (!isSameContainer) {
           // 跨容器移动
@@ -1043,25 +1026,25 @@ const DraggableWrapper: React.FC<{
             path[0] === 'dsl' &&
             path[1] === 'body'
           ) {
-            console.log('🔄 执行跨容器移动:', {
-              draggedComponent: {
-                id: item.component.id,
-                tag: item.component.tag,
-              },
-              draggedPath,
-              targetPath: path,
-              insertIndex,
-              draggedContainerPath,
-              targetContainerPath,
-            });
+            // console.log('🔄 执行跨容器移动:', {
+            //   draggedComponent: {
+            //     id: item.component.id,
+            //     tag: item.component.tag,
+            //   },
+            //   draggedPath,
+            //   targetPath: path,
+            //   insertIndex,
+            //   draggedContainerPath,
+            //   targetContainerPath,
+            // });
 
             // 执行跨容器移动 - 使用正确的目标容器路径
             const targetPath = [...targetContainerPath, insertIndex];
-            console.log('🔄 计算目标路径:', {
-              targetContainerPath,
-              insertIndex,
-              computedTargetPath: targetPath,
-            });
+            // console.log('🔄 计算目标路径:', {
+            //   targetContainerPath,
+            //   insertIndex,
+            //   computedTargetPath: targetPath,
+            // });
             onComponentMove(
               item.component,
               draggedPath,
@@ -1077,12 +1060,12 @@ const DraggableWrapper: React.FC<{
           }
         } else {
           // 同容器内排序
-          console.log('🔄 同容器内排序 (drop事件):', {
-            draggedComponent: item.component.tag,
-            draggedPath,
-            targetPath: path,
-            index,
-          });
+          // console.log('🔄 同容器内排序 (drop事件):', {
+          //   draggedComponent: item.component.tag,
+          //   draggedPath,
+          //   targetPath: path,
+          //   index,
+          // });
 
           // 确定目标索引
           const rect = ref.current?.getBoundingClientRect();
@@ -1105,16 +1088,16 @@ const DraggableWrapper: React.FC<{
             path[0] === 'dsl' &&
             path[1] === 'body'
           ) {
-            console.log('✅ 执行同容器排序:', {
-              draggedComponent: {
-                id: item.component.id,
-                tag: item.component.tag,
-              },
-              draggedPath,
-              targetPath: path,
-              targetIndex,
-              isChildComponent,
-            });
+            // console.log('✅ 执行同容器排序:', {
+            //   draggedComponent: {
+            //     id: item.component.id,
+            //     tag: item.component.tag,
+            //   },
+            //   draggedPath,
+            //   targetPath: path,
+            //   targetIndex,
+            //   isChildComponent,
+            // });
 
             // 执行排序
             onComponentMove(item.component, draggedPath, path, targetIndex);
@@ -1159,12 +1142,12 @@ const DraggableWrapper: React.FC<{
     e.stopPropagation();
     e.preventDefault();
 
-    console.log('🎯 DraggableWrapper 组件被点击:', {
-      componentId: component.id,
-      componentTag: component.tag,
-      path,
-      isChildComponent,
-    });
+    // console.log('🎯 DraggableWrapper 组件被点击:', {
+    //   componentId: component.id,
+    //   componentTag: component.tag,
+    //   path,
+    //   isChildComponent,
+    // });
 
     // 处理组件选中
     onSelect?.(component, path);
@@ -1303,23 +1286,23 @@ const SmartDropZone: React.FC<{
   const [{ isOver, canDrop, draggedItem }, drop] = useDrop({
     accept: ['component', 'existing-component', 'canvas-component'],
     canDrop: (item: DragItem) => {
-      console.log('🔍 SmartDropZone canDrop 检查:', {
-        itemType: item.type,
-        isNew: item.isNew,
-        hasComponent: !!item.component,
-        componentTag: item.component?.tag,
-        isChildComponent: item.isChildComponent,
-        targetPath,
-        childElementsCount: childElements.length,
-        containerType,
-      });
+      // console.log('🔍 SmartDropZone canDrop 检查:', {
+      //   itemType: item.type,
+      //   isNew: item.isNew,
+      //   hasComponent: !!item.component,
+      //   componentTag: item.component?.tag,
+      //   isChildComponent: item.isChildComponent,
+      //   targetPath,
+      //   childElementsCount: childElements.length,
+      //   containerType,
+      // });
 
       // 特殊处理标题组件 - 标题组件不能拖拽到容器中
       if (
         item.type === 'title' ||
         (item.component && item.component.tag === 'title')
       ) {
-        console.log('❌ 标题组件不能拖拽到容器中');
+        // console.log('❌ 标题组件不能拖拽到容器中');
         return false;
       }
 
@@ -1327,26 +1310,26 @@ const SmartDropZone: React.FC<{
       if (item.isChildComponent) {
         // 子组件可以拖拽到其他容器中，但不能拖拽到自己的父容器
         if (item.path && isParentChild(item.path, targetPath)) {
-          console.log('❌ 子组件不能拖拽到自己的父容器');
+          // console.log('❌ 子组件不能拖拽到自己的父容器');
           return false;
         }
         const canDrop = canDropInContainer(
           item.component?.tag || item.type,
           targetPath,
         );
-        console.log('✅ 子组件拖拽检查结果:', canDrop);
+        // console.log('✅ 子组件拖拽检查结果:', canDrop);
         return canDrop;
       }
 
       // 检查是否可以在此容器中放置
       if (item.isNew) {
         const canDrop = canDropInContainer(item.type, targetPath);
-        console.log('✅ 新组件拖拽检查结果:', canDrop);
+        // console.log('✅ 新组件拖拽检查结果:', canDrop);
         return canDrop;
       } else if (item.component && item.path) {
         // 不能拖拽到自己的父容器中
         if (isParentChild(item.path, targetPath)) {
-          console.log('❌ 不能拖拽到自己的父容器中');
+          // console.log('❌ 不能拖拽到自己的父容器中');
           return false;
         }
 
@@ -1371,17 +1354,17 @@ const SmartDropZone: React.FC<{
           targetPath[2] === 'elements';
 
         if (isFormColumnSetDraggedToRoot) {
-          console.log('❌ 表单容器下的分栏容器不允许拖拽离开表单');
+          // console.log('❌ 表单容器下的分栏容器不允许拖拽离开表单');
           return false;
         }
 
-        if (isRootComponent) {
-          console.log('🔍 根节点组件拖拽到容器检查:', {
-            componentTag: item.component.tag,
-            targetPath,
-            containerType,
-          });
-        }
+        // if (isRootComponent) {
+        //   console.log('🔍 根节点组件拖拽到容器检查:', {
+        //     componentTag: item.component.tag,
+        //     targetPath,
+        //     containerType,
+        //   });
+        // }
 
         // ✅ 修复：限制容器热区的拖拽接受条件
         // 只有当组件是从根级别拖拽到容器时，才允许容器热区接受
@@ -1392,11 +1375,11 @@ const SmartDropZone: React.FC<{
         ) {
           // 分栏列和表单容器允许接受任何非容器组件的拖拽
           if (isContainerComponent(item.component?.tag || item.type)) {
-            console.log(
-              `❌ 容器组件不能拖拽到${
-                containerType === 'column' ? '分栏列' : '表单容器'
-              }中`,
-            );
+            // console.log(
+            //   `❌ 容器组件不能拖拽到${
+            //     containerType === 'column' ? '分栏列' : '表单容器'
+            //   }中`,
+            // );
             return false;
           }
 
@@ -1421,11 +1404,11 @@ const SmartDropZone: React.FC<{
             }
           }
 
-          console.log(
-            `✅ 普通组件可以拖拽到${
-              containerType === 'column' ? '分栏列' : '表单容器'
-            }中`,
-          );
+          // console.log(
+          //   `✅ 普通组件可以拖拽到${
+          //     containerType === 'column' ? '分栏列' : '表单容器'
+          //   }中`,
+          // );
           return true;
         } else if (!isRootComponent) {
           console.log('❌ 非根级别组件不能拖拽到容器热区');
@@ -1433,7 +1416,7 @@ const SmartDropZone: React.FC<{
         }
 
         const canDrop = canDropInContainer(item.component.tag, targetPath);
-        console.log('✅ 现有组件拖拽检查结果:', canDrop);
+        // console.log('✅ 现有组件拖拽检查结果:', canDrop);
         return canDrop;
       }
       console.log('❌ 默认拒绝拖拽');
@@ -1526,30 +1509,30 @@ const SmartDropZone: React.FC<{
       // 清除指示线位置
       setIndicatorPosition(null);
 
-      console.log('🎯 SmartDropZone 拖拽处理:', {
-        containerType,
-        targetPath,
-        item: {
-          type: item.type,
-          isNew: item.isNew,
-          hasComponent: !!item.component,
-          hasPath: !!item.path,
-          isChildComponent: item.isChildComponent,
-        },
-        childElementsCount: childElements.length,
-        columnIndex,
-        insertPosition,
-        insertIndex,
-      });
+      // console.log('🎯 SmartDropZone 拖拽处理:', {
+      //   containerType,
+      //   targetPath,
+      //   item: {
+      //     type: item.type,
+      //     isNew: item.isNew,
+      //     hasComponent: !!item.component,
+      //     hasPath: !!item.path,
+      //     isChildComponent: item.isChildComponent,
+      //   },
+      //   childElementsCount: childElements.length,
+      //   columnIndex,
+      //   insertPosition,
+      //   insertIndex,
+      // });
 
       if (item.isNew) {
         // 新组件添加到指定位置
-        console.log('✅ 新组件拖拽到容器:', {
-          itemType: item.type,
-          targetPath,
-          insertIndex,
-          insertPosition,
-        });
+        // console.log('✅ 新组件拖拽到容器:', {
+        //   itemType: item.type,
+        //   targetPath,
+        //   insertIndex,
+        //   insertPosition,
+        // });
         onContainerDrop?.(item, targetPath, insertIndex);
       } else if (item.component && item.path) {
         // 现有组件移动
@@ -1575,43 +1558,43 @@ const SmartDropZone: React.FC<{
             item.path[2] === 'elements';
 
           if (isRootComponent) {
-            console.log('🔄 根节点组件移动到容器:', {
-              component: item.component.tag,
-              from: item.path,
-              to: targetPath,
-              containerType,
-              insertIndex,
-            });
+            // console.log('🔄 根节点组件移动到容器:', {
+            //   component: item.component.tag,
+            //   from: item.path,
+            //   to: targetPath,
+            //   containerType,
+            //   insertIndex,
+            // });
 
             // 对于根节点组件移动到容器，使用 onContainerDrop 来处理移动逻辑
             // 这样会正确地移除原组件并添加到新位置
-            console.log('🎯 调用 onContainerDrop 处理根节点到容器的移动:', {
-              draggedItem: item,
-              targetPath,
-              insertIndex,
-            });
+            // console.log('🎯 调用 onContainerDrop 处理根节点到容器的移动:', {
+            //   draggedItem: item,
+            //   targetPath,
+            //   insertIndex,
+            // });
             onContainerDrop?.(item, targetPath, insertIndex);
             return;
           }
 
           // 子组件跨容器移动的特殊处理
-          if (item.isChildComponent) {
-            console.log('🔄 子组件跨容器移动:', {
-              component: item.component.tag,
-              from: draggedContainerPath,
-              to: targetPath,
-              containerType,
-            });
-          }
+          // if (item.isChildComponent) {
+          //   console.log('🔄 子组件跨容器移动:', {
+          //     component: item.component.tag,
+          //     from: draggedContainerPath,
+          //     to: targetPath,
+          //     containerType,
+          //   });
+          // }
 
           // 容器间移动到指定位置（非根节点组件）
-          console.log('🎯 调用 onComponentMove (跨容器):', {
-            component: item.component.tag,
-            fromPath: item.path,
-            toPath: targetPath,
-            insertIndex,
-            targetPath,
-          });
+          // console.log('🎯 调用 onComponentMove (跨容器):', {
+          //   component: item.component.tag,
+          //   fromPath: item.path,
+          //   toPath: targetPath,
+          //   insertIndex,
+          //   targetPath,
+          // });
           onComponentMove?.(
             item.component,
             item.path,
@@ -1620,11 +1603,11 @@ const SmartDropZone: React.FC<{
           );
         } else {
           // 同容器内的拖拽 - 移动到指定位置
-          console.log('🔄 同容器内拖拽到指定位置:', {
-            component: item.component.tag,
-            targetPath,
-            insertIndex,
-          });
+          // console.log('🔄 同容器内拖拽到指定位置:', {
+          //   component: item.component.tag,
+          //   targetPath,
+          //   insertIndex,
+          // });
 
           // 检查拖拽限制
           if (!canDropInContainer(item.component.tag, targetPath)) {
@@ -1637,13 +1620,13 @@ const SmartDropZone: React.FC<{
           }
 
           // 移动到指定位置
-          console.log('🎯 调用 onComponentMove (同容器):', {
-            component: item.component.tag,
-            fromPath: item.path,
-            toPath: targetPath,
-            insertIndex,
-            targetPath,
-          });
+          // console.log('🎯 调用 onComponentMove (同容器):', {
+          //   component: item.component.tag,
+          //   fromPath: item.path,
+          //   toPath: targetPath,
+          //   insertIndex,
+          //   targetPath,
+          // });
           onComponentMove?.(
             item.component,
             item.path,
@@ -1695,16 +1678,16 @@ const SmartDropZone: React.FC<{
 
   // 处理点击事件 - 确保不阻止子组件的选中
   const handleContainerClick = (e: React.MouseEvent) => {
-    console.log('🖱️ SmartDropZone 点击事件:', {
-      containerType,
-      target: e.target,
-      currentTarget: e.currentTarget,
-      clickedOnSelf: e.target === e.currentTarget,
-    });
+    // console.log('🖱️ SmartDropZone 点击事件:', {
+    //   containerType,
+    //   target: e.target,
+    //   currentTarget: e.currentTarget,
+    //   clickedOnSelf: e.target === e.currentTarget,
+    // });
 
     // 对于分栏列，触发选中回调
     if (containerType === 'column') {
-      console.log('✅ 分栏列点击 - 触发选中回调');
+      // console.log('✅ 分栏列点击 - 触发选中回调');
       if (onColumnSelect) {
         onColumnSelect();
       }
@@ -2002,12 +1985,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       return [];
     }
 
-    console.log('🔄 内部渲染子组件:', {
-      elementsCount: elements.length,
-      basePath,
-      elements: elements.map((el) => ({ id: el?.id, tag: el?.tag })),
-    });
-
     return elements.map((element, elementIndex) => {
       if (!element || !element.id) {
         console.warn('⚠️ 无效的子组件:', elementIndex, element);
@@ -2031,15 +2008,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
       const childPath = [...basePath, elementIndex];
       const isSelected = isSamePath(selectedPath || null, childPath);
-
-      console.log(`✅ 渲染子组件 ${elementIndex}:`, {
-        elementId: element.id,
-        elementTag: element.tag,
-        childPath,
-        isSelected,
-        enableDrag,
-        isPreview,
-      });
 
       // 组件选中和操作处理
       const handleClick = (e: React.MouseEvent) => {
@@ -2096,14 +2064,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             />
           );
         } else {
-          // 对于非容器组件，使用简化的直接渲染，避免通过 ComponentRenderer
-          console.log(`🎯 直接渲染非容器子组件 ${element.tag}:`, {
-            elementId: element.id,
-            childPath,
-            enableDrag,
-            isPreview,
-          });
-
           return (
             <ComponentRendererCore
               component={element}
@@ -2260,13 +2220,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       );
 
       if (enableDrag && !isPreview) {
-        console.log('🟢 渲染 ContainerSortableItem for:', {
-          elementTag: element.tag,
-          elementId: element.id,
-          childPath,
-          enableDrag,
-          isPreview,
-        });
         return (
           <ContainerSortableItem
             key={`${element.id}-${elementIndex}-${childPath.join('-')}`}
@@ -2302,15 +2255,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       const formPath = [...path, 'elements'];
 
       // 检查当前组件是否被选中
-      const isCurrentSelected = isSamePath(selectedPath || null, path);
-
-      console.log('📋 渲染表单容器:', {
-        formName: comp.name,
-        elementsCount: formElements.length,
-        formPath,
-        elements: formElements.map((el: any) => ({ id: el?.id, tag: el?.tag })),
-        isCurrentSelected,
-      });
+      // const isCurrentSelected = isSamePath(selectedPath || null, path);
 
       const formContent = (
         <div
@@ -2379,11 +2324,11 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         selectedPath[4] === 'columns'
       ) {
         selectedColumnIndex = selectedPath[5] as number;
-        console.log('🎯 检测到根级别分栏列被选中:', {
-          selectedPath,
-          path,
-          selectedColumnIndex,
-        });
+        // console.log('🎯 检测到根级别分栏列被选中:', {
+        //   selectedPath,
+        //   path,
+        //   selectedColumnIndex,
+        // });
       }
 
       // 检查表单内分栏列选中 (路径长度为8)
@@ -2399,27 +2344,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         selectedPath[5] === path[5] // 分栏组件在表单内的索引
       ) {
         selectedColumnIndex = selectedPath[7] as number;
-        console.log('🎯 检测到表单内分栏列被选中:', {
-          selectedPath,
-          path,
-          selectedColumnIndex,
-          formIndex: selectedPath[3],
-          columnSetIndex: selectedPath[5],
-        });
       }
-
-      console.log('📐 渲染分栏容器:', {
-        columnsCount: columns.length,
-        columns: columns.map((col: any, idx: number) => ({
-          columnIndex: idx,
-          elementsCount: col.elements?.length || 0,
-          elements:
-            col.elements?.map((el: any) => ({ id: el?.id, tag: el?.tag })) ||
-            [],
-        })),
-        isCurrentSelected,
-        selectedColumnIndex,
-      });
 
       // 检查是否为默认分栏容器
       const isDefaultColumnSet = comp.isDefault === true;
@@ -2475,23 +2400,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                 0,
               );
               const flexValue = columnWidth / totalWidth;
-
-              console.log(`📐 渲染第${columnIndex + 1}列:`, {
-                columnIndex,
-                elementsCount: columnElements.length,
-                columnPath,
-                columnSelectionPath,
-                isColumnSelected,
-                selectedColumnIndex,
-                selectedPath,
-                columnWidth,
-                totalWidth,
-                flexValue,
-                elements: columnElements.map((el: any) => ({
-                  id: el?.id,
-                  tag: el?.tag,
-                })),
-              });
 
               return (
                 <SmartDropZone
@@ -2650,19 +2558,19 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
     // 所有其他组件类型的渲染逻辑保持不变...
     case 'plain_text': {
-      console.log('📝 渲染 plain_text 组件:', {
-        componentId: comp.id,
-        content: comp.content,
-        textColor: comp.textColor,
-        fontSize: comp.fontSize,
-        fontWeight: comp.fontWeight,
-        textAlign: comp.textAlign,
-        numberOfLines: comp.numberOfLines,
-        style: comp.style,
-        path,
-        isPreview,
-        enableDrag,
-      });
+      // console.log('📝 渲染 plain_text 组件:', {
+      //   componentId: comp.id,
+      //   content: comp.content,
+      //   textColor: comp.textColor,
+      //   fontSize: comp.fontSize,
+      //   fontWeight: comp.fontWeight,
+      //   textAlign: comp.textAlign,
+      //   numberOfLines: comp.numberOfLines,
+      //   style: comp.style,
+      //   path,
+      //   isPreview,
+      //   enableDrag,
+      // });
 
       // 从 style 对象中读取样式属性，如果没有则从根属性读取
       const fontSize = comp.style?.fontSize || comp.fontSize || 14;
@@ -2698,23 +2606,23 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         e.stopPropagation();
         e.preventDefault();
 
-        console.log('📝 文本组件被点击:', {
-          componentId: comp.id,
-          componentTag: comp.tag,
-          path,
-        });
+        // console.log('📝 文本组件被点击:', {
+        //   componentId: comp.id,
+        //   componentTag: comp.tag,
+        //   path,
+        // });
 
-        console.log('📝 检查 onSelect 回调:', {
-          onSelectExists: !!onSelect,
-          onSelectType: typeof onSelect,
-        });
+        // console.log('📝 检查 onSelect 回调:', {
+        //   onSelectExists: !!onSelect,
+        //   onSelectType: typeof onSelect,
+        // });
 
         // 处理组件选中
         if (onSelect) {
-          console.log('📝 调用 onSelect 回调:', {
-            component,
-            path,
-          });
+          // console.log('📝 调用 onSelect 回调:', {
+          //   component,
+          //   path,
+          // });
           onSelect(component, path);
         } else {
           console.log('❌ onSelect 回调不存在');
@@ -2731,14 +2639,14 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       // 检查当前组件是否被选中
       const isCurrentSelected = isSamePath(selectedPath || null, path);
 
-      console.log('📝 文本组件选中状态检查:', {
-        componentId: comp.id,
-        componentTag: comp.tag,
-        path,
-        selectedPath,
-        isCurrentSelected,
-        isPreview,
-      });
+      // console.log('📝 文本组件选中状态检查:', {
+      //   componentId: comp.id,
+      //   componentTag: comp.tag,
+      //   path,
+      //   selectedPath,
+      //   isCurrentSelected,
+      //   isPreview,
+      // });
 
       // 选中状态样式
       const selectedStyles: React.CSSProperties = {
@@ -2755,25 +2663,25 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       };
 
       // 处理变量替换
-      console.log('🔍 文本组件变量替换检查:', {
-        componentId: comp.id,
-        originalContent: comp.content || '文本内容',
-        variablesCount: variables.length,
-        variables: variables,
-        hasVariables: variables.length > 0,
-      });
+      // console.log('🔍 文本组件变量替换检查:', {
+      //   componentId: comp.id,
+      //   originalContent: comp.content || '文本内容',
+      //   variablesCount: variables.length,
+      //   variables: variables,
+      //   hasVariables: variables.length > 0,
+      // });
 
       const displayContent = replaceVariables(
         comp.content || '文本内容',
         variables,
       );
 
-      console.log('✅ 文本组件变量替换结果:', {
-        componentId: comp.id,
-        originalContent: comp.content || '文本内容',
-        displayContent: displayContent,
-        replaced: comp.content !== displayContent,
-      });
+      // console.log('✅ 文本组件变量替换结果:', {
+      //   componentId: comp.id,
+      //   originalContent: comp.content || '文本内容',
+      //   displayContent: displayContent,
+      //   replaced: comp.content !== displayContent,
+      // });
 
       const textContent = (
         <div
@@ -2867,15 +2775,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
     }
 
     case 'hr': {
-      console.log('📏 渲染分割线组件:', {
-        componentId: comp.id,
-        path,
-        isPreview,
-        enableDrag,
-        enableSort,
-        style: comp.style,
-      });
-
       // 检查当前组件是否被选中
       const isCurrentSelected = isSamePath(selectedPath || null, path);
 
@@ -2908,23 +2807,23 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             e.stopPropagation();
             e.preventDefault();
 
-            console.log('📏 分割线组件被点击:', {
-              componentId: comp.id,
-              componentTag: comp.tag,
-              path,
-            });
+            // console.log('📏 分割线组件被点击:', {
+            //   componentId: comp.id,
+            //   componentTag: comp.tag,
+            //   path,
+            // });
 
             // 处理组件选中
             if (onSelect) {
-              console.log('📏 调用 onSelect 回调:', {
-                component,
-                path,
-              });
+              // console.log('📏 调用 onSelect 回调:', {
+              //   component,
+              //   path,
+              // });
               onSelect(component, path);
             }
 
             if (onCanvasFocus) {
-              console.log('📏 调用 onCanvasFocus 回调');
+              // console.log('📏 调用 onCanvasFocus 回调');
               onCanvasFocus();
             }
           }}

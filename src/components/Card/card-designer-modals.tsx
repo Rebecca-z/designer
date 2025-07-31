@@ -361,13 +361,6 @@ const Modals: React.FC<ModalsProps> = ({
                   (headerData.title?.content || headerData.subtitle?.content);
                 const totalComponents = elements.length + (hasTitle ? 1 : 0);
 
-                console.log('📊 预览工具栏组件统计:', {
-                  isNewFormat,
-                  elementsCount: elements.length,
-                  hasTitle,
-                  totalComponents,
-                });
-
                 return totalComponents > 0 ? (
                   <Text
                     type="secondary"
@@ -410,15 +403,6 @@ const Modals: React.FC<ModalsProps> = ({
                 : data.elements || [];
               const headerData = isNewFormat ? data.dsl.header : null;
 
-              console.log('🔍 预览模式数据检查:', {
-                isNewFormat,
-                hasHeader: !!headerData,
-                headerContent: headerData,
-                elementsCount: elements.length,
-                elementsData: elements,
-                fullData: data,
-              });
-
               // 检查header数据的有效性
               const hasValidTitle =
                 headerData?.title?.content &&
@@ -428,21 +412,12 @@ const Modals: React.FC<ModalsProps> = ({
                 headerData.subtitle.content.trim() !== '';
               const hasValidHeader = hasValidTitle || hasValidSubtitle;
 
-              console.log('📋 Header数据详细检查:', {
-                hasValidTitle,
-                hasValidSubtitle,
-                hasValidHeader,
-                titleContent: headerData?.title?.content,
-                subtitleContent: headerData?.subtitle?.content,
-                headerStyle: headerData?.style,
-              });
-
               // 创建要渲染的组件列表
               const componentsToRender = [];
 
               // 1. 如果有有效的header数据，先添加title组件
               if (hasValidHeader) {
-                console.log('✅ 预览模式: 添加title组件到渲染列表');
+                // console.log('✅ 预览模式: 添加title组件到渲染列表');
                 componentsToRender.push({
                   id: 'preview-title',
                   tag: 'title',
@@ -450,21 +425,10 @@ const Modals: React.FC<ModalsProps> = ({
                   subtitle: headerData.subtitle?.content || '副标题',
                   style: headerData.style || 'blue',
                 });
-              } else {
-                console.log('❌ 预览模式: header数据无效，不添加title组件');
               }
 
               // 2. 添加body中的所有elements
               componentsToRender.push(...elements);
-
-              console.log('📝 预览模式最终渲染列表:', {
-                totalComponents: componentsToRender.length,
-                hasTitle: componentsToRender.some(
-                  (comp) => comp.tag === 'title',
-                ),
-                componentTypes: componentsToRender.map((comp) => comp.tag),
-                renderingComponents: componentsToRender,
-              });
 
               if (componentsToRender.length > 0) {
                 return componentsToRender.map(

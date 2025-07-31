@@ -65,12 +65,6 @@ const CardDesigner: React.FC = () => {
 
   // 安全检查：确保数据结构完整，并进行数据迁移
   const safeCardData = React.useMemo(() => {
-    console.log('🔄 safeCardData useMemo 执行:', {
-      historyData: history.data,
-      hasHistoryData: !!history.data,
-      timestamp: new Date().toISOString(),
-    });
-
     const data = history.data as unknown as CardDesignData;
     if (!data || !data.dsl || !data.dsl.body) {
       console.warn('⚠️ 卡片数据结构不完整，使用默认数据');
@@ -80,24 +74,16 @@ const CardDesigner: React.FC = () => {
     // 进行数据迁移
     const migratedData = migrateTitleStyle(data);
 
-    console.log('✅ safeCardData 计算完成:', {
-      originalData: data,
-      migratedData: migratedData,
-      hasHeader: !!migratedData.dsl?.header,
-      headerContent: migratedData.dsl?.header,
-      timestamp: new Date().toISOString(),
-    });
-
     return migratedData;
   }, [history.data]);
 
   // 处理变量更新 - 同时更新本地状态和卡片数据结构
   const handleUpdateVariables = (newVariables: VariableItem[]) => {
-    console.log('🔄 更新变量:', {
-      oldVariables: variables,
-      newVariables: newVariables,
-      timestamp: new Date().toISOString(),
-    });
+    // console.log('🔄 更新变量:', {
+    //   oldVariables: variables,
+    //   newVariables: newVariables,
+    //   timestamp: new Date().toISOString(),
+    // });
 
     // 更新本地状态
     setVariables(newVariables);
@@ -152,11 +138,11 @@ const CardDesigner: React.FC = () => {
         }),
       );
 
-      console.log('🔄 从卡片数据结构初始化变量:', {
-        cardVariables: cardVariables,
-        variableItems: variableItems,
-        timestamp: new Date().toISOString(),
-      });
+      // console.log('🔄 从卡片数据结构初始化变量:', {
+      //   cardVariables: cardVariables,
+      //   variableItems: variableItems,
+      //   timestamp: new Date().toISOString(),
+      // });
 
       setVariables(variableItems);
     }
@@ -345,12 +331,12 @@ const CardDesigner: React.FC = () => {
           columnSetComponent.columns &&
           columnSetComponent.columns[columnIndex]
         ) {
-          console.log('✅ 根级别分栏列选择状态有效:', {
-            columnSetIndex,
-            columnIndex,
-            columnSetId: columnSetComponent.id,
-            selectedComponentId: selection.selectedComponent?.id,
-          });
+          // console.log('✅ 根级别分栏列选择状态有效:', {
+          //   columnSetIndex,
+          //   columnIndex,
+          //   columnSetId: columnSetComponent.id,
+          //   selectedComponentId: selection.selectedComponent?.id,
+          // });
           return; // 分栏列选择状态有效
         } else {
           console.log('❌ 根级别分栏列选择状态无效，清除选择');
@@ -385,14 +371,6 @@ const CardDesigner: React.FC = () => {
             columnSetComponent.columns &&
             columnSetComponent.columns[columnIndex]
           ) {
-            console.log('✅ 表单内分栏列选择状态有效:', {
-              formIndex,
-              columnSetIndex,
-              columnIndex,
-              formId: formComponent.id,
-              columnSetId: columnSetComponent.id,
-              selectedComponentId: selection.selectedComponent?.id,
-            });
             return; // 表单内分栏列选择状态有效
           } else {
             console.log('❌ 表单内分栏列选择状态无效，清除选择');
@@ -462,10 +440,10 @@ const CardDesigner: React.FC = () => {
 
     let newData = JSON.parse(JSON.stringify(safeCardData));
 
-    console.log('🗑️ 删除组件:', {
-      path,
-      pathLength: path.length,
-    });
+    // console.log('🗑️ 删除组件:', {
+    //   path,
+    //   pathLength: path.length,
+    // });
 
     // 检查是否删除的是标题组件
     let isDeletingTitle = false;
@@ -475,7 +453,7 @@ const CardDesigner: React.FC = () => {
       const componentToDelete = newData.dsl.body.elements[index];
       isDeletingTitle = componentToDelete && componentToDelete.tag === 'title';
       newData.dsl.body.elements.splice(index, 1);
-      console.log('🗑️ 删除根级组件:', { index, isTitle: isDeletingTitle });
+      // console.log('🗑️ 删除根级组件:', { index, isTitle: isDeletingTitle });
     } else if (path.length === 6 && path[4] === 'elements') {
       // 表单内组件: ['dsl', 'body', 'elements', formIndex, 'elements', componentIndex]
       const formIndex = path[3] as number;
@@ -491,11 +469,11 @@ const CardDesigner: React.FC = () => {
         isDeletingTitle =
           componentToDelete && componentToDelete.tag === 'title';
         formComponent.elements.splice(componentIndex, 1);
-        console.log('🗑️ 删除表单内组件:', {
-          formIndex,
-          componentIndex,
-          isTitle: isDeletingTitle,
-        });
+        // console.log('🗑️ 删除表单内组件:', {
+        //   formIndex,
+        //   componentIndex,
+        //   isTitle: isDeletingTitle,
+        // });
       }
     } else if (path.length === 6 && path[4] === 'columns') {
       // 删除分栏列: ['dsl', 'body', 'elements', columnSetIndex, 'columns', columnIndex]
@@ -522,16 +500,16 @@ const CardDesigner: React.FC = () => {
 
         // 删除指定的分栏列
         columnSetComponent.columns.splice(columnIndex, 1);
-        console.log('🗑️ 删除分栏列:', {
-          columnSetIndex,
-          columnIndex,
-          remainingColumns: columnSetComponent.columns.length,
-        });
+        // console.log('🗑️ 删除分栏列:', {
+        //   columnSetIndex,
+        //   columnIndex,
+        //   remainingColumns: columnSetComponent.columns.length,
+        // });
 
         // 如果删除后没有列了，删除整个分栏组件
         if (columnSetComponent.columns.length === 0) {
           newData.dsl.body.elements.splice(columnSetIndex, 1);
-          console.log('🗑️ 分栏列全部删除，删除整个分栏组件');
+          // console.log('🗑️ 分栏列全部删除，删除整个分栏组件');
         } else {
           // 重新计算剩余列的宽度 - 确保每列都有width属性
           columnSetComponent.columns = columnSetComponent.columns.map(
@@ -541,12 +519,12 @@ const CardDesigner: React.FC = () => {
             }),
           );
 
-          console.log('🔄 删除分栏列后重新计算列宽:', {
-            remainingColumns: columnSetComponent.columns.length,
-            columnWidths: columnSetComponent.columns.map(
-              (col: any) => col.width,
-            ),
-          });
+          // console.log('🔄 删除分栏列后重新计算列宽:', {
+          //   remainingColumns: columnSetComponent.columns.length,
+          //   columnWidths: columnSetComponent.columns.map(
+          //     (col: any) => col.width,
+          //   ),
+          // });
         }
 
         // 如果当前选中的是被删除的列或之后的列，需要重置选中状态
@@ -558,7 +536,7 @@ const CardDesigner: React.FC = () => {
           (selection.selectedPath[5] as number) >= columnIndex
         ) {
           selection.clearSelection();
-          console.log('🔄 重置选中状态，因为删除了当前选中的列或其后的列');
+          // console.log('🔄 重置选中状态，因为删除了当前选中的列或其后的列');
         }
       }
     } else if (
@@ -597,17 +575,17 @@ const CardDesigner: React.FC = () => {
 
           // 删除指定的分栏列
           columnSetComponent.columns.splice(columnIndex, 1);
-          console.log('🗑️ 删除表单内分栏列:', {
-            formIndex,
-            columnSetIndex,
-            columnIndex,
-            remainingColumns: columnSetComponent.columns.length,
-          });
+          // console.log('🗑️ 删除表单内分栏列:', {
+          //   formIndex,
+          //   columnSetIndex,
+          //   columnIndex,
+          //   remainingColumns: columnSetComponent.columns.length,
+          // });
 
           // 如果删除后没有列了，删除整个分栏组件
           if (columnSetComponent.columns.length === 0) {
             formComponent.elements.splice(columnSetIndex, 1);
-            console.log('🗑️ 表单内分栏列全部删除，删除整个分栏组件');
+            // console.log('🗑️ 表单内分栏列全部删除，删除整个分栏组件');
           } else {
             // 重新计算剩余列的宽度 - 确保每列都有width属性
             columnSetComponent.columns = columnSetComponent.columns.map(
@@ -617,12 +595,12 @@ const CardDesigner: React.FC = () => {
               }),
             );
 
-            console.log('🔄 删除表单内分栏列后重新计算列宽:', {
-              remainingColumns: columnSetComponent.columns.length,
-              columnWidths: columnSetComponent.columns.map(
-                (col: any) => col.width,
-              ),
-            });
+            // console.log('🔄 删除表单内分栏列后重新计算列宽:', {
+            //   remainingColumns: columnSetComponent.columns.length,
+            //   columnWidths: columnSetComponent.columns.map(
+            //     (col: any) => col.width,
+            //   ),
+            // });
           }
 
           // 如果当前选中的是被删除的列或之后的列，需要重置选中状态
@@ -636,7 +614,7 @@ const CardDesigner: React.FC = () => {
             (selection.selectedPath[7] as number) >= columnIndex
           ) {
             selection.clearSelection();
-            console.log('🔄 重置选中状态，因为删除了当前选中的列或其后的列');
+            // console.log('🔄 重置选中状态，因为删除了当前选中的列或其后的列');
           }
         }
       }
@@ -662,12 +640,12 @@ const CardDesigner: React.FC = () => {
           isDeletingTitle =
             componentToDelete && componentToDelete.tag === 'title';
           column.elements.splice(componentIndex, 1);
-          console.log('🗑️ 删除分栏内组件:', {
-            columnSetIndex,
-            columnIndex,
-            componentIndex,
-            isTitle: isDeletingTitle,
-          });
+          // console.log('🗑️ 删除分栏内组件:', {
+          //   columnSetIndex,
+          //   columnIndex,
+          //   componentIndex,
+          //   isTitle: isDeletingTitle,
+          // });
         }
       }
     } else {
@@ -678,7 +656,7 @@ const CardDesigner: React.FC = () => {
     // 如果删除的是标题组件，移除header
     if (isDeletingTitle) {
       delete newData.dsl.header;
-      console.log('🗑️ 删除标题组件，移除header');
+      // console.log('🗑️ 删除标题组件，移除header');
     }
 
     history.updateData(newData as any);
@@ -714,31 +692,31 @@ const CardDesigner: React.FC = () => {
     const path = selection.selectedPath;
     let newData = JSON.parse(JSON.stringify(safeCardData));
 
-    console.log('🔄 开始更新组件:', {
-      componentId: updatedComponent.id,
-      componentTag: updatedComponent.tag,
-      path,
-      pathLength: path.length,
-      hasStyle: !!(updatedComponent as any).style,
-      styleFields: (updatedComponent as any).style
-        ? Object.keys((updatedComponent as any).style)
-        : [],
-    });
+    // console.log('🔄 开始更新组件:', {
+    //   componentId: updatedComponent.id,
+    //   componentTag: updatedComponent.tag,
+    //   path,
+    //   pathLength: path.length,
+    //   hasStyle: !!(updatedComponent as any).style,
+    //   styleFields: (updatedComponent as any).style
+    //     ? Object.keys((updatedComponent as any).style)
+    //     : [],
+    // });
 
     if (path.length === 4) {
       // 根级组件: ['dsl', 'body', 'elements', index]
       const index = path[3] as number;
-      const oldComponent = newData.dsl.body.elements[index];
+      // const oldComponent = newData.dsl.body.elements[index];
       newData.dsl.body.elements[index] = updatedComponent;
-      console.log('📝 更新根级组件:', {
-        index,
-        componentTag: updatedComponent.tag,
-        oldStyle: (oldComponent as any).style,
-        newStyle: (updatedComponent as any).style,
-        styleChanged:
-          JSON.stringify((oldComponent as any).style) !==
-          JSON.stringify((updatedComponent as any).style),
-      });
+      // console.log('📝 更新根级组件:', {
+      //   index,
+      //   componentTag: updatedComponent.tag,
+      //   oldStyle: (oldComponent as any).style,
+      //   newStyle: (updatedComponent as any).style,
+      //   styleChanged:
+      //     JSON.stringify((oldComponent as any).style) !==
+      //     JSON.stringify((updatedComponent as any).style),
+      // });
     } else if (path.length === 6 && path[4] === 'elements') {
       // 表单内组件: ['dsl', 'body', 'elements', formIndex, 'elements', componentIndex]
       const formIndex = path[3] as number;
@@ -763,14 +741,14 @@ const CardDesigner: React.FC = () => {
         }
 
         formComponent.elements[componentIndex] = updatedComponent;
-        console.log('📋 更新表单内组件:', {
-          formIndex,
-          componentIndex,
-          componentTag: updatedComponent.tag,
-          oldStyle: (oldComponent as any).style,
-          newStyle: (updatedComponent as any).style,
-          isColumnSet: updatedComponent.tag === 'column_set',
-        });
+        // console.log('📋 更新表单内组件:', {
+        //   formIndex,
+        //   componentIndex,
+        //   componentTag: updatedComponent.tag,
+        //   oldStyle: (oldComponent as any).style,
+        //   newStyle: (updatedComponent as any).style,
+        //   isColumnSet: updatedComponent.tag === 'column_set',
+        // });
       }
     } else if (
       path.length === 8 &&
@@ -792,16 +770,16 @@ const CardDesigner: React.FC = () => {
           if (!column.elements) {
             column.elements = [];
           }
-          const oldComponent = column.elements[componentIndex];
+          // const oldComponent = column.elements[componentIndex];
           column.elements[componentIndex] = updatedComponent;
-          console.log('📐 更新分栏内组件:', {
-            columnSetIndex,
-            columnIndex,
-            componentIndex,
-            componentTag: updatedComponent.tag,
-            oldStyle: (oldComponent as any).style,
-            newStyle: (updatedComponent as any).style,
-          });
+          // console.log('📐 更新分栏内组件:', {
+          //   columnSetIndex,
+          //   columnIndex,
+          //   componentIndex,
+          //   componentTag: updatedComponent.tag,
+          //   oldStyle: (oldComponent as any).style,
+          //   newStyle: (updatedComponent as any).style,
+          // });
         }
       }
     } else if (
@@ -827,12 +805,12 @@ const CardDesigner: React.FC = () => {
           if (column) {
             // 这里处理的是列，但我们需要处理分栏容器本身
             // 所以我们需要更新整个分栏容器
-            console.log('📐 更新表单内分栏容器:', {
-              formIndex,
-              columnSetIndex,
-              columnIndex,
-              componentTag: updatedComponent.tag,
-            });
+            // console.log('📐 更新表单内分栏容器:', {
+            //   formIndex,
+            //   columnSetIndex,
+            //   columnIndex,
+            //   componentTag: updatedComponent.tag,
+            // });
             // 更新整个分栏容器
             formElements[columnSetIndex] = updatedComponent;
           }
@@ -855,22 +833,15 @@ const CardDesigner: React.FC = () => {
     padding?: CardPadding;
     cardData?: CardDesignData; // 新增：支持完整的卡片数据更新
   }) => {
-    console.log('🎯 处理卡片属性更新:', {
-      updates,
-      currentVerticalSpacing: safeCardData.dsl.body.vertical_spacing,
-      currentPadding: safeCardData.dsl.body.padding,
-      timestamp: new Date().toISOString(),
-    });
-
     let newData;
 
     // 如果提供了完整的卡片数据更新
     if (updates.cardData) {
       newData = updates.cardData;
-      console.log('🔄 完整卡片数据更新:', {
-        oldHeader: safeCardData.dsl.header,
-        newHeader: newData.dsl.header,
-      });
+      // console.log('🔄 完整卡片数据更新:', {
+      //   oldHeader: safeCardData.dsl.header,
+      //   newHeader: newData.dsl.header,
+      // });
     } else {
       // 原有的body更新逻辑
       newData = {
@@ -885,16 +856,6 @@ const CardDesigner: React.FC = () => {
       };
     }
 
-    // 如果更新了垂直间距，记录详细信息
-    if (updates.vertical_spacing !== undefined) {
-      console.log('📏 垂直间距更新:', {
-        oldValue: safeCardData.dsl.body.vertical_spacing,
-        newValue: updates.vertical_spacing,
-        willAffectExport: true,
-        exportConfigWillInclude: updates.vertical_spacing,
-      });
-    }
-
     history.updateData(newData as any);
   };
 
@@ -904,14 +865,6 @@ const CardDesigner: React.FC = () => {
     subtitle?: { content: string };
     style?: string;
   }) => {
-    console.log('🎯 处理标题数据更新 - 开始:', {
-      headerData,
-      currentHeader: safeCardData.dsl.header,
-      willCreateHeader: !safeCardData.dsl.header,
-      currentData: safeCardData,
-      timestamp: new Date().toISOString(),
-    });
-
     // 检查是否要删除标题（标题和副标题都为空）
     const shouldDeleteHeader =
       (!headerData.title?.content || headerData.title.content.trim() === '') &&
@@ -919,7 +872,6 @@ const CardDesigner: React.FC = () => {
         headerData.subtitle.content.trim() === '');
 
     if (shouldDeleteHeader) {
-      console.log('🗑️ 检测到标题内容为空，删除header');
       const newData = {
         ...safeCardData,
         dsl: {
@@ -928,7 +880,6 @@ const CardDesigner: React.FC = () => {
         },
       };
       history.updateData(newData as any);
-      console.log('✅ 标题组件已删除，header已从dsl中移除');
       return;
     }
 
@@ -943,31 +894,7 @@ const CardDesigner: React.FC = () => {
       },
     };
 
-    console.log('💾 准备保存更新后的标题数据:', {
-      newHeader: newData.dsl.header,
-      headerExists: !!newData.dsl.header,
-      titleContent: newData.dsl.header?.title?.content,
-      subtitleContent: newData.dsl.header?.subtitle?.content,
-      style: newData.dsl.header?.style,
-      newData: newData,
-      timestamp: new Date().toISOString(),
-    });
-
-    // 直接调用history.updateData
-    console.log('🔄 调用history.updateData');
     history.updateData(newData as any);
-
-    console.log('✅ 标题数据更新完成，等待数据同步');
-
-    // 验证数据是否已更新
-    setTimeout(() => {
-      console.log('🔍 验证数据更新结果:', {
-        currentData: history.data,
-        hasHeader: !!(history.data as any).dsl?.header,
-        headerContent: (history.data as any).dsl?.header,
-        timestamp: new Date().toISOString(),
-      });
-    }, 100);
   };
 
   // 处理卡片元素变化
@@ -990,13 +917,13 @@ const CardDesigner: React.FC = () => {
     component: ComponentType | null,
     path: (string | number)[],
   ) => {
-    console.log('🌳 大纲树选择处理:', {
-      componentId: component?.id,
-      componentTag: component?.tag,
-      path,
-      pathLength: path.length,
-      isCard: path.length === 2 && path[0] === 'dsl' && path[1] === 'body',
-    });
+    // console.log('🌳 大纲树选择处理:', {
+    //   componentId: component?.id,
+    //   componentTag: component?.tag,
+    //   path,
+    //   pathLength: path.length,
+    //   isCard: path.length === 2 && path[0] === 'dsl' && path[1] === 'body',
+    // });
     selection.selectComponent(component, path);
     focus.handleCanvasFocus();
   };

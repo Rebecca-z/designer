@@ -33,14 +33,14 @@ const VariableTextEditor: React.FC<VariableTextEditorProps> = ({
   rows = 4,
   disabled = false,
 }) => {
-  console.log('🎯 VariableTextEditor 组件初始化:', {
-    value,
-    variablesCount: variables.length,
-    placeholder,
-    rows,
-    disabled,
-    timestamp: new Date().toISOString(),
-  });
+  // console.log('🎯 VariableTextEditor 组件初始化:', {
+  //   value,
+  //   variablesCount: variables.length,
+  //   placeholder,
+  //   rows,
+  //   disabled,
+  //   timestamp: new Date().toISOString(),
+  // });
 
   const [editValue, setEditValue] = useState(value);
   const [isEditing, setIsEditing] = useState(false);
@@ -165,22 +165,22 @@ const VariableTextEditor: React.FC<VariableTextEditorProps> = ({
 
   // 处理TextArea失焦
   const handleTextAreaBlur = useCallback(() => {
-    console.log('TextArea blur, switching to preview mode');
+    // console.log('TextArea blur, switching to preview mode');
 
     // 延迟处理，避免与点击事件冲突
     blurTimeoutRef.current = setTimeout(() => {
-      console.log('Switching to preview mode due to blur');
+      // console.log('Switching to preview mode due to blur');
       setIsEditing(false);
     }, 300);
   }, []);
 
   // 处理容器点击
   const handleContainerClick = useCallback((e: React.MouseEvent) => {
-    console.log('Container clicked');
+    // console.log('Container clicked');
 
     // 如果点击的是容器本身（不是TextArea或变量按钮），则恢复到查看态
     if (e.target === containerRef.current) {
-      console.log('Switching to preview mode due to container click');
+      // console.log('Switching to preview mode due to container click');
       setIsEditing(false);
     }
   }, []);
@@ -228,12 +228,12 @@ const VariableTextEditor: React.FC<VariableTextEditorProps> = ({
   const renderPreview = () => {
     const parsedContent = parseVariables(editValue);
 
-    console.log('🎯 renderPreview called:', {
-      editValue,
-      parsedContentLength: parsedContent.length,
-      isEditing,
-      timestamp: new Date().toISOString(),
-    });
+    // console.log('🎯 renderPreview called:', {
+    //   editValue,
+    //   parsedContentLength: parsedContent.length,
+    //   isEditing,
+    //   timestamp: new Date().toISOString(),
+    // });
 
     return (
       <div

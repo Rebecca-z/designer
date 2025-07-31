@@ -228,7 +228,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
 }) => {
   // 安全检查 - 防止组件为 undefined 或 null
   if (!component) {
-    console.warn('ComponentRenderer: component is null or undefined', { path });
+    // console.warn('ComponentRenderer: component is null or undefined', { path });
     return (
       <div
         style={{
@@ -248,10 +248,10 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
 
   // 检查组件是否有基本属性
   if (!component.tag || !component.id) {
-    console.warn('ComponentRenderer: component missing required properties', {
-      component,
-      path,
-    });
+    // console.warn('ComponentRenderer: component missing required properties', {
+    //   component,
+    //   path,
+    // });
     return (
       <div
         style={{
@@ -276,23 +276,23 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
   const handleClick = (e: React.MouseEvent) => {
     if (isPreview) return;
 
-    console.log('🎯 组件点击处理:', {
-      componentId: component.id,
-      componentTag: component.tag,
-      path,
-      targetTag: (e.target as HTMLElement)?.tagName,
-      targetClass: (e.target as HTMLElement)?.className,
-    });
+    // console.log('🎯 组件点击处理:', {
+    //   componentId: component.id,
+    //   componentTag: component.tag,
+    //   path,
+    //   targetTag: (e.target as HTMLElement)?.tagName,
+    //   targetClass: (e.target as HTMLElement)?.className,
+    // });
 
     // 立即阻止事件冒泡，防止触发卡片选中
     e.stopPropagation();
     e.preventDefault();
 
-    console.log('✅ 处理组件选中:', {
-      componentId: component.id,
-      componentTag: component.tag,
-      path,
-    });
+    // console.log('✅ 处理组件选中:', {
+    //   componentId: component.id,
+    //   componentTag: component.tag,
+    //   path,
+    // });
 
     // 直接处理组件选中
     onSelect(component, path);
@@ -332,22 +332,22 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
 
   // 调试信息
   if (component.tag === 'column_set' && isCurrentSelected) {
-    console.log('🔍 分栏容器选中状态检查:', {
-      componentId: component.id,
-      path,
-      pathLength: path.length,
-      isFormColumnSet,
-      isCurrentSelected,
-      isPreview,
-      shouldShowOperationIcon:
-        isCurrentSelected && !isPreview && !isFormColumnSet,
-      pathDetails: {
-        isDsl: path[0] === 'dsl',
-        isBody: path[1] === 'body',
-        isElements: path[2] === 'elements',
-        hasElementsSegment: path[4] === 'elements',
-      },
-    });
+    // console.log('🔍 分栏容器选中状态检查:', {
+    //   componentId: component.id,
+    //   path,
+    //   pathLength: path.length,
+    //   isFormColumnSet,
+    //   isCurrentSelected,
+    //   isPreview,
+    //   shouldShowOperationIcon:
+    //     isCurrentSelected && !isPreview && !isFormColumnSet,
+    //   pathDetails: {
+    //     isDsl: path[0] === 'dsl',
+    //     isBody: path[1] === 'body',
+    //     isElements: path[2] === 'elements',
+    //     hasElementsSegment: path[4] === 'elements',
+    //   },
+    // });
   }
 
   const contextMenu = {
@@ -390,14 +390,6 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
 
   // 如果是容器组件，直接使用 ComponentRendererCore 渲染
   if (component.tag === 'form' || component.tag === 'column_set') {
-    console.log(`🎯 渲染容器组件 ${component.tag}:`, {
-      componentId: component.id,
-      path,
-      isPreview,
-      hasContainerDrop: !!onContainerDrop,
-      hasComponentSort: !!onComponentSort,
-    });
-
     return (
       <ErrorBoundary
         fallback={

@@ -2867,17 +2867,9 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         message.warning('画布中已存在表单容器，每个画布只能有一个表单容器');
         return;
       }
-
-      console.log('🎯 画布拖拽处理:', {
-        itemType: item.type,
-        isNew: item.isNew,
-        hasComponent: !!item.component,
-        hasPath: !!item.path,
-      });
-
       // 特殊处理标题组件
       if (item.type === 'title') {
-        console.log('🎯 检测到标题组件拖拽，调用handleContainerDrop');
+        // console.log('🎯 检测到标题组件拖拽，调用handleContainerDrop');
         handleContainerDrop(item, ['dsl', 'body', 'elements']);
         return;
       }
@@ -2891,10 +2883,10 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         message.success(`${item.type} 组件已添加到画布`);
       } else if (item.component && item.path) {
         // 现有组件移动到画布根级别
-        console.log('🔄 移动现有组件到画布根级别:', {
-          component: { id: item.component.id, tag: item.component.tag },
-          fromPath: item.path,
-        });
+        // console.log('🔄 移动现有组件到画布根级别:', {
+        //   component: { id: item.component.id, tag: item.component.tag },
+        //   fromPath: item.path,
+        // });
 
         // 检查是否是从容器中移动到根级别
         if (item.path.length > 4) {
@@ -2914,31 +2906,31 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
 
   const handleCardClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
-    const currentTarget = e.currentTarget as HTMLElement;
+    // const currentTarget = e.currentTarget as HTMLElement;
 
-    console.log('🎯 卡片点击处理:', {
-      targetTag: target.tagName,
-      targetClass: target.className,
-      targetId: target.id,
-      targetDataset: target.dataset,
-      targetAttributes: Array.from(target.attributes).map(
-        (attr) => `${attr.name}="${attr.value}"`,
-      ),
-      isCurrentTarget: target === currentTarget,
-      hasComponentWrapper: !!target.closest('[data-component-wrapper]'),
-      hasDragSortableItem: !!target.closest('[data-drag-sortable-item]'),
-      hasCardContainer: !!target.closest('[data-card-container]'),
-      isCardSelected,
-      componentId: target.getAttribute('data-component-id'),
-      closestComponentWrapper: target
-        .closest('[data-component-wrapper]')
-        ?.getAttribute('data-component-id'),
-      targetTextContent: target.textContent?.substring(0, 50),
-      targetParentTag: target.parentElement?.tagName,
-      targetParentClass: target.parentElement?.className,
-      targetParentId: target.parentElement?.id,
-      targetParentDataset: target.parentElement?.dataset,
-    });
+    // console.log('🎯 卡片点击处理:', {
+    //   targetTag: target.tagName,
+    //   targetClass: target.className,
+    //   targetId: target.id,
+    //   targetDataset: target.dataset,
+    //   targetAttributes: Array.from(target.attributes).map(
+    //     (attr) => `${attr.name}="${attr.value}"`,
+    //   ),
+    //   isCurrentTarget: target === currentTarget,
+    //   hasComponentWrapper: !!target.closest('[data-component-wrapper]'),
+    //   hasDragSortableItem: !!target.closest('[data-drag-sortable-item]'),
+    //   hasCardContainer: !!target.closest('[data-card-container]'),
+    //   isCardSelected,
+    //   componentId: target.getAttribute('data-component-id'),
+    //   closestComponentWrapper: target
+    //     .closest('[data-component-wrapper]')
+    //     ?.getAttribute('data-component-id'),
+    //   targetTextContent: target.textContent?.substring(0, 50),
+    //   targetParentTag: target.parentElement?.tagName,
+    //   targetParentClass: target.parentElement?.className,
+    //   targetParentId: target.parentElement?.id,
+    //   targetParentDataset: target.parentElement?.dataset,
+    // });
 
     // 立即阻止事件冒泡，防止触发画布点击事件
     e.stopPropagation();
@@ -2963,7 +2955,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       return;
     }
 
-    console.log('✅ 处理卡片选中');
+    // console.log('✅ 处理卡片选中');
     onCardSelect();
   };
 
@@ -3043,14 +3035,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       >
         {/* 标题显示区域 - 独立于elements显示 */}
         {(() => {
-          console.log('🎯 标题显示区域检查:', {
-            hasHeaderData: !!headerData,
-            headerData,
-            hasTitleContent: !!headerData?.title?.content,
-            hasSubtitleContent: !!headerData?.subtitle?.content,
-            titleContent: headerData?.title?.content,
-            subtitleContent: headerData?.subtitle?.content,
-          });
           return (
             headerData &&
             (headerData.title?.content || headerData.subtitle?.content)

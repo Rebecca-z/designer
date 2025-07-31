@@ -971,28 +971,12 @@ export const migrateCardLink = (cardData: any): any => {
 
 // 数据迁移函数：将旧的titleStyle字段迁移到新的style字符串中
 export const migrateTitleStyle = (cardData: any): any => {
-  console.log('🔄 migrateTitleStyle 开始执行:', {
-    hasCardData: !!cardData,
-    hasDsl: !!cardData?.dsl,
-    hasHeader: !!cardData?.dsl?.header,
-    headerContent: cardData?.dsl?.header,
-    hasElements: !!cardData?.dsl?.body?.elements,
-    elementsCount: cardData?.dsl?.body?.elements?.length,
-    timestamp: new Date().toISOString(),
-  });
-
   // 检查是否需要迁移titleStyle字段
   const needsMigration =
     cardData?.dsl?.header?.titleStyle !== undefined ||
     (cardData?.dsl?.header?.style &&
       typeof cardData.dsl.header.style === 'object' &&
       cardData.dsl.header.style.themeStyle !== undefined);
-
-  console.log('🔍 迁移检查结果:', {
-    needsMigration,
-    hasTitleStyle: cardData?.dsl?.header?.titleStyle !== undefined,
-    hasThemeStyle: cardData?.dsl?.header?.style?.themeStyle !== undefined,
-  });
 
   if (needsMigration) {
     // 处理titleStyle迁移
@@ -2203,20 +2187,7 @@ export const replaceVariables = (
   text: string,
   variables: VariableItem[],
 ): string => {
-  console.log('🔧 replaceVariables 函数调用:', {
-    text: text,
-    variablesCount: variables.length,
-    variables: variables,
-    hasText: !!text,
-    hasVariables: variables.length > 0,
-  });
-
   if (!text || !variables || variables.length === 0) {
-    console.log('⚠️ replaceVariables 提前返回:', {
-      reason: !text ? 'no text' : 'no variables',
-      text: text,
-      variablesCount: variables.length,
-    });
     return text;
   }
 

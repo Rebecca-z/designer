@@ -239,18 +239,18 @@ const getComponentRealPath = (
       const component = formElements[componentIndex];
 
       if (component) {
-        console.log('📋 表单内组件:', {
-          componentId: component.id,
-          componentTag: component.tag,
-          formIndex,
-          componentIndex,
-          selectedPath,
-          realPath: selectedPath,
-          formComponentId: formComponent.id,
-          formComponentTag: formComponent.tag,
-          formElementsLength: formElements.length,
-          targetComponent: component,
-        });
+        // console.log('📋 表单内组件:', {
+        //   componentId: component.id,
+        //   componentTag: component.tag,
+        //   formIndex,
+        //   componentIndex,
+        //   selectedPath,
+        //   realPath: selectedPath,
+        //   formComponentId: formComponent.id,
+        //   formComponentTag: formComponent.tag,
+        //   formElementsLength: formElements.length,
+        //   targetComponent: component,
+        // });
         return { component, realPath: selectedPath };
       } else {
         console.warn('⚠️ 表单内组件索引无效:', {
@@ -287,16 +287,16 @@ const getComponentRealPath = (
           ...column,
         };
 
-        console.log('📐 根级别分栏列选中:', {
-          componentId: columnComponent.id,
-          componentTag: columnComponent.tag,
-          columnSetIndex,
-          columnIndex,
-          selectedPath,
-          realPath: selectedPath,
-          columnSetComponentId: columnSetComponent.id,
-          columnData: column,
-        });
+        // console.log('📐 根级别分栏列选中:', {
+        //   componentId: columnComponent.id,
+        //   componentTag: columnComponent.tag,
+        //   columnSetIndex,
+        //   columnIndex,
+        //   selectedPath,
+        //   realPath: selectedPath,
+        //   columnSetComponentId: columnSetComponent.id,
+        //   columnData: column,
+        // });
         return { component: columnComponent, realPath: selectedPath };
       }
     }
@@ -332,18 +332,18 @@ const getComponentRealPath = (
             ...column,
           };
 
-          console.log('📐 表单内分栏列选中:', {
-            componentId: columnComponent.id,
-            componentTag: columnComponent.tag,
-            formIndex,
-            columnSetIndex,
-            columnIndex,
-            selectedPath,
-            realPath: selectedPath,
-            formComponentId: formComponent.id,
-            columnSetComponentId: columnSetComponent.id,
-            columnData: column,
-          });
+          // console.log('📐 表单内分栏列选中:', {
+          //   componentId: columnComponent.id,
+          //   componentTag: columnComponent.tag,
+          //   formIndex,
+          //   columnSetIndex,
+          //   columnIndex,
+          //   selectedPath,
+          //   realPath: selectedPath,
+          //   formComponentId: formComponent.id,
+          //   columnSetComponentId: columnSetComponent.id,
+          //   columnData: column,
+          // });
           return { component: columnComponent, realPath: selectedPath };
         }
       }
@@ -372,15 +372,15 @@ const getComponentRealPath = (
         const component = column.elements[componentIndex];
 
         if (component) {
-          console.log('📐 根级别分栏内组件:', {
-            componentId: component.id,
-            componentTag: component.tag,
-            columnSetIndex,
-            columnIndex,
-            componentIndex,
-            selectedPath,
-            realPath: selectedPath,
-          });
+          // console.log('📐 根级别分栏内组件:', {
+          //   componentId: component.id,
+          //   componentTag: component.tag,
+          //   columnSetIndex,
+          //   columnIndex,
+          //   componentIndex,
+          //   selectedPath,
+          //   realPath: selectedPath,
+          // });
           return { component, realPath: selectedPath };
         }
       }
@@ -415,16 +415,16 @@ const getComponentRealPath = (
           const component = column.elements[componentIndex];
 
           if (component) {
-            console.log('📐 表单内分栏内组件:', {
-              componentId: component.id,
-              componentTag: component.tag,
-              formIndex,
-              columnSetIndex,
-              columnIndex,
-              componentIndex,
-              selectedPath,
-              realPath: selectedPath,
-            });
+            // console.log('📐 表单内分栏内组件:', {
+            //   componentId: component.id,
+            //   componentTag: component.tag,
+            //   formIndex,
+            //   columnSetIndex,
+            //   columnIndex,
+            //   componentIndex,
+            //   selectedPath,
+            //   realPath: selectedPath,
+            // });
             return { component, realPath: selectedPath };
           }
         }
@@ -537,23 +537,23 @@ const OutlineTree: React.FC<{
   }, [data.dsl.body.elements]);
 
   const handleSelect = (selectedKeys: React.Key[], info: any) => {
-    console.log('🌳 大纲树选择事件触发:', {
-      selectedKeys,
-      nodePath: info.node?.path,
-      nodeComponent: info.node?.component,
-      nodeKey: info.node?.key,
-    });
+    // console.log('🌳 大纲树选择事件触发:', {
+    //   selectedKeys,
+    //   nodePath: info.node?.path,
+    //   nodeComponent: info.node?.component,
+    //   nodeKey: info.node?.key,
+    // });
 
     if (info.node?.path) {
-      console.log('🌳 大纲树选择:', {
-        componentId: info.node.component?.id,
-        componentTag: info.node.component?.tag,
-        path: info.node.path,
-        isCard:
-          info.node.path.length === 2 &&
-          info.node.path[0] === 'dsl' &&
-          info.node.path[1] === 'body',
-      });
+      // console.log('🌳 大纲树选择:', {
+      //   componentId: info.node.component?.id,
+      //   componentTag: info.node.component?.tag,
+      //   path: info.node.path,
+      //   isCard:
+      //     info.node.path.length === 2 &&
+      //     info.node.path[0] === 'dsl' &&
+      //     info.node.path[1] === 'body',
+      // });
 
       // 如果是卡片节点，传递null作为组件，路径为['dsl', 'body']
       if (
@@ -862,7 +862,7 @@ export const PropertyPanel: React.FC<{
   // 新增：卡片数据（用于样式设置）
   cardData?: CardDesignData;
 }> = ({
-  selectedComponent,
+  // selectedComponent,
   selectedPath,
   onUpdateComponent,
   onUpdateCard,
@@ -903,88 +903,6 @@ export const PropertyPanel: React.FC<{
     selectedPath,
   );
 
-  // 添加详细调试信息
-  console.log('🔍 属性面板组件解析:', {
-    selectedPath,
-    realPath,
-    realComponentId: realComponent?.id,
-    realComponentTag: realComponent?.tag,
-    cardDataExists: !!cardData,
-    selectedPathLength: selectedPath?.length,
-  });
-
-  // 特别检查表单内组件的解析
-  if (
-    selectedPath &&
-    selectedPath.length === 6 &&
-    selectedPath[4] === 'elements'
-  ) {
-    const formIndex = selectedPath[3] as number;
-    const componentIndex = selectedPath[5] as number;
-    console.log('🔍 表单内组件详细调试:', {
-      selectedPath,
-      formIndex,
-      componentIndex,
-      cardDataElementsLength: cardData?.dsl?.body?.elements?.length,
-      formComponent: cardData?.dsl?.body?.elements?.[formIndex],
-      formElementsLength: (cardData?.dsl?.body?.elements?.[formIndex] as any)
-        ?.elements?.length,
-      targetComponent: (cardData?.dsl?.body?.elements?.[formIndex] as any)
-        ?.elements?.[componentIndex],
-      realComponentFromPath: realComponent,
-      isRealComponentForm: realComponent?.tag === 'form',
-    });
-  }
-
-  // 验证数据结构是否存在嵌套问题
-  if (selectedPath && selectedPath.length >= 6 && cardData) {
-    const formIndex = selectedPath[3] as number;
-    const componentIndex = selectedPath[5] as number;
-    const formComponent = cardData.dsl.body.elements[formIndex];
-
-    if (formComponent && formComponent.tag === 'form') {
-      const formElements = (formComponent as any).elements || [];
-      const targetElement = formElements[componentIndex];
-
-      console.log('🔍 验证表单内数据结构:', {
-        formIndex,
-        componentIndex,
-        formComponent: {
-          id: formComponent.id,
-          tag: formComponent.tag,
-          elementsCount: formElements.length,
-        },
-        targetElement: {
-          id: targetElement?.id,
-          tag: targetElement?.tag,
-        },
-        isNestedForm: targetElement?.tag === 'form',
-        fullFormData: formComponent,
-        fullTargetData: targetElement,
-      });
-
-      if (targetElement?.tag === 'form') {
-        console.error('❌ 发现数据中存在嵌套表单结构!', {
-          parentForm: formComponent,
-          childForm: targetElement,
-        });
-
-        // 提示用户需要修复数据结构
-        console.log('⚠️ 数据结构存在问题，建议重新导入正确的数据或手动修复');
-
-        // 显示修复建议
-        const nestedForm = targetElement as any;
-        if (nestedForm.elements && nestedForm.elements.length > 0) {
-          const actualComponent = nestedForm.elements[0];
-          console.log('💡 修复建议: 实际目标组件可能是:', {
-            componentId: actualComponent?.id,
-            componentTag: actualComponent?.tag,
-          });
-        }
-      }
-    }
-  }
-
   // 检查是否选中了卡片本身
   const isCardSelected =
     selectedPath &&
@@ -998,12 +916,6 @@ export const PropertyPanel: React.FC<{
   // 监听currentComponent变化，强制重新渲染
   useEffect(() => {
     if (currentComponent && currentComponent.tag === 'img') {
-      console.log('🖼️ 图片组件数据变化，强制更新UI:', {
-        componentId: (currentComponent as any).id,
-        img_source: (currentComponent as any).img_source,
-        img_name: (currentComponent as any).img_name,
-        variable_name: (currentComponent as any).variable_name,
-      });
       forceUpdate((prev) => prev + 1);
     }
   }, [
@@ -1012,27 +924,6 @@ export const PropertyPanel: React.FC<{
     (currentComponent as any)?.img_name,
     (currentComponent as any)?.variable_name,
   ]);
-
-  // 添加调试日志
-  console.log('🎯 属性面板数据检查:', {
-    selectedPath,
-    cardDataExists: !!cardData,
-    cardDataElementsCount: cardData?.dsl?.body?.elements?.length,
-    realComponentExists: !!realComponent,
-    realComponentId: realComponent?.id,
-    realComponentTag: realComponent?.tag,
-    realComponentContent: (realComponent as any)?.content,
-    isCardSelected,
-    timestamp: new Date().toISOString(),
-  });
-
-  // 如果没有找到真实组件，记录警告
-  if (selectedPath && selectedPath.length >= 4 && !currentComponent) {
-    console.warn('⚠️ 无法找到组件:', {
-      selectedPath,
-      cardDataElements: cardData?.dsl?.body?.elements?.length,
-    });
-  }
 
   // 检查是否为交互组件
   const isInteractiveComponent = useMemo(() => {
@@ -1136,17 +1027,6 @@ export const PropertyPanel: React.FC<{
     setEditingActionIndex(-1);
   };
 
-  console.log('🎨 属性面板状态:', {
-    selectedPath,
-    realPath,
-    isCardSelected,
-    hasSelectedComponent: !!currentComponent,
-    componentTag: currentComponent?.tag,
-    componentId: currentComponent?.id,
-    selectedComponentFromProps: selectedComponent,
-    selectedPathFromProps: selectedPath,
-  });
-
   const handleValueChange = (field: string, value: any) => {
     if (currentComponent) {
       // 检查是否是错误的表单组件选中（应该选中表单内的子组件）
@@ -1182,15 +1062,15 @@ export const PropertyPanel: React.FC<{
         'size',
       ];
 
-      console.log('🔧 开始处理组件更新:', {
-        componentId: (currentComponent as any).id,
-        componentTag: currentComponent.tag,
-        field,
-        value,
-        isStyleField: styleFields.includes(field),
-        currentStyle: (currentComponent as any).style,
-        realPath,
-      });
+      // console.log('🔧 开始处理组件更新:', {
+      //   componentId: (currentComponent as any).id,
+      //   componentTag: currentComponent.tag,
+      //   field,
+      //   value,
+      //   isStyleField: styleFields.includes(field),
+      //   currentStyle: (currentComponent as any).style,
+      //   realPath,
+      // });
 
       if (styleFields.includes(field)) {
         const updatedComponent = {
@@ -1200,25 +1080,25 @@ export const PropertyPanel: React.FC<{
             [field]: value,
           },
         };
-        console.log('📝 更新组件样式属性:', {
-          componentId: (updatedComponent as any).id,
-          field,
-          value,
-          newStyle: (updatedComponent as any).style,
-          realPath,
-        });
+        // console.log('📝 更新组件样式属性:', {
+        //   componentId: (updatedComponent as any).id,
+        //   field,
+        //   value,
+        //   newStyle: (updatedComponent as any).style,
+        //   realPath,
+        // });
         onUpdateComponent(updatedComponent);
       } else {
         const updatedComponent = {
           ...currentComponent,
           [field]: value,
         };
-        console.log('📝 更新组件属性:', {
-          componentId: (updatedComponent as any).id,
-          field,
-          value,
-          realPath,
-        });
+        // console.log('📝 更新组件属性:', {
+        //   componentId: (updatedComponent as any).id,
+        //   field,
+        //   value,
+        //   realPath,
+        // });
         onUpdateComponent(updatedComponent);
       }
     } else {
@@ -1258,13 +1138,13 @@ export const PropertyPanel: React.FC<{
   ) => {
     if (!cardData) return;
 
-    console.log('🎯 处理标题嵌套字段更新:', {
-      parentField,
-      field,
-      value,
-      currentHeader: cardData.dsl?.header,
-      currentParentField: cardData.dsl?.header?.[parentField],
-    });
+    // console.log('🎯 处理标题嵌套字段更新:', {
+    //   parentField,
+    //   field,
+    //   value,
+    //   currentHeader: cardData.dsl?.header,
+    //   currentParentField: cardData.dsl?.header?.[parentField],
+    // });
 
     // 确保header存在
     const currentHeader = cardData.dsl?.header || {};
@@ -1284,12 +1164,12 @@ export const PropertyPanel: React.FC<{
       },
     };
 
-    console.log('💾 更新标题数据:', {
-      newHeader: updatedCardData.dsl.header,
-      titleContent: (updatedCardData.dsl.header as any)?.title?.content,
-      subtitleContent: (updatedCardData.dsl.header as any)?.subtitle?.content,
-      style: (updatedCardData.dsl.header as any)?.style,
-    });
+    // console.log('💾 更新标题数据:', {
+    //   newHeader: updatedCardData.dsl.header,
+    //   titleContent: (updatedCardData.dsl.header as any)?.title?.content,
+    //   subtitleContent: (updatedCardData.dsl.header as any)?.subtitle?.content,
+    //   style: (updatedCardData.dsl.header as any)?.style,
+    // });
 
     onUpdateCard({ cardData: updatedCardData });
   };
@@ -1359,31 +1239,31 @@ export const PropertyPanel: React.FC<{
         newVariables[variableIndex] = variableObject;
         onUpdateVariables(newVariables);
 
-        console.log('🔄 更新变量:', {
-          variableName: editingVariable.name,
-          variableIndex,
-          oldVariable: variables[variableIndex],
-          newVariable: variableObject,
-          allVariables: newVariables,
-        });
+        // console.log('🔄 更新变量:', {
+        //   variableName: editingVariable.name,
+        //   variableIndex,
+        //   oldVariable: variables[variableIndex],
+        //   newVariable: variableObject,
+        //   allVariables: newVariables,
+        // });
       } else {
         // 没找到变量，作为新变量添加
         const newVariables = [...variables, variableObject];
         onUpdateVariables(newVariables);
-        console.log('⚠️ 未找到要编辑的变量，作为新变量添加:', {
-          variableName: editingVariable.name,
-          newVariable: variableObject,
-          allVariables: newVariables,
-        });
+        // console.log('⚠️ 未找到要编辑的变量，作为新变量添加:', {
+        //   variableName: editingVariable.name,
+        //   newVariable: variableObject,
+        //   allVariables: newVariables,
+        // });
       }
     } else {
       // 新增模式：添加新变量
       const newVariables = [...variables, variableObject];
       onUpdateVariables(newVariables);
-      console.log('➕ 添加新变量:', {
-        newVariable: variableObject,
-        allVariables: newVariables,
-      });
+      // console.log('➕ 添加新变量:', {
+      //   newVariable: variableObject,
+      //   allVariables: newVariables,
+      // });
     }
     setIsAddVariableModalVisible(false);
     setEditingVariable(null);
@@ -2497,10 +2377,10 @@ export const PropertyPanel: React.FC<{
 
         if (isPlainText) {
           const content = (currentComponent as any).content || '';
-          console.log('📝 getTextContent (plain_text):', {
-            componentId: currentComponent.id,
-            content,
-          });
+          // console.log('📝 getTextContent (plain_text):', {
+          //   componentId: currentComponent.id,
+          //   content,
+          // });
           return content;
         } else if (isRichText) {
           const content = (currentComponent as any).content;
@@ -2520,14 +2400,14 @@ export const PropertyPanel: React.FC<{
           };
           const finalContent = content || defaultContent;
 
-          console.log('📝 getTextContent (rich_text):', {
-            componentId: currentComponent.id,
-            rawContent: content,
-            finalContent,
-            hasContent: !!content,
-            contentType: typeof content,
-            timestamp: new Date().toISOString(),
-          });
+          // console.log('📝 getTextContent (rich_text):', {
+          //   componentId: currentComponent.id,
+          //   rawContent: content,
+          //   finalContent,
+          //   hasContent: !!content,
+          //   contentType: typeof content,
+          //   timestamp: new Date().toISOString(),
+          // });
 
           return finalContent;
         }
@@ -2536,13 +2416,13 @@ export const PropertyPanel: React.FC<{
 
       // 更新文本内容
       const updateTextContent = (value: any) => {
-        console.log('📝 更新文本内容:', {
-          componentId: currentComponent?.id,
-          componentTag: currentComponent?.tag,
-          value,
-          isPlainText,
-          isRichText,
-        });
+        // console.log('📝 更新文本内容:', {
+        //   componentId: currentComponent?.id,
+        //   componentTag: currentComponent?.tag,
+        //   value,
+        //   isPlainText,
+        //   isRichText,
+        // });
 
         if (isPlainText) {
           handleValueChange('content', value);
@@ -2578,14 +2458,14 @@ export const PropertyPanel: React.FC<{
                   <Form form={form} layout="vertical">
                     <Form.Item label="文本内容">
                       {(() => {
-                        console.log('🎯 文本编辑器渲染检查:', {
-                          componentId: currentComponent?.id,
-                          componentTag: currentComponent?.tag,
-                          textContent: getTextContent(),
-                          isRichText,
-                          variablesCount: variables.length,
-                          timestamp: new Date().toISOString(),
-                        });
+                        // console.log('🎯 文本编辑器渲染检查:', {
+                        //   componentId: currentComponent?.id,
+                        //   componentTag: currentComponent?.tag,
+                        //   textContent: getTextContent(),
+                        //   isRichText,
+                        //   variablesCount: variables.length,
+                        //   timestamp: new Date().toISOString(),
+                        // });
 
                         if (isRichText) {
                           return (
