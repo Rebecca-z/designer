@@ -2156,13 +2156,31 @@ export const PropertyPanel: React.FC<{
         onUpdateComponent(updatedComponent);
       };
 
+      // 检查列中是否包含取消按钮
+      const hasCancelButton = (column: any): boolean => {
+        if (!column.elements || !Array.isArray(column.elements)) {
+          return false;
+        }
+        return column.elements.some(
+          (element: any) =>
+            element.tag === 'button' && element.form_action_type === 'cancel',
+        );
+      };
+
       // 删除单个列的函数
       const handleDeleteColumn = (columnIndex: number) => {
         const isDefaultColumnSet = columnSetComp.isDefault === true;
+        const targetColumn = columns[columnIndex];
 
         // 对于默认分栏容器，不允许删除第一列
         if (isDefaultColumnSet && columnIndex === 0) {
           console.log('⚠️ 默认分栏容器的第一列不能删除，因为包含按钮');
+          return;
+        }
+
+        // 检查列中是否包含取消按钮
+        if (hasCancelButton(targetColumn)) {
+          console.log('⚠️ 该列包含取消按钮，不能删除');
           return;
         }
 
@@ -2323,24 +2341,25 @@ export const PropertyPanel: React.FC<{
                             >
                               {columnWidths[index]}%
                             </Text>
-                            {/* 删除列按钮 - 默认分栏容器的第一列不显示删除按钮 */}
+                            {/* 删除列按钮 - 默认分栏容器的第一列和包含取消按钮的列不显示删除按钮 */}
                             {!(
                               columnSetComp.isDefault === true && index === 0
-                            ) && (
-                              <Button
-                                type="text"
-                                size="small"
-                                danger
-                                icon={<DeleteOutlined />}
-                                onClick={() => handleDeleteColumn(index)}
-                                style={{
-                                  padding: '4px 8px',
-                                  height: '24px',
-                                  fontSize: '12px',
-                                }}
-                                title="删除此列"
-                              />
-                            )}
+                            ) &&
+                              !hasCancelButton(column) && (
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  danger
+                                  icon={<DeleteOutlined />}
+                                  onClick={() => handleDeleteColumn(index)}
+                                  style={{
+                                    padding: '4px 8px',
+                                    height: '24px',
+                                    fontSize: '12px',
+                                  }}
+                                  title="删除此列"
+                                />
+                              )}
                             {/* 默认分栏容器第一列的保护标识 */}
                             {columnSetComp.isDefault === true &&
                               index === 0 && (
@@ -2360,6 +2379,24 @@ export const PropertyPanel: React.FC<{
                                   保护
                                 </div>
                               )}
+                            {/* 包含取消按钮的列的保护标识 */}
+                            {hasCancelButton(column) && (
+                              <div
+                                style={{
+                                  padding: '4px 8px',
+                                  height: '24px',
+                                  fontSize: '12px',
+                                  color: '#52c41a',
+                                  backgroundColor: '#f6ffed',
+                                  border: '1px solid #b7eb8f',
+                                  borderRadius: '4px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                }}
+                              >
+                                保护
+                              </div>
+                            )}
                           </div>
                         </Form.Item>
                       </div>

@@ -50,6 +50,7 @@ interface ComponentRendererCoreProps {
   onDelete?: (path: (string | number)[]) => void;
   onCopy?: (component: ComponentType) => void;
   onCanvasFocus?: () => void;
+  onClearSelection?: () => void; // 新增：清除选中状态的回调
   // 新增：标题数据，用于title组件渲染
   headerData?: {
     title?: { content: string };
@@ -82,7 +83,7 @@ const canDropInContainer = (
     targetPathLength: targetPath.length,
   });
 
-  // 特殊规则：分栏容器可以拖拽到表单容器内
+  // 特殊规则：分栏容器可以拖拽到表单容器内，但不能拖拽到表单容器下的分栏容器的列中
   if (draggedType === 'column_set') {
     // 检查目标路径是否指向表单容器的 elements
     // 路径格式：['dsl', 'body', 'elements', formIndex, 'elements']
@@ -93,14 +94,43 @@ const canDropInContainer = (
       targetPath[2] === 'elements' &&
       targetPath[4] === 'elements';
 
-    console.log('🔍 分栏容器拖拽到表单检查:', {
+    // 检查是否要拖拽到表单容器下的分栏容器的列中
+    // 路径格式：['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements']
+    const isTargetingFormColumnElements =
+      targetPath.length >= 9 &&
+      targetPath[0] === 'dsl' &&
+      targetPath[1] === 'body' &&
+      targetPath[2] === 'elements' &&
+      targetPath[4] === 'elements' &&
+      targetPath[6] === 'columns' &&
+      targetPath[8] === 'elements';
+
+    console.log('🔍 分栏容器拖拽检查:', {
       draggedType,
       targetPath,
       isTargetingFormElements,
-      canDrop: isTargetingFormElements,
+      isTargetingFormColumnElements,
+      canDrop: isTargetingFormElements && !isTargetingFormColumnElements,
     });
 
-    return isTargetingFormElements;
+    // 只允许拖拽到表单容器的 elements，不允许拖拽到表单容器下的分栏容器的列中
+    return isTargetingFormElements && !isTargetingFormColumnElements;
+  }
+
+  // 特殊规则：表单容器下的分栏容器不允许拖拽离开表单
+  if (draggedType === 'column_set') {
+    // 检查是否是从表单容器内拖拽分栏容器到根级别
+    // 如果目标路径是根级别（路径长度为4），且分栏容器原本在表单内，则不允许拖拽
+    const isTargetingRootLevel =
+      targetPath.length === 4 &&
+      targetPath[0] === 'dsl' &&
+      targetPath[1] === 'body' &&
+      targetPath[2] === 'elements';
+
+    if (isTargetingRootLevel) {
+      console.log('❌ 表单容器下的分栏容器不允许拖拽离开表单');
+      return false;
+    }
   }
 
   // 其他容器组件不能嵌套到其他容器中
@@ -680,6 +710,7 @@ const DraggableWrapper: React.FC<{
   onSelect?: (component: ComponentType, path: (string | number)[]) => void;
   selectedPath?: (string | number)[] | null;
   onCanvasFocus?: () => void;
+  onClearSelection?: () => void; // 新增：清除选中状态的回调
 }> = ({
   component,
   path,
@@ -692,6 +723,7 @@ const DraggableWrapper: React.FC<{
   onSelect,
   selectedPath,
   onCanvasFocus,
+  onClearSelection,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const [indicatorPosition, setIndicatorPosition] = React.useState<
@@ -718,6 +750,13 @@ const DraggableWrapper: React.FC<{
         index,
         isChildComponent,
       });
+
+      // 拖拽开始时清除选中状态
+      if (onClearSelection) {
+        console.log('🗑️ DraggableWrapper 拖拽开始时清除选中状态');
+        onClearSelection();
+      }
+
       return {
         type: component.tag,
         component,
@@ -1318,6 +1357,24 @@ const SmartDropZone: React.FC<{
           item.path[1] === 'body' &&
           item.path[2] === 'elements';
 
+        // 检查是否是从表单容器内拖拽分栏容器到根级别
+        const isFormColumnSetDraggedToRoot =
+          item.component?.tag === 'column_set' &&
+          item.path.length >= 6 &&
+          item.path[0] === 'dsl' &&
+          item.path[1] === 'body' &&
+          item.path[2] === 'elements' &&
+          item.path[4] === 'elements' &&
+          targetPath.length === 4 &&
+          targetPath[0] === 'dsl' &&
+          targetPath[1] === 'body' &&
+          targetPath[2] === 'elements';
+
+        if (isFormColumnSetDraggedToRoot) {
+          console.log('❌ 表单容器下的分栏容器不允许拖拽离开表单');
+          return false;
+        }
+
         if (isRootComponent) {
           console.log('🔍 根节点组件拖拽到容器检查:', {
             componentTag: item.component.tag,
@@ -1342,6 +1399,28 @@ const SmartDropZone: React.FC<{
             );
             return false;
           }
+
+          // 特殊检查：分栏容器不能拖拽到表单容器下的分栏容器的列中
+          if (
+            item.component?.tag === 'column_set' &&
+            containerType === 'column'
+          ) {
+            // 检查目标路径是否指向表单容器下的分栏容器的列
+            const isTargetingFormColumnElements =
+              targetPath.length >= 9 &&
+              targetPath[0] === 'dsl' &&
+              targetPath[1] === 'body' &&
+              targetPath[2] === 'elements' &&
+              targetPath[4] === 'elements' &&
+              targetPath[6] === 'columns' &&
+              targetPath[8] === 'elements';
+
+            if (isTargetingFormColumnElements) {
+              console.log('❌ 分栏容器不能拖拽到表单容器下的分栏容器的列中');
+              return false;
+            }
+          }
+
           console.log(
             `✅ 普通组件可以拖拽到${
               containerType === 'column' ? '分栏列' : '表单容器'
@@ -1889,6 +1968,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
   onDelete,
   onCopy,
   onCanvasFocus,
+  onClearSelection,
   headerData,
   variables = [],
 }) => {
@@ -2265,6 +2345,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           onSelect={onSelect}
           selectedPath={selectedPath}
           onCanvasFocus={onCanvasFocus}
+          onClearSelection={onClearSelection}
         >
           {formContent}
         </DraggableWrapper>
@@ -2467,8 +2548,16 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                       }
                     }}
                   >
-                    {/* 选中时显示操作菜单 */}
-                    {isColumnSelected && !isPreview && (
+                    {/* 选中时显示操作菜单 - 不包含提交按钮的列才显示 */}
+                    {(() => {
+                      const hasSubmitButton = columnElements.some(
+                        (element: any) =>
+                          element.tag === 'button' &&
+                          element.form_action_type === 'submit',
+                      );
+
+                      return isColumnSelected && !isPreview && !hasSubmitButton;
+                    })() && (
                       <div
                         style={{
                           position: 'absolute',
@@ -2545,6 +2634,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           onSelect={onSelect}
           selectedPath={selectedPath}
           onCanvasFocus={onCanvasFocus}
+          onClearSelection={onClearSelection}
         >
           {columnContent}
         </DraggableWrapper>
@@ -2702,6 +2792,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           onSelect={onSelect}
           selectedPath={selectedPath}
           onCanvasFocus={onCanvasFocus}
+          onClearSelection={onClearSelection}
         >
           {textContent}
         </DraggableWrapper>
@@ -2761,6 +2852,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           onSelect={onSelect}
           selectedPath={selectedPath}
           onCanvasFocus={onCanvasFocus}
+          onClearSelection={onClearSelection}
         >
           {richTextContent}
         </DraggableWrapper>

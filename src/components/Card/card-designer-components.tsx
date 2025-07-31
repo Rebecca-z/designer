@@ -321,6 +321,35 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
     message.success('组件已复制');
   };
 
+  // 检查是否为表单容器下的分栏容器（包含提交和取消按钮的父容器）
+  const isFormColumnSet =
+    component.tag === 'column_set' &&
+    path.length >= 6 &&
+    path[0] === 'dsl' &&
+    path[1] === 'body' &&
+    path[2] === 'elements' &&
+    path[4] === 'elements';
+
+  // 调试信息
+  if (component.tag === 'column_set' && isCurrentSelected) {
+    console.log('🔍 分栏容器选中状态检查:', {
+      componentId: component.id,
+      path,
+      pathLength: path.length,
+      isFormColumnSet,
+      isCurrentSelected,
+      isPreview,
+      shouldShowOperationIcon:
+        isCurrentSelected && !isPreview && !isFormColumnSet,
+      pathDetails: {
+        isDsl: path[0] === 'dsl',
+        isBody: path[1] === 'body',
+        isElements: path[2] === 'elements',
+        hasElementsSegment: path[4] === 'elements',
+      },
+    });
+  }
+
   const contextMenu = {
     items: [
       // 标题组件和表单组件不显示复制选项
@@ -334,13 +363,18 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             },
           ]
         : []),
-      {
-        key: 'delete',
-        icon: <DeleteOutlined />,
-        label: '删除组件',
-        onClick: handleDelete,
-        danger: true,
-      },
+      // 表单容器下的分栏容器不显示删除选项
+      ...(!isFormColumnSet
+        ? [
+            {
+              key: 'delete',
+              icon: <DeleteOutlined />,
+              label: '删除组件',
+              onClick: handleDelete,
+              danger: true,
+            },
+          ]
+        : []),
     ],
   };
 
@@ -402,8 +436,8 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
           data-component-wrapper="true"
           data-component-id={component.id}
         >
-          {/* 操作按钮 */}
-          {isCurrentSelected && !isPreview && (
+          {/* 操作按钮 - 表单容器下的分栏容器不显示 */}
+          {isCurrentSelected && !isPreview && !isFormColumnSet && (
             <div
               style={{
                 position: 'absolute',
@@ -554,8 +588,8 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
         data-component-wrapper="true"
         data-component-id={component.id}
       >
-        {/* 组件操作按钮 */}
-        {isCurrentSelected && !isPreview && (
+        {/* 组件操作按钮 - 表单容器下的分栏容器不显示 */}
+        {isCurrentSelected && !isPreview && !isFormColumnSet && (
           <div
             style={{
               position: 'absolute',

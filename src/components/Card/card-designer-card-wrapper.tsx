@@ -21,7 +21,8 @@ const DragSortableItem: React.FC<{
   path: (string | number)[];
   onMove: (dragIndex: number, hoverIndex: number) => void;
   children: React.ReactNode;
-}> = ({ component, index, path, onMove, children }) => {
+  onClearSelection?: () => void; // 新增：清除选中状态的回调
+}> = ({ component, index, path, onMove, children, onClearSelection }) => {
   const ref = useRef<HTMLDivElement>(null);
   const [insertPosition, setInsertPosition] = React.useState<
     'before' | 'after' | null
@@ -239,6 +240,13 @@ const DragSortableItem: React.FC<{
         index,
         componentId: component.id,
       });
+
+      // 拖拽开始时清除选中状态
+      if (onClearSelection) {
+        console.log('🗑️ 拖拽开始时清除选中状态');
+        onClearSelection();
+      }
+
       return {
         type: component.tag,
         component,
@@ -3363,6 +3371,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                   index={index}
                   path={componentPath}
                   onMove={handleCanvasComponentSort}
+                  onClearSelection={() => onSelectComponent(null)}
                 >
                   <ErrorBoundary>
                     <div

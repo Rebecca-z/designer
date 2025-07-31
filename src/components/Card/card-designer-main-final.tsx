@@ -508,6 +508,18 @@ const CardDesigner: React.FC = () => {
         columnSetComponent.tag === 'column_set' &&
         columnSetComponent.columns
       ) {
+        // 检查要删除的列是否包含取消按钮
+        const targetColumn = columnSetComponent.columns[columnIndex];
+        const hasCancelButton = targetColumn?.elements?.some(
+          (element: any) =>
+            element.tag === 'button' && element.form_action_type === 'cancel',
+        );
+
+        if (hasCancelButton) {
+          console.log('⚠️ 该列包含取消按钮，不能删除');
+          return;
+        }
+
         // 删除指定的分栏列
         columnSetComponent.columns.splice(columnIndex, 1);
         console.log('🗑️ 删除分栏列:', {
@@ -571,6 +583,18 @@ const CardDesigner: React.FC = () => {
           columnSetComponent.tag === 'column_set' &&
           columnSetComponent.columns
         ) {
+          // 检查要删除的列是否包含取消按钮
+          const targetColumn = columnSetComponent.columns[columnIndex];
+          const hasCancelButton = targetColumn?.elements?.some(
+            (element: any) =>
+              element.tag === 'button' && element.form_action_type === 'cancel',
+          );
+
+          if (hasCancelButton) {
+            console.log('⚠️ 该列包含取消按钮，不能删除');
+            return;
+          }
+
           // 删除指定的分栏列
           columnSetComponent.columns.splice(columnIndex, 1);
           console.log('🗑️ 删除表单内分栏列:', {
