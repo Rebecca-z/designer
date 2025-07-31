@@ -3250,6 +3250,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                 ? '0 0 8px rgba(24, 144, 255, 0.3)'
                 : 'none',
             transition: 'all 0.2s ease',
+            width: '100%', // 确保宽度与父容器一致
+            maxWidth: '100%', // 限制最大宽度
+            overflow: 'hidden', // 防止内容溢出
           }}
         >
           <div
@@ -3268,8 +3271,12 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           <div
             style={{
               display: 'flex',
-              flexWrap: 'wrap',
+              flexWrap: comp.combination_mode === 'triple' ? 'nowrap' : 'wrap', // 三图模式不换行
               gap: '1px',
+              width: '100%', // 确保宽度与父容器一致
+              maxWidth: '100%', // 限制最大宽度
+              alignItems:
+                comp.combination_mode === 'triple' ? 'stretch' : 'flex-start', // 三图模式拉伸对齐
             }}
           >
             {/* 二图模式 */}
@@ -3281,6 +3288,8 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                   style={{
                     width: '32.4%',
                     aspectRatio: '24 / 33',
+                    maxWidth: '32.4%', // 限制最大宽度
+                    flexShrink: 0, // 防止收缩
                   }}
                 />
                 <ImgRenderer
@@ -3289,6 +3298,8 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                   style={{
                     width: 'calc(100% - 32.4% - 4px)',
                     aspectRatio: '49.33 / 33',
+                    maxWidth: 'calc(100% - 32.4% - 4px)', // 限制最大宽度
+                    flexShrink: 0, // 防止收缩
                   }}
                 />
               </>
@@ -3303,6 +3314,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                   style={{
                     width: '66.5%',
                     aspectRatio: 1,
+                    maxWidth: '66.5%', // 限制最大宽度
+                    flexShrink: 0, // 防止收缩
+                    flexBasis: '66.5%', // 设置基础宽度
                   }}
                 />
                 <div
@@ -3311,6 +3325,10 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                     display: 'flex',
                     justifyContent: 'space-between',
                     flexDirection: 'column',
+                    maxWidth: '33%', // 限制最大宽度
+                    flexShrink: 0, // 防止收缩
+                    flexBasis: '33%', // 设置基础宽度
+                    gap: '1px', // 添加间距
                   }}
                 >
                   <ImgRenderer
@@ -3318,6 +3336,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                     key="triple-img-1"
                     style={{
                       aspectRatio: '1',
+                      width: '100%', // 确保宽度与父容器一致
+                      maxWidth: '100%', // 限制最大宽度
+                      flex: '1', // 让两个小图平分高度
                     }}
                   />
                   <ImgRenderer
@@ -3325,6 +3346,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                     key="triple-img-2"
                     style={{
                       aspectRatio: '1',
+                      width: '100%', // 确保宽度与父容器一致
+                      maxWidth: '100%', // 限制最大宽度
+                      flex: '1', // 让两个小图平分高度
                     }}
                   />
                 </div>
@@ -3337,7 +3361,12 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                   <ImgRenderer
                     item={item}
                     key={`bisect-img-${imgIndex}-${item?.img_url || 'empty'}`}
-                    style={{ width: 'calc(50% - 2px)', aspectRatio: 1 }}
+                    style={{
+                      width: 'calc(50% - 2px)',
+                      aspectRatio: 1,
+                      maxWidth: 'calc(50% - 2px)', // 限制最大宽度
+                      flexShrink: 0, // 防止收缩
+                    }}
                   />
                 ))}
               </>
@@ -3349,7 +3378,12 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                   <ImgRenderer
                     item={item}
                     key={`trisect-img-${imgIndex}-${item?.img_url || 'empty'}`}
-                    style={{ width: 'calc(33.33% - 2.67px)', aspectRatio: 1 }}
+                    style={{
+                      width: 'calc(33.33% - 2.67px)',
+                      aspectRatio: 1,
+                      maxWidth: 'calc(33.33% - 2.67px)', // 限制最大宽度
+                      flexShrink: 0, // 防止收缩
+                    }}
                   />
                 ))}
               </>
