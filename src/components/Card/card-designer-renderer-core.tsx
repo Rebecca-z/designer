@@ -1589,7 +1589,7 @@ const SmartDropZone: React.FC<{
 
   const dropZoneStyle: React.CSSProperties = {
     minHeight: hasContent ? 'auto' : containerType === 'form' ? '60px' : '50px',
-    padding: '4px', // 统一简化padding
+    // padding: '4px', //
     borderRadius: '0', // 不要圆角，由外层管理
     position: 'relative',
     transition: 'all 0.15s ease',
@@ -2116,13 +2116,22 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                           },
                         ]
                       : []),
-                    {
-                      key: 'delete',
-                      icon: <DeleteOutlined />,
-                      label: '删除组件',
-                      onClick: handleDelete,
-                      danger: true,
-                    },
+                    // 提交按钮和默认分栏容器不显示删除选项
+                    ...((element.tag !== 'button' ||
+                      (element as any).form_action_type !== 'submit') &&
+                    !(
+                      element.tag === 'column_set' && (element as any).isDefault
+                    )
+                      ? [
+                          {
+                            key: 'delete',
+                            icon: <DeleteOutlined />,
+                            label: '删除组件',
+                            onClick: handleDelete,
+                            danger: true,
+                          },
+                        ]
+                      : []),
                   ],
                 }}
                 trigger={['click']}
@@ -2343,15 +2352,29 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         selectedColumnIndex,
       });
 
+      // 检查是否为默认分栏容器
+      // const isDefaultColumnSet = comp.isDefault === true;
+
       const columnContent = (
         <div
           style={{
-            border: 'none', // 分栏整体不显示边框
+            border:
+              isCurrentSelected && !isPreview
+                ? '2px solid #1890ff'
+                : '2px solid transparent',
             borderRadius: '4px',
-            backgroundColor: 'transparent',
+            backgroundColor:
+              isCurrentSelected && !isPreview
+                ? 'rgba(24, 144, 255, 0.05)'
+                : 'transparent',
+            boxShadow:
+              isCurrentSelected && !isPreview
+                ? '0 0 8px rgba(24, 144, 255, 0.3)'
+                : 'none',
             transition: 'all 0.2s ease',
             position: 'relative',
             minHeight: '60px',
+            padding: '4px',
           }}
           onClick={(e) => {
             if (e.target === e.currentTarget && onSelect) {
@@ -2507,9 +2530,18 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                       </div>
                     )}
                     {/* 渲染列内组件 */}
-                    {columnElements.length > 0
-                      ? internalRenderChildren(columnElements, columnPath)
-                      : null}
+                    {columnElements.length > 0 ? (
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          // gap: '8px',
+                          alignItems: 'flex-start',
+                        }}
+                      >
+                        {internalRenderChildren(columnElements, columnPath)}
+                      </div>
+                    ) : null}
                   </div>
                 </SmartDropZone>
               );
@@ -3045,7 +3077,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                 ? '2px solid #1890ff'
                 : '2px solid transparent',
             borderRadius: '6px',
-            padding: '8px',
+            // padding: '8px',
             backgroundColor:
               isCurrentSelected && !isPreview
                 ? 'rgba(24, 144, 255, 0.05)'
@@ -3055,6 +3087,8 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                 ? '0 0 8px rgba(24, 144, 255, 0.3)'
                 : 'none',
             transition: 'all 0.2s ease',
+            position: 'relative',
+            display: 'inline-block', // 让按钮容器内联显示，支持并排
           }}
         >
           <Button
@@ -3070,7 +3104,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             disabled={isPreview}
           >
             {comp.text?.content || '按钮'}
-            {comp.form_action_type && ` (${comp.form_action_type})`}
           </Button>
         </div>
       );

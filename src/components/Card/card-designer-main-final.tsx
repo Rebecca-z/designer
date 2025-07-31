@@ -745,6 +745,7 @@ const CardDesigner: React.FC = () => {
           componentTag: updatedComponent.tag,
           oldStyle: (oldComponent as any).style,
           newStyle: (updatedComponent as any).style,
+          isColumnSet: updatedComponent.tag === 'column_set',
         });
       }
     } else if (
@@ -777,6 +778,40 @@ const CardDesigner: React.FC = () => {
             oldStyle: (oldComponent as any).style,
             newStyle: (updatedComponent as any).style,
           });
+        }
+      }
+    } else if (
+      path.length === 8 &&
+      path[4] === 'elements' &&
+      path[6] === 'columns'
+    ) {
+      // 表单内分栏容器: ['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex]
+      const formIndex = path[3] as number;
+      const columnSetIndex = path[5] as number;
+      const columnIndex = path[7] as number;
+      const formComponent = newData.dsl.body.elements[formIndex];
+
+      if (formComponent && formComponent.tag === 'form') {
+        const formElements = (formComponent as any).elements || [];
+        const columnSetComponent = formElements[columnSetIndex];
+
+        if (columnSetComponent && columnSetComponent.tag === 'column_set') {
+          if (!columnSetComponent.columns) {
+            columnSetComponent.columns = [];
+          }
+          const column = columnSetComponent.columns[columnIndex];
+          if (column) {
+            // 这里处理的是列，但我们需要处理分栏容器本身
+            // 所以我们需要更新整个分栏容器
+            console.log('📐 更新表单内分栏容器:', {
+              formIndex,
+              columnSetIndex,
+              columnIndex,
+              componentTag: updatedComponent.tag,
+            });
+            // 更新整个分栏容器
+            formElements[columnSetIndex] = updatedComponent;
+          }
         }
       }
     } else {

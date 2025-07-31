@@ -584,7 +584,67 @@ export const createDefaultComponent = (type: string): ComponentType => {
       return {
         tag: 'form',
         name: `Form_${generateId()}`,
-        elements: [],
+        elements: [
+          // 默认包含分栏容器（1列）
+          {
+            tag: 'column_set',
+            id: generateId(),
+            gap: 8,
+            isDefault: true, // 标识这是默认分栏容器，不允许删除
+            columns: [
+              {
+                tag: 'column',
+                elements: [
+                  // 提交按钮
+                  {
+                    id: generateId(),
+                    tag: 'button',
+                    name: `SubmitButton_${generateId()}`,
+                    text: {
+                      tag: 'plain_text',
+                      content: '提交',
+                      i18n_content: {
+                        'en-US': 'Submit',
+                      },
+                    },
+                    form_action_type: 'submit',
+                    behaviors: [
+                      {
+                        type: 'callback',
+                        callback: {
+                          action: 'click',
+                        },
+                      },
+                    ],
+                  },
+                  // 取消按钮
+                  {
+                    id: generateId(),
+                    tag: 'button',
+                    name: `CancelButton_${generateId()}`,
+                    text: {
+                      tag: 'plain_text',
+                      content: '取消',
+                      i18n_content: {
+                        'en-US': 'Cancel',
+                      },
+                    },
+                    form_action_type: 'cancel',
+                    behaviors: [
+                      {
+                        type: 'callback',
+                        callback: {
+                          action: 'click',
+                        },
+                      },
+                    ],
+                  },
+                ],
+                width: 1,
+              },
+            ],
+          },
+        ],
         id: generateId(),
       } as ComponentType;
 
@@ -592,7 +652,7 @@ export const createDefaultComponent = (type: string): ComponentType => {
       return {
         tag: 'column_set',
         id: generateId(),
-        gap: 16, // 默认列间距
+        gap: 8, // 默认列间距
         columns: [
           {
             tag: 'column',

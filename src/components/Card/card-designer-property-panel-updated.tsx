@@ -479,11 +479,6 @@ const OutlineTree: React.FC<{
             <Text style={{ fontSize: '12px' }}>
               {config?.name || component.tag}
             </Text>
-            {component.name && (
-              <Text type="secondary" style={{ fontSize: '11px' }}>
-                ({component.name})
-              </Text>
-            )}
           </Space>
         ),
         key: path.join('-'),
@@ -510,7 +505,7 @@ const OutlineTree: React.FC<{
               const columnNode = {
                 title: (
                   <Text style={{ fontSize: '11px', color: '#666' }}>
-                    📐 第{colIndex + 1}列 ({column.elements.length}个组件)
+                    第{colIndex + 1}列
                   </Text>
                 ),
                 key: [...path, 'columns', colIndex].join('-'),
@@ -543,9 +538,6 @@ const OutlineTree: React.FC<{
             style={{ fontSize: '14px', fontWeight: 'bold', color: '#1890ff' }}
           >
             📄 正文
-          </Text>
-          <Text type="secondary" style={{ fontSize: '11px' }}>
-            ({data.dsl.body.elements.length}个组件)
           </Text>
         </Space>
       ),
@@ -892,7 +884,7 @@ export const PropertyPanel: React.FC<{
   onUpdateCard,
   variables,
   onUpdateVariables,
-  cardVerticalSpacing,
+
   // cardPadding,
   headerData,
   cardData,
@@ -1757,48 +1749,14 @@ export const PropertyPanel: React.FC<{
             style={{ marginBottom: '12px' }}
           >
             <Form layout="vertical" size="small">
-              <Form.Item
-                label="垂直间距"
-                help="组件之间的垂直间距，实时预览效果"
-              >
+              <Form.Item label="垂直间距" help="组件之间的垂直间距，固定为8px">
                 <InputNumber
-                  value={cardVerticalSpacing}
-                  onChange={(value) => {
-                    console.warn('value===', value);
-                    const newValue = value;
-                    console.log('🎯 更新垂直间距:', {
-                      oldValue: cardVerticalSpacing,
-                      newValue,
-                      timestamp: new Date().toISOString(),
-                    });
-                    onUpdateCard({ vertical_spacing: newValue });
-                  }}
-                  min={0}
-                  max={50}
-                  step={1}
+                  value={8}
+                  disabled={true}
                   style={{ width: '100%' }}
                   addonAfter="px"
-                  placeholder="请输入间距值"
+                  placeholder="固定间距"
                 />
-              </Form.Item>
-
-              {/* 快速预设按钮 */}
-              <Form.Item label="快速设置">
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {[4, 8, 12, 16, 20].map((preset) => (
-                    <Button
-                      key={preset}
-                      size="small"
-                      type={
-                        cardVerticalSpacing === preset ? 'primary' : 'default'
-                      }
-                      onClick={() => onUpdateCard({ vertical_spacing: preset })}
-                      style={{ minWidth: '40px' }}
-                    >
-                      {preset}px
-                    </Button>
-                  ))}
-                </div>
               </Form.Item>
             </Form>
           </Card>
@@ -2157,6 +2115,7 @@ export const PropertyPanel: React.FC<{
       // 更新列数的函数
       const handleColumnCountChange = (count: number) => {
         const newColumns = [...columns];
+        const isDefaultColumnSet = columnSetComp.isDefault === true;
 
         if (count > columns.length) {
           // 增加列
@@ -2168,8 +2127,26 @@ export const PropertyPanel: React.FC<{
             });
           }
         } else if (count < columns.length) {
-          // 减少列
-          newColumns.splice(count);
+          // 减少列 - 对于默认分栏容器，保护第一列的按钮
+          if (isDefaultColumnSet && count < 1) {
+            // 不允许减少到少于1列，因为按钮需要保持在第一列
+            console.log('⚠️ 默认分栏容器至少需要1列来容纳按钮');
+            return;
+          }
+
+          // 对于默认分栏容器，只删除非第一列的列
+          if (isDefaultColumnSet) {
+            // 保留第一列，只删除后面的列
+            const firstColumn = newColumns[0];
+            newColumns.splice(1, newColumns.length - count);
+            // 确保第一列存在
+            if (newColumns.length === 0) {
+              newColumns.push(firstColumn);
+            }
+          } else {
+            // 非默认分栏容器，正常删除
+            newColumns.splice(count);
+          }
         }
 
         const updatedComponent = {
@@ -2181,6 +2158,14 @@ export const PropertyPanel: React.FC<{
 
       // 删除单个列的函数
       const handleDeleteColumn = (columnIndex: number) => {
+        const isDefaultColumnSet = columnSetComp.isDefault === true;
+
+        // 对于默认分栏容器，不允许删除第一列
+        if (isDefaultColumnSet && columnIndex === 0) {
+          console.log('⚠️ 默认分栏容器的第一列不能删除，因为包含按钮');
+          return;
+        }
+
         const newColumns = [...columns];
         newColumns.splice(columnIndex, 1);
 
@@ -2273,18 +2258,6 @@ export const PropertyPanel: React.FC<{
                         options={generateColumnOptions()}
                       />
                     </Form.Item>
-                    <Form.Item label="列间距">
-                      <InputNumber
-                        value={columnSetComp.gap || 16}
-                        onChange={(value) =>
-                          handleValueChange('gap', value || 16)
-                        }
-                        min={0}
-                        max={50}
-                        addonAfter="px"
-                        style={{ width: '100%' }}
-                      />
-                    </Form.Item>
                   </Form>
                 ),
               },
@@ -2350,20 +2323,43 @@ export const PropertyPanel: React.FC<{
                             >
                               {columnWidths[index]}%
                             </Text>
-                            {/* 删除列按钮 */}
-                            <Button
-                              type="text"
-                              size="small"
-                              danger
-                              icon={<DeleteOutlined />}
-                              onClick={() => handleDeleteColumn(index)}
-                              style={{
-                                padding: '4px 8px',
-                                height: '24px',
-                                fontSize: '12px',
-                              }}
-                              title="删除此列"
-                            />
+                            {/* 删除列按钮 - 默认分栏容器的第一列不显示删除按钮 */}
+                            {!(
+                              columnSetComp.isDefault === true && index === 0
+                            ) && (
+                              <Button
+                                type="text"
+                                size="small"
+                                danger
+                                icon={<DeleteOutlined />}
+                                onClick={() => handleDeleteColumn(index)}
+                                style={{
+                                  padding: '4px 8px',
+                                  height: '24px',
+                                  fontSize: '12px',
+                                }}
+                                title="删除此列"
+                              />
+                            )}
+                            {/* 默认分栏容器第一列的保护标识 */}
+                            {columnSetComp.isDefault === true &&
+                              index === 0 && (
+                                <div
+                                  style={{
+                                    padding: '4px 8px',
+                                    height: '24px',
+                                    fontSize: '12px',
+                                    color: '#faad14',
+                                    backgroundColor: '#fff7e6',
+                                    border: '1px solid #ffd591',
+                                    borderRadius: '4px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                  }}
+                                >
+                                  保护
+                                </div>
+                              )}
                           </div>
                         </Form.Item>
                       </div>
