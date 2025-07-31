@@ -358,7 +358,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             {
               key: 'copy',
               icon: <CopyOutlined />,
-              label: '复制组件',
+              label: '复制组件1',
               onClick: handleCopy,
             },
           ]
@@ -369,7 +369,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             {
               key: 'delete',
               icon: <DeleteOutlined />,
-              label: '删除组件',
+              label: '删除组件1',
               onClick: handleDelete,
               danger: true,
             },

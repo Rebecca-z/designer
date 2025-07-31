@@ -2166,6 +2166,11 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         wrapperStyle.margin = '1px 0';
       }
 
+      const showActions =
+        (element.tag !== 'button' ||
+          (element as any).form_action_type !== 'submit') &&
+        !(element.tag === 'column_set' && (element as any).isDefault);
+
       const selectableWrapper = (
         <div
           style={wrapperStyle}
@@ -2174,7 +2179,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           data-component-id={element.id}
         >
           {/* 操作按钮 */}
-          {isSelected && !isPreview && onDelete && onCopy && (
+          {isSelected && !isPreview && onDelete && onCopy && showActions && (
             <div
               style={{
                 position: 'absolute',

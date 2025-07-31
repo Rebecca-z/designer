@@ -177,10 +177,6 @@ const getComponentRealPath = (
     selectedPath[0] === 'dsl' &&
     selectedPath[1] === 'body'
   ) {
-    console.log('🎯 卡片选中状态:', {
-      selectedPath,
-      realPath: selectedPath,
-    });
     return { component: null, realPath: selectedPath };
   }
 
@@ -204,12 +200,6 @@ const getComponentRealPath = (
         | 'orange'
         | 'red',
     };
-    console.log('🎯 标题组件选中状态:', {
-      componentId: titleComponent.id,
-      componentTag: titleComponent.tag,
-      selectedPath,
-      realPath: selectedPath,
-    });
     return { component: titleComponent, realPath: selectedPath };
   }
 
@@ -228,12 +218,6 @@ const getComponentRealPath = (
     const component = data.dsl.body.elements[index];
 
     if (component) {
-      console.log('🎯 根元素组件:', {
-        componentId: component.id,
-        componentTag: component.tag,
-        selectedPath,
-        realPath: selectedPath,
-      });
       return { component, realPath: selectedPath };
     }
   }
@@ -884,7 +868,7 @@ export const PropertyPanel: React.FC<{
   onUpdateCard,
   variables,
   onUpdateVariables,
-
+  cardVerticalSpacing,
   // cardPadding,
   headerData,
   cardData,
@@ -1517,14 +1501,8 @@ export const PropertyPanel: React.FC<{
               >
                 <Select
                   value={cardData?.dsl?.body?.direction || 'vertical'}
-                  onChange={(value) => {
-                    console.log('🎯 更新布局方式:', {
-                      oldValue: cardData?.dsl?.body?.direction,
-                      newValue: value,
-                      timestamp: new Date().toISOString(),
-                    });
-                    onUpdateCard({ direction: value });
-                  }}
+                  onChange={(value) => onUpdateCard({ direction: value })}
+                  disabled={true} // 选中卡片时禁用布局模式
                   style={{ width: '100%' }}
                 >
                   <Option value="vertical">
@@ -1749,29 +1727,23 @@ export const PropertyPanel: React.FC<{
             style={{ marginBottom: '12px' }}
           >
             <Form layout="vertical" size="small">
-              <Form.Item label="垂直间距" help="组件之间的垂直间距，固定为8px">
+              <Form.Item label="垂直间距" help="组件之间的垂直间距，可调整">
                 <InputNumber
-                  value={8}
-                  disabled={true}
+                  value={
+                    cardVerticalSpacing !== undefined ? cardVerticalSpacing : 8
+                  }
+                  onChange={(value) => {
+                    onUpdateCard({ vertical_spacing: value });
+                  }}
+                  min={0}
+                  max={50}
                   style={{ width: '100%' }}
                   addonAfter="px"
-                  placeholder="固定间距"
+                  placeholder="设置间距"
                 />
               </Form.Item>
             </Form>
           </Card>
-
-          {/* 内边距设置 */}
-          {/* <Card
-            title="📦 内边距设置"
-            size="small"
-            style={{ marginBottom: '12px' }}
-          >
-                <PaddingEditor
-                  value={cardPadding}
-                  onChange={(padding) => onUpdateCard({ padding })}
-                />
-          </Card> */}
         </div>
       );
     }
@@ -3066,14 +3038,6 @@ export const PropertyPanel: React.FC<{
                                 img_list: newImageList,
                               };
 
-                              console.log('🖼️ 切换混排方式:', {
-                                mode: mode.value,
-                                requiredCount,
-                                oldCount: currentImages.length,
-                                newCount: newImageList.length,
-                                component: updatedComponent,
-                              });
-
                               onUpdateComponent(updatedComponent);
                             }}
                           >
@@ -4036,16 +4000,6 @@ export const PropertyPanel: React.FC<{
       const imgSource = imageComponent.img_source || 'upload';
       const cropMode = imageComponent.crop_mode || 'default';
 
-      // 添加调试信息
-      console.log('🖼️ 图片组件属性面板数据:', {
-        componentId: imageComponent.id,
-        imgSource,
-        img_name: imageComponent.img_name,
-        variable_name: imageComponent.variable_name,
-        cropMode,
-        fullComponent: imageComponent,
-      });
-
       return (
         <div style={{ padding: '16px' }}>
           <div
@@ -4074,13 +4028,6 @@ export const PropertyPanel: React.FC<{
                       <Switch
                         checked={imgSource === 'variable'}
                         onChange={(checked) => {
-                          console.log('🔄 切换图片来源:', {
-                            checked,
-                            currentSource: imgSource,
-                            newSource: checked ? 'variable' : 'upload',
-                            componentId: imageComponent.id,
-                          });
-
                           const newSource = checked ? 'variable' : 'upload';
 
                           // 创建更新后的组件
@@ -4092,17 +4039,6 @@ export const PropertyPanel: React.FC<{
                               ? { img_name: undefined }
                               : { variable_name: undefined }),
                           } as any;
-
-                          console.log('🔄 Switch更新组件:', {
-                            componentId: (updatedComponent as any).id,
-                            newSource,
-                            updatedFields: checked
-                              ? { img_source: newSource, img_name: undefined }
-                              : {
-                                  img_source: newSource,
-                                  variable_name: undefined,
-                                },
-                          });
 
                           onUpdateComponent(updatedComponent);
 
@@ -4143,22 +4079,10 @@ export const PropertyPanel: React.FC<{
                                 accept="image/*"
                                 showUploadList={false}
                                 beforeUpload={(file) => {
-                                  console.log('📤 开始上传图片:', {
-                                    fileName: file.name,
-                                    fileSize: file.size,
-                                    fileType: file.type,
-                                    componentId: imageComponent.id,
-                                  });
-
                                   // 处理文件上传逻辑
                                   const reader = new FileReader();
                                   reader.onload = (e) => {
                                     const dataUrl = e.target?.result as string;
-                                    console.log('📷 图片读取完成:', {
-                                      fileName: file.name,
-                                      dataUrlLength: dataUrl.length,
-                                      componentId: imageComponent.id,
-                                    });
 
                                     // 批量更新图片属性
                                     const updatedComponent = {
@@ -4166,18 +4090,6 @@ export const PropertyPanel: React.FC<{
                                       img_url: dataUrl,
                                       img_name: file.name,
                                     } as any;
-
-                                    console.log('🔄 批量更新图片组件:', {
-                                      componentId: (updatedComponent as any).id,
-                                      img_url: dataUrl.substring(0, 50) + '...',
-                                      img_name: file.name,
-                                      oldImgUrl:
-                                        imageComponent.img_url?.substring(
-                                          0,
-                                          50,
-                                        ) + '...',
-                                      oldImgName: imageComponent.img_name,
-                                    });
 
                                     onUpdateComponent(updatedComponent);
 
@@ -4781,28 +4693,12 @@ export const PropertyPanel: React.FC<{
     const cardLink = (cardData as any)?.dsl?.card_link || {};
     const multiUrl = cardLink.multi_url || {};
 
-    console.log('🔗 卡片链接配置渲染:', {
-      cardData: cardData,
-      cardLink: cardLink,
-      multiUrl: multiUrl,
-      hasCardData: !!cardData,
-    });
-
     // 更新卡片链接数据的函数
     const updateCardLink = (field: string, value: string) => {
       if (!cardData) {
         console.warn('⚠️ cardData不存在，无法更新卡片链接');
         return;
       }
-
-      console.log('🔄 更新卡片链接:', {
-        field,
-        value,
-        oldValue: multiUrl[field],
-        currentCardLink: cardLink,
-        currentMultiUrl: multiUrl,
-      });
-
       const updatedCardData = {
         ...cardData,
         dsl: {
@@ -4816,13 +4712,6 @@ export const PropertyPanel: React.FC<{
           },
         },
       };
-
-      console.log('📝 更新后的卡片数据:', {
-        field,
-        value,
-        updatedCardLink: updatedCardData.dsl.card_link,
-        updatedMultiUrl: updatedCardData.dsl.card_link.multi_url,
-      });
 
       onUpdateCard({ cardData: updatedCardData });
     };
