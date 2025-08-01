@@ -638,7 +638,15 @@ const ContainerSortableItem: React.FC<{
   drag(drop(ref));
 
   const handleContainerSortableClick = (e: React.MouseEvent) => {
-    // 阻止事件冒泡到容器，避免触发容器选中
+    // 对于按钮组件，不阻止事件，让它能够正确处理选中
+    const isButtonComponent = component.tag === 'button';
+
+    if (isButtonComponent) {
+      // 按钮组件不阻止事件，让它能够正确处理选中
+      return;
+    }
+
+    // 对于其他组件，阻止事件冒泡到容器，避免触发容器选中
     e.stopPropagation();
     e.preventDefault();
   };
@@ -1129,8 +1137,12 @@ const DraggableWrapper: React.FC<{
     const target = e.target as HTMLElement;
     const currentTarget = e.currentTarget as HTMLElement;
 
-    // 如果点击的是子组件（有 data-component-wrapper 属性），不处理包装器的选中
+    // 对于按钮组件，允许点击选中，即使有子组件的 data-component-wrapper 属性
+    const isButtonComponent = component.tag === 'button';
+
+    // 如果点击的是子组件（有 data-component-wrapper 属性），且不是按钮组件，不处理包装器的选中
     if (
+      !isButtonComponent &&
       target.closest('[data-component-wrapper]') &&
       target !== currentTarget
     ) {
@@ -1141,13 +1153,6 @@ const DraggableWrapper: React.FC<{
     // 阻止事件冒泡，防止触发父级选中
     e.stopPropagation();
     e.preventDefault();
-
-    // console.log('🎯 DraggableWrapper 组件被点击:', {
-    //   componentId: component.id,
-    //   componentTag: component.tag,
-    //   path,
-    //   isChildComponent,
-    // });
 
     // 处理组件选中
     onSelect?.(component, path);
@@ -2015,19 +2020,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         e.stopPropagation();
         e.preventDefault();
 
-        // 确保点击的是组件包装器本身，而不是其子元素
-        const target = e.target as HTMLElement;
-        const currentTarget = e.currentTarget as HTMLElement;
-
-        // 检查点击目标是否是组件包装器本身
-        if (
-          target === currentTarget ||
-          target.closest('[data-component-wrapper]') === currentTarget
-        ) {
-          // 直接处理组件选中，不使用setTimeout
-          onSelect?.(element, childPath);
-          onCanvasFocus?.();
-        }
+        // 简化选中逻辑，直接处理组件选中
+        onSelect?.(element, childPath);
+        onCanvasFocus?.();
       };
 
       const handleDelete = () => {
@@ -2064,6 +2059,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             />
           );
         } else {
+          // 对于按钮组件，启用拖拽包装以确保选中功能正常
+          const shouldEnableDrag = element.tag === 'button';
+
           return (
             <ComponentRendererCore
               component={element}
@@ -2074,7 +2072,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               path={childPath}
               index={elementIndex}
               containerPath={basePath}
-              enableDrag={false} // 禁用内部拖拽，避免冲突
+              enableDrag={shouldEnableDrag} // 按钮组件启用拖拽包装
               enableSort={false} // 禁用内部排序，避免冲突
               onSelect={onSelect}
               selectedPath={selectedPath}
@@ -3048,6 +3046,27 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       // 检查当前组件是否被选中
       const isCurrentSelected = isSamePath(selectedPath || null, path);
 
+      // 获取按钮颜色样式
+      const getButtonStyle = (customColor?: string) => {
+        const baseStyle = {
+          border: '1px solid #1890ff',
+          backgroundColor: '#1890ff',
+          color: '#ffffff',
+        };
+
+        // 如果有自定义颜色，覆盖默认颜色
+        if (customColor) {
+          return {
+            ...baseStyle,
+            color: customColor,
+          };
+        }
+
+        return baseStyle;
+      };
+
+      const buttonStyle = getButtonStyle((comp as any).style?.color);
+
       const buttonContent = (
         <div
           style={{
@@ -3080,6 +3099,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               borderRadius: '6px',
               fontSize: '14px',
               fontWeight: 500,
+              ...buttonStyle,
             }}
             disabled={isPreview}
           >
@@ -3099,6 +3119,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           onSelect={onSelect}
           selectedPath={selectedPath}
           onCanvasFocus={onCanvasFocus}
+          onClearSelection={onClearSelection}
         >
           {buttonContent}
         </DraggableWrapper>

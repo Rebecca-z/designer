@@ -608,6 +608,9 @@ export const createDefaultComponent = (type: string): ComponentType => {
                       },
                     },
                     form_action_type: 'submit',
+                    style: {
+                      color: '#1890ff', // 默认蓝色
+                    },
                     behaviors: [
                       {
                         type: 'callback',
@@ -629,7 +632,10 @@ export const createDefaultComponent = (type: string): ComponentType => {
                         'en-US': 'Cancel',
                       },
                     },
-                    form_action_type: 'cancel',
+                    form_action_type: 'reset',
+                    style: {
+                      color: '#000000', // 默认黑色
+                    },
                     behaviors: [
                       {
                         type: 'callback',

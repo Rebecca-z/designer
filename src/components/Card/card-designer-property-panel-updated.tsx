@@ -224,7 +224,7 @@ const getComponentRealPath = (
 
   // 检查是否是表单内的组件路径：['dsl', 'body', 'elements', formIndex, 'elements', componentIndex]
   if (
-    selectedPath.length >= 6 &&
+    selectedPath.length === 6 &&
     selectedPath[0] === 'dsl' &&
     selectedPath[1] === 'body' &&
     selectedPath[2] === 'elements' &&
@@ -239,18 +239,13 @@ const getComponentRealPath = (
       const component = formElements[componentIndex];
 
       if (component) {
-        // console.log('📋 表单内组件:', {
-        //   componentId: component.id,
-        //   componentTag: component.tag,
-        //   formIndex,
-        //   componentIndex,
-        //   selectedPath,
-        //   realPath: selectedPath,
-        //   formComponentId: formComponent.id,
-        //   formComponentTag: formComponent.tag,
-        //   formElementsLength: formElements.length,
-        //   targetComponent: component,
-        // });
+        console.log('📋 路径命中 - 表单内组件:', {
+          selectedPath,
+          componentTag: component.tag,
+          componentId: component.id,
+          formIndex,
+          componentIndex,
+        });
         return { component, realPath: selectedPath };
       } else {
         console.warn('⚠️ 表单内组件索引无效:', {
@@ -258,6 +253,72 @@ const getComponentRealPath = (
           componentIndex,
           formElementsLength: formElements.length,
           formComponent: formComponent,
+        });
+      }
+    }
+  }
+
+  // 检查是否是表单内分栏容器内的组件路径：['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', componentIndex]
+  if (
+    selectedPath.length === 10 &&
+    selectedPath[0] === 'dsl' &&
+    selectedPath[1] === 'body' &&
+    selectedPath[2] === 'elements' &&
+    selectedPath[4] === 'elements' &&
+    selectedPath[6] === 'columns' &&
+    selectedPath[8] === 'elements'
+  ) {
+    const formIndex = selectedPath[3] as number;
+    const columnSetIndex = selectedPath[5] as number;
+    const columnIndex = selectedPath[7] as number;
+    const componentIndex = selectedPath[9] as number;
+    const formComponent = data.dsl.body.elements[formIndex];
+
+    if (formComponent && formComponent.tag === 'form') {
+      const formElements = (formComponent as any).elements || [];
+      const columnSetComponent = formElements[columnSetIndex];
+
+      if (columnSetComponent && columnSetComponent.tag === 'column_set') {
+        const columns = (columnSetComponent as any).columns || [];
+        const column = columns[columnIndex];
+
+        if (column && column.elements) {
+          const component = column.elements[componentIndex];
+
+          if (component) {
+            console.log('🎯 表单内分栏容器内的组件:', {
+              componentId: component.id,
+              componentTag: component.tag,
+              formIndex,
+              columnSetIndex,
+              columnIndex,
+              componentIndex,
+              selectedPath,
+              realPath: selectedPath,
+            });
+            return { component, realPath: selectedPath };
+          } else {
+            console.warn('⚠️ 表单内分栏容器内的组件索引无效:', {
+              formIndex,
+              columnSetIndex,
+              columnIndex,
+              componentIndex,
+              columnElementsLength: column.elements?.length || 0,
+            });
+          }
+        } else {
+          console.warn('⚠️ 表单内分栏容器的列无效:', {
+            formIndex,
+            columnSetIndex,
+            columnIndex,
+            columnsLength: columns.length,
+          });
+        }
+      } else {
+        console.warn('⚠️ 表单内分栏容器无效:', {
+          formIndex,
+          columnSetIndex,
+          columnSetComponent,
         });
       }
     }
@@ -287,16 +348,13 @@ const getComponentRealPath = (
           ...column,
         };
 
-        // console.log('📐 根级别分栏列选中:', {
-        //   componentId: columnComponent.id,
-        //   componentTag: columnComponent.tag,
-        //   columnSetIndex,
-        //   columnIndex,
-        //   selectedPath,
-        //   realPath: selectedPath,
-        //   columnSetComponentId: columnSetComponent.id,
-        //   columnData: column,
-        // });
+        console.log('📐 路径命中 - 根级别分栏列选中:', {
+          selectedPath,
+          componentTag: columnComponent.tag,
+          componentId: columnComponent.id,
+          columnSetIndex,
+          columnIndex,
+        });
         return { component: columnComponent, realPath: selectedPath };
       }
     }
@@ -332,19 +390,59 @@ const getComponentRealPath = (
             ...column,
           };
 
-          // console.log('📐 表单内分栏列选中:', {
-          //   componentId: columnComponent.id,
-          //   componentTag: columnComponent.tag,
-          //   formIndex,
-          //   columnSetIndex,
-          //   columnIndex,
-          //   selectedPath,
-          //   realPath: selectedPath,
-          //   formComponentId: formComponent.id,
-          //   columnSetComponentId: columnSetComponent.id,
-          //   columnData: column,
-          // });
+          console.log('📐 路径命中 - 表单内分栏列选中:', {
+            selectedPath,
+            componentTag: columnComponent.tag,
+            componentId: columnComponent.id,
+            formIndex,
+            columnSetIndex,
+            columnIndex,
+          });
           return { component: columnComponent, realPath: selectedPath };
+        }
+      }
+    }
+  }
+
+  // 检查是否是表单内分栏内的组件路径：['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', componentIndex]
+  if (
+    selectedPath.length === 10 &&
+    selectedPath[0] === 'dsl' &&
+    selectedPath[1] === 'body' &&
+    selectedPath[2] === 'elements' &&
+    selectedPath[4] === 'elements' &&
+    selectedPath[6] === 'columns' &&
+    selectedPath[8] === 'elements'
+  ) {
+    const formIndex = selectedPath[3] as number;
+    const columnSetIndex = selectedPath[5] as number;
+    const columnIndex = selectedPath[7] as number;
+    const componentIndex = selectedPath[9] as number;
+
+    const formComponent = data.dsl.body.elements[formIndex];
+    if (formComponent && formComponent.tag === 'form') {
+      const formElements = (formComponent as any).elements || [];
+      const columnSetComponent = formElements[columnSetIndex];
+
+      if (columnSetComponent && columnSetComponent.tag === 'column_set') {
+        const columns = (columnSetComponent as any).columns || [];
+        const column = columns[columnIndex];
+
+        if (column && column.elements) {
+          const component = column.elements[componentIndex];
+
+          if (component) {
+            console.log('🎯 路径命中 - 表单内分栏内的组件:', {
+              selectedPath,
+              componentTag: component.tag,
+              componentId: component.id,
+              formIndex,
+              columnSetIndex,
+              columnIndex,
+              componentIndex,
+            });
+            return { component, realPath: selectedPath };
+          }
         }
       }
     }
@@ -382,51 +480,6 @@ const getComponentRealPath = (
           //   realPath: selectedPath,
           // });
           return { component, realPath: selectedPath };
-        }
-      }
-    }
-  }
-
-  // 检查是否是表单内分栏内的组件路径：['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', componentIndex]
-  if (
-    selectedPath.length >= 10 &&
-    selectedPath[0] === 'dsl' &&
-    selectedPath[1] === 'body' &&
-    selectedPath[2] === 'elements' &&
-    selectedPath[4] === 'elements' &&
-    selectedPath[6] === 'columns' &&
-    selectedPath[8] === 'elements'
-  ) {
-    const formIndex = selectedPath[3] as number;
-    const columnSetIndex = selectedPath[5] as number;
-    const columnIndex = selectedPath[7] as number;
-    const componentIndex = selectedPath[9] as number;
-
-    const formComponent = data.dsl.body.elements[formIndex];
-    if (formComponent && formComponent.tag === 'form') {
-      const formElements = (formComponent as any).elements || [];
-      const columnSetComponent = formElements[columnSetIndex];
-
-      if (columnSetComponent && columnSetComponent.tag === 'column_set') {
-        const columns = (columnSetComponent as any).columns || [];
-        const column = columns[columnIndex];
-
-        if (column && column.elements) {
-          const component = column.elements[componentIndex];
-
-          if (component) {
-            // console.log('📐 表单内分栏内组件:', {
-            //   componentId: component.id,
-            //   componentTag: component.tag,
-            //   formIndex,
-            //   columnSetIndex,
-            //   columnIndex,
-            //   componentIndex,
-            //   selectedPath,
-            //   realPath: selectedPath,
-            // });
-            return { component, realPath: selectedPath };
-          }
         }
       }
     }
@@ -1951,6 +2004,199 @@ export const PropertyPanel: React.FC<{
     const isColumnSetComponent =
       currentComponent && currentComponent.tag === 'column_set';
 
+    // 检查是否选中了按钮组件 - 使用currentComponent而不是selectedComponent
+    const isButtonComponent =
+      currentComponent && currentComponent.tag === 'button';
+
+    console.log('🔍 属性面板组件类型检查:', {
+      selectedPath,
+      currentComponentTag: currentComponent?.tag,
+      currentComponentId: currentComponent?.id,
+      isButtonComponent,
+      isColumnSetComponent,
+    });
+
+    // 如果选中了按钮组件，显示按钮编辑界面
+    if (isButtonComponent) {
+      return (
+        <div style={{ padding: '16px' }}>
+          <div
+            style={{
+              marginBottom: '16px',
+              padding: '12px',
+              backgroundColor: '#f0f9ff',
+              border: '1px solid #bae6fd',
+              borderRadius: '6px',
+            }}
+          >
+            <Text style={{ fontSize: '12px', color: '#0369a1' }}>
+              🎯 当前选中：按钮组件
+            </Text>
+          </div>
+          <Collapse
+            defaultActiveKey={['content', 'style']}
+            ghost
+            items={[
+              {
+                key: 'content',
+                label: '📝 内容设置',
+                children: (
+                  <Form form={form} layout="vertical">
+                    <Form.Item
+                      label="按钮文案"
+                      help="设置按钮显示的文本内容，最多8个字符"
+                    >
+                      <Input
+                        value={
+                          (currentComponent as any).text?.content || '按钮'
+                        }
+                        onChange={(e) => {
+                          const newText = {
+                            content: e.target.value,
+                            i18n_content: {
+                              'en-US': e.target.value || 'Button',
+                            },
+                          };
+                          handleValueChange('text', newText);
+                        }}
+                        placeholder="请输入按钮文案"
+                        maxLength={8}
+                        showCount
+                      />
+                    </Form.Item>
+                  </Form>
+                ),
+              },
+              {
+                key: 'style',
+                label: '🎨 样式设置',
+                children: (
+                  <Form form={form} layout="vertical">
+                    <Form.Item label="按钮颜色" help="选择按钮的颜色主题">
+                      <Select
+                        value={
+                          (currentComponent as any).style?.color || '#1890ff'
+                        }
+                        onChange={(value) => {
+                          // 更新按钮样式
+                          const updatedComponent = {
+                            ...currentComponent,
+                            style: {
+                              ...((currentComponent as any).style || {}),
+                              color: value,
+                            },
+                          };
+                          onUpdateComponent(updatedComponent);
+                        }}
+                        placeholder="请选择按钮颜色"
+                      >
+                        <Option value="#000000" label="black">
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: '16px',
+                                  height: '16px',
+                                  backgroundColor: '#ffffff',
+                                  borderRadius: '3px',
+                                  marginRight: '8px',
+                                  border: '1px solid #d9d9d9',
+                                }}
+                              ></div>
+                              <span>黑色</span>
+                            </div>
+                            {(currentComponent as any).style?.color ===
+                              '#000000' && (
+                              <span style={{ color: '#52c41a' }}>✅</span>
+                            )}
+                          </div>
+                        </Option>
+                        <Option value="#1890ff" label="blue">
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: '16px',
+                                  height: '16px',
+                                  backgroundColor: '#1890ff',
+                                  borderRadius: '3px',
+                                  marginRight: '8px',
+                                  border: '1px solid #d9d9d9',
+                                }}
+                              ></div>
+                              <span>蓝色</span>
+                            </div>
+                            {(currentComponent as any).style?.color ===
+                              '#1890ff' && (
+                              <span style={{ color: '#52c41a' }}>✅</span>
+                            )}
+                          </div>
+                        </Option>
+                        <Option value="#ff4d4f" label="red">
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: '16px',
+                                  height: '16px',
+                                  backgroundColor: '#ff4d4f',
+                                  borderRadius: '3px',
+                                  marginRight: '8px',
+                                  border: '1px solid #d9d9d9',
+                                }}
+                              ></div>
+                              <span>红色</span>
+                            </div>
+                            {(currentComponent as any).style?.color ===
+                              '#ff4d4f' && (
+                              <span style={{ color: '#52c41a' }}>✅</span>
+                            )}
+                          </div>
+                        </Option>
+                      </Select>
+                    </Form.Item>
+                  </Form>
+                ),
+              },
+            ]}
+          />
+        </div>
+      );
+    }
+
     // 如果选中了分栏组件，显示分栏编辑界面
     if (isColumnSetComponent) {
       const columnSetComp = currentComponent as any;
@@ -2015,7 +2261,7 @@ export const PropertyPanel: React.FC<{
         }
         return column.elements.some(
           (element: any) =>
-            element.tag === 'button' && element.form_action_type === 'cancel',
+            element.tag === 'button' && element.form_action_type === 'reset',
         );
       };
 

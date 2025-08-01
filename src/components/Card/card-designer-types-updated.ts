@@ -109,6 +109,10 @@ export interface ButtonComponent extends ComponentBase {
   size?: 'small' | 'middle' | 'large';
   danger?: boolean;
   form_action_type?: 'submit' | 'reset';
+  style?: {
+    color?: string;
+    [key: string]: any;
+  };
   behaviors?: Array<{
     type: 'open_url' | 'callback';
     open_url?: {

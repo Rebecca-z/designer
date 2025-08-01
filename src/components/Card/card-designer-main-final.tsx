@@ -274,6 +274,38 @@ const CardDesigner: React.FC = () => {
           }
         }
       }
+    } else if (
+      path.length === 10 &&
+      path[4] === 'elements' &&
+      path[6] === 'columns' &&
+      path[8] === 'elements'
+    ) {
+      // 表单内分栏容器内的组件: ['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', componentIndex]
+      const formIndex = path[3] as number;
+      const columnSetIndex = path[5] as number;
+      const columnIndex = path[7] as number;
+      const componentIndex = path[9] as number;
+      const formComponent = data.dsl.body.elements[formIndex];
+
+      if (
+        formComponent &&
+        formComponent.tag === 'form' &&
+        (formComponent as any).elements
+      ) {
+        const columnSetComponent = (formComponent as any).elements[
+          columnSetIndex
+        ];
+        if (
+          columnSetComponent &&
+          columnSetComponent.tag === 'column_set' &&
+          (columnSetComponent as any).columns
+        ) {
+          const column = (columnSetComponent as any).columns[columnIndex];
+          if (column && column.elements) {
+            return column.elements[componentIndex] || null;
+          }
+        }
+      }
     }
 
     return null;
@@ -490,7 +522,7 @@ const CardDesigner: React.FC = () => {
         const targetColumn = columnSetComponent.columns[columnIndex];
         const hasCancelButton = targetColumn?.elements?.some(
           (element: any) =>
-            element.tag === 'button' && element.form_action_type === 'cancel',
+            element.tag === 'button' && element.form_action_type === 'reset',
         );
 
         if (hasCancelButton) {
@@ -565,7 +597,7 @@ const CardDesigner: React.FC = () => {
           const targetColumn = columnSetComponent.columns[columnIndex];
           const hasCancelButton = targetColumn?.elements?.some(
             (element: any) =>
-              element.tag === 'button' && element.form_action_type === 'cancel',
+              element.tag === 'button' && element.form_action_type === 'reset',
           );
 
           if (hasCancelButton) {
@@ -813,6 +845,44 @@ const CardDesigner: React.FC = () => {
             // });
             // 更新整个分栏容器
             formElements[columnSetIndex] = updatedComponent;
+          }
+        }
+      }
+    } else if (
+      path.length === 10 &&
+      path[4] === 'elements' &&
+      path[6] === 'columns' &&
+      path[8] === 'elements'
+    ) {
+      // 表单内分栏容器内的组件: ['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', componentIndex]
+      const formIndex = path[3] as number;
+      const columnSetIndex = path[5] as number;
+      const columnIndex = path[7] as number;
+      const componentIndex = path[9] as number;
+      const formComponent = newData.dsl.body.elements[formIndex];
+
+      if (formComponent && formComponent.tag === 'form') {
+        const formElements = (formComponent as any).elements || [];
+        const columnSetComponent = formElements[columnSetIndex];
+
+        if (columnSetComponent && columnSetComponent.tag === 'column_set') {
+          if (!columnSetComponent.columns) {
+            columnSetComponent.columns = [];
+          }
+          const column = columnSetComponent.columns[columnIndex];
+          if (column) {
+            if (!column.elements) {
+              column.elements = [];
+            }
+            column.elements[componentIndex] = updatedComponent;
+            console.log('🎯 更新表单内分栏容器内的组件:', {
+              formIndex,
+              columnSetIndex,
+              columnIndex,
+              componentIndex,
+              componentTag: updatedComponent.tag,
+              componentId: updatedComponent.id,
+            });
           }
         }
       }
