@@ -1269,6 +1269,7 @@ const SmartDropZone: React.FC<{
   ) => void;
   childElements?: ComponentType[];
   onColumnSelect?: () => void; // 新增：分栏列选中回调
+  flexValue?: number; // 新增：flex值
 }> = ({
   targetPath,
   containerType,
@@ -1278,6 +1279,7 @@ const SmartDropZone: React.FC<{
   onComponentMove,
   childElements = [],
   onColumnSelect,
+  flexValue,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const [insertPosition, setInsertPosition] = React.useState<
@@ -1661,7 +1663,8 @@ const SmartDropZone: React.FC<{
     borderRadius: '0', // 不要圆角，由外层管理
     position: 'relative',
     transition: 'all 0.15s ease',
-    flex: containerType === 'column' ? 1 : 'none',
+    // 对于分栏列，使用传入的flexValue
+    flex: containerType === 'column' ? flexValue || 1 : 'none',
     // 确保拖拽区域始终可交互，即使有子组件
     pointerEvents: 'auto',
     // 🎯 新增：拖拽悬停时显示蓝色线条指示线
@@ -2366,7 +2369,8 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             transition: 'all 0.2s ease',
             position: 'relative',
             minHeight: '60px',
-            padding: '4px',
+            padding: '0', // 移除padding，避免影响flex布局
+            width: '100%', // 确保容器有明确宽度
           }}
           onClick={(e) => {
             if (e.target === e.currentTarget && onSelect) {
@@ -2379,11 +2383,19 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           <div
             style={{
               display: 'flex',
-              // gap: `${comp.gap || 16}px`,
-              gap: '4px',
+              flexDirection: 'row',
+              flexWrap: 'nowrap',
+              alignItems: 'stretch',
+              gap: '2px', //
               padding: '0', // 移除内边距
               minHeight: '60px',
+              width: '100%',
             }}
+            data-columns-count={columns.length}
+            data-total-width={columns.reduce(
+              (sum: number, col: any) => sum + (col.width || 1),
+              0,
+            )}
           >
             {columns.map((column: any, columnIndex: number) => {
               const columnElements = column.elements || [];
@@ -2401,7 +2413,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
               return (
                 <SmartDropZone
-                  key={`column-dropzone-${columnIndex}`}
+                  key={`column-dropzone-${columnIndex}-${columnWidth}-${totalWidth}`}
                   containerType="column"
                   targetPath={columnPath}
                   onContainerDrop={onContainerDrop}
@@ -2417,10 +2429,11 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                       onSelect(columnComponent, columnSelectionPath);
                     }
                   }}
+                  flexValue={flexValue} // 传递flex值给SmartDropZone
                 >
                   <div
+                    key={`column-${columnIndex}-${columnWidth}-${totalWidth}`}
                     style={{
-                      flex: flexValue,
                       position: 'relative',
                       minHeight: '60px',
                       border: isColumnSelected
@@ -2432,9 +2445,14 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                         : 'transparent',
                       transition: 'all 0.2s ease',
                       cursor: 'pointer',
+                      padding: '8px',
+                      boxSizing: 'border-box',
                     }}
                     className="column-container"
                     data-column-index={columnIndex}
+                    data-flex-value={flexValue}
+                    data-column-width={columnWidth}
+                    data-total-width={totalWidth}
                     onClick={(e) => {
                       e.stopPropagation();
                       if (onSelect) {
@@ -2536,6 +2554,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
       return enableDrag && !isPreview ? (
         <DraggableWrapper
+          key={`column-set-${component.id}-${JSON.stringify(
+            comp.columns?.map((col: any) => col.width),
+          )}`}
           component={component}
           path={path}
           index={index}
@@ -2550,7 +2571,13 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           {columnContent}
         </DraggableWrapper>
       ) : (
-        columnContent
+        <div
+          key={`column-set-${component.id}-${JSON.stringify(
+            comp.columns?.map((col: any) => col.width),
+          )}`}
+        >
+          {columnContent}
+        </div>
       );
     }
 
