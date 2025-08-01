@@ -4,7 +4,6 @@ import React, { useRef } from 'react';
 import {
   CanvasGrid,
   CanvasHeader,
-  CanvasToolbar,
   DeviceIndicator,
 } from './card-designer-canvas-components';
 import ChatInterface from './card-designer-chat-interface';
@@ -251,13 +250,6 @@ const Canvas: React.FC<CanvasProps> = ({
         {/* 画布网格背景 */}
         <CanvasGrid />
       </div>
-
-      {/* 画布工具栏 */}
-      <CanvasToolbar
-        selectedComponent={selectedPath ? {} : null}
-        canvasWidth={canvasWidth}
-        hoveredPath={hoveredPath}
-      />
     </div>
   );
 };

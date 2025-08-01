@@ -4,7 +4,6 @@ import {
   CodeOutlined,
   CopyOutlined,
   EyeOutlined,
-  FolderOpenOutlined,
   ImportOutlined,
   PlusOutlined,
   QuestionCircleOutlined,
@@ -49,7 +48,6 @@ interface ToolbarProps {
 
   // 文件操作
   onSave: () => void;
-  onLoad: () => void;
   onImport: () => void;
   onExport: () => void;
   onPreview: () => void;
@@ -76,7 +74,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
   onCopy,
   onPaste,
   onSave,
-  onLoad,
   onImport,
   onExport,
   onPreview,
@@ -284,13 +281,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
         <Space>
           <Tooltip title="保存 (Ctrl+S)">
             <Button icon={<SaveOutlined />} onClick={onSave} size="small" />
-          </Tooltip>
-          <Tooltip title="加载 (Ctrl+O)">
-            <Button
-              icon={<FolderOpenOutlined />}
-              onClick={onLoad}
-              size="small"
-            />
           </Tooltip>
         </Space>
       </Space>

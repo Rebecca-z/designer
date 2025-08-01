@@ -2008,14 +2008,6 @@ export const PropertyPanel: React.FC<{
     const isButtonComponent =
       currentComponent && currentComponent.tag === 'button';
 
-    console.log('🔍 属性面板组件类型检查:', {
-      selectedPath,
-      currentComponentTag: currentComponent?.tag,
-      currentComponentId: currentComponent?.id,
-      isButtonComponent,
-      isColumnSetComponent,
-    });
-
     // 如果选中了按钮组件，显示按钮编辑界面
     if (isButtonComponent) {
       return (
