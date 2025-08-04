@@ -2213,7 +2213,7 @@ export const PropertyPanel: React.FC<{
             newColumns.push({
               tag: 'column',
               elements: [],
-              width: 1, // 默认宽度为1
+              flex: 1, // 默认flex为1
             });
           }
         } else if (count < columns.length) {
@@ -2285,15 +2285,15 @@ export const PropertyPanel: React.FC<{
         }
 
         // 重新计算剩余列的宽度，保持总宽度不变
-        const totalWidth = newColumns.reduce(
-          (sum: number, col: any) => sum + (col.width || 1),
+        const totalFlex = newColumns.reduce(
+          (sum: number, col: any) => sum + (col.flex || 1),
           0,
         );
 
-        // 如果总宽度为0，给所有列设置默认宽度1
-        if (totalWidth === 0) {
+        // 如果总宽度为0，给所有列设置默认flex为1
+        if (totalFlex === 0) {
           newColumns.forEach((col: any) => {
-            col.width = 1;
+            col.flex = 1;
           });
         }
 
@@ -2305,10 +2305,10 @@ export const PropertyPanel: React.FC<{
       };
 
       // 更新单个列宽的函数
-      const handleColumnWidthChange = (columnIndex: number, width: number) => {
+      const handleColumnWidthChange = (columnIndex: number, flex: number) => {
         const newColumns = columns.map((col: any, index: number) => {
           if (index === columnIndex) {
-            return { ...col, width };
+            return { ...col, flex };
           }
           return col;
         });
@@ -2323,12 +2323,12 @@ export const PropertyPanel: React.FC<{
       // 计算列宽百分比
       const calculateColumnWidths = () => {
         const totalWidth = columns.reduce(
-          (sum: number, col: any) => sum + (col.width || 1),
+          (sum: number, col: any) => sum + (col.flex || 1),
           0,
         );
         return columns.map((col: any) => {
-          const width = col.width || 1;
-          return Math.round((width / totalWidth) * 100);
+          const flex = col.flex || 1;
+          return Math.round((flex / totalWidth) * 100);
         });
       };
 
@@ -2395,7 +2395,7 @@ export const PropertyPanel: React.FC<{
                             }}
                           >
                             <InputNumber
-                              value={column.width || 1}
+                              value={column.flex || 1}
                               onChange={(value) =>
                                 handleColumnWidthChange(index, value || 1)
                               }

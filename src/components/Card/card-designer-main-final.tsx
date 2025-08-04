@@ -543,11 +543,11 @@ const CardDesigner: React.FC = () => {
           newData.dsl.body.elements.splice(columnSetIndex, 1);
           // console.log('🗑️ 分栏列全部删除，删除整个分栏组件');
         } else {
-          // 重新计算剩余列的宽度 - 确保每列都有width属性
+          // 重新计算剩余列的宽度 - 确保每列都有flex属性
           columnSetComponent.columns = columnSetComponent.columns.map(
             (col: any) => ({
               ...col,
-              width: col.width || 1, // 确保每列都有width属性，默认为1
+              flex: col.flex || 1, // 确保每列都有flex属性，默认为1
             }),
           );
 
@@ -619,11 +619,11 @@ const CardDesigner: React.FC = () => {
             formComponent.elements.splice(columnSetIndex, 1);
             // console.log('🗑️ 表单内分栏列全部删除，删除整个分栏组件');
           } else {
-            // 重新计算剩余列的宽度 - 确保每列都有width属性
+            // 重新计算剩余列的宽度 - 确保每列都有flex属性
             columnSetComponent.columns = columnSetComponent.columns.map(
               (col: any) => ({
                 ...col,
-                width: col.width || 1, // 确保每列都有width属性，默认为1
+                flex: col.flex || 1, // 确保每列都有flex属性，默认为1
               }),
             );
 

@@ -2404,16 +2404,16 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               const isColumnSelected = selectedColumnIndex === columnIndex;
 
               // 计算列宽比例
-              const columnWidth = column.width || 1;
-              const totalWidth = columns.reduce(
-                (sum: number, col: any) => sum + (col.width || 1),
+              const columnFlex = column.flex || 1;
+              const totalFlex = columns.reduce(
+                (sum: number, col: any) => sum + (col.flex || 1),
                 0,
               );
-              const flexValue = columnWidth / totalWidth;
+              const flexValue = columnFlex / totalFlex;
 
               return (
                 <SmartDropZone
-                  key={`column-dropzone-${columnIndex}-${columnWidth}-${totalWidth}`}
+                  key={`column-dropzone-${columnIndex}-${columnFlex}-${totalFlex}`}
                   containerType="column"
                   targetPath={columnPath}
                   onContainerDrop={onContainerDrop}
@@ -2432,7 +2432,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                   flexValue={flexValue} // 传递flex值给SmartDropZone
                 >
                   <div
-                    key={`column-${columnIndex}-${columnWidth}-${totalWidth}`}
+                    key={`column-${columnIndex}-${columnFlex}-${totalFlex}`}
                     style={{
                       position: 'relative',
                       minHeight: '60px',
@@ -2451,8 +2451,8 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                     className="column-container"
                     data-column-index={columnIndex}
                     data-flex-value={flexValue}
-                    data-column-width={columnWidth}
-                    data-total-width={totalWidth}
+                    data-column-flex={columnFlex}
+                    data-total-flex={totalFlex}
                     onClick={(e) => {
                       e.stopPropagation();
                       if (onSelect) {

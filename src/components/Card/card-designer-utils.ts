@@ -646,7 +646,7 @@ export const createDefaultComponent = (type: string): ComponentType => {
                     ],
                   },
                 ],
-                width: 1,
+                flex: 1,
               },
             ],
           },
@@ -663,17 +663,17 @@ export const createDefaultComponent = (type: string): ComponentType => {
           {
             tag: 'column',
             elements: [],
-            width: 1, // 默认列宽比例
+            flex: 1, // 默认列宽比例
           },
           {
             tag: 'column',
             elements: [],
-            width: 1, // 默认列宽比例
+            flex: 1, // 默认列宽比例
           },
           {
             tag: 'column',
             elements: [],
-            width: 1, // 默认列宽比例
+            flex: 1, // 默认列宽比例
           },
         ],
       } as ComponentType;
