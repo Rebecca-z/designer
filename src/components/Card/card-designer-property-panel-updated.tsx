@@ -2205,7 +2205,6 @@ export const PropertyPanel: React.FC<{
       // 更新列数的函数
       const handleColumnCountChange = (count: number) => {
         const newColumns = [...columns];
-        const isDefaultColumnSet = columnSetComp.isDefault === true;
 
         if (count > columns.length) {
           // 增加列
@@ -2217,26 +2216,8 @@ export const PropertyPanel: React.FC<{
             });
           }
         } else if (count < columns.length) {
-          // 减少列 - 对于默认分栏容器，保护第一列的按钮
-          if (isDefaultColumnSet && count < 1) {
-            // 不允许减少到少于1列，因为按钮需要保持在第一列
-            console.log('⚠️ 默认分栏容器至少需要1列来容纳按钮');
-            return;
-          }
-
-          // 对于默认分栏容器，只删除非第一列的列
-          if (isDefaultColumnSet) {
-            // 保留第一列，只删除后面的列
-            const firstColumn = newColumns[0];
-            newColumns.splice(1, newColumns.length - count);
-            // 确保第一列存在
-            if (newColumns.length === 0) {
-              newColumns.push(firstColumn);
-            }
-          } else {
-            // 非默认分栏容器，正常删除
-            newColumns.splice(count);
-          }
+          // 减少列
+          newColumns.splice(count);
         }
 
         const updatedComponent = {
@@ -2259,14 +2240,7 @@ export const PropertyPanel: React.FC<{
 
       // 删除单个列的函数
       const handleDeleteColumn = (columnIndex: number) => {
-        const isDefaultColumnSet = columnSetComp.isDefault === true;
         const targetColumn = columns[columnIndex];
-
-        // 对于默认分栏容器，不允许删除第一列
-        if (isDefaultColumnSet && columnIndex === 0) {
-          console.log('⚠️ 默认分栏容器的第一列不能删除，因为包含按钮');
-          return;
-        }
 
         // 检查列中是否包含取消按钮
         if (hasCancelButton(targetColumn)) {
@@ -2431,44 +2405,40 @@ export const PropertyPanel: React.FC<{
                             >
                               {columnWidths[index]}%
                             </Text>
-                            {/* 删除列按钮 - 默认分栏容器的第一列和包含取消按钮的列不显示删除按钮 */}
-                            {!(
-                              columnSetComp.isDefault === true && index === 0
-                            ) &&
-                              !hasCancelButton(column) && (
-                                <Button
-                                  type="text"
-                                  size="small"
-                                  danger
-                                  icon={<DeleteOutlined />}
-                                  onClick={() => handleDeleteColumn(index)}
-                                  style={{
-                                    padding: '4px 8px',
-                                    height: '24px',
-                                    fontSize: '12px',
-                                  }}
-                                  title="删除此列"
-                                />
-                              )}
+                            {/* 删除列按钮 - 包含取消按钮的列不显示删除按钮 */}
+                            {!hasCancelButton(column) && (
+                              <Button
+                                type="text"
+                                size="small"
+                                danger
+                                icon={<DeleteOutlined />}
+                                onClick={() => handleDeleteColumn(index)}
+                                style={{
+                                  padding: '4px 8px',
+                                  height: '24px',
+                                  fontSize: '12px',
+                                }}
+                                title="删除此列"
+                              />
+                            )}
                             {/* 默认分栏容器第一列的保护标识 */}
-                            {columnSetComp.isDefault === true &&
-                              index === 0 && (
-                                <div
-                                  style={{
-                                    padding: '4px 8px',
-                                    height: '24px',
-                                    fontSize: '12px',
-                                    color: '#faad14',
-                                    backgroundColor: '#fff7e6',
-                                    border: '1px solid #ffd591',
-                                    borderRadius: '4px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                  }}
-                                >
-                                  保护
-                                </div>
-                              )}
+                            {false && (
+                              <div
+                                style={{
+                                  padding: '4px 8px',
+                                  height: '24px',
+                                  fontSize: '12px',
+                                  color: '#faad14',
+                                  backgroundColor: '#fff7e6',
+                                  border: '1px solid #ffd591',
+                                  borderRadius: '4px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                }}
+                              >
+                                保护
+                              </div>
+                            )}
                             {/* 包含取消按钮的列的保护标识 */}
                             {hasCancelButton(column) && (
                               <div

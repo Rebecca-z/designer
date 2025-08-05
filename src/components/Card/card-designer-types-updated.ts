@@ -161,8 +161,6 @@ export interface FormComponent extends ComponentBase {
 
 export interface ColumnSetComponent extends ComponentBase {
   tag: 'column_set';
-  gap?: number;
-  isDefault?: boolean; // 标识是否为默认分栏容器，不允许删除
   columns: Array<{
     tag: 'column';
     elements: ComponentType[];

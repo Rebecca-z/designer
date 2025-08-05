@@ -136,6 +136,7 @@ const renderColumnContent = (
 const columnsHtml = (
   comp: any,
   renderFn: (component: ComponentType) => string,
+  verticalSpacing: number = 8,
 ) => {
   const columnsContent = (comp.columns || [])
     .map((col: any, index: number) => renderColumnContent(col, index, renderFn))
@@ -146,7 +147,7 @@ const columnsHtml = (
     border: 2px solid #f0e6ff;
     padding: 16px;
     border-radius: 8px;
-    margin: 16px 0;
+    margin: ${verticalSpacing}px 0;
     background-color: #fafafa;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   ">
@@ -168,7 +169,7 @@ const columnsHtml = (
 `;
 };
 
-const imagesHtml = (comp: any) => {
+const imagesHtml = (comp: any, verticalSpacing: number = 8) => {
   const imagesHtml = Array.from(
     {
       length: Math.max(
@@ -210,7 +211,7 @@ const imagesHtml = (comp: any) => {
 
   return `
     <div style="
-      margin: 16px 0;
+      margin: ${verticalSpacing}px 0;
       padding: 16px;
       background-color: #f8f9fa;
       border: 1px solid #e9ecef;
@@ -330,7 +331,10 @@ const getTitleThemeStyle = (theme: string) => {
 };
 
 // 组件渲染工具函数
-export const renderComponentToHTML = (component: ComponentType): string => {
+export const renderComponentToHTML = (
+  component: ComponentType,
+  verticalSpacing: number = 8,
+): string => {
   const comp = component as any;
 
   switch (component.tag) {
@@ -345,7 +349,7 @@ export const renderComponentToHTML = (component: ComponentType): string => {
           padding: 24px 16px;
           border-radius: 8px;
           text-align: center;
-          margin: 0 0 16px 0;
+          margin: 0 0 ${verticalSpacing}px 0;
           box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         ">
           <h1 style="
@@ -373,7 +377,7 @@ export const renderComponentToHTML = (component: ComponentType): string => {
           border: 2px solid #e6f7ff; 
           padding: 20px; 
           border-radius: 8px; 
-          margin: 16px 0;
+          margin: ${verticalSpacing}px 0;
           background-color: #f6ffed;
           box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         ">
@@ -396,12 +400,12 @@ export const renderComponentToHTML = (component: ComponentType): string => {
       `;
 
     case 'column_set':
-      return columnsHtml(comp, renderComponentToHTML);
+      return columnsHtml(comp, renderComponentToHTML, verticalSpacing);
 
     case 'plain_text':
       return `
         <div style="
-          margin: 12px 0;
+          margin: ${verticalSpacing}px 0;
           background-color: white;
           border-radius: 6px;
           border: 1px solid #f0f0f0;
@@ -416,7 +420,7 @@ export const renderComponentToHTML = (component: ComponentType): string => {
     case 'rich_text':
       return `
         <div style="
-          margin: 12px 0;
+          margin: ${verticalSpacing}px 0;
           padding: 16px;
           background-color: #fff7e6;
           border: 1px solid #ffd591;
@@ -447,7 +451,7 @@ export const renderComponentToHTML = (component: ComponentType): string => {
 
     case 'hr':
       return `
-        <div style="margin: 20px 0;">
+        <div style="margin: ${verticalSpacing}px 0;">
           <hr style="
             border: none; 
             border-top: 2px solid #d9d9d9; 
@@ -460,7 +464,7 @@ export const renderComponentToHTML = (component: ComponentType): string => {
     case 'img':
       return `
         <div style="
-          margin: 16px 0;
+          margin: ${verticalSpacing}px 0;
           text-align: center;
           padding: 16px;
           background-color: #f8f9fa;
@@ -500,11 +504,11 @@ export const renderComponentToHTML = (component: ComponentType): string => {
       `;
 
     case 'img_combination':
-      return imagesHtml(comp);
+      return imagesHtml(comp, verticalSpacing);
 
     case 'input':
       return `
-        <div style="margin: 12px 0;">
+        <div style="margin: ${verticalSpacing}px 0;">
           <label style="
             display: block;
             margin-bottom: 6px;
@@ -554,7 +558,7 @@ export const renderComponentToHTML = (component: ComponentType): string => {
           text-align: center;
           color: #ff4d4f;
           background-color: #fff2f0;
-          margin: 8px 0;
+          margin: ${verticalSpacing}px 0;
           font-size: 14px;
         ">
           ❓ 未知组件类型: ${(component as any).tag || 'unknown'}
@@ -589,8 +593,6 @@ export const createDefaultComponent = (type: string): ComponentType => {
           {
             tag: 'column_set',
             id: generateId(),
-            gap: 8,
-            isDefault: true, // 标识这是默认分栏容器，不允许删除
             columns: [
               {
                 tag: 'column',
@@ -658,7 +660,6 @@ export const createDefaultComponent = (type: string): ComponentType => {
       return {
         tag: 'column_set',
         id: generateId(),
-        gap: 8, // 默认列间距
         columns: [
           {
             tag: 'column',
@@ -1996,7 +1997,10 @@ export const generatePreviewHTML = (data: any): string => {
   if (isNewFormat) {
     // 新格式卡片数据处理
     const elements = data.dsl.body.elements || [];
-    bodyContent = elements.map(renderComponentToHTML).join('');
+    const verticalSpacing = data.dsl.body.vertical_spacing || 8;
+    bodyContent = elements
+      .map((element: any) => renderComponentToHTML(element, verticalSpacing))
+      .join('');
 
     // 从header获取主题信息
     headerInfo = data.dsl.header;
@@ -2005,19 +2009,22 @@ export const generatePreviewHTML = (data: any): string => {
       totalComponents: elements.length,
       formCount: elements.filter((el: any) => el.tag === 'form').length,
       columnCount: elements.filter((el: any) => el.tag === 'column_set').length,
-      verticalSpacing: data.dsl.body.vertical_spacing || 8,
+      verticalSpacing: verticalSpacing,
     };
     direction = data.dsl.body.direction || 'vertical';
   } else {
     // 旧格式数据处理（向后兼容）
     const elements = data.elements || [];
-    bodyContent = elements.map(renderComponentToHTML).join('');
+    const verticalSpacing = data.vertical_spacing || 8;
+    bodyContent = elements
+      .map((element: any) => renderComponentToHTML(element, verticalSpacing))
+      .join('');
 
     stats = {
       totalComponents: elements.length,
       formCount: elements.filter((el: any) => el.tag === 'form').length,
       columnCount: elements.filter((el: any) => el.tag === 'column_set').length,
-      verticalSpacing: data.vertical_spacing || 8,
+      verticalSpacing: verticalSpacing,
     };
     direction = data.direction || 'vertical';
   }

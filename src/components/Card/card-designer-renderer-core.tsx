@@ -59,6 +59,8 @@ interface ComponentRendererCoreProps {
   };
   // 新增：变量数据，用于变量替换
   variables?: VariableItem[];
+  // 新增：垂直间距
+  verticalSpacing?: number;
 }
 
 // 检查组件是否为容器类型
@@ -1962,6 +1964,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
   onClearSelection,
   headerData,
   variables = [],
+  verticalSpacing = 8,
 }) => {
   // 安全检查
   if (!component || !component.tag) {
@@ -2096,7 +2099,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         border: '2px solid transparent', // 始终使用透明边框，避免双边框
         borderRadius: '4px',
         padding: '4px',
-        margin: '2px 0',
+        margin: `${verticalSpacing}px 0`,
         backgroundColor: 'transparent', // 始终使用透明背景
         cursor: 'pointer',
         transition: 'all 0.2s ease',
@@ -2114,7 +2117,8 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         // 在分栏列或表单容器中，子组件不显示 hover 边框效果
         wrapperStyle.border = 'none';
         wrapperStyle.padding = '2px';
-        wrapperStyle.margin = '1px 0';
+        // 在预览模式下保持垂直间距，在编辑模式下使用较小的间距
+        wrapperStyle.margin = isPreview ? `${verticalSpacing}px 0` : '1px 0';
       }
 
       // ✅ 修复：普通组件在任何情况下都不显示 hover 边框（待激活态）
@@ -2124,13 +2128,13 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         // 普通组件不显示 hover 边框效果
         wrapperStyle.border = 'none';
         wrapperStyle.padding = '2px';
-        wrapperStyle.margin = '1px 0';
+        // 在预览模式下保持垂直间距，在编辑模式下使用较小的间距
+        wrapperStyle.margin = isPreview ? `${verticalSpacing}px 0` : '1px 0';
       }
 
       const showActions =
-        (element.tag !== 'button' ||
-          (element as any).form_action_type !== 'submit') &&
-        !(element.tag === 'column_set' && (element as any).isDefault);
+        element.tag !== 'button' ||
+        (element as any).form_action_type !== 'submit';
 
       const selectableWrapper = (
         <div
@@ -2163,12 +2167,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                           },
                         ]
                       : []),
-                    // 提交按钮和默认分栏容器不显示删除选项
-                    ...((element.tag !== 'button' ||
-                      (element as any).form_action_type !== 'submit') &&
-                    !(
-                      element.tag === 'column_set' && (element as any).isDefault
-                    )
+                    // 提交按钮不显示删除选项
+                    ...(element.tag !== 'button' ||
+                    (element as any).form_action_type !== 'submit'
                       ? [
                           {
                             key: 'delete',
@@ -2238,7 +2239,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         return (
           <div
             key={`${element.id}-${elementIndex}-${childPath.join('-')}`}
-            // style={{ marginBottom: '8px' }}
+            style={{
+              marginBottom: isPreview ? `${verticalSpacing}px` : '8px',
+            }}
           >
             {selectableWrapper}
           </div>
@@ -2347,14 +2350,11 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         selectedColumnIndex = selectedPath[7] as number;
       }
 
-      // 检查是否为默认分栏容器
-      const isDefaultColumnSet = comp.isDefault === true;
-
       const columnContent = (
         <div
           style={{
             border:
-              isCurrentSelected && !isPreview && isDefaultColumnSet
+              isCurrentSelected && !isPreview
                 ? '2px solid #1890ff'
                 : '2px solid transparent',
             borderRadius: '4px',

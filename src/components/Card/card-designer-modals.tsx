@@ -402,6 +402,9 @@ const Modals: React.FC<ModalsProps> = ({
                 ? data.dsl.body.elements
                 : data.elements || [];
               const headerData = isNewFormat ? data.dsl.header : null;
+              const verticalSpacing = isNewFormat
+                ? data.dsl.body.vertical_spacing || 8
+                : data.vertical_spacing || 8;
 
               // 检查header数据的有效性
               const hasValidTitle =
@@ -458,7 +461,9 @@ const Modals: React.FC<ModalsProps> = ({
                         <div
                           style={{
                             marginBottom:
-                              component.tag === 'title' ? '16px' : '0',
+                              component.tag === 'title'
+                                ? '16px'
+                                : `${verticalSpacing}px`,
                           }}
                         >
                           <ComponentRenderer
@@ -475,6 +480,7 @@ const Modals: React.FC<ModalsProps> = ({
                             hoveredPath={null}
                             isHovered={false}
                             headerData={headerData}
+                            verticalSpacing={verticalSpacing}
                           />
                         </div>
                       </ErrorBoundary>

@@ -49,6 +49,8 @@ interface ComponentRendererProps {
   };
   // 新增：变量数据
   variables?: VariableItem[];
+  // 新增：垂直间距
+  verticalSpacing?: number;
 }
 
 // 检查组件是否为容器类型
@@ -225,6 +227,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
   onCanvasFocus,
   headerData,
   variables = [],
+  verticalSpacing = 8,
 }) => {
   // 安全检查 - 防止组件为 undefined 或 null
   if (!component) {
@@ -504,6 +507,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             onCanvasFocus={onCanvasFocus}
             headerData={headerData}
             variables={variables}
+            verticalSpacing={verticalSpacing}
           />
           {/* 选中状态标签 */}
           {isCurrentSelected && !isPreview && (
@@ -652,6 +656,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
           onCanvasFocus={onCanvasFocus}
           headerData={headerData}
           variables={variables}
+          verticalSpacing={verticalSpacing}
         />
         {/* 组件标签 */}
         {isCurrentSelected && !isPreview && (
