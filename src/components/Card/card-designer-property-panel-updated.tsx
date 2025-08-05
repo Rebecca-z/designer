@@ -2198,7 +2198,7 @@ export const PropertyPanel: React.FC<{
 
     // 新增：如果选中了下拉单选组件，显示下拉单选属性面板
     const isSelectSingleComponent =
-      currentComponent && currentComponent.tag === 'select-single';
+      currentComponent && (currentComponent as any).tag === 'select-single';
     if (isSelectSingleComponent) {
       const options = (currentComponent as any).options || [];
       return (
@@ -2982,7 +2982,7 @@ export const PropertyPanel: React.FC<{
     if (isImgCombinationComponent) {
       const imgCombComponent = currentComponent as any;
 
-      // 混排方式选项，按照新的设计分组
+      // 混排方式选项，按照新的设计分组，包含对应的图标
       const combinationModes = [
         // 双图模式
         {
@@ -2990,6 +2990,33 @@ export const PropertyPanel: React.FC<{
           label: '双图模式',
           description: '左小右大',
           category: 'double',
+          icon: (
+            <div
+              style={{
+                display: 'flex',
+                gap: '2px',
+                height: '20px',
+                alignItems: 'flex-end',
+              }}
+            >
+              <div
+                style={{
+                  width: '8px',
+                  height: '16px',
+                  backgroundColor: '#d9d9d9',
+                  borderRadius: '2px',
+                }}
+              ></div>
+              <div
+                style={{
+                  width: '16px',
+                  height: '16px',
+                  backgroundColor: '#d9d9d9',
+                  borderRadius: '2px',
+                }}
+              ></div>
+            </div>
+          ),
         },
         // 三图模式
         {
@@ -2997,6 +3024,45 @@ export const PropertyPanel: React.FC<{
           label: '三图模式',
           description: '左1右2',
           category: 'triple',
+          icon: (
+            <div
+              style={{
+                display: 'flex',
+                gap: '2px',
+                height: '20px',
+                alignItems: 'flex-end',
+              }}
+            >
+              <div
+                style={{
+                  width: '16px',
+                  height: '16px',
+                  backgroundColor: '#d9d9d9',
+                  borderRadius: '2px',
+                }}
+              ></div>
+              <div
+                style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}
+              >
+                <div
+                  style={{
+                    width: '12px',
+                    height: '7px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+                <div
+                  style={{
+                    width: '12px',
+                    height: '7px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+              </div>
+            </div>
+          ),
         },
         // 等分双列模式
         {
@@ -3004,18 +3070,150 @@ export const PropertyPanel: React.FC<{
           label: '双列-2图',
           description: '1行2列',
           category: 'bisect',
+          icon: (
+            <div style={{ display: 'flex', gap: '2px', height: '20px' }}>
+              <div
+                style={{
+                  width: '16px',
+                  height: '16px',
+                  backgroundColor: '#d9d9d9',
+                  borderRadius: '2px',
+                }}
+              ></div>
+              <div
+                style={{
+                  width: '16px',
+                  height: '16px',
+                  backgroundColor: '#d9d9d9',
+                  borderRadius: '2px',
+                }}
+              ></div>
+            </div>
+          ),
         },
         {
           value: 'bisect_4',
           label: '双列-4图',
           description: '2行2列',
           category: 'bisect',
+          icon: (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '2px',
+                height: '20px',
+              }}
+            >
+              <div style={{ display: 'flex', gap: '2px' }}>
+                <div
+                  style={{
+                    width: '10px',
+                    height: '9px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+                <div
+                  style={{
+                    width: '10px',
+                    height: '9px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+              </div>
+              <div style={{ display: 'flex', gap: '2px' }}>
+                <div
+                  style={{
+                    width: '10px',
+                    height: '9px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+                <div
+                  style={{
+                    width: '10px',
+                    height: '9px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+              </div>
+            </div>
+          ),
         },
         {
           value: 'bisect_6',
           label: '双列-6图',
           description: '3行2列',
           category: 'bisect',
+          icon: (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '2px',
+                height: '20px',
+              }}
+            >
+              <div style={{ display: 'flex', gap: '2px' }}>
+                <div
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+                <div
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+              </div>
+              <div style={{ display: 'flex', gap: '2px' }}>
+                <div
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+                <div
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+              </div>
+              <div style={{ display: 'flex', gap: '2px' }}>
+                <div
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+                <div
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+              </div>
+            </div>
+          ),
         },
         // 等分三列模式
         {
@@ -3023,18 +3221,198 @@ export const PropertyPanel: React.FC<{
           label: '三列-3图',
           description: '1行3列',
           category: 'trisect',
+          icon: (
+            <div style={{ display: 'flex', gap: '2px', height: '20px' }}>
+              <div
+                style={{
+                  width: '6px',
+                  height: '20px',
+                  backgroundColor: '#d9d9d9',
+                  borderRadius: '2px',
+                }}
+              ></div>
+              <div
+                style={{
+                  width: '6px',
+                  height: '20px',
+                  backgroundColor: '#d9d9d9',
+                  borderRadius: '2px',
+                }}
+              ></div>
+              <div
+                style={{
+                  width: '6px',
+                  height: '20px',
+                  backgroundColor: '#d9d9d9',
+                  borderRadius: '2px',
+                }}
+              ></div>
+            </div>
+          ),
         },
         {
           value: 'trisect_6',
           label: '三列-6图',
           description: '2行3列',
           category: 'trisect',
+          icon: (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '2px',
+                height: '20px',
+              }}
+            >
+              <div style={{ display: 'flex', gap: '2px' }}>
+                <div
+                  style={{
+                    width: '6px',
+                    height: '9px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+                <div
+                  style={{
+                    width: '6px',
+                    height: '9px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+                <div
+                  style={{
+                    width: '6px',
+                    height: '9px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+              </div>
+              <div style={{ display: 'flex', gap: '2px' }}>
+                <div
+                  style={{
+                    width: '6px',
+                    height: '9px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+                <div
+                  style={{
+                    width: '6px',
+                    height: '9px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+                <div
+                  style={{
+                    width: '6px',
+                    height: '9px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+              </div>
+            </div>
+          ),
         },
         {
           value: 'trisect_9',
           label: '三列-9图',
           description: '3行3列',
           category: 'trisect',
+          icon: (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '2px',
+                height: '20px',
+              }}
+            >
+              <div style={{ display: 'flex', gap: '2px' }}>
+                <div
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+                <div
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+                <div
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+              </div>
+              <div style={{ display: 'flex', gap: '2px' }}>
+                <div
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+                <div
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+                <div
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+              </div>
+              <div style={{ display: 'flex', gap: '2px' }}>
+                <div
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+                <div
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+                <div
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    backgroundColor: '#d9d9d9',
+                    borderRadius: '2px',
+                  }}
+                ></div>
+              </div>
+            </div>
+          ),
         },
       ];
 
@@ -3060,7 +3438,7 @@ export const PropertyPanel: React.FC<{
               background: '#fff',
               borderRadius: 6,
               boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-              padding: 16,
+              padding: 8,
             }}
           >
             <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>
@@ -3068,21 +3446,11 @@ export const PropertyPanel: React.FC<{
             </div>
             <div>
               <div style={{ marginBottom: '16px' }}>
-                <Text
-                  style={{
-                    fontSize: '12px',
-                    color: '#666',
-                    marginBottom: '8px',
-                    display: 'block',
-                  }}
-                >
-                  选择图片排列方式：
-                </Text>
                 <div
                   style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(4, 1fr)',
-                    gap: '8px',
+                    gap: '4px',
                     marginTop: '8px',
                   }}
                 >
@@ -3095,10 +3463,10 @@ export const PropertyPanel: React.FC<{
                             imgCombComponent.combination_mode,
                             imgCombComponent.img_list?.length || 0,
                           ) === mode.value
-                            ? '2px solid #1890ff'
+                            ? '1px solid #1890ff'
                             : '1px solid #d9d9d9',
                         borderRadius: '4px',
-                        padding: '8px',
+                        padding: '4px',
                         textAlign: 'center',
                         cursor: 'pointer',
                         backgroundColor:
@@ -3107,7 +3475,7 @@ export const PropertyPanel: React.FC<{
                             imgCombComponent.img_list?.length || 0,
                           ) === mode.value
                             ? '#f0f9ff'
-                            : '#fafafa',
+                            : '#ffffff',
                         transition: 'all 0.2s ease',
                       }}
                       onClick={() => {
@@ -3163,23 +3531,19 @@ export const PropertyPanel: React.FC<{
                           ...currentComponent,
                           combination_mode: getStorageCombinationMode(
                             mode.value,
-                          ),
+                          ) as any,
                           img_list: newImageList,
                         };
                         onUpdateComponent(updatedComponent);
                       }}
                     >
-                      <div style={{ fontSize: '12px', fontWeight: 'bold' }}>
-                        {mode.label}
-                      </div>
                       <div
                         style={{
-                          fontSize: '10px',
-                          color: '#666',
-                          marginTop: '4px',
+                          display: 'flex',
+                          justifyContent: 'center',
                         }}
                       >
-                        {mode.description}
+                        {mode.icon}
                       </div>
                     </div>
                   ))}
