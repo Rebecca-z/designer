@@ -2100,7 +2100,7 @@ export const PropertyPanel: React.FC<{
                                 style={{
                                   width: '16px',
                                   height: '16px',
-                                  backgroundColor: '#ffffff',
+                                  backgroundColor: '#1f2329',
                                   borderRadius: '3px',
                                   marginRight: '8px',
                                   border: '1px solid #d9d9d9',

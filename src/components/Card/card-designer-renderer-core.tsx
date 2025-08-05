@@ -3057,11 +3057,11 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
     case 'button': {
       // 检查当前组件是否被选中
       const isCurrentSelected = isSamePath(selectedPath || null, path);
+      const buttonColor = (comp as any).style?.color || '#fff';
 
       // 获取按钮颜色样式
       const getButtonStyle = (customColor?: string) => {
         const baseStyle = {
-          border: '1px solid #1890ff',
           backgroundColor: '#1890ff',
           color: '#ffffff',
         };
@@ -3070,7 +3070,12 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         if (customColor) {
           return {
             ...baseStyle,
-            color: customColor,
+            border: `1px solid ${
+              buttonColor === '#000000' ? '#d0d3d6' : customColor
+            }`,
+            backgroundColor:
+              buttonColor === '#000000' ? '#ffffff' : customColor,
+            color: buttonColor === '#000000' ? '#1f2329' : '#ffffff',
           };
         }
 
@@ -3082,21 +3087,11 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       const buttonContent = (
         <div
           style={{
-            // marginBottom: '12px',
-            border:
-              isCurrentSelected && !isPreview
-                ? '2px solid #1890ff'
-                : '2px solid transparent',
+            width: '100%',
+            border: isCurrentSelected
+              ? '2px solid #1890ff'
+              : '2px solid transparent',
             borderRadius: '6px',
-            // padding: '8px',
-            backgroundColor:
-              isCurrentSelected && !isPreview
-                ? 'rgba(24, 144, 255, 0.05)'
-                : 'transparent',
-            boxShadow:
-              isCurrentSelected && !isPreview
-                ? '0 0 8px rgba(24, 144, 255, 0.3)'
-                : 'none',
             transition: 'all 0.2s ease',
             position: 'relative',
             display: 'inline-block', // 让按钮容器内联显示，支持并排
