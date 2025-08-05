@@ -8,7 +8,6 @@ import {
   PlusOutlined,
   SettingOutlined,
   ThunderboltOutlined,
-  UploadOutlined,
 } from '@ant-design/icons';
 import {
   Button,
@@ -604,24 +603,7 @@ const OutlineTree: React.FC<{
   }, [data.dsl.body.elements]);
 
   const handleSelect = (selectedKeys: React.Key[], info: any) => {
-    // console.log('🌳 大纲树选择事件触发:', {
-    //   selectedKeys,
-    //   nodePath: info.node?.path,
-    //   nodeComponent: info.node?.component,
-    //   nodeKey: info.node?.key,
-    // });
-
     if (info.node?.path) {
-      // console.log('🌳 大纲树选择:', {
-      //   componentId: info.node.component?.id,
-      //   componentTag: info.node.component?.tag,
-      //   path: info.node.path,
-      //   isCard:
-      //     info.node.path.length === 2 &&
-      //     info.node.path[0] === 'dsl' &&
-      //     info.node.path[1] === 'body',
-      // });
-
       // 如果是卡片节点，传递null作为组件，路径为['dsl', 'body']
       if (
         info.node.path.length === 2 &&
@@ -1723,280 +1705,285 @@ export const PropertyPanel: React.FC<{
               🎯 当前选中：标题组件
             </Text>
           </div>
-          <Collapse
-            defaultActiveKey={['content', 'style']}
-            ghost
-            items={[
-              {
-                key: 'content',
-                label: '📝 内容设置',
-                children: (
-                  <Form form={form} layout="vertical">
-                    <Form.Item label="主标题">
-                      <Input
-                        value={headerData?.title?.content || ''}
-                        onChange={(e) =>
-                          handleHeaderNestedChange(
-                            'title',
-                            'content',
-                            e.target.value,
-                          )
-                        }
-                        placeholder="请输入主标题"
-                      />
-                    </Form.Item>
-                    <Form.Item label="副标题">
-                      <Input
-                        value={headerData?.subtitle?.content || ''}
-                        onChange={(e) =>
-                          handleHeaderNestedChange(
-                            'subtitle',
-                            'content',
-                            e.target.value,
-                          )
-                        }
-                        placeholder="请输入副标题"
-                      />
-                    </Form.Item>
-                  </Form>
-                ),
-              },
-              {
-                key: 'style',
-                label: '🎨 样式设置',
-                children: (
-                  <Form form={form} layout="vertical">
-                    <Form.Item label="主题样式">
-                      <Select
-                        value={headerData?.style || 'blue'}
-                        onChange={(value) => handleHeaderChange('style', value)}
-                        style={{ width: '100%' }}
-                        optionLabelProp="label"
+          {/* 内容设置 */}
+          <div
+            style={{
+              marginBottom: '16px',
+              background: '#fff',
+              borderRadius: 6,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+              padding: 16,
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>
+              📝 内容设置
+            </div>
+            <Form form={form} layout="vertical">
+              <Form.Item label="主标题">
+                <Input
+                  value={headerData?.title?.content || ''}
+                  onChange={(e) =>
+                    handleHeaderNestedChange('title', 'content', e.target.value)
+                  }
+                  placeholder="请输入主标题"
+                />
+              </Form.Item>
+              <Form.Item label="副标题">
+                <Input
+                  value={headerData?.subtitle?.content || ''}
+                  onChange={(e) =>
+                    handleHeaderNestedChange(
+                      'subtitle',
+                      'content',
+                      e.target.value,
+                    )
+                  }
+                  placeholder="请输入副标题"
+                />
+              </Form.Item>
+            </Form>
+          </div>
+          {/* 样式设置 */}
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 6,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+              padding: 16,
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>
+              🎨 样式设置
+            </div>
+            <Form form={form} layout="vertical">
+              <Form.Item label="主题样式">
+                <Select
+                  value={headerData?.style || 'blue'}
+                  onChange={(value) => handleHeaderChange('style', value)}
+                  style={{ width: '100%' }}
+                  optionLabelProp="label"
+                >
+                  <Option value="blue" label="blue">
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
                       >
-                        <Option value="blue" label="blue">
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  width: '16px',
-                                  height: '16px',
-                                  backgroundColor: '#1890ff',
-                                  borderRadius: '3px',
-                                  marginRight: '8px',
-                                  border: '1px solid #d9d9d9',
-                                }}
-                              ></div>
-                              <span>blue</span>
-                            </div>
-                            {headerData?.style === 'blue' && (
-                              <span style={{ color: '#52c41a' }}>✅</span>
-                            )}
-                          </div>
-                        </Option>
-                        <Option value="wathet" label="wathet">
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  width: '16px',
-                                  height: '16px',
-                                  backgroundColor: '#0369a1',
-                                  borderRadius: '3px',
-                                  marginRight: '8px',
-                                  border: '1px solid #d9d9d9',
-                                }}
-                              ></div>
-                              <span>wathet</span>
-                            </div>
-                            {headerData?.style === 'wathet' && (
-                              <span style={{ color: '#52c41a' }}>✅</span>
-                            )}
-                          </div>
-                        </Option>
-                        <Option value="turquoise" label="turquoise">
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  width: '16px',
-                                  height: '16px',
-                                  backgroundColor: '#14b8a6',
-                                  borderRadius: '3px',
-                                  marginRight: '8px',
-                                  border: '1px solid #d9d9d9',
-                                }}
-                              ></div>
-                              <span>turquoise</span>
-                            </div>
-                            {headerData?.style === 'turquoise' && (
-                              <span style={{ color: '#52c41a' }}>✅</span>
-                            )}
-                          </div>
-                        </Option>
-                        <Option value="green" label="green">
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  width: '16px',
-                                  height: '16px',
-                                  backgroundColor: '#22c55e',
-                                  borderRadius: '3px',
-                                  marginRight: '8px',
-                                  border: '1px solid #d9d9d9',
-                                }}
-                              ></div>
-                              <span>green</span>
-                            </div>
-                            {headerData?.style === 'green' && (
-                              <span style={{ color: '#52c41a' }}>✅</span>
-                            )}
-                          </div>
-                        </Option>
-                        <Option value="yellow" label="yellow">
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  width: '16px',
-                                  height: '16px',
-                                  backgroundColor: '#eab308',
-                                  borderRadius: '3px',
-                                  marginRight: '8px',
-                                  border: '1px solid #d9d9d9',
-                                }}
-                              ></div>
-                              <span>yellow</span>
-                            </div>
-                            {headerData?.style === 'yellow' && (
-                              <span style={{ color: '#52c41a' }}>✅</span>
-                            )}
-                          </div>
-                        </Option>
-                        <Option value="orange" label="orange">
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  width: '16px',
-                                  height: '16px',
-                                  backgroundColor: '#f97316',
-                                  borderRadius: '3px',
-                                  marginRight: '8px',
-                                  border: '1px solid #d9d9d9',
-                                }}
-                              ></div>
-                              <span>orange</span>
-                            </div>
-                            {headerData?.style === 'orange' && (
-                              <span style={{ color: '#52c41a' }}>✅</span>
-                            )}
-                          </div>
-                        </Option>
-                        <Option value="red" label="red">
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  width: '16px',
-                                  height: '16px',
-                                  backgroundColor: '#ef4444',
-                                  borderRadius: '3px',
-                                  marginRight: '8px',
-                                  border: '1px solid #d9d9d9',
-                                }}
-                              ></div>
-                              <span>red</span>
-                            </div>
-                            {headerData?.style === 'red' && (
-                              <span style={{ color: '#52c41a' }}>✅</span>
-                            )}
-                          </div>
-                        </Option>
-                      </Select>
-                    </Form.Item>
-                  </Form>
-                ),
-              },
-            ]}
-          />
+                        <div
+                          style={{
+                            width: '16px',
+                            height: '16px',
+                            backgroundColor: '#1890ff',
+                            borderRadius: '3px',
+                            marginRight: '8px',
+                            border: '1px solid #d9d9d9',
+                          }}
+                        ></div>
+                        <span>blue</span>
+                      </div>
+                      {headerData?.style === 'blue' && (
+                        <span style={{ color: '#52c41a' }}>✅</span>
+                      )}
+                    </div>
+                  </Option>
+                  <Option value="wathet" label="wathet">
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '16px',
+                            height: '16px',
+                            backgroundColor: '#0369a1',
+                            borderRadius: '3px',
+                            marginRight: '8px',
+                            border: '1px solid #d9d9d9',
+                          }}
+                        ></div>
+                        <span>wathet</span>
+                      </div>
+                      {headerData?.style === 'wathet' && (
+                        <span style={{ color: '#52c41a' }}>✅</span>
+                      )}
+                    </div>
+                  </Option>
+                  <Option value="turquoise" label="turquoise">
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '16px',
+                            height: '16px',
+                            backgroundColor: '#14b8a6',
+                            borderRadius: '3px',
+                            marginRight: '8px',
+                            border: '1px solid #d9d9d9',
+                          }}
+                        ></div>
+                        <span>turquoise</span>
+                      </div>
+                      {headerData?.style === 'turquoise' && (
+                        <span style={{ color: '#52c41a' }}>✅</span>
+                      )}
+                    </div>
+                  </Option>
+                  <Option value="green" label="green">
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '16px',
+                            height: '16px',
+                            backgroundColor: '#22c55e',
+                            borderRadius: '3px',
+                            marginRight: '8px',
+                            border: '1px solid #d9d9d9',
+                          }}
+                        ></div>
+                        <span>green</span>
+                      </div>
+                      {headerData?.style === 'green' && (
+                        <span style={{ color: '#52c41a' }}>✅</span>
+                      )}
+                    </div>
+                  </Option>
+                  <Option value="yellow" label="yellow">
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '16px',
+                            height: '16px',
+                            backgroundColor: '#eab308',
+                            borderRadius: '3px',
+                            marginRight: '8px',
+                            border: '1px solid #d9d9d9',
+                          }}
+                        ></div>
+                        <span>yellow</span>
+                      </div>
+                      {headerData?.style === 'yellow' && (
+                        <span style={{ color: '#52c41a' }}>✅</span>
+                      )}
+                    </div>
+                  </Option>
+                  <Option value="orange" label="orange">
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '16px',
+                            height: '16px',
+                            backgroundColor: '#f97316',
+                            borderRadius: '3px',
+                            marginRight: '8px',
+                            border: '1px solid #d9d9d9',
+                          }}
+                        ></div>
+                        <span>orange</span>
+                      </div>
+                      {headerData?.style === 'orange' && (
+                        <span style={{ color: '#52c41a' }}>✅</span>
+                      )}
+                    </div>
+                  </Option>
+                  <Option value="red" label="red">
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '16px',
+                            height: '16px',
+                            backgroundColor: '#ef4444',
+                            borderRadius: '3px',
+                            marginRight: '8px',
+                            border: '1px solid #d9d9d9',
+                          }}
+                        ></div>
+                        <span>red</span>
+                      </div>
+                      {headerData?.style === 'red' && (
+                        <span style={{ color: '#52c41a' }}>✅</span>
+                      )}
+                    </div>
+                  </Option>
+                </Select>
+              </Form.Item>
+            </Form>
+          </div>
         </div>
       );
     }
@@ -2043,166 +2030,265 @@ export const PropertyPanel: React.FC<{
               🎯 当前选中：按钮组件
             </Text>
           </div>
-          <Collapse
-            defaultActiveKey={['content', 'style']}
-            ghost
-            items={[
-              {
-                key: 'content',
-                label: '📝 内容设置',
-                children: (
-                  <Form form={form} layout="vertical">
-                    <Form.Item
-                      label="按钮文案"
-                      help="设置按钮显示的文本内容，最多8个字符"
+          {/* 内容设置 */}
+          <div
+            style={{
+              marginBottom: '16px',
+              background: '#fff',
+              borderRadius: 6,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+              padding: 16,
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>
+              📝 内容设置
+            </div>
+            <Form form={form} layout="vertical">
+              <Form.Item
+                label="按钮文案"
+                help="设置按钮显示的文本内容，最多8个字符"
+              >
+                <Input
+                  value={(currentComponent as any).text?.content || '按钮'}
+                  onChange={(e) => {
+                    const newText = {
+                      content: e.target.value,
+                      i18n_content: {
+                        'en-US': e.target.value || 'Button',
+                      },
+                    };
+                    handleValueChange('text', newText);
+                  }}
+                  placeholder="请输入按钮文案"
+                  maxLength={8}
+                  showCount
+                />
+              </Form.Item>
+            </Form>
+          </div>
+          {/* 样式设置 */}
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 6,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+              padding: 16,
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>
+              🎨 样式设置
+            </div>
+            <Form form={form} layout="vertical">
+              <Form.Item label="按钮颜色" help="选择按钮的颜色主题">
+                <Select
+                  value={(currentComponent as any).style?.color || '#1890ff'}
+                  onChange={(value) => {
+                    // 更新按钮样式
+                    const updatedComponent = {
+                      ...currentComponent,
+                      style: {
+                        ...((currentComponent as any).style || {}),
+                        color: value,
+                      },
+                    };
+                    onUpdateComponent(updatedComponent);
+                  }}
+                  placeholder="请选择按钮颜色"
+                >
+                  <Option value="#000000" label="black">
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
                     >
-                      <Input
-                        value={
-                          (currentComponent as any).text?.content || '按钮'
-                        }
-                        onChange={(e) => {
-                          const newText = {
-                            content: e.target.value,
-                            i18n_content: {
-                              'en-US': e.target.value || 'Button',
-                            },
-                          };
-                          handleValueChange('text', newText);
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
                         }}
-                        placeholder="请输入按钮文案"
-                        maxLength={8}
-                        showCount
-                      />
-                    </Form.Item>
-                  </Form>
-                ),
-              },
-              {
-                key: 'style',
-                label: '🎨 样式设置',
-                children: (
-                  <Form form={form} layout="vertical">
-                    <Form.Item label="按钮颜色" help="选择按钮的颜色主题">
-                      <Select
-                        value={
-                          (currentComponent as any).style?.color || '#1890ff'
-                        }
-                        onChange={(value) => {
-                          // 更新按钮样式
-                          const updatedComponent = {
-                            ...currentComponent,
-                            style: {
-                              ...((currentComponent as any).style || {}),
-                              color: value,
-                            },
-                          };
-                          onUpdateComponent(updatedComponent);
-                        }}
-                        placeholder="请选择按钮颜色"
                       >
-                        <Option value="#000000" label="black">
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  width: '16px',
-                                  height: '16px',
-                                  backgroundColor: '#1f2329',
-                                  borderRadius: '3px',
-                                  marginRight: '8px',
-                                  border: '1px solid #d9d9d9',
-                                }}
-                              ></div>
-                              <span>黑色</span>
-                            </div>
-                            {(currentComponent as any).style?.color ===
-                              '#000000' && (
-                              <span style={{ color: '#52c41a' }}>✅</span>
-                            )}
-                          </div>
-                        </Option>
-                        <Option value="#1890ff" label="blue">
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  width: '16px',
-                                  height: '16px',
-                                  backgroundColor: '#1890ff',
-                                  borderRadius: '3px',
-                                  marginRight: '8px',
-                                  border: '1px solid #d9d9d9',
-                                }}
-                              ></div>
-                              <span>蓝色</span>
-                            </div>
-                            {(currentComponent as any).style?.color ===
-                              '#1890ff' && (
-                              <span style={{ color: '#52c41a' }}>✅</span>
-                            )}
-                          </div>
-                        </Option>
-                        <Option value="#ff4d4f" label="red">
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  width: '16px',
-                                  height: '16px',
-                                  backgroundColor: '#ff4d4f',
-                                  borderRadius: '3px',
-                                  marginRight: '8px',
-                                  border: '1px solid #d9d9d9',
-                                }}
-                              ></div>
-                              <span>红色</span>
-                            </div>
-                            {(currentComponent as any).style?.color ===
-                              '#ff4d4f' && (
-                              <span style={{ color: '#52c41a' }}>✅</span>
-                            )}
-                          </div>
-                        </Option>
-                      </Select>
-                    </Form.Item>
-                  </Form>
-                ),
-              },
-            ]}
-          />
+                        <div
+                          style={{
+                            width: '16px',
+                            height: '16px',
+                            backgroundColor: '#1f2329',
+                            borderRadius: '3px',
+                            marginRight: '8px',
+                            border: '1px solid #d9d9d9',
+                          }}
+                        ></div>
+                        <span>黑色</span>
+                      </div>
+                      {(currentComponent as any).style?.color === '#000000' && (
+                        <span style={{ color: '#52c41a' }}>✅</span>
+                      )}
+                    </div>
+                  </Option>
+                  <Option value="#1890ff" label="blue">
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '16px',
+                            height: '16px',
+                            backgroundColor: '#1890ff',
+                            borderRadius: '3px',
+                            marginRight: '8px',
+                            border: '1px solid #d9d9d9',
+                          }}
+                        ></div>
+                        <span>蓝色</span>
+                      </div>
+                      {(currentComponent as any).style?.color === '#1890ff' && (
+                        <span style={{ color: '#52c41a' }}>✅</span>
+                      )}
+                    </div>
+                  </Option>
+                  <Option value="#ff4d4f" label="red">
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '16px',
+                            height: '16px',
+                            backgroundColor: '#ff4d4f',
+                            borderRadius: '3px',
+                            marginRight: '8px',
+                            border: '1px solid #d9d9d9',
+                          }}
+                        ></div>
+                        <span>红色</span>
+                      </div>
+                      {(currentComponent as any).style?.color === '#ff4d4f' && (
+                        <span style={{ color: '#52c41a' }}>✅</span>
+                      )}
+                    </div>
+                  </Option>
+                </Select>
+              </Form.Item>
+            </Form>
+          </div>
+        </div>
+      );
+    }
+
+    // 新增：如果选中了下拉单选组件，显示下拉单选属性面板
+    const isSelectSingleComponent =
+      currentComponent && currentComponent.tag === 'select-single';
+    if (isSelectSingleComponent) {
+      const options = (currentComponent as any).options || [];
+      return (
+        <div style={{ padding: '16px' }}>
+          <div
+            style={{
+              marginBottom: '16px',
+              padding: '12px',
+              backgroundColor: '#f6ffed',
+              border: '1px solid #b7eb8f',
+              borderRadius: '6px',
+            }}
+          >
+            <Text style={{ fontSize: '12px', color: '#52c41a' }}>
+              🎯 当前选中：下拉单选组件
+            </Text>
+          </div>
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 6,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+              padding: 16,
+            }}
+          >
+            <Form form={form} layout="vertical">
+              <Form.Item label="选项">
+                {options.map((opt: any, idx: number) => (
+                  <div
+                    key={idx}
+                    style={{ display: 'flex', gap: 8, marginBottom: 8 }}
+                  >
+                    <Input
+                      value={opt.label}
+                      onChange={(e) => {
+                        const newOptions = [...options];
+                        newOptions[idx].label = e.target.value;
+                        handleValueChange('options', newOptions);
+                      }}
+                      placeholder="选项名称"
+                      style={{ flex: 1 }}
+                    />
+                    <Button
+                      danger
+                      size="small"
+                      onClick={() => {
+                        const newOptions = options.filter(
+                          (_: any, i: number) => i !== idx,
+                        );
+                        handleValueChange('options', newOptions);
+                      }}
+                    >
+                      删除
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  type="dashed"
+                  block
+                  onClick={() => {
+                    handleValueChange('options', [
+                      ...options,
+                      { label: '', value: '' },
+                    ]);
+                  }}
+                >
+                  添加选项
+                </Button>
+              </Form.Item>
+              <Form.Item label="默认值">
+                <Select
+                  value={(currentComponent as any).default_value}
+                  onChange={(val) => handleValueChange('default_value', val)}
+                  style={{ width: '100%' }}
+                >
+                  {options.map((opt: any, idx: number) => (
+                    <Option key={idx} value={opt.value || opt.label}>
+                      {opt.label || `选项${idx + 1}`}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+              <Form.Item label="是否必填">
+                <Switch
+                  checked={(currentComponent as any).required || false}
+                  onChange={(checked) => handleValueChange('required', checked)}
+                />
+              </Form.Item>
+            </Form>
+          </div>
         </div>
       );
     }
@@ -2341,162 +2427,151 @@ export const PropertyPanel: React.FC<{
               📐 当前选中：分栏组件 ({columns.length}列)
             </Text>
           </div>
-          <Collapse
-            defaultActiveKey={['basic', 'layout']}
-            ghost
-            items={[
-              {
-                key: 'basic',
-                label: '🔧 基础设置',
-                children: (
-                  <Form form={form} layout="vertical">
-                    <Form.Item label="列数">
-                      <Select
-                        value={columns.length}
-                        onChange={handleColumnCountChange}
-                        style={{ width: '100%' }}
-                        options={generateColumnOptions()}
-                      />
-                    </Form.Item>
-                  </Form>
-                ),
-              },
-              {
-                key: 'layout',
-                label: '📏 列宽设置',
-                children: (
-                  <div>
-                    <div style={{ marginBottom: '12px' }}>
-                      <Text type="secondary" style={{ fontSize: '12px' }}>
-                        调整各列宽度比例，总宽度按比例分配
-                      </Text>
-                    </div>
-                    {columns.map((column: any, index: number) => (
-                      <div key={index} style={{ marginBottom: '12px' }}>
-                        <Form.Item
-                          label={`第${index + 1}列宽度 (${
-                            columnWidths[index]
-                          }%)`}
-                          style={{ marginBottom: '8px' }}
-                        >
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                            }}
-                          >
-                            <InputNumber
-                              value={column.flex || 1}
-                              onChange={(value) =>
-                                handleColumnWidthChange(index, value || 1)
-                              }
-                              min={1}
-                              max={5}
-                              step={1}
-                              style={{ width: '80px' }}
-                            />
-                            <div
-                              style={{
-                                flex: 1,
-                                height: '8px',
-                                backgroundColor: '#f0f0f0',
-                                borderRadius: '4px',
-                                overflow: 'hidden',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  height: '100%',
-                                  backgroundColor: '#1890ff',
-                                  width: `${columnWidths[index]}%`,
-                                  transition: 'width 0.3s ease',
-                                }}
-                              />
-                            </div>
-                            <Text
-                              style={{
-                                fontSize: '12px',
-                                color: '#666',
-                                minWidth: '35px',
-                              }}
-                            >
-                              {columnWidths[index]}%
-                            </Text>
-                            {/* 删除列按钮 - 包含取消按钮的列不显示删除按钮 */}
-                            {!hasCancelButton(column) && (
-                              <Button
-                                type="text"
-                                size="small"
-                                danger
-                                icon={<DeleteOutlined />}
-                                onClick={() => handleDeleteColumn(index)}
-                                style={{
-                                  padding: '4px 8px',
-                                  height: '24px',
-                                  fontSize: '12px',
-                                }}
-                                title="删除此列"
-                              />
-                            )}
-                            {/* 默认分栏容器第一列的保护标识 */}
-                            {false && (
-                              <div
-                                style={{
-                                  padding: '4px 8px',
-                                  height: '24px',
-                                  fontSize: '12px',
-                                  color: '#faad14',
-                                  backgroundColor: '#fff7e6',
-                                  border: '1px solid #ffd591',
-                                  borderRadius: '4px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                }}
-                              >
-                                保护
-                              </div>
-                            )}
-                            {/* 包含取消按钮的列的保护标识 */}
-                            {hasCancelButton(column) && (
-                              <div
-                                style={{
-                                  padding: '4px 8px',
-                                  height: '24px',
-                                  fontSize: '12px',
-                                  color: '#52c41a',
-                                  backgroundColor: '#f6ffed',
-                                  border: '1px solid #b7eb8f',
-                                  borderRadius: '4px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                }}
-                              >
-                                保护
-                              </div>
-                            )}
-                          </div>
-                        </Form.Item>
-                      </div>
-                    ))}
+          {/* 基础设置 */}
+          <div
+            style={{
+              marginBottom: '16px',
+              background: '#fff',
+              borderRadius: 6,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+              padding: 16,
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>
+              🔧 基础设置
+            </div>
+            <Form form={form} layout="vertical">
+              <Form.Item label="列数">
+                <Select
+                  value={columns.length}
+                  onChange={handleColumnCountChange}
+                  style={{ width: '100%' }}
+                  options={generateColumnOptions()}
+                />
+              </Form.Item>
+            </Form>
+          </div>
+          {/* 列宽设置 */}
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 6,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+              padding: 16,
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>
+              📏 列宽设置
+            </div>
+            <div>
+              <div style={{ marginBottom: '12px' }}>
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  调整各列宽度比例，总宽度按比例分配
+                </Text>
+              </div>
+              {columns.map((column: any, index: number) => (
+                <div key={index} style={{ marginBottom: '12px' }}>
+                  <Form.Item
+                    label={`第${index + 1}列宽度 (${columnWidths[index]}%)`}
+                    style={{ marginBottom: '8px' }}
+                  >
                     <div
                       style={{
-                        marginTop: '16px',
-                        padding: '8px',
-                        backgroundColor: '#fafafa',
-                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
                       }}
                     >
-                      <Text style={{ fontSize: '11px', color: '#666' }}>
-                        💡 列宽值范围：1-5，数值越大占用宽度越大。例如：1:2:1
-                        的比例会产生 25%:50%:25% 的列宽分配。
+                      <InputNumber
+                        value={column.flex || 1}
+                        onChange={(value) =>
+                          handleColumnWidthChange(index, value || 1)
+                        }
+                        min={1}
+                        max={5}
+                        step={1}
+                        style={{ width: '80px' }}
+                      />
+                      <div
+                        style={{
+                          flex: 1,
+                          height: '8px',
+                          backgroundColor: '#f0f0f0',
+                          borderRadius: '4px',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <div
+                          style={{
+                            height: '100%',
+                            backgroundColor: '#1890ff',
+                            width: `${columnWidths[index]}%`,
+                            transition: 'width 0.3s ease',
+                          }}
+                        />
+                      </div>
+                      <Text
+                        style={{
+                          fontSize: '12px',
+                          color: '#666',
+                          minWidth: '35px',
+                        }}
+                      >
+                        {columnWidths[index]}%
                       </Text>
+                      {/* 删除列按钮 - 包含取消按钮的列不显示删除按钮 */}
+                      {!hasCancelButton(column) && (
+                        <Button
+                          type="text"
+                          size="small"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={() => handleDeleteColumn(index)}
+                          style={{
+                            padding: '4px 8px',
+                            height: '24px',
+                            fontSize: '12px',
+                          }}
+                          title="删除此列"
+                        />
+                      )}
+                      {/* 包含取消按钮的列的保护标识 */}
+                      {hasCancelButton(column) && (
+                        <div
+                          style={{
+                            padding: '4px 8px',
+                            height: '24px',
+                            fontSize: '12px',
+                            color: '#52c41a',
+                            backgroundColor: '#f6ffed',
+                            border: '1px solid #b7eb8f',
+                            borderRadius: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                          }}
+                        >
+                          保护
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ),
-              },
-            ]}
-          />
+                  </Form.Item>
+                </div>
+              ))}
+              <div
+                style={{
+                  marginTop: '16px',
+                  padding: '8px',
+                  backgroundColor: '#fafafa',
+                  borderRadius: '4px',
+                }}
+              >
+                <Text style={{ fontSize: '11px', color: '#666' }}>
+                  💡 列宽值范围：1-5，数值越大占用宽度越大。例如：1:2:1
+                  的比例会产生 25%:50%:25% 的列宽分配。
+                </Text>
+              </div>
+            </div>
+          </div>
         </div>
       );
     }
@@ -2518,72 +2593,75 @@ export const PropertyPanel: React.FC<{
               🎯 当前选中：输入框组件
             </Text>
           </div>
-          <Collapse
-            defaultActiveKey={['basic', 'content']}
-            ghost
-            items={[
-              {
-                key: 'basic',
-                label: '🔧 基础设置',
-                children: (
-                  <Form form={form} layout="vertical">
-                    <Form.Item label="是否必填">
-                      <Switch
-                        checked={(currentComponent as any).required || false}
-                        onChange={(checked) =>
-                          handleValueChange('required', checked)
-                        }
-                      />
-                    </Form.Item>
-                  </Form>
-                ),
-              },
-              {
-                key: 'content',
-                label: '📝 内容设置',
-                children: (
-                  <Form form={form} layout="vertical">
-                    <Form.Item label="占位文本">
-                      <Input
-                        value={
-                          (currentComponent as any).placeholder?.content || ''
-                        }
-                        onChange={(e) => {
-                          const newPlaceholder = {
-                            content: e.target.value,
-                            i18n_content: {
-                              'en-US': 'English placeholder',
-                            },
-                          };
-                          handleValueChange('placeholder', newPlaceholder);
-                        }}
-                        placeholder="请输入占位文本"
-                        maxLength={100}
-                      />
-                    </Form.Item>
-                    <Form.Item label="默认文本">
-                      <Input
-                        value={
-                          (currentComponent as any).default_value?.content || ''
-                        }
-                        onChange={(e) => {
-                          const newDefaultValue = {
-                            content: e.target.value,
-                            i18n_content: {
-                              'en-US': 'English default value',
-                            },
-                          };
-                          handleValueChange('default_value', newDefaultValue);
-                        }}
-                        placeholder="请输入默认文本"
-                        maxLength={100}
-                      />
-                    </Form.Item>
-                  </Form>
-                ),
-              },
-            ]}
-          />
+          {/* 基础设置 */}
+          <div
+            style={{
+              marginBottom: '16px',
+              background: '#fff',
+              borderRadius: 6,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+              padding: 16,
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>
+              🔧 基础设置
+            </div>
+            <Form form={form} layout="vertical">
+              <Form.Item label="是否必填">
+                <Switch
+                  checked={(currentComponent as any).required || false}
+                  onChange={(checked) => handleValueChange('required', checked)}
+                />
+              </Form.Item>
+            </Form>
+          </div>
+          {/* 内容设置 */}
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 6,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+              padding: 16,
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>
+              📝 内容设置
+            </div>
+            <Form form={form} layout="vertical">
+              <Form.Item label="占位文本">
+                <Input
+                  value={(currentComponent as any).placeholder?.content || ''}
+                  onChange={(e) => {
+                    const newPlaceholder = {
+                      content: e.target.value,
+                      i18n_content: {
+                        'en-US': 'English placeholder',
+                      },
+                    };
+                    handleValueChange('placeholder', newPlaceholder);
+                  }}
+                  placeholder="请输入占位文本"
+                  maxLength={100}
+                />
+              </Form.Item>
+              <Form.Item label="默认文本">
+                <Input
+                  value={(currentComponent as any).default_value?.content || ''}
+                  onChange={(e) => {
+                    const newDefaultValue = {
+                      content: e.target.value,
+                      i18n_content: {
+                        'en-US': 'English default value',
+                      },
+                    };
+                    handleValueChange('default_value', newDefaultValue);
+                  }}
+                  placeholder="请输入默认文本"
+                  maxLength={100}
+                />
+              </Form.Item>
+            </Form>
+          </div>
         </div>
       );
     }
@@ -2595,19 +2673,9 @@ export const PropertyPanel: React.FC<{
 
       // 获取文本内容
       const getTextContent = () => {
-        // 添加空值检查，防止删除组件时的报错
-        if (!currentComponent) {
-          console.log('⚠️ getTextContent: 当前组件为空');
-          return '';
-        }
-
+        if (!currentComponent) return '';
         if (isPlainText) {
-          const content = (currentComponent as any).content || '';
-          // console.log('📝 getTextContent (plain_text):', {
-          //   componentId: currentComponent.id,
-          //   content,
-          // });
-          return content;
+          return (currentComponent as any).content || '';
         } else if (isRichText) {
           const content = (currentComponent as any).content;
           const defaultContent = {
@@ -2624,36 +2692,16 @@ export const PropertyPanel: React.FC<{
               },
             ],
           };
-          const finalContent = content || defaultContent;
-
-          // console.log('📝 getTextContent (rich_text):', {
-          //   componentId: currentComponent.id,
-          //   rawContent: content,
-          //   finalContent,
-          //   hasContent: !!content,
-          //   contentType: typeof content,
-          //   timestamp: new Date().toISOString(),
-          // });
-
-          return finalContent;
+          return content || defaultContent;
         }
         return '';
       };
 
       // 更新文本内容
       const updateTextContent = (value: any) => {
-        // console.log('📝 更新文本内容:', {
-        //   componentId: currentComponent?.id,
-        //   componentTag: currentComponent?.tag,
-        //   value,
-        //   isPlainText,
-        //   isRichText,
-        // });
-
         if (isPlainText) {
           handleValueChange('content', value);
         } else if (isRichText) {
-          // 富文本直接保存JSON格式
           handleValueChange('content', value);
         }
       };
@@ -2673,170 +2721,146 @@ export const PropertyPanel: React.FC<{
               🎯 当前选中：{isPlainText ? '普通文本' : '富文本'}组件
             </Text>
           </div>
-          <Collapse
-            defaultActiveKey={isRichText ? ['content'] : ['content', 'style']}
-            ghost
-            items={[
-              {
-                key: 'content',
-                label: '📝 内容设置',
-                children: (
-                  <Form form={form} layout="vertical">
-                    <Form.Item label="文本内容">
-                      {(() => {
-                        // console.log('🎯 文本编辑器渲染检查:', {
-                        //   componentId: currentComponent?.id,
-                        //   componentTag: currentComponent?.tag,
-                        //   textContent: getTextContent(),
-                        //   isRichText,
-                        //   variablesCount: variables.length,
-                        //   timestamp: new Date().toISOString(),
-                        // });
-
-                        if (isRichText) {
-                          return (
-                            <RichTextEditor
-                              key={`rich-text-${
-                                currentComponent?.id
-                              }-${selectedPath?.join('-')}`} // ✅ 修复：添加key确保组件重新渲染
-                              value={getTextContent()}
-                              onChange={updateTextContent}
-                              placeholder="请输入富文本内容..."
-                              height={300}
-                              showToolbar={true}
-                            />
-                          );
+          {/* 内容设置 */}
+          <div
+            style={{
+              marginBottom: '16px',
+              background: '#fff',
+              borderRadius: 6,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+              padding: 16,
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>
+              📝 内容设置
+            </div>
+            <Form form={form} layout="vertical">
+              <Form.Item label="文本内容">
+                {isRichText ? (
+                  <RichTextEditor
+                    key={`rich-text-${
+                      currentComponent?.id
+                    }-${selectedPath?.join('-')}`}
+                    value={getTextContent()}
+                    onChange={updateTextContent}
+                    placeholder="请输入富文本内容..."
+                    height={300}
+                    showToolbar={true}
+                  />
+                ) : (
+                  <VariableTextEditor
+                    value={getTextContent()}
+                    onChange={updateTextContent}
+                    variables={variables}
+                    onAddVariable={() => setIsAddVariableModalVisible(true)}
+                    onEditVariable={(variableName) => {
+                      // 查找并编辑指定的变量
+                      const variable = variables.find((v) => {
+                        if (typeof v === 'object' && v !== null) {
+                          const keys = Object.keys(v as Record<string, any>);
+                          return keys.length > 0 && keys[0] === variableName;
                         }
-
-                        return (
-                          <VariableTextEditor
-                            value={getTextContent()}
-                            onChange={updateTextContent}
-                            variables={variables}
-                            onAddVariable={() => {
-                              setIsAddVariableModalVisible(true);
-                            }}
-                            onEditVariable={(variableName) => {
-                              // 查找并编辑指定的变量
-                              const variable = variables.find((v) => {
-                                if (typeof v === 'object' && v !== null) {
-                                  const keys = Object.keys(
-                                    v as Record<string, any>,
-                                  );
-                                  return (
-                                    keys.length > 0 && keys[0] === variableName
-                                  );
-                                }
-                                return false;
-                              });
-
-                              if (variable) {
-                                // 转换为Variable格式用于编辑
-                                const keys = Object.keys(
-                                  variable as Record<string, any>,
-                                );
-                                const variableValue = (
-                                  variable as Record<string, any>
-                                )[keys[0]];
-                                const editingVariable = {
-                                  name: variableName,
-                                  type: 'text' as const,
-                                  value: String(variableValue),
-                                };
-                                setEditingVariable(editingVariable);
-                                setIsAddVariableModalVisible(true);
-                              }
-                            }}
-                            placeholder="请输入文本内容"
-                            rows={4}
-                          />
+                        return false;
+                      });
+                      if (variable) {
+                        // 转换为Variable格式用于编辑
+                        const keys = Object.keys(
+                          variable as Record<string, any>,
                         );
-                      })()}
-                    </Form.Item>
-                  </Form>
-                ),
-              },
-              // 只有普通文本才显示样式设置
-              ...(isPlainText
-                ? [
-                    {
-                      key: 'style',
-                      label: '🎨 样式设置',
-                      children: (
-                        <Form form={form} layout="vertical">
-                          <Form.Item label="字体大小">
-                            <Select
-                              value={
-                                (currentComponent as any).style?.fontSize ||
-                                (currentComponent as any).fontSize ||
-                                14
-                              }
-                              onChange={(value) =>
-                                handleValueChange('fontSize', value)
-                              }
-                              style={{ width: '100%' }}
-                            >
-                              <Option value={14}>正文 14px</Option>
-                              <Option value={16}>标题 16px</Option>
-                              <Option value={12}>辅助信息 12px</Option>
-                            </Select>
-                          </Form.Item>
-                          <Form.Item label="字色">
-                            <ColorPicker
-                              value={
-                                (currentComponent as any).style?.color ||
-                                '#000000'
-                              }
-                              onChange={(color: any) => {
-                                const rgbaValue = color.toRgbString();
-                                handleValueChange('color', rgbaValue);
-                              }}
-                              showText
-                              format="rgb"
-                              style={{ width: '100%' }}
-                            />
-                          </Form.Item>
-                          <Form.Item label="对齐方式">
-                            <Select
-                              value={
-                                (currentComponent as any).style?.textAlign ||
-                                (currentComponent as any).textAlign ||
-                                'left'
-                              }
-                              onChange={(value) =>
-                                handleValueChange('textAlign', value)
-                              }
-                              style={{ width: '100%' }}
-                            >
-                              <Option value="left">左对齐</Option>
-                              <Option value="center">居中对齐</Option>
-                              <Option value="right">右对齐</Option>
-                            </Select>
-                          </Form.Item>
-                          <Form.Item label="最大显示行数">
-                            <InputNumber
-                              value={
-                                (currentComponent as any).style
-                                  ?.numberOfLines ||
-                                (currentComponent as any).numberOfLines ||
-                                1
-                              }
-                              onChange={(value) =>
-                                handleValueChange('numberOfLines', value)
-                              }
-                              min={1}
-                              max={10}
-                              style={{ width: '100%' }}
-                              placeholder="设置最大显示行数"
-                            />
-                          </Form.Item>
-                        </Form>
-                      ),
-                    },
-                  ]
-                : []),
-            ]}
-          />
+                        const variableValue = (variable as Record<string, any>)[
+                          keys[0]
+                        ];
+                        const editingVariable = {
+                          name: variableName,
+                          type: 'text' as const,
+                          value: String(variableValue),
+                        };
+                        setEditingVariable(editingVariable);
+                        setIsAddVariableModalVisible(true);
+                      }
+                    }}
+                    placeholder="请输入文本内容"
+                    rows={4}
+                  />
+                )}
+              </Form.Item>
+            </Form>
+          </div>
+          {/* 样式设置（仅普通文本） */}
+          {isPlainText && (
+            <div
+              style={{
+                background: '#fff',
+                borderRadius: 6,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                padding: 16,
+              }}
+            >
+              <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>
+                🎨 样式设置
+              </div>
+              <Form form={form} layout="vertical">
+                <Form.Item label="字体大小">
+                  <Select
+                    value={
+                      (currentComponent as any).style?.fontSize ||
+                      (currentComponent as any).fontSize ||
+                      14
+                    }
+                    onChange={(value) => handleValueChange('fontSize', value)}
+                    style={{ width: '100%' }}
+                  >
+                    <Option value={14}>正文 14px</Option>
+                    <Option value={16}>标题 16px</Option>
+                    <Option value={12}>辅助信息 12px</Option>
+                  </Select>
+                </Form.Item>
+                <Form.Item label="字色">
+                  <ColorPicker
+                    value={(currentComponent as any).style?.color || '#000000'}
+                    onChange={(color: any) => {
+                      const rgbaValue = color.toRgbString();
+                      handleValueChange('color', rgbaValue);
+                    }}
+                    showText
+                    format="rgb"
+                    style={{ width: '100%' }}
+                  />
+                </Form.Item>
+                <Form.Item label="对齐方式">
+                  <Select
+                    value={
+                      (currentComponent as any).style?.textAlign ||
+                      (currentComponent as any).textAlign ||
+                      'left'
+                    }
+                    onChange={(value) => handleValueChange('textAlign', value)}
+                    style={{ width: '100%' }}
+                  >
+                    <Option value="left">左对齐</Option>
+                    <Option value="center">居中对齐</Option>
+                    <Option value="right">右对齐</Option>
+                  </Select>
+                </Form.Item>
+                <Form.Item label="最大显示行数">
+                  <InputNumber
+                    value={
+                      (currentComponent as any).style?.numberOfLines ||
+                      (currentComponent as any).numberOfLines ||
+                      1
+                    }
+                    onChange={(value) =>
+                      handleValueChange('numberOfLines', value)
+                    }
+                    min={1}
+                    max={10}
+                    style={{ width: '100%' }}
+                    placeholder="设置最大显示行数"
+                  />
+                </Form.Item>
+              </Form>
+            </div>
+          )}
         </div>
       );
     }
@@ -2860,95 +2884,96 @@ export const PropertyPanel: React.FC<{
               📏 当前选中：分割线组件
             </Text>
           </div>
-          <Collapse
-            defaultActiveKey={['style']}
-            ghost
-            items={[
-              {
-                key: 'style',
-                label: '🎨 样式设置',
-                children: (
-                  <Form form={form} layout="vertical">
-                    <Form.Item label="边框样式">
-                      <Select
-                        value={hrComponent.style?.borderStyle || 'solid'}
-                        onChange={(value) => {
-                          const updatedStyle = {
-                            ...hrComponent.style,
-                            borderStyle: value,
-                          };
-                          const updatedComponent = {
-                            ...currentComponent,
-                            style: updatedStyle,
-                          };
-                          onUpdateComponent(updatedComponent);
+          {/* 样式设置 */}
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 6,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+              padding: 16,
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>
+              🎨 样式设置
+            </div>
+            <Form form={form} layout="vertical">
+              <Form.Item label="边框样式">
+                <Select
+                  value={hrComponent.style?.borderStyle || 'solid'}
+                  onChange={(value) => {
+                    const updatedStyle = {
+                      ...hrComponent.style,
+                      borderStyle: value,
+                    };
+                    const updatedComponent = {
+                      ...currentComponent,
+                      style: updatedStyle,
+                    };
+                    onUpdateComponent(updatedComponent);
+                  }}
+                  style={{ width: '100%' }}
+                >
+                  <Option value="solid">
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '20px',
+                          height: '2px',
+                          backgroundColor: '#333',
+                          borderStyle: 'solid',
                         }}
-                        style={{ width: '100%' }}
-                      >
-                        <Option value="solid">
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                            }}
-                          >
-                            <div
-                              style={{
-                                width: '20px',
-                                height: '2px',
-                                backgroundColor: '#333',
-                                borderStyle: 'solid',
-                              }}
-                            />
-                            实线
-                          </div>
-                        </Option>
-                        <Option value="dashed">
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                            }}
-                          >
-                            <div
-                              style={{
-                                width: '20px',
-                                height: '2px',
-                                borderTop: '2px dashed #333',
-                                backgroundColor: 'transparent',
-                              }}
-                            />
-                            虚线
-                          </div>
-                        </Option>
-                        <Option value="dotted">
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                            }}
-                          >
-                            <div
-                              style={{
-                                width: '20px',
-                                height: '2px',
-                                borderTop: '2px dotted #333',
-                                backgroundColor: 'transparent',
-                              }}
-                            />
-                            点线
-                          </div>
-                        </Option>
-                      </Select>
-                    </Form.Item>
-                  </Form>
-                ),
-              },
-            ]}
-          />
+                      />
+                      实线
+                    </div>
+                  </Option>
+                  <Option value="dashed">
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '20px',
+                          height: '2px',
+                          borderTop: '2px dashed #333',
+                          backgroundColor: 'transparent',
+                        }}
+                      />
+                      虚线
+                    </div>
+                  </Option>
+                  <Option value="dotted">
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '20px',
+                          height: '2px',
+                          borderTop: '2px dotted #333',
+                          backgroundColor: 'transparent',
+                        }}
+                      />
+                      点线
+                    </div>
+                  </Option>
+                </Select>
+              </Form.Item>
+            </Form>
+          </div>
         </div>
       );
     }
@@ -3028,923 +3053,306 @@ export const PropertyPanel: React.FC<{
               🖼️ 当前选中：多图混排组件
             </Text>
           </div>
-          <Collapse
-            defaultActiveKey={['layout', 'images']}
-            ghost
-            items={[
-              {
-                key: 'layout',
-                label: '📐 混排方式',
-                children: (
-                  <div>
-                    <div style={{ marginBottom: '16px' }}>
-                      <Text
-                        style={{
-                          fontSize: '12px',
-                          color: '#666',
-                          marginBottom: '8px',
-                          display: 'block',
-                        }}
-                      >
-                        选择图片排列方式：
-                      </Text>
+          {/* 混排方式 */}
+          <div
+            style={{
+              marginBottom: '16px',
+              background: '#fff',
+              borderRadius: 6,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+              padding: 16,
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>
+              📐 混排方式
+            </div>
+            <div>
+              <div style={{ marginBottom: '16px' }}>
+                <Text
+                  style={{
+                    fontSize: '12px',
+                    color: '#666',
+                    marginBottom: '8px',
+                    display: 'block',
+                  }}
+                >
+                  选择图片排列方式：
+                </Text>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(4, 1fr)',
+                    gap: '8px',
+                    marginTop: '8px',
+                  }}
+                >
+                  {combinationModes.map((mode) => (
+                    <div
+                      key={mode.value}
+                      style={{
+                        border:
+                          getDisplayCombinationMode(
+                            imgCombComponent.combination_mode,
+                            imgCombComponent.img_list?.length || 0,
+                          ) === mode.value
+                            ? '2px solid #1890ff'
+                            : '1px solid #d9d9d9',
+                        borderRadius: '4px',
+                        padding: '8px',
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        backgroundColor:
+                          getDisplayCombinationMode(
+                            imgCombComponent.combination_mode,
+                            imgCombComponent.img_list?.length || 0,
+                          ) === mode.value
+                            ? '#f0f9ff'
+                            : '#fafafa',
+                        transition: 'all 0.2s ease',
+                      }}
+                      onClick={() => {
+                        // 根据选择的模式确定所需的图片数量
+                        const getRequiredImageCount = (mode: string) => {
+                          switch (mode) {
+                            case 'double':
+                              return 2;
+                            case 'triple':
+                              return 3;
+                            case 'bisect_2':
+                              return 2;
+                            case 'bisect_4':
+                              return 4;
+                            case 'bisect_6':
+                              return 6;
+                            case 'trisect_3':
+                              return 3;
+                            case 'trisect_6':
+                              return 6;
+                            case 'trisect_9':
+                              return 9;
+                            default:
+                              return 2;
+                          }
+                        };
+
+                        const requiredCount = getRequiredImageCount(mode.value);
+                        const currentImages = imgCombComponent.img_list || [];
+
+                        // 调整图片列表数量
+                        let newImageList = [...currentImages];
+
+                        if (newImageList.length < requiredCount) {
+                          // 需要添加图片
+                          for (
+                            let i = newImageList.length;
+                            i < requiredCount;
+                            i++
+                          ) {
+                            newImageList.push({
+                              img_url: '',
+                              img_name: `图片${i + 1}`,
+                            });
+                          }
+                        } else if (newImageList.length > requiredCount) {
+                          // 需要删除多余的图片
+                          newImageList = newImageList.slice(0, requiredCount);
+                        }
+
+                        // 更新组件
+                        const updatedComponent = {
+                          ...currentComponent,
+                          combination_mode: getStorageCombinationMode(
+                            mode.value,
+                          ),
+                          img_list: newImageList,
+                        };
+                        onUpdateComponent(updatedComponent);
+                      }}
+                    >
+                      <div style={{ fontSize: '12px', fontWeight: 'bold' }}>
+                        {mode.label}
+                      </div>
                       <div
                         style={{
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(4, 1fr)',
-                          gap: '8px',
-                          marginTop: '8px',
-                        }}
-                      >
-                        {combinationModes.map((mode) => (
-                          <div
-                            key={mode.value}
-                            style={{
-                              border:
-                                getDisplayCombinationMode(
-                                  imgCombComponent.combination_mode,
-                                  imgCombComponent.img_list?.length || 0,
-                                ) === mode.value
-                                  ? '2px solid #1890ff'
-                                  : '1px solid #d9d9d9',
-                              borderRadius: '4px',
-                              padding: '8px',
-                              textAlign: 'center',
-                              cursor: 'pointer',
-                              backgroundColor:
-                                getDisplayCombinationMode(
-                                  imgCombComponent.combination_mode,
-                                  imgCombComponent.img_list?.length || 0,
-                                ) === mode.value
-                                  ? '#f0f9ff'
-                                  : '#fafafa',
-                              transition: 'all 0.2s ease',
-                            }}
-                            onClick={() => {
-                              // 根据选择的模式确定所需的图片数量
-                              const getRequiredImageCount = (mode: string) => {
-                                switch (mode) {
-                                  case 'double':
-                                    return 2;
-                                  case 'triple':
-                                    return 3;
-                                  case 'bisect_2':
-                                    return 2;
-                                  case 'bisect_4':
-                                    return 4;
-                                  case 'bisect_6':
-                                    return 6;
-                                  case 'trisect_3':
-                                    return 3;
-                                  case 'trisect_6':
-                                    return 6;
-                                  case 'trisect_9':
-                                    return 9;
-                                  default:
-                                    return 2;
-                                }
-                              };
-
-                              const requiredCount = getRequiredImageCount(
-                                mode.value,
-                              );
-                              const currentImages =
-                                imgCombComponent.img_list || [];
-
-                              // 调整图片列表数量
-                              let newImageList = [...currentImages];
-
-                              if (newImageList.length < requiredCount) {
-                                // 需要添加图片
-                                for (
-                                  let i = newImageList.length;
-                                  i < requiredCount;
-                                  i++
-                                ) {
-                                  newImageList.push({
-                                    img_url: 'demo.png',
-                                    i18n_img_url: {
-                                      'en-US': 'demo.png',
-                                    },
-                                  });
-                                }
-                              } else if (newImageList.length > requiredCount) {
-                                // 需要移除多余图片
-                                newImageList = newImageList.slice(
-                                  0,
-                                  requiredCount,
-                                );
-                              }
-
-                              const updatedComponent = {
-                                ...currentComponent,
-                                combination_mode: getStorageCombinationMode(
-                                  mode.value,
-                                ) as any,
-                                img_list: newImageList,
-                              };
-
-                              onUpdateComponent(updatedComponent);
-                            }}
-                          >
-                            {/* 混排方式图标预览 */}
-                            {(() => {
-                              const renderModeIcon = (mode: string) => {
-                                switch (mode) {
-                                  case 'double':
-                                    return (
-                                      <div
-                                        style={{
-                                          width: '24px',
-                                          height: '16px',
-                                          display: 'flex',
-                                          gap: '1px',
-                                          margin: '0 auto 4px',
-                                        }}
-                                      >
-                                        <div
-                                          style={{
-                                            width: '8px',
-                                            height: '16px',
-                                            backgroundColor: '#1890ff',
-                                            borderRadius: '1px',
-                                          }}
-                                        />
-                                        <div
-                                          style={{
-                                            width: '15px',
-                                            height: '16px',
-                                            backgroundColor: '#1890ff',
-                                            borderRadius: '1px',
-                                          }}
-                                        />
-                                      </div>
-                                    );
-                                  case 'triple':
-                                    return (
-                                      <div
-                                        style={{
-                                          width: '24px',
-                                          height: '16px',
-                                          display: 'flex',
-                                          gap: '1px',
-                                          margin: '0 auto 4px',
-                                        }}
-                                      >
-                                        <div
-                                          style={{
-                                            width: '16px',
-                                            height: '16px',
-                                            backgroundColor: '#1890ff',
-                                            borderRadius: '1px',
-                                          }}
-                                        />
-                                        <div
-                                          style={{
-                                            width: '7px',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            gap: '1px',
-                                          }}
-                                        >
-                                          <div
-                                            style={{
-                                              width: '7px',
-                                              height: '7.5px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                          <div
-                                            style={{
-                                              width: '7px',
-                                              height: '7.5px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                        </div>
-                                      </div>
-                                    );
-                                  case 'bisect_2':
-                                    return (
-                                      <div
-                                        style={{
-                                          width: '24px',
-                                          height: '12px',
-                                          display: 'flex',
-                                          gap: '1px',
-                                          margin: '0 auto 4px',
-                                        }}
-                                      >
-                                        <div
-                                          style={{
-                                            width: '11.5px',
-                                            height: '12px',
-                                            backgroundColor: '#1890ff',
-                                            borderRadius: '1px',
-                                          }}
-                                        />
-                                        <div
-                                          style={{
-                                            width: '11.5px',
-                                            height: '12px',
-                                            backgroundColor: '#1890ff',
-                                            borderRadius: '1px',
-                                          }}
-                                        />
-                                      </div>
-                                    );
-                                  case 'bisect_4':
-                                    return (
-                                      <div
-                                        style={{
-                                          width: '20px',
-                                          height: '20px',
-                                          display: 'flex',
-                                          flexDirection: 'column',
-                                          gap: '1px',
-                                          margin: '0 auto 4px',
-                                        }}
-                                      >
-                                        <div
-                                          style={{
-                                            display: 'flex',
-                                            gap: '1px',
-                                            height: '9.5px',
-                                          }}
-                                        >
-                                          <div
-                                            style={{
-                                              width: '9.5px',
-                                              height: '9.5px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                          <div
-                                            style={{
-                                              width: '9.5px',
-                                              height: '9.5px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                        </div>
-                                        <div
-                                          style={{
-                                            display: 'flex',
-                                            gap: '1px',
-                                            height: '9.5px',
-                                          }}
-                                        >
-                                          <div
-                                            style={{
-                                              width: '9.5px',
-                                              height: '9.5px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                          <div
-                                            style={{
-                                              width: '9.5px',
-                                              height: '9.5px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                        </div>
-                                      </div>
-                                    );
-                                  case 'bisect_6':
-                                    return (
-                                      <div
-                                        style={{
-                                          width: '16px',
-                                          height: '24px',
-                                          display: 'flex',
-                                          flexDirection: 'column',
-                                          gap: '1px',
-                                          margin: '0 auto 4px',
-                                        }}
-                                      >
-                                        <div
-                                          style={{
-                                            display: 'flex',
-                                            gap: '1px',
-                                            height: '7.33px',
-                                          }}
-                                        >
-                                          <div
-                                            style={{
-                                              width: '7.5px',
-                                              height: '7.33px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                          <div
-                                            style={{
-                                              width: '7.5px',
-                                              height: '7.33px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                        </div>
-                                        <div
-                                          style={{
-                                            display: 'flex',
-                                            gap: '1px',
-                                            height: '7.33px',
-                                          }}
-                                        >
-                                          <div
-                                            style={{
-                                              width: '7.5px',
-                                              height: '7.33px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                          <div
-                                            style={{
-                                              width: '7.5px',
-                                              height: '7.33px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                        </div>
-                                        <div
-                                          style={{
-                                            display: 'flex',
-                                            gap: '1px',
-                                            height: '7.33px',
-                                          }}
-                                        >
-                                          <div
-                                            style={{
-                                              width: '7.5px',
-                                              height: '7.33px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                          <div
-                                            style={{
-                                              width: '7.5px',
-                                              height: '7.33px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                        </div>
-                                      </div>
-                                    );
-                                  case 'trisect_3':
-                                    return (
-                                      <div
-                                        style={{
-                                          width: '24px',
-                                          height: '8px',
-                                          display: 'flex',
-                                          gap: '1px',
-                                          margin: '0 auto 4px',
-                                        }}
-                                      >
-                                        <div
-                                          style={{
-                                            width: '7.33px',
-                                            height: '8px',
-                                            backgroundColor: '#1890ff',
-                                            borderRadius: '1px',
-                                          }}
-                                        />
-                                        <div
-                                          style={{
-                                            width: '7.33px',
-                                            height: '8px',
-                                            backgroundColor: '#1890ff',
-                                            borderRadius: '1px',
-                                          }}
-                                        />
-                                        <div
-                                          style={{
-                                            width: '7.33px',
-                                            height: '8px',
-                                            backgroundColor: '#1890ff',
-                                            borderRadius: '1px',
-                                          }}
-                                        />
-                                      </div>
-                                    );
-                                  case 'trisect_6':
-                                    return (
-                                      <div
-                                        style={{
-                                          width: '24px',
-                                          height: '16px',
-                                          display: 'flex',
-                                          flexDirection: 'column',
-                                          gap: '1px',
-                                          margin: '0 auto 4px',
-                                        }}
-                                      >
-                                        <div
-                                          style={{
-                                            display: 'flex',
-                                            gap: '1px',
-                                            height: '7.5px',
-                                          }}
-                                        >
-                                          <div
-                                            style={{
-                                              width: '7.33px',
-                                              height: '7.5px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                          <div
-                                            style={{
-                                              width: '7.33px',
-                                              height: '7.5px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                          <div
-                                            style={{
-                                              width: '7.33px',
-                                              height: '7.5px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                        </div>
-                                        <div
-                                          style={{
-                                            display: 'flex',
-                                            gap: '1px',
-                                            height: '7.5px',
-                                          }}
-                                        >
-                                          <div
-                                            style={{
-                                              width: '7.33px',
-                                              height: '7.5px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                          <div
-                                            style={{
-                                              width: '7.33px',
-                                              height: '7.5px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                          <div
-                                            style={{
-                                              width: '7.33px',
-                                              height: '7.5px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                        </div>
-                                      </div>
-                                    );
-                                  case 'trisect_9':
-                                    return (
-                                      <div
-                                        style={{
-                                          width: '18px',
-                                          height: '18px',
-                                          display: 'flex',
-                                          flexDirection: 'column',
-                                          gap: '1px',
-                                          margin: '0 auto 4px',
-                                        }}
-                                      >
-                                        <div
-                                          style={{
-                                            display: 'flex',
-                                            gap: '1px',
-                                            height: '5.33px',
-                                          }}
-                                        >
-                                          <div
-                                            style={{
-                                              width: '5.33px',
-                                              height: '5.33px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                          <div
-                                            style={{
-                                              width: '5.33px',
-                                              height: '5.33px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                          <div
-                                            style={{
-                                              width: '5.33px',
-                                              height: '5.33px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                        </div>
-                                        <div
-                                          style={{
-                                            display: 'flex',
-                                            gap: '1px',
-                                            height: '5.33px',
-                                          }}
-                                        >
-                                          <div
-                                            style={{
-                                              width: '5.33px',
-                                              height: '5.33px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                          <div
-                                            style={{
-                                              width: '5.33px',
-                                              height: '5.33px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                          <div
-                                            style={{
-                                              width: '5.33px',
-                                              height: '5.33px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                        </div>
-                                        <div
-                                          style={{
-                                            display: 'flex',
-                                            gap: '1px',
-                                            height: '5.33px',
-                                          }}
-                                        >
-                                          <div
-                                            style={{
-                                              width: '5.33px',
-                                              height: '5.33px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                          <div
-                                            style={{
-                                              width: '5.33px',
-                                              height: '5.33px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                          <div
-                                            style={{
-                                              width: '5.33px',
-                                              height: '5.33px',
-                                              backgroundColor: '#1890ff',
-                                              borderRadius: '1px',
-                                            }}
-                                          />
-                                        </div>
-                                      </div>
-                                    );
-                                  default:
-                                    return (
-                                      <div
-                                        style={{
-                                          width: '24px',
-                                          height: '16px',
-                                          backgroundColor: '#d9d9d9',
-                                          borderRadius: '2px',
-                                          margin: '0 auto 4px',
-                                        }}
-                                      />
-                                    );
-                                }
-                              };
-                              return renderModeIcon(mode.value);
-                            })()}
-                            <div
-                              style={{
-                                fontSize: '10px',
-                                color: '#666',
-                                lineHeight: '1.2',
-                              }}
-                            >
-                              {mode.label}
-                            </div>
-                            <div
-                              style={{
-                                fontSize: '9px',
-                                color: '#999',
-                                marginTop: '2px',
-                              }}
-                            >
-                              {mode.description}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ),
-              },
-              {
-                key: 'images',
-                label: '🖼️ 图片管理',
-                children: (
-                  <div>
-                    <div style={{ marginBottom: '12px' }}>
-                      <Text
-                        style={{
-                          fontSize: '12px',
+                          fontSize: '10px',
                           color: '#666',
-                          marginBottom: '8px',
-                          display: 'block',
+                          marginTop: '4px',
                         }}
                       >
-                        当前混排方式:{' '}
-                        <strong>
-                          {(() => {
-                            const displayMode = getDisplayCombinationMode(
-                              imgCombComponent.combination_mode,
-                              imgCombComponent.img_list?.length || 0,
-                            );
-                            const modeLabels = {
-                              double: '双图模式（左小右大）',
-                              triple: '三图模式（左1右2）',
-                              bisect_2: '双列-2图（1行2列）',
-                              bisect_4: '双列-4图（2行2列）',
-                              bisect_6: '双列-6图（3行2列）',
-                              trisect_3: '三列-3图（1行3列）',
-                              trisect_6: '三列-6图（2行3列）',
-                              trisect_9: '三列-9图（3行3列）',
-                            };
-                            return (
-                              modeLabels[
-                                displayMode as keyof typeof modeLabels
-                              ] || displayMode
-                            );
-                          })()}
-                        </strong>
-                      </Text>
-                      <Text
-                        style={{
-                          fontSize: '12px',
-                          color: '#52c41a',
-                          marginBottom: '8px',
-                          display: 'block',
-                        }}
-                      >
-                        图片数量:{' '}
-                        <strong>
-                          {(imgCombComponent.img_list || []).length}
-                        </strong>{' '}
-                        张
-                      </Text>
-                    </div>
-                    {/* 所有混排模式都显示详细的图片管理界面 */}
-                    {true ? (
-                      // 所有混排模式 - 详细的图片管理
-                      <div style={{ marginTop: '12px' }}>
-                        {(imgCombComponent.img_list || []).map(
-                          (img: any, index: number) => (
-                            <div
-                              key={index}
-                              style={{
-                                marginBottom: '16px',
-                                padding: '12px',
-                                backgroundColor: '#fafafa',
-                                borderRadius: '6px',
-                                border: '1px solid #f0f0f0',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  marginBottom: '8px',
-                                  fontSize: '13px',
-                                  fontWeight: 600,
-                                  color: '#333',
-                                }}
-                              >
-                                图片{index + 1}
-                              </div>
-
-                              {/* 图片路径输入框 */}
-                              <div style={{ marginBottom: '8px' }}>
-                                <div
-                                  style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '4px',
-                                  }}
-                                >
-                                  <Input
-                                    value={img.img_url || ''}
-                                    disabled={[
-                                      'double',
-                                      'triple',
-                                      'bisect_2',
-                                      'trisect_3',
-                                    ].includes(
-                                      getDisplayCombinationMode(
-                                        imgCombComponent.combination_mode,
-                                        imgCombComponent.img_list?.length || 0,
-                                      ),
-                                    )}
-                                    onChange={(e) => {
-                                      const newImgList = [
-                                        ...(imgCombComponent.img_list || []),
-                                      ];
-                                      const newValue = e.target.value.trim();
-                                      newImgList[index] = {
-                                        ...newImgList[index],
-                                        img_url: newValue || '',
-                                        i18n_img_url: {
-                                          ...newImgList[index]?.i18n_img_url,
-                                          'en-US': newValue || '',
-                                        },
-                                      };
-                                      const updatedComponent = {
-                                        ...currentComponent,
-                                        img_list: newImgList,
-                                      };
-                                      onUpdateComponent(updatedComponent);
-                                    }}
-                                    placeholder={
-                                      [
-                                        'double',
-                                        'triple',
-                                        'bisect_2',
-                                        'trisect_3',
-                                      ].includes(
-                                        getDisplayCombinationMode(
-                                          imgCombComponent.combination_mode,
-                                          imgCombComponent.img_list?.length ||
-                                            0,
-                                        ),
-                                      )
-                                        ? '只能通过上传替换图片'
-                                        : `请输入图片${index + 1}路径`
-                                    }
-                                    style={{ fontSize: '12px', flex: 1 }}
-                                  />
-
-                                  {/* 上传图标按钮 */}
-                                  <Upload
-                                    showUploadList={false}
-                                    beforeUpload={(file) => {
-                                      const reader = new FileReader();
-                                      reader.onload = (e) => {
-                                        const imageUrl = e.target
-                                          ?.result as string;
-                                        if (imageUrl) {
-                                          // 更新指定索引的图片
-                                          const newImgList = [
-                                            ...(imgCombComponent.img_list ||
-                                              []),
-                                          ];
-                                          newImgList[index] = {
-                                            ...newImgList[index],
-                                            img_url: imageUrl,
-                                            i18n_img_url: {
-                                              'en-US': imageUrl,
-                                              ...(newImgList[index]
-                                                ?.i18n_img_url || {}),
-                                            },
-                                          };
-
-                                          const updatedComponent = {
-                                            ...currentComponent,
-                                            img_list: newImgList,
-                                          };
-
-                                          console.log(
-                                            `🖼️ 上传图片${index + 1}:`,
-                                            {
-                                              fileName: file.name,
-                                              imageUrl:
-                                                imageUrl.substring(0, 50) +
-                                                '...',
-                                              component: updatedComponent,
-                                            },
-                                          );
-
-                                          onUpdateComponent(updatedComponent);
-                                          message.success(
-                                            `图片${index + 1}上传成功`,
-                                          );
-                                        }
-                                      };
-                                      reader.readAsDataURL(file);
-                                      return false; // 阻止默认上传行为
-                                    }}
-                                    accept="image/*"
-                                  >
-                                    <Button
-                                      type="text"
-                                      icon={<UploadOutlined />}
-                                      size="small"
-                                      style={{
-                                        color: '#666',
-                                        border: 'none',
-                                        boxShadow: 'none',
-                                        padding: '4px',
-                                        minWidth: 'auto',
-                                        height: 'auto',
-                                      }}
-                                      title="上传图片"
-                                    />
-                                  </Upload>
-                                </div>
-                              </div>
-                            </div>
-                          ),
-                        )}
+                        {mode.description}
                       </div>
-                    ) : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* 图片设置 */}
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 6,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+              padding: 16,
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>
+              🖼️ 图片设置
+            </div>
+            <div>
+              <div style={{ marginBottom: '12px' }}>
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  当前模式需要 {imgCombComponent.img_list?.length || 0} 张图片
+                </Text>
+              </div>
+              {(imgCombComponent.img_list || []).map(
+                (img: any, index: number) => (
+                  <div
+                    key={index}
+                    style={{
+                      marginBottom: '12px',
+                      padding: '12px',
+                      border: '1px solid #d9d9d9',
+                      borderRadius: '4px',
+                      backgroundColor: '#fafafa',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        marginBottom: '8px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '20px',
+                          height: '20px',
+                          backgroundColor: '#1890ff',
+                          color: 'white',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                        }}
+                      >
+                        {index + 1}
+                      </div>
+                      <Text style={{ fontWeight: 600 }}>图片 {index + 1}</Text>
+                    </div>
+                    <Form.Item label="图片名称">
+                      <Input
+                        value={img.img_name || ''}
+                        onChange={(e) => {
+                          const newImgList = [
+                            ...(imgCombComponent.img_list || []),
+                          ];
+                          newImgList[index] = {
+                            ...newImgList[index],
+                            img_name: e.target.value,
+                          };
+                          const updatedComponent = {
+                            ...currentComponent,
+                            img_list: newImgList,
+                          };
+                          onUpdateComponent(updatedComponent);
+                        }}
+                        placeholder={`请输入图片${index + 1}的名称`}
+                        style={{ marginBottom: '8px' }}
+                      />
+                    </Form.Item>
+                    <Form.Item label="图片URL">
+                      <Input
+                        value={img.img_url || ''}
+                        onChange={(e) => {
+                          const newImgList = [
+                            ...(imgCombComponent.img_list || []),
+                          ];
+                          newImgList[index] = {
+                            ...newImgList[index],
+                            img_url: e.target.value,
+                          };
+                          const updatedComponent = {
+                            ...currentComponent,
+                            img_list: newImgList,
+                          };
+                          onUpdateComponent(updatedComponent);
+                        }}
+                        placeholder={`请输入图片${index + 1}的URL`}
+                      />
+                    </Form.Item>
                   </div>
                 ),
-              },
-            ]}
-          />
+              )}
+            </div>
+          </div>
         </div>
       );
     }
 
-    // 检查是否选中了下拉组件 - 使用currentComponent而不是selectedComponent
-    const isSelectComponent =
+    // 检查是否选中了选择器组件 - 使用currentComponent而不是selectedComponent
+    if (
       currentComponent &&
       (currentComponent.tag === 'select_static' ||
-        currentComponent.tag === 'multi_select_static');
-
-    // 如果选中了下拉组件，显示下拉编辑界面
-    if (isSelectComponent) {
+        currentComponent.tag === 'multi_select_static')
+    ) {
       const selectComponent = currentComponent as any;
-      const options = selectComponent?.options || [];
+      const options = selectComponent.options || [];
 
+      // 添加选项
       const handleAddOption = () => {
         const newOption = {
-          value: `option_${Date.now()}`,
           text: {
             content: `选项${options.length + 1}`,
             i18n_content: {
-              'en-US': `选项${options.length + 1}`,
+              'en-US': `Option${options.length + 1}`,
             },
           },
+          value: `option_${options.length + 1}`,
         };
-        const updatedOptions = [...options, newOption];
-        handleValueChange('options', updatedOptions);
+        const newOptions = [...options, newOption];
+        const updatedComponent = {
+          ...currentComponent,
+          options: newOptions,
+        };
+        onUpdateComponent(updatedComponent);
       };
 
+      // 更新选项
       const handleUpdateOption = (index: number, field: string, value: any) => {
-        const updatedOptions = [...options];
+        const newOptions = [...options];
         if (field === 'content') {
-          updatedOptions[index] = {
-            ...updatedOptions[index],
+          newOptions[index] = {
+            ...newOptions[index],
             text: {
-              ...updatedOptions[index].text,
+              ...newOptions[index].text,
               content: value,
-              // 为单选和多选组件都同步更新国际化内容与content保持一致
-              i18n_content: {
-                'en-US': value,
-              },
             },
           };
         } else if (field === 'value') {
-          updatedOptions[index] = {
-            ...updatedOptions[index],
+          newOptions[index] = {
+            ...newOptions[index],
             value: value,
           };
         }
-        handleValueChange('options', updatedOptions);
+        const updatedComponent = {
+          ...currentComponent,
+          options: newOptions,
+        };
+        onUpdateComponent(updatedComponent);
       };
 
+      // 删除选项
       const handleDeleteOption = (index: number) => {
-        const updatedOptions = options.filter(
-          (_: any, i: number) => i !== index,
-        );
-        handleValueChange('options', updatedOptions);
+        const newOptions = options.filter((_: any, i: number) => i !== index);
+        const updatedComponent = {
+          ...currentComponent,
+          options: newOptions,
+        };
+        onUpdateComponent(updatedComponent);
       };
 
       return (
@@ -3965,120 +3373,79 @@ export const PropertyPanel: React.FC<{
                 : '下拉单选组件'}
             </Text>
           </div>
-          <Collapse
-            defaultActiveKey={['basic', 'options']}
-            ghost
-            items={[
-              {
-                key: 'basic',
-                label: '🔧 基础设置',
-                children: (
-                  <Form form={form} layout="vertical">
-                    <Form.Item label="是否必填">
-                      <Switch
-                        checked={selectComponent.required || false}
-                        onChange={(checked) =>
-                          handleValueChange('required', checked)
-                        }
-                      />
-                    </Form.Item>
-                  </Form>
-                ),
-              },
-              {
-                key: 'options',
-                label: '📝 选项设置',
-                children: (
-                  <div>
-                    <div style={{ marginBottom: '12px' }}>
-                      <Button
-                        type="dashed"
-                        icon={<PlusOutlined />}
-                        onClick={handleAddOption}
-                        style={{ width: '100%' }}
-                        size="small"
-                      >
-                        添加选项
-                      </Button>
-                    </div>
-                    {options.length === 0 && (
-                      <div
-                        style={{
-                          textAlign: 'center',
-                          color: '#999',
-                          padding: '20px 0',
-                        }}
-                      >
-                        暂无选项，请点击上方按钮添加
-                      </div>
-                    )}
-                    {options.map((option: any, index: number) => (
-                      <div
-                        key={index}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          padding: '8px',
-                          border: '1px solid #d9d9d9',
-                          borderRadius: '4px',
-                          marginBottom: '8px',
-                          backgroundColor: '#fafafa',
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: '24px',
-                            height: '24px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            backgroundColor: '#1890ff',
-                            color: 'white',
-                            borderRadius: '50%',
-                            fontSize: '12px',
-                            fontWeight: 'bold',
-                          }}
-                        >
-                          {index + 1}
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <Input
-                            placeholder="选项文本"
-                            value={option.text?.content || ''}
-                            onChange={(e) =>
-                              handleUpdateOption(
-                                index,
-                                'content',
-                                e.target.value,
-                              )
-                            }
-                            style={{ marginBottom: '4px' }}
-                            size="small"
-                          />
-                          <Input
-                            placeholder="选项值"
-                            value={option.value || ''}
-                            onChange={(e) =>
-                              handleUpdateOption(index, 'value', e.target.value)
-                            }
-                            size="small"
-                          />
-                        </div>
-                        <Button
-                          type="text"
-                          danger
-                          icon={<DeleteOutlined />}
-                          onClick={() => handleDeleteOption(index)}
-                          size="small"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ),
-              },
-            ]}
-          />
+          {/* 基础设置 */}
+          <div
+            style={{
+              marginBottom: '16px',
+              background: '#fff',
+              borderRadius: 6,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+              padding: 16,
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>
+              🔧 基础设置
+            </div>
+            <Form form={form} layout="vertical">
+              <Form.Item label="是否必填">
+                <Switch
+                  checked={selectComponent.required || false}
+                  onChange={(checked) => handleValueChange('required', checked)}
+                />
+              </Form.Item>
+            </Form>
+          </div>
+          {/* 选项设置 */}
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 6,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+              padding: 16,
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>
+              📝 选项设置
+            </div>
+            {options.map((opt: any, idx: number) => (
+              <div
+                key={idx}
+                style={{
+                  display: 'flex',
+                  gap: 8,
+                  marginBottom: 8,
+                  alignItems: 'center',
+                }}
+              >
+                <Input
+                  value={opt.text?.content || ''}
+                  onChange={(e) =>
+                    handleUpdateOption(idx, 'content', e.target.value)
+                  }
+                  placeholder={`选项${idx + 1}名称`}
+                  style={{ flex: 2 }}
+                />
+                <Input
+                  value={opt.value || ''}
+                  onChange={(e) =>
+                    handleUpdateOption(idx, 'value', e.target.value)
+                  }
+                  placeholder={`选项${idx + 1}值`}
+                  style={{ flex: 2 }}
+                />
+                <Button
+                  danger
+                  size="small"
+                  onClick={() => handleDeleteOption(idx)}
+                >
+                  删除
+                </Button>
+              </div>
+            ))}
+            <Button type="dashed" block onClick={handleAddOption}>
+              添加选项
+            </Button>
+          </div>
         </div>
       );
     }
@@ -4122,7 +3489,7 @@ export const PropertyPanel: React.FC<{
             </Text>
           </div>
           <Collapse
-            defaultActiveKey={['source', 'display']}
+            defaultActiveKey={[]}
             ghost
             items={[
               {
@@ -4451,136 +3818,9 @@ export const PropertyPanel: React.FC<{
           }}
         >
           <Text style={{ fontSize: '12px', color: '#d46b08' }}>
-            🎯 当前选中：{currentComponent?.tag || '未知'}组件
+            🎯 当前选中：{currentComponent?.tag || '未知'}
           </Text>
         </div>
-        {/* <Collapse
-          defaultActiveKey={['basic', 'style']}
-          ghost
-          items={[
-            {
-              key: 'basic',
-              label: '🔧 基础设置',
-              children: (
-                <Form form={form} layout="vertical">
-                  <Form.Item label="组件名称">
-                    <Input
-                      value={(currentComponent as any)?.name || ''}
-                      onChange={(e) =>
-                        handleValueChange('name', e.target.value)
-                      }
-                      placeholder="请输入组件名称"
-                      maxLength={50}
-                    />
-                  </Form.Item>
-                  {(currentComponent as any)?.content !== undefined && (
-                    <Form.Item label="内容">
-                      <Input.TextArea
-                        value={(currentComponent as any)?.content || ''}
-                        onChange={(e) =>
-                          handleValueChange('content', e.target.value)
-                        }
-                        placeholder="请输入内容"
-                        maxLength={500}
-                        rows={4}
-                      />
-                    </Form.Item>
-                  )}
-                </Form>
-              ),
-            },
-            {
-              key: 'style',
-              label: '🎨 样式设置',
-              children: (
-                <Form form={form} layout="vertical">
-                  <Form.Item label="字体大小">
-                    <InputNumber
-                      value={
-                        (currentComponent as any)?.style?.fontSize ||
-                        (currentComponent as any)?.fontSize ||
-                        14
-                      }
-                      onChange={(value) => handleValueChange('fontSize', value)}
-                      min={8}
-                      max={72}
-                      addonAfter="px"
-                      style={{ width: '100%' }}
-                    />
-                  </Form.Item>
-                  <Form.Item label="文字颜色">
-                    <ColorPicker
-                      value={
-                        (currentComponent as any)?.style?.color ||
-                        (currentComponent as any)?.color ||
-                        '#000000'
-                      }
-                      onChange={(color) => {
-                        const colorString =
-                          typeof color === 'string'
-                            ? color
-                            : color.toHexString();
-                        handleValueChange('color', colorString);
-                      }}
-                      showText
-                      style={{ width: '100%' }}
-                    />
-                  </Form.Item>
-                  <Form.Item label="文字对齐">
-                    <Select
-                      value={
-                        (currentComponent as any)?.style?.textAlign ||
-                        (currentComponent as any)?.textAlign ||
-                        'left'
-                      }
-                      onChange={(value) =>
-                        handleValueChange('textAlign', value)
-                      }
-                      style={{ width: '100%' }}
-                    >
-                      <Option value="left">
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                          }}
-                        >
-                          <div style={{ fontSize: '16px' }}>⬅️</div>
-                          <span>左对齐</span>
-                        </div>
-                      </Option>
-                      <Option value="center">
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                          }}
-                        >
-                          <div style={{ fontSize: '16px' }}>⬆️</div>
-                          <span>居中对齐</span>
-                        </div>
-                      </Option>
-                      <Option value="right">
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                          }}
-                        >
-                          <div style={{ fontSize: '16px' }}>➡️</div>
-                          <span>右对齐</span>
-                        </div>
-                      </Option>
-                    </Select>
-                  </Form.Item>
-                </Form>
-              ),
-            },
-          ]}
-        /> */}
       </div>
     );
   };
