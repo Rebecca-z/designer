@@ -3091,7 +3091,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             border: isCurrentSelected
               ? '2px solid #1890ff'
               : '2px solid transparent',
-            borderRadius: '6px',
             transition: 'all 0.2s ease',
             position: 'relative',
             display: 'inline-block', // 让按钮容器内联显示，支持并排
