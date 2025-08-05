@@ -470,6 +470,17 @@ const CardDesigner: React.FC = () => {
       return;
     }
 
+    // 检查是否为表单内分栏列中组件的删除路径
+    if (
+      path.length === 10 &&
+      path[4] === 'elements' &&
+      path[6] === 'columns' &&
+      path[8] === 'elements'
+    ) {
+      // 表单内分栏列中组件: ['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', componentIndex]
+      console.log('🗑️ 检测到表单内分栏列中组件删除路径:', path);
+    }
+
     let newData = JSON.parse(JSON.stringify(safeCardData));
 
     // console.log('🗑️ 删除组件:', {
@@ -678,6 +689,46 @@ const CardDesigner: React.FC = () => {
           //   componentIndex,
           //   isTitle: isDeletingTitle,
           // });
+        }
+      }
+    } else if (
+      path.length === 10 &&
+      path[4] === 'elements' &&
+      path[6] === 'columns' &&
+      path[8] === 'elements'
+    ) {
+      // 表单内分栏列中组件: ['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', componentIndex]
+      const formIndex = path[3] as number;
+      const columnSetIndex = path[5] as number;
+      const columnIndex = path[7] as number;
+      const componentIndex = path[9] as number;
+      const formComponent = newData.dsl.body.elements[formIndex];
+
+      if (
+        formComponent &&
+        formComponent.tag === 'form' &&
+        formComponent.elements
+      ) {
+        const columnSetComponent = formComponent.elements[columnSetIndex];
+        if (
+          columnSetComponent &&
+          columnSetComponent.tag === 'column_set' &&
+          columnSetComponent.columns
+        ) {
+          const column = columnSetComponent.columns[columnIndex];
+          if (column && column.elements) {
+            const componentToDelete = column.elements[componentIndex];
+            isDeletingTitle =
+              componentToDelete && componentToDelete.tag === 'title';
+            column.elements.splice(componentIndex, 1);
+            console.log('🗑️ 删除表单内分栏列中组件:', {
+              formIndex,
+              columnSetIndex,
+              columnIndex,
+              componentIndex,
+              isTitle: isDeletingTitle,
+            });
+          }
         }
       }
     } else {
