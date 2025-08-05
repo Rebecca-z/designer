@@ -677,11 +677,69 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       depth: number = 0,
       rootElements?: ComponentType[], // ✅ 修复：添加根elements数组参数
       originalTargetPath?: (string | number)[], // ✅ 修复：添加原始目标路径参数
+      componentToAdd?: ComponentType, // ✅ 修复：添加要添加的组件参数
     ): boolean => {
-      if (!target || remainingPath.length === 0) {
-        console.error('❌ 路径导航失败：目标为空或路径为空', {
-          target: target ? 'exists' : 'null',
+      if (!target) {
+        console.error('❌ 路径导航失败：目标为空', {
+          target: 'null',
           remainingPath,
+          depth,
+        });
+        return false;
+      }
+
+      // 如果路径为空，说明已经到达目标位置，直接添加组件
+      if (remainingPath.length === 0) {
+        console.log('✅ 路径导航完成，到达目标位置，准备添加组件:', {
+          targetType: typeof target,
+          isArray: Array.isArray(target),
+          targetLength: Array.isArray(target) ? target.length : 'N/A',
+          insertIndex,
+          componentId: componentToAdd?.id,
+          componentTag: componentToAdd?.tag,
+        });
+
+        // 如果目标是数组，直接添加组件
+        if (Array.isArray(target) && componentToAdd) {
+          if (insertIndex !== undefined) {
+            target.splice(insertIndex, 0, componentToAdd);
+          } else {
+            target.push(componentToAdd);
+          }
+
+          console.log('✅ 组件添加成功 (数组目标):', {
+            componentId: componentToAdd.id,
+            componentTag: componentToAdd.tag,
+            insertIndex,
+            arrayLength: target.length,
+          });
+          return true;
+        }
+
+        // 如果目标是对象，尝试添加到elements数组
+        if (
+          target.elements &&
+          Array.isArray(target.elements) &&
+          componentToAdd
+        ) {
+          if (insertIndex !== undefined) {
+            target.elements.splice(insertIndex, 0, componentToAdd);
+          } else {
+            target.elements.push(componentToAdd);
+          }
+
+          console.log('✅ 组件添加成功 (对象elements):', {
+            componentId: componentToAdd.id,
+            componentTag: componentToAdd.tag,
+            insertIndex,
+            elementsLength: target.elements.length,
+          });
+          return true;
+        }
+
+        console.error('❌ 无法添加组件：目标既不是数组也没有elements属性', {
+          targetType: typeof target,
+          targetKeys: target ? Object.keys(target) : [],
           depth,
         });
         return false;
@@ -752,6 +810,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
               depth + 1,
               rootElements,
               originalTargetPath,
+              componentToAdd,
             );
           } else {
             console.error('❌ 分栏索引无效:', {
@@ -795,6 +854,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                 depth,
                 rootElements,
                 originalTargetPath,
+                componentToAdd,
               );
             } else {
               console.error('❌ 在根elements中未找到分栏容器');
@@ -835,6 +895,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                     depth,
                     rootElements,
                     originalTargetPath,
+                    componentToAdd,
                   );
                 } else {
                   console.error('❌ 在全局elements中未找到分栏容器');
@@ -984,6 +1045,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                 depth + 1,
                 rootElements,
                 originalTargetPath,
+                componentToAdd,
               );
             } else {
               // ✅ 修复：当数组为空时，直接添加组件
@@ -1026,27 +1088,44 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
 
                 // 如果表单有elements数组，尝试访问指定索引
                 if (target.elements && Array.isArray(target.elements)) {
-                  if (nextKey >= 0 && nextKey < target.elements.length) {
-                    console.log('✅ 从表单elements数组中获取组件:', {
-                      nextKey,
+                  // ✅ 修复：如果索引超出范围，尝试智能修正
+                  let correctedIndex = nextKey;
+                  if (nextKey >= target.elements.length) {
+                    console.warn('⚠️ 表单elements数组索引超出范围，尝试修正:', {
+                      originalIndex: nextKey,
                       elementsLength: target.elements.length,
-                      targetItem: target.elements[nextKey]
+                      correctedIndex: 0,
+                    });
+                    correctedIndex = 0;
+                  }
+
+                  if (
+                    correctedIndex >= 0 &&
+                    correctedIndex < target.elements.length
+                  ) {
+                    console.log('✅ 从表单elements数组中获取组件:', {
+                      originalIndex: nextKey,
+                      correctedIndex,
+                      elementsLength: target.elements.length,
+                      targetItem: target.elements[correctedIndex]
                         ? {
-                            id: target.elements[nextKey].id,
-                            tag: target.elements[nextKey].tag,
+                            id: target.elements[correctedIndex].id,
+                            tag: target.elements[correctedIndex].tag,
                           }
                         : 'undefined',
                     });
                     return navigateAndAdd(
-                      target.elements[nextKey],
+                      target.elements[correctedIndex],
                       nextPath.slice(1),
                       depth + 1,
                       rootElements,
                       originalTargetPath,
+                      componentToAdd,
                     );
                   } else {
                     console.error('❌ 表单elements数组索引无效:', {
                       nextKey,
+                      correctedIndex,
                       elementsLength: target.elements.length,
                       availableIndices: target.elements.map(
                         (_: any, idx: number) => idx,
@@ -1103,6 +1182,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                 depth + 1,
                 rootElements,
                 originalTargetPath,
+                componentToAdd,
               );
             } else {
               // ✅ 修复：智能修正表单容器路径
@@ -1127,6 +1207,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                   depth + 1,
                   rootElements,
                   originalTargetPath,
+                  componentToAdd,
                 );
               } else {
                 // ✅ 修复：当路径指向错误的组件类型时，尝试智能修正
@@ -1461,6 +1542,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                 depth + 1,
                 rootElements,
                 originalTargetPath,
+                componentToAdd,
               );
             }
           }
@@ -1473,6 +1555,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
             depth + 1,
             rootElements,
             originalTargetPath,
+            componentToAdd,
           );
         } else {
           console.error('❌ 数组索引无效:', {
@@ -1492,6 +1575,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           depth + 1,
           rootElements,
           originalTargetPath,
+          componentToAdd,
         );
       } else {
         console.error('❌ 属性路径无效:', {
@@ -1540,6 +1624,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       0,
       newElements,
       path,
+      newComponent,
     );
 
     if (success) {
