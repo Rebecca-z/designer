@@ -2264,13 +2264,11 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       const formContent = (
         <div
           style={{
-            // border: '2px dashed #d9d9d9',
             borderRadius: '4px',
             backgroundColor: 'transparent',
             transition: 'all 0.2s ease',
             position: 'relative',
-            minHeight: '80px', // 确保表单容器有最小高度
-            // padding: '8px',
+            minHeight: '80px',
           }}
         >
           {/* 简化的拖拽区域 - 移除SmartDropZone的嵌套 */}
@@ -2314,6 +2312,15 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       // 检查当前组件是否被选中
       const isCurrentSelected = isSamePath(selectedPath || null, path);
 
+      // 检查分栏组件是否在表单中
+      const isInForm = path.length >= 6 && path[4] === 'elements';
+
+      // 根据位置确定选中边框颜色
+      const getSelectedBorderColor = () => {
+        if (!isCurrentSelected || isPreview) return 'transparent';
+        return isInForm ? '#1890ff' : 'transparent'; // 表单中为红色，根节点为蓝色
+      };
+
       // 检查是否有分栏列被选中
       let selectedColumnIndex = -1;
 
@@ -2328,11 +2335,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         selectedPath[4] === 'columns'
       ) {
         selectedColumnIndex = selectedPath[5] as number;
-        // console.log('🎯 检测到根级别分栏列被选中:', {
-        //   selectedPath,
-        //   path,
-        //   selectedColumnIndex,
-        // });
       }
 
       // 检查表单内分栏列选中 (路径长度为8)
@@ -2353,10 +2355,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       const columnContent = (
         <div
           style={{
-            border:
-              isCurrentSelected && !isPreview
-                ? '2px solid #1890ff'
-                : '2px solid transparent',
+            border: `2px solid ${getSelectedBorderColor()}`,
             borderRadius: '4px',
             backgroundColor:
               isCurrentSelected && !isPreview
@@ -2437,7 +2436,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                       position: 'relative',
                       minHeight: '60px',
                       border: isColumnSelected
-                        ? '1px solid #1890ff'
+                        ? `1px solid #1890ff}`
                         : '1px dashed #d9d9d9',
                       borderRadius: '4px',
                       backgroundColor: isColumnSelected
@@ -2583,20 +2582,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
     // 所有其他组件类型的渲染逻辑保持不变...
     case 'plain_text': {
-      // console.log('📝 渲染 plain_text 组件:', {
-      //   componentId: comp.id,
-      //   content: comp.content,
-      //   textColor: comp.textColor,
-      //   fontSize: comp.fontSize,
-      //   fontWeight: comp.fontWeight,
-      //   textAlign: comp.textAlign,
-      //   numberOfLines: comp.numberOfLines,
-      //   style: comp.style,
-      //   path,
-      //   isPreview,
-      //   enableDrag,
-      // });
-
       // 从 style 对象中读取样式属性，如果没有则从根属性读取
       const fontSize = comp.style?.fontSize || comp.fontSize || 14;
       const fontWeight = comp.style?.fontWeight || comp.fontWeight || 'normal';
