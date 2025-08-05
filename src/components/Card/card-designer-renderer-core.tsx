@@ -2331,10 +2331,15 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         selectedPath[0] === 'dsl' &&
         selectedPath[1] === 'body' &&
         selectedPath[2] === 'elements' &&
-        selectedPath[3] === path[3] && // 分栏组件的索引
-        selectedPath[4] === 'columns'
+        selectedPath[4] === 'columns' &&
+        selectedPath[3] === path[3] // 分栏组件的索引
       ) {
         selectedColumnIndex = selectedPath[5] as number;
+        console.log('✅ 根级别分栏列选中状态匹配:', {
+          selectedPath,
+          currentPath: path,
+          selectedColumnIndex,
+        });
       }
 
       // 检查表单内分栏列选中 (路径长度为8)
@@ -2350,6 +2355,82 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         selectedPath[5] === path[5] // 分栏组件在表单内的索引
       ) {
         selectedColumnIndex = selectedPath[7] as number;
+        console.log('✅ 表单内分栏列选中状态匹配:', {
+          selectedPath,
+          currentPath: path,
+          selectedColumnIndex,
+        });
+      }
+
+      // 调试信息：输出当前路径和选中路径的详细信息
+      if (selectedPath && selectedPath.length >= 6) {
+        console.log('🔍 分栏组件路径匹配检查:', {
+          selectedPath,
+          currentPath: path,
+          pathLength: selectedPath.length,
+          isRootLevel: selectedPath.length === 6,
+          isFormLevel: selectedPath.length === 8,
+          selectedPathIndices: {
+            dsl: selectedPath[0],
+            body: selectedPath[1],
+            elements: selectedPath[2],
+            componentIndex: selectedPath[3],
+            columns: selectedPath[4],
+            columnIndex: selectedPath[5],
+          },
+          currentPathIndices: {
+            dsl: path[0],
+            body: path[1],
+            elements: path[2],
+            componentIndex: path[3],
+          },
+        });
+      }
+
+      // 更精确的路径匹配检查 - 根级别分栏列
+      const isExactRootPathMatch =
+        selectedPath &&
+        selectedPath.length === 6 &&
+        selectedPath[0] === 'dsl' &&
+        selectedPath[1] === 'body' &&
+        selectedPath[2] === 'elements' &&
+        selectedPath[4] === 'columns' &&
+        selectedPath[3] === path[3];
+
+      if (isExactRootPathMatch) {
+        const exactSelectedColumnIndex = selectedPath[5] as number;
+        console.log('🎯 根级别精确路径匹配成功:', {
+          selectedPath,
+          currentPath: path,
+          exactSelectedColumnIndex,
+          selectedColumnIndex,
+          willUpdate: exactSelectedColumnIndex !== selectedColumnIndex,
+        });
+        selectedColumnIndex = exactSelectedColumnIndex;
+      }
+
+      // 更精确的路径匹配检查 - 表单内分栏列
+      const isExactFormPathMatch =
+        selectedPath &&
+        selectedPath.length === 8 &&
+        selectedPath[0] === 'dsl' &&
+        selectedPath[1] === 'body' &&
+        selectedPath[2] === 'elements' &&
+        selectedPath[4] === 'elements' &&
+        selectedPath[6] === 'columns' &&
+        selectedPath[3] === path[3] && // 表单索引
+        selectedPath[5] === path[5]; // 分栏组件在表单内的索引
+
+      if (isExactFormPathMatch) {
+        const exactSelectedColumnIndex = selectedPath[7] as number;
+        console.log('🎯 表单内精确路径匹配成功:', {
+          selectedPath,
+          currentPath: path,
+          exactSelectedColumnIndex,
+          selectedColumnIndex,
+          willUpdate: exactSelectedColumnIndex !== selectedColumnIndex,
+        });
+        selectedColumnIndex = exactSelectedColumnIndex;
       }
 
       const columnContent = (
@@ -2402,6 +2483,26 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               const columnSelectionPath = [...path, 'columns', columnIndex];
               const isColumnSelected = selectedColumnIndex === columnIndex;
 
+              // 调试信息：检查分栏列的选中状态
+              if (selectedPath && selectedPath.length >= 6) {
+                console.log('🔍 分栏列选中状态检查:', {
+                  columnIndex,
+                  selectedColumnIndex,
+                  isColumnSelected,
+                  selectedPath,
+                  columnSelectionPath,
+                  pathMatch:
+                    JSON.stringify(selectedPath) ===
+                    JSON.stringify(columnSelectionPath),
+                  exactMatch:
+                    selectedPath.length === columnSelectionPath.length &&
+                    selectedPath.every(
+                      (segment, index) =>
+                        segment === columnSelectionPath[index],
+                    ),
+                });
+              }
+
               // 计算列宽比例
               const columnFlex = column.flex || 1;
               const totalFlex = columns.reduce(
@@ -2436,7 +2537,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                       position: 'relative',
                       minHeight: '60px',
                       border: isColumnSelected
-                        ? `1px solid #1890ff}`
+                        ? '1px dashed #1890ff'
                         : '1px dashed #d9d9d9',
                       borderRadius: '4px',
                       backgroundColor: isColumnSelected

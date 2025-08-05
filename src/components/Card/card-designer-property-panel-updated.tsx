@@ -633,6 +633,10 @@ const OutlineTree: React.FC<{
       } else if (info.node.component) {
         console.log('🎯 调用组件选择: onOutlineSelect(component, path)');
         onOutlineSelect(info.node.component, info.node.path);
+      } else if (info.node.path && info.node.path.length > 0) {
+        // 处理分栏列节点等没有component但有path的节点
+        console.log('🎯 调用路径选择: onOutlineSelect(null, path)');
+        onOutlineSelect(null, info.node.path);
       } else {
         console.log('⚠️ 未找到有效的组件或卡片节点');
       }
