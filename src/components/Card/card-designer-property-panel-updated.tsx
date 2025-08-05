@@ -67,7 +67,6 @@ const DraggableComponent: React.FC<{
     <div
       ref={drag}
       style={{
-        padding: '12px',
         border: '1px solid #d9d9d9',
         borderRadius: '6px',
         cursor: 'grab',
@@ -76,8 +75,9 @@ const DraggableComponent: React.FC<{
         opacity: isDragging ? 0.5 : 1,
         display: 'flex',
         alignItems: 'center',
-        gap: '8px',
-        marginBottom: '8px',
+        gap: '4px',
+        minHeight: '38px',
+        justifyContent: 'center',
         boxShadow: isDragging
           ? '0 4px 12px rgba(24, 144, 255, 0.3)'
           : '0 1px 3px rgba(0,0,0,0.1)',
@@ -99,15 +99,17 @@ const DraggableComponent: React.FC<{
     >
       <config.icon
         style={{
-          fontSize: '16px',
+          fontSize: '18px',
           color: isDragging ? '#1890ff' : '#666',
         }}
       />
       <span
         style={{
-          fontSize: '13px',
+          fontSize: '11px',
           color: isDragging ? '#1890ff' : '#333',
           fontWeight: isDragging ? 'bold' : 'normal',
+          textAlign: 'center',
+          lineHeight: '1.2',
         }}
       >
         {config.name}
@@ -126,35 +128,47 @@ const ComponentLibrary: React.FC = () => {
   }));
 
   return (
-    <div style={{ padding: '8px' }}>
-      <Collapse
-        defaultActiveKey={categories.map((cat) => cat.key)}
-        ghost
-        items={categories.map((category) => ({
-          key: category.key,
-          label: (
-            <Space>
-              <div
-                style={{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  backgroundColor: category.color,
-                }}
-              />
-              <Text strong style={{ fontSize: '14px' }}>
-                {category.title}
-              </Text>
-              <Text type="secondary" style={{ fontSize: '12px' }}>
-                ({category.components.length})
-              </Text>
-            </Space>
-          ),
-          children: category.components.map(([type, config]) => (
-            <DraggableComponent key={type} type={type} config={config} />
-          )),
-        }))}
-      />
+    <div style={{ padding: '12px 8px' }}>
+      {categories.map((category) => (
+        <div key={category.key} style={{ marginBottom: '24px' }}>
+          {/* 分类标题 */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 12px',
+              backgroundColor: '#f8f9fa',
+              borderRadius: '6px',
+            }}
+          >
+            <div
+              style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: category.color,
+              }}
+            />
+            <Text strong style={{ fontSize: '14px', color: '#333' }}>
+              {category.title}
+            </Text>
+          </div>
+
+          {/* 子组件网格布局 - 一行两列 */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '8px',
+            }}
+          >
+            {category.components.map(([type, config]) => (
+              <DraggableComponent key={type} type={type} config={config} />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 };
