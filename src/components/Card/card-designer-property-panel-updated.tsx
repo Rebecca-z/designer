@@ -8,6 +8,7 @@ import {
   PlusOutlined,
   SettingOutlined,
   ThunderboltOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import {
   Button,
@@ -3071,7 +3072,14 @@ export const PropertyPanel: React.FC<{
           description: '1行2列',
           category: 'bisect',
           icon: (
-            <div style={{ display: 'flex', gap: '2px', height: '20px' }}>
+            <div
+              style={{
+                display: 'flex',
+                gap: '2px',
+                height: '20px',
+                alignItems: 'center',
+              }}
+            >
               <div
                 style={{
                   width: '16px',
@@ -3101,6 +3109,7 @@ export const PropertyPanel: React.FC<{
               style={{
                 display: 'flex',
                 flexDirection: 'column',
+                alignItems: 'center',
                 gap: '2px',
                 height: '20px',
               }}
@@ -3477,6 +3486,9 @@ export const PropertyPanel: React.FC<{
                             ? '#f0f9ff'
                             : '#ffffff',
                         transition: 'all 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                       }}
                       onClick={() => {
                         // 根据选择的模式确定所需的图片数量
@@ -3506,7 +3518,7 @@ export const PropertyPanel: React.FC<{
                         const requiredCount = getRequiredImageCount(mode.value);
                         const currentImages = imgCombComponent.img_list || [];
 
-                        // 调整图片列表数量
+                        // 调整图片列表数量，并填充默认图片
                         let newImageList = [...currentImages];
 
                         if (newImageList.length < requiredCount) {
@@ -3517,13 +3529,20 @@ export const PropertyPanel: React.FC<{
                             i++
                           ) {
                             newImageList.push({
-                              img_url: '',
+                              img_url: 'demo.png', // 填充默认图片
                               img_name: `图片${i + 1}`,
                             });
                           }
                         } else if (newImageList.length > requiredCount) {
                           // 需要删除多余的图片
                           newImageList = newImageList.slice(0, requiredCount);
+                        } else {
+                          // 数量相同，但需要确保所有图片都有默认值
+                          newImageList = newImageList.map((img, index) => ({
+                            ...img,
+                            img_url: img.img_url || 'demo.png', // 如果为空则填充默认图片
+                            img_name: img.img_name || `图片${index + 1}`,
+                          }));
                         }
 
                         // 更新组件
@@ -3628,6 +3647,84 @@ export const PropertyPanel: React.FC<{
                         style={{ marginBottom: '8px' }}
                       />
                     </Form.Item>
+                    <Form.Item label="图片预览">
+                      <div
+                        style={{
+                          width: '100%',
+                          height: '80px',
+                          border: '1px solid #d9d9d9',
+                          borderRadius: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: '#fafafa',
+                          marginBottom: '8px',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {img.img_url ? (
+                          <img
+                            src={img.img_url}
+                            alt={`图片${index + 1}`}
+                            style={{
+                              maxWidth: '100%',
+                              maxHeight: '100%',
+                              objectFit: 'contain',
+                            }}
+                            onError={(e) => {
+                              // 图片加载失败时显示默认图片
+                              e.currentTarget.src = 'demo.png';
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              color: '#999',
+                              fontSize: '12px',
+                              textAlign: 'center',
+                            }}
+                          >
+                            暂无图片
+                          </div>
+                        )}
+                      </div>
+                    </Form.Item>
+                    <Form.Item label="图片上传">
+                      <Upload
+                        accept="image/*"
+                        showUploadList={false}
+                        beforeUpload={(file) => {
+                          // 创建本地URL用于预览
+                          const reader = new FileReader();
+                          reader.onload = (e) => {
+                            const imageUrl = e.target?.result as string;
+                            const newImgList = [
+                              ...(imgCombComponent.img_list || []),
+                            ];
+                            newImgList[index] = {
+                              ...newImgList[index],
+                              img_url: imageUrl,
+                            };
+                            const updatedComponent = {
+                              ...currentComponent,
+                              img_list: newImgList,
+                            };
+                            onUpdateComponent(updatedComponent);
+                          };
+                          reader.readAsDataURL(file);
+                          return false; // 阻止自动上传
+                        }}
+                      >
+                        <Button
+                          type="dashed"
+                          block
+                          icon={<UploadOutlined />}
+                          style={{ marginBottom: '8px' }}
+                        >
+                          上传图片
+                        </Button>
+                      </Upload>
+                    </Form.Item>
                     <Form.Item label="图片URL">
                       <Input
                         value={img.img_url || ''}
@@ -3645,7 +3742,9 @@ export const PropertyPanel: React.FC<{
                           };
                           onUpdateComponent(updatedComponent);
                         }}
-                        placeholder={`请输入图片${index + 1}的URL`}
+                        placeholder={`请输入图片${
+                          index + 1
+                        }的URL或上传本地图片`}
                       />
                     </Form.Item>
                   </div>
