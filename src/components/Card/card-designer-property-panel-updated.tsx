@@ -975,7 +975,6 @@ export const PropertyPanel: React.FC<{
   }, [
     currentComponent?.id,
     (currentComponent as any)?.img_source,
-    (currentComponent as any)?.img_name,
     (currentComponent as any)?.variable_name,
   ]);
 
@@ -1143,17 +1142,29 @@ export const PropertyPanel: React.FC<{
         // });
         onUpdateComponent(updatedComponent);
       } else {
-        const updatedComponent = {
-          ...currentComponent,
-          [field]: value,
-        };
-        // console.log('📝 更新组件属性:', {
-        //   componentId: (updatedComponent as any).id,
-        //   field,
-        //   value,
-        //   realPath,
-        // });
-        onUpdateComponent(updatedComponent);
+        // 特殊处理img_url字段，同时更新i18n_img_url
+        if (field === 'img_url') {
+          const updatedComponent = {
+            ...currentComponent,
+            [field]: value,
+            i18n_img_url: {
+              'en-US': value,
+            },
+          };
+          onUpdateComponent(updatedComponent);
+        } else {
+          const updatedComponent = {
+            ...currentComponent,
+            [field]: value,
+          };
+          // console.log('📝 更新组件属性:', {
+          //   componentId: (updatedComponent as any).id,
+          //   field,
+          //   value,
+          //   realPath,
+          // });
+          onUpdateComponent(updatedComponent);
+        }
       }
     } else {
       console.warn('⚠️ 无法更新组件，currentComponent为空:', {
@@ -1416,7 +1427,7 @@ export const PropertyPanel: React.FC<{
     // 如果选中了卡片本身，显示提示信息
     if (isCardSelected) {
       return (
-        <div style={{ padding: '16px' }}>
+        <div>
           {/* 布局方式设置 */}
           <Card
             title="📐 布局方式"
@@ -3438,11 +3449,9 @@ export const PropertyPanel: React.FC<{
           {/* 混排方式 */}
           <div
             style={{
-              marginBottom: '16px',
+              marginBottom: '24px',
               background: '#fff',
-              borderRadius: 6,
               boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-              padding: 8,
             }}
           >
             <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>
@@ -3511,33 +3520,18 @@ export const PropertyPanel: React.FC<{
                         };
 
                         const requiredCount = getRequiredImageCount(mode.value);
-                        const currentImages = imgCombComponent.img_list || [];
 
-                        // 调整图片列表数量，并填充默认图片
-                        let newImageList = [...currentImages];
+                        // 切换混排方式时，重置所有图片为默认图片
+                        let newImageList = [];
 
-                        if (newImageList.length < requiredCount) {
-                          // 需要添加图片
-                          for (
-                            let i = newImageList.length;
-                            i < requiredCount;
-                            i++
-                          ) {
-                            newImageList.push({
-                              img_url: 'demo.png', // 填充默认图片
-                              img_name: `图片${i + 1}`,
-                            });
-                          }
-                        } else if (newImageList.length > requiredCount) {
-                          // 需要删除多余的图片
-                          newImageList = newImageList.slice(0, requiredCount);
-                        } else {
-                          // 数量相同，但需要确保所有图片都有默认值
-                          newImageList = newImageList.map((img, index) => ({
-                            ...img,
-                            img_url: img.img_url || 'demo.png', // 如果为空则填充默认图片
-                            img_name: img.img_name || `图片${index + 1}`,
-                          }));
+                        // 根据新的混排方式创建对应数量的默认图片
+                        for (let i = 0; i < requiredCount; i++) {
+                          newImageList.push({
+                            img_url: 'demo.png', // 所有图片都重置为默认图片
+                            i18n_img_url: {
+                              'en-US': 'demo.png',
+                            },
+                          });
                         }
 
                         // 更新组件
@@ -3571,66 +3565,32 @@ export const PropertyPanel: React.FC<{
               background: '#fff',
               borderRadius: 6,
               boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-              padding: 16,
             }}
           >
             <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>
               🖼️ 图片设置
             </div>
             <div>
-              <div style={{ marginBottom: '12px' }}>
-                <Text type="secondary" style={{ fontSize: '12px' }}>
-                  当前模式需要 {imgCombComponent.img_list?.length || 0} 张图片
-                </Text>
-              </div>
               {(imgCombComponent.img_list || []).map(
                 (img: any, index: number) => (
-                  <div
-                    key={index}
-                    style={{
-                      marginBottom: '12px',
-                      padding: '12px',
-                      border: '1px solid #d9d9d9',
-                      borderRadius: '4px',
-                      backgroundColor: '#fafafa',
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        marginBottom: '8px',
-                      }}
+                  <div key={index}>
+                    <Form.Item
+                      label={`图片${index + 1}`}
+                      style={{ marginBottom: '12px' }}
                     >
-                      <div
-                        style={{
-                          width: '20px',
-                          height: '20px',
-                          backgroundColor: '#1890ff',
-                          color: 'white',
-                          borderRadius: '50%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                        }}
-                      >
-                        {index + 1}
-                      </div>
-                      <Text style={{ fontWeight: 600 }}>图片 {index + 1}</Text>
-                    </div>
-                    <Form.Item label="图片名称">
                       <Input
-                        value={img.img_name || ''}
+                        style={{ width: '200px' }}
+                        value={img.img_url || ''}
                         onChange={(e) => {
                           const newImgList = [
                             ...(imgCombComponent.img_list || []),
                           ];
                           newImgList[index] = {
                             ...newImgList[index],
-                            img_name: e.target.value,
+                            img_url: e.target.value,
+                            i18n_img_url: {
+                              'en-US': e.target.value,
+                            },
                           };
                           const updatedComponent = {
                             ...currentComponent,
@@ -3638,53 +3598,8 @@ export const PropertyPanel: React.FC<{
                           };
                           onUpdateComponent(updatedComponent);
                         }}
-                        placeholder={`请输入图片${index + 1}的名称`}
-                        style={{ marginBottom: '8px' }}
+                        placeholder="请输入图片的路径"
                       />
-                    </Form.Item>
-                    <Form.Item label="图片预览">
-                      <div
-                        style={{
-                          width: '100%',
-                          height: '80px',
-                          border: '1px solid #d9d9d9',
-                          borderRadius: '4px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          backgroundColor: '#fafafa',
-                          marginBottom: '8px',
-                          overflow: 'hidden',
-                        }}
-                      >
-                        {img.img_url ? (
-                          <img
-                            src={img.img_url}
-                            alt={`图片${index + 1}`}
-                            style={{
-                              maxWidth: '100%',
-                              maxHeight: '100%',
-                              objectFit: 'contain',
-                            }}
-                            onError={(e) => {
-                              // 图片加载失败时显示默认图片
-                              e.currentTarget.src = 'demo.png';
-                            }}
-                          />
-                        ) : (
-                          <div
-                            style={{
-                              color: '#999',
-                              fontSize: '12px',
-                              textAlign: 'center',
-                            }}
-                          >
-                            暂无图片
-                          </div>
-                        )}
-                      </div>
-                    </Form.Item>
-                    <Form.Item label="图片上传">
                       <Upload
                         accept="image/*"
                         showUploadList={false}
@@ -3699,6 +3614,9 @@ export const PropertyPanel: React.FC<{
                             newImgList[index] = {
                               ...newImgList[index],
                               img_url: imageUrl,
+                              i18n_img_url: {
+                                'en-US': imageUrl,
+                              },
                             };
                             const updatedComponent = {
                               ...currentComponent,
@@ -3710,37 +3628,8 @@ export const PropertyPanel: React.FC<{
                           return false; // 阻止自动上传
                         }}
                       >
-                        <Button
-                          type="dashed"
-                          block
-                          icon={<UploadOutlined />}
-                          style={{ marginBottom: '8px' }}
-                        >
-                          上传图片
-                        </Button>
+                        <Button type="link" icon={<UploadOutlined />} />
                       </Upload>
-                    </Form.Item>
-                    <Form.Item label="图片URL">
-                      <Input
-                        value={img.img_url || ''}
-                        onChange={(e) => {
-                          const newImgList = [
-                            ...(imgCombComponent.img_list || []),
-                          ];
-                          newImgList[index] = {
-                            ...newImgList[index],
-                            img_url: e.target.value,
-                          };
-                          const updatedComponent = {
-                            ...currentComponent,
-                            img_list: newImgList,
-                          };
-                          onUpdateComponent(updatedComponent);
-                        }}
-                        placeholder={`请输入图片${
-                          index + 1
-                        }的URL或上传本地图片`}
-                      />
                     </Form.Item>
                   </div>
                 ),
@@ -3966,9 +3855,7 @@ export const PropertyPanel: React.FC<{
                             ...currentComponent,
                             img_source: newSource,
                             // 清除相关字段
-                            ...(checked
-                              ? { img_name: undefined }
-                              : { variable_name: undefined }),
+                            ...(checked ? {} : { variable_name: undefined }),
                           } as any;
 
                           onUpdateComponent(updatedComponent);
@@ -3998,53 +3885,43 @@ export const PropertyPanel: React.FC<{
 
                     {imgSource === 'upload' && (
                       <>
-                        <Form.Item label="图片Key">
-                          <Input
-                            value={imageComponent.img_name || ''}
-                            onChange={(e) => {
-                              handleValueChange('img_name', e.target.value);
+                        <Form.Item label="图片上传">
+                          <Upload
+                            accept="image/*"
+                            showUploadList={false}
+                            beforeUpload={(file) => {
+                              // 处理文件上传逻辑
+                              const reader = new FileReader();
+                              reader.onload = (e) => {
+                                const dataUrl = e.target?.result as string;
+
+                                // 批量更新图片属性
+                                const updatedComponent = {
+                                  ...currentComponent,
+                                  img_url: dataUrl,
+                                } as any;
+
+                                onUpdateComponent(updatedComponent);
+
+                                // 强制UI更新
+                                setTimeout(() => {
+                                  forceUpdate((prev) => prev + 1);
+                                }, 100);
+                              };
+
+                              reader.onerror = (error) => {
+                                console.error('❌ 图片读取失败:', error);
+                                message.error('图片读取失败，请重试');
+                              };
+
+                              reader.readAsDataURL(file);
+                              return false; // 阻止自动上传
                             }}
-                            placeholder="请输入图片Key名称"
-                            addonAfter={
-                              <Upload
-                                accept="image/*"
-                                showUploadList={false}
-                                beforeUpload={(file) => {
-                                  // 处理文件上传逻辑
-                                  const reader = new FileReader();
-                                  reader.onload = (e) => {
-                                    const dataUrl = e.target?.result as string;
-
-                                    // 批量更新图片属性
-                                    const updatedComponent = {
-                                      ...currentComponent,
-                                      img_url: dataUrl,
-                                      img_name: file.name,
-                                    } as any;
-
-                                    onUpdateComponent(updatedComponent);
-
-                                    // 强制UI更新
-                                    setTimeout(() => {
-                                      forceUpdate((prev) => prev + 1);
-                                    }, 100);
-                                  };
-
-                                  reader.onerror = (error) => {
-                                    console.error('❌ 图片读取失败:', error);
-                                    message.error('图片读取失败，请重试');
-                                  };
-
-                                  reader.readAsDataURL(file);
-                                  return false; // 阻止自动上传
-                                }}
-                              >
-                                <Button size="small" type="primary">
-                                  上传
-                                </Button>
-                              </Upload>
-                            }
-                          />
+                          >
+                            <Button size="small" type="primary">
+                              上传
+                            </Button>
+                          </Upload>
                         </Form.Item>
                       </>
                     )}

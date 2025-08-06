@@ -783,7 +783,6 @@ export const createDefaultComponent = (type: string): ComponentType => {
         tag: 'img',
         img_url: '/demo.png', // 使用public目录下的demo.png文件
         img_source: 'upload', // 默认使用文件上传
-        img_name: 'demo.png', // 默认图片名称
         crop_mode: 'default', // 默认完整展示
         i18n_img_url: {
           'en-US': '/demo.png',

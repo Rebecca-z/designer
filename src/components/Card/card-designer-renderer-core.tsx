@@ -3046,7 +3046,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         >
           <img
             src={getImageUrl()}
-            alt={comp.img_name || '图片'}
+            alt="图片"
             style={getCropStyle()}
             onError={(e) => {
               (e.target as HTMLImageElement).src = '/demo.png';
@@ -3068,7 +3068,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               }}
             >
               {comp.img_source === 'variable' ? '🔗' : '📁'}
-              {comp.img_name || 'demo.png'}
+              {'demo.png'}
             </div>
           )}
         </div>
