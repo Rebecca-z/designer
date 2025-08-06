@@ -310,10 +310,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
               json={jsonData}
               title="图片数据"
               onJSONChange={handleJSONChange}
-              editable={true}
-              height={200}
-              showLineNumbers={false}
-              showCopyButton={false}
+              height={140}
             />
           </Form.Item>
         );

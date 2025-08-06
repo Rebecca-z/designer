@@ -4,64 +4,59 @@ import {
   CompressOutlined,
   CopyOutlined,
   ExpandOutlined,
-  FileTextOutlined,
-  SaveOutlined,
 } from '@ant-design/icons';
-import { Button, Card, Input, message, Space, Tooltip, Typography } from 'antd';
-import React, { useEffect, useMemo, useState } from 'react';
+import { Button, Card, message, Space, Tooltip, Typography } from 'antd';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 const { Text } = Typography;
-
-export interface JSONNode {
-  key: string;
-  value: any;
-  type: 'object' | 'array' | 'string' | 'number' | 'boolean' | 'null';
-  level: number;
-  path: string;
-  isCollapsible: boolean;
-  children?: JSONNode[];
-  parentKey?: string;
-  propertyName?: string; // 新增：属性名称
-  arrayIndex?: number; // 新增：数组索引
-}
 
 export interface JSONEditorProps {
   json: string | object;
   title?: string;
-  showLineNumbers?: boolean;
-  showCopyButton?: boolean;
-  showExpandButton?: boolean;
   height?: string | number;
   className?: string;
   style?: React.CSSProperties;
-  editable?: boolean;
   onJSONChange?: (newJSON: string) => void;
   onSave?: (json: string) => void;
   readOnly?: boolean;
 }
 
+interface LineData {
+  lineNumber: number;
+  content: string;
+  indent: number;
+  isCollapsible: boolean;
+  isCollapsed: boolean;
+  nodeType: 'object' | 'array' | 'property' | 'value';
+  path: string;
+  originalValue?: any;
+}
+
+interface JSONError {
+  line: number;
+  column: number;
+  message: string;
+}
+
 const JSONEditor: React.FC<JSONEditorProps> = ({
   json: initialJSON,
   title = 'JSON 编辑器',
-  showLineNumbers = true,
-  showCopyButton = true,
-  showExpandButton = true,
-  height = 'auto',
+  height = '400px',
   className,
   style,
-  editable = true,
   onJSONChange,
   onSave,
   readOnly = false,
 }) => {
-  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
-  const [isAllExpanded, setIsAllExpanded] = useState(false);
+  const [jsonText, setJsonText] = useState('');
+  const [lines, setLines] = useState<LineData[]>([]);
+  const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(new Set());
   const [isDirty, setIsDirty] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
-  const [editingValues, setEditingValues] = useState<Map<string, any>>(
-    new Map(),
-  );
-  const [isEditing, setIsEditing] = useState(false);
+  const [jsonErrors, setJsonErrors] = useState<JSONError[]>([]);
+  const [isAllExpanded, setIsAllExpanded] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const lineNumbersRef = useRef<HTMLDivElement>(null);
 
   // 解析初始JSON
   const parsedJSON = useMemo(() => {
@@ -76,265 +71,352 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
     return initialJSON;
   }, [initialJSON]);
 
-  // 格式化JSON字符串
-  const formatJSON = (obj: any, indent: number = 2): string => {
-    return JSON.stringify(obj, null, indent);
-  };
+  // JSON 校验函数
+  const validateJSON = (
+    text: string,
+  ): { isValid: boolean; errors: JSONError[] } => {
+    const errors: JSONError[] = [];
 
-  // 当外部json变化时更新内部状态
-  useEffect(() => {
-    setEditingValues(new Map());
-    setIsDirty(false);
-    setParseError(null);
-  }, [initialJSON]);
+    try {
+      JSON.parse(text);
+      return { isValid: true, errors: [] };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'JSON格式错误';
 
-  // 构建JSON节点树
-  const jsonNodes = useMemo(() => {
-    if (!parsedJSON) return [];
+      // 尝试解析错误位置
+      if (error instanceof SyntaxError) {
+        const match = errorMessage.match(/position (\d+)/);
+        if (match) {
+          const position = parseInt(match[1]);
+          const lines = text.split('\n');
+          let currentPos = 0;
 
-    const buildNodes = (
-      obj: any,
-      level: number = 0,
-      path: string = '',
-      parentKey: string = '',
-      propertyName?: string,
-      arrayIndex?: number,
-    ): JSONNode[] => {
-      const nodes: JSONNode[] = [];
-
-      if (Array.isArray(obj)) {
-        // 数组节点
-        const arrayNode: JSONNode = {
-          key: `array_${path}`,
-          value: obj,
-          type: 'array',
-          level,
-          path,
-          isCollapsible: obj.length > 0,
-          children: [],
-          parentKey,
-          propertyName,
-          arrayIndex,
-        };
-
-        obj.forEach((item, index) => {
-          const childPath = path ? `${path}[${index}]` : `[${index}]`;
-          const childKey = `item_${childPath}`;
-
-          if (typeof item === 'object' && item !== null) {
-            const childNodes = buildNodes(
-              item,
-              level + 1,
-              childPath,
-              arrayNode.key,
-              undefined,
-              index,
-            );
-            arrayNode.children!.push(...childNodes);
-          } else {
-            arrayNode.children!.push({
-              key: childKey,
-              value: item,
-              type: typeof item as any,
-              level: level + 1,
-              path: childPath,
-              isCollapsible: false,
-              parentKey: arrayNode.key,
-              propertyName: undefined,
-              arrayIndex: index,
-            });
+          for (let lineNum = 0; lineNum < lines.length; lineNum++) {
+            const lineLength = lines[lineNum].length + 1; // +1 for newline
+            if (currentPos + lineLength > position) {
+              const column = position - currentPos;
+              errors.push({
+                line: lineNum + 1,
+                column,
+                message: errorMessage,
+              });
+              break;
+            }
+            currentPos += lineLength;
           }
-        });
+        }
+      }
 
-        nodes.push(arrayNode);
-      } else if (typeof obj === 'object' && obj !== null) {
-        // 对象节点
-        const objectNode: JSONNode = {
-          key: `object_${path}`,
-          value: obj,
-          type: 'object',
-          level,
-          path,
-          isCollapsible: Object.keys(obj).length > 0,
-          children: [],
-          parentKey,
-          propertyName,
-          arrayIndex,
-        };
-
-        Object.entries(obj).forEach(([key, value]) => {
-          const childPath = path ? `${path}.${key}` : key;
-          const childKey = `property_${childPath}`;
-
-          if (typeof value === 'object' && value !== null) {
-            const childNodes = buildNodes(
-              value,
-              level + 1,
-              childPath,
-              objectNode.key,
-              key,
-            );
-            objectNode.children!.push(...childNodes);
-          } else {
-            objectNode.children!.push({
-              key: childKey,
-              value,
-              type: typeof value as any,
-              level: level + 1,
-              path: childPath,
-              isCollapsible: false,
-              parentKey: objectNode.key,
-              propertyName: key,
-              arrayIndex: undefined,
-            });
-          }
-        });
-
-        nodes.push(objectNode);
-      } else {
-        // 基本类型节点
-        nodes.push({
-          key: `value_${path}`,
-          value: obj,
-          type: typeof obj as any,
-          level,
-          path,
-          isCollapsible: false,
-          parentKey,
-          propertyName,
-          arrayIndex,
+      // 如果没有找到具体位置，添加通用错误
+      if (errors.length === 0) {
+        errors.push({
+          line: 1,
+          column: 1,
+          message: errorMessage,
         });
       }
 
-      return nodes;
+      return { isValid: false, errors };
+    }
+  };
+
+  // 格式化JSON并生成行数据
+  const formatJSONWithLines = (
+    obj: any,
+  ): { text: string; lines: LineData[] } => {
+    const lines: LineData[] = [];
+    let lineNumber = 1;
+
+    const formatValue = (value: any, indent: number, path: string): string => {
+      if (value === null) return 'null';
+      if (typeof value === 'string') return `"${value}"`;
+      if (typeof value === 'number' || typeof value === 'boolean')
+        return String(value);
+
+      if (Array.isArray(value)) {
+        if (value.length === 0) return '[]';
+
+        const isCollapsed = collapsedPaths.has(path);
+        if (isCollapsed) {
+          lines.push({
+            lineNumber,
+            content: `[${value.length} items]`,
+            indent,
+            isCollapsible: true,
+            isCollapsed: true,
+            nodeType: 'array',
+            path,
+          });
+          lineNumber++;
+          return `[${value.length} items]`;
+        }
+
+        // 添加开始括号行
+        lines.push({
+          lineNumber,
+          content: '[',
+          indent,
+          isCollapsible: true,
+          isCollapsed: false,
+          nodeType: 'array',
+          path,
+        });
+        lineNumber++;
+
+        const items = value.map((item, index) => {
+          const itemPath = `${path}[${index}]`;
+          const itemIndent = indent + 2;
+
+          if (typeof item === 'object' && item !== null) {
+            const formattedValue = formatValue(item, itemIndent, itemPath);
+            // 对于对象和数组，只添加第一行到行数据中
+            const firstLine = formattedValue.split('\n')[0];
+            lines.push({
+              lineNumber,
+              content: firstLine,
+              indent: itemIndent,
+              isCollapsible: false,
+              isCollapsed: false,
+              nodeType: 'value',
+              path: itemPath,
+              originalValue: item,
+            });
+            lineNumber++;
+            // 处理嵌套的格式化，确保正确的缩进
+            const nestedLines = formattedValue.split('\n');
+            if (nestedLines.length > 1) {
+              // 为嵌套内容添加额外的缩进
+              return nestedLines
+                .map((line, index) => {
+                  if (index === 0) return line;
+                  return '  ' + line;
+                })
+                .join('\n');
+            }
+            return formattedValue;
+          } else {
+            const content =
+              typeof item === 'string' ? `"${item}"` : String(item);
+            lines.push({
+              lineNumber,
+              content,
+              indent: itemIndent,
+              isCollapsible: false,
+              isCollapsed: false,
+              nodeType: 'value',
+              path: itemPath,
+              originalValue: item,
+            });
+            lineNumber++;
+            return content;
+          }
+        });
+
+        // 添加结束括号行，与开始括号对齐
+        lines.push({
+          lineNumber,
+          content: ']',
+          indent,
+          isCollapsible: false,
+          isCollapsed: false,
+          nodeType: 'value',
+          path: `${path}_end`,
+        });
+        lineNumber++;
+
+        // 使用正确的缩进格式
+        const indentSpaces = '  '.repeat(indent);
+        const itemIndentSpaces = '  '.repeat(indent + 1);
+        return `[\n${items
+          .map((item) => `${itemIndentSpaces}${item}`)
+          .join(',\n')}\n${indentSpaces}]`;
+      }
+
+      if (typeof value === 'object' && value !== null) {
+        const keys = Object.keys(value);
+        if (keys.length === 0) return '{}';
+
+        const isCollapsed = collapsedPaths.has(path);
+        if (isCollapsed) {
+          lines.push({
+            lineNumber,
+            content: `{${keys.length} properties}`,
+            indent,
+            isCollapsible: true,
+            isCollapsed: true,
+            nodeType: 'object',
+            path,
+          });
+          lineNumber++;
+          return `{${keys.length} properties}`;
+        }
+
+        // 添加开始大括号行
+        lines.push({
+          lineNumber,
+          content: '{',
+          indent,
+          isCollapsible: true,
+          isCollapsed: false,
+          nodeType: 'object',
+          path,
+        });
+        lineNumber++;
+
+        const properties = keys.map((key) => {
+          const propPath = `${path}.${key}`;
+          const propIndent = indent + 2;
+          const propValue = value[key];
+
+          if (typeof propValue === 'object' && propValue !== null) {
+            const formattedValue = formatValue(propValue, propIndent, propPath);
+            // 对于对象和数组，只添加第一行到行数据中
+            const firstLine = formattedValue.split('\n')[0];
+            lines.push({
+              lineNumber,
+              content: `"${key}": ${firstLine}`,
+              indent: propIndent,
+              isCollapsible: false,
+              isCollapsed: false,
+              nodeType: 'property',
+              path: propPath,
+              originalValue: propValue,
+            });
+            lineNumber++;
+            // 处理嵌套的格式化，确保正确的缩进
+            const nestedLines = formattedValue.split('\n');
+            if (nestedLines.length > 1) {
+              // 为嵌套内容添加额外的缩进
+              const nestedFormatted = nestedLines
+                .map((line, index) => {
+                  if (index === 0) return line;
+                  return '  ' + line;
+                })
+                .join('\n');
+              return `"${key}": ${nestedFormatted}`;
+            }
+            return `"${key}": ${formattedValue}`;
+          } else {
+            const content =
+              typeof propValue === 'string'
+                ? `"${propValue}"`
+                : String(propValue);
+            lines.push({
+              lineNumber,
+              content: `"${key}": ${content}`,
+              indent: propIndent,
+              isCollapsible: false,
+              isCollapsed: false,
+              nodeType: 'property',
+              path: propPath,
+              originalValue: propValue,
+            });
+            lineNumber++;
+            return `"${key}": ${content}`;
+          }
+        });
+
+        // 添加结束大括号行，与开始大括号对齐
+        lines.push({
+          lineNumber,
+          content: '}',
+          indent,
+          isCollapsible: false,
+          isCollapsed: false,
+          nodeType: 'value',
+          path: `${path}_end`,
+        });
+        lineNumber++;
+
+        // 使用正确的缩进格式
+        const indentSpaces = '  '.repeat(indent);
+        const propIndentSpaces = '  '.repeat(indent + 1);
+        return `{\n${properties
+          .map((prop) => `${propIndentSpaces}${prop}`)
+          .join(',\n')}\n${indentSpaces}}`;
+      }
+
+      return String(value);
     };
 
-    return buildNodes(parsedJSON);
-  }, [parsedJSON]);
+    const text = formatValue(obj, 0, 'root');
+    return { text, lines };
+  };
 
-  // 复制JSON
-  const handleCopy = async () => {
-    try {
-      const jsonToCopy = formatJSON(parsedJSON);
-      await navigator.clipboard.writeText(jsonToCopy);
-      message.success('JSON已复制到剪贴板');
-    } catch (err) {
-      console.error('复制失败:', err);
-      message.error('复制失败');
+  // 处理文本变化
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newText = e.target.value;
+    setJsonText(newText);
+    setIsDirty(true);
+
+    // 实时校验JSON
+    const { isValid, errors } = validateJSON(newText);
+    if (!isValid) {
+      setParseError(errors[0]?.message || 'JSON格式错误');
+      setJsonErrors(errors);
+    } else {
+      setParseError(null);
+      setJsonErrors([]);
     }
+  };
+
+  // 处理折叠/展开
+  const handleToggleCollapse = (path: string) => {
+    const newCollapsedPaths = new Set(collapsedPaths);
+    if (newCollapsedPaths.has(path)) {
+      newCollapsedPaths.delete(path);
+    } else {
+      newCollapsedPaths.add(path);
+    }
+    setCollapsedPaths(newCollapsedPaths);
   };
 
   // 展开/折叠所有
   const handleToggleAll = () => {
     if (isAllExpanded) {
-      setExpandedNodes(new Set());
+      setCollapsedPaths(new Set());
       setIsAllExpanded(false);
     } else {
-      const allNodeKeys = new Set<string>();
-      const collectNodeKeys = (nodes: JSONNode[]) => {
-        nodes.forEach((node) => {
-          if (node.isCollapsible) {
-            allNodeKeys.add(node.key);
-          }
-          if (node.children && node.children.length > 0) {
-            collectNodeKeys(node.children);
-          }
-        });
-      };
-      collectNodeKeys(jsonNodes);
-      setExpandedNodes(allNodeKeys);
+      const allPaths = new Set<string>();
+      lines.forEach((line) => {
+        if (line.isCollapsible) {
+          allPaths.add(line.path);
+        }
+      });
+      setCollapsedPaths(allPaths);
       setIsAllExpanded(true);
     }
   };
 
-  // 展开/折叠单个节点
-  const handleToggleNode = (nodeKey: string) => {
-    const newExpandedNodes = new Set(expandedNodes);
-    if (newExpandedNodes.has(nodeKey)) {
-      newExpandedNodes.delete(nodeKey);
-    } else {
-      newExpandedNodes.add(nodeKey);
-    }
-    setExpandedNodes(newExpandedNodes);
-  };
-
-  // 根据编辑值更新JSON
-  const updateJSONWithChanges = (obj: any, changes: Map<string, any>): any => {
-    if (Array.isArray(obj)) {
-      return obj.map((item, index) => {
-        const path = `[${index}]`;
-        const changeKey = `item_${path}`;
-
-        if (changes.has(changeKey)) {
-          return changes.get(changeKey);
-        }
-
-        if (typeof item === 'object' && item !== null) {
-          return updateJSONWithChanges(item, changes);
-        }
-
-        return item;
-      });
-    } else if (typeof obj === 'object' && obj !== null) {
-      const updated = { ...obj };
-
-      Object.keys(obj).forEach((key) => {
-        const value = obj[key];
-        const path = key;
-        const changeKey = `property_${path}`;
-
-        if (changes.has(changeKey)) {
-          updated[key] = changes.get(changeKey);
-        } else if (typeof value === 'object' && value !== null) {
-          updated[key] = updateJSONWithChanges(value, changes);
-        }
-      });
-
-      return updated;
-    }
-
-    return obj;
-  };
-
-  // 保存编辑
+  // 保存JSON
   const handleSave = () => {
-    try {
-      const updatedJSON = updateJSONWithChanges(parsedJSON, editingValues);
-      const jsonString = formatJSON(updatedJSON);
-
+    const { isValid } = validateJSON(jsonText);
+    if (isValid) {
       if (onSave) {
-        onSave(jsonString);
+        onSave(jsonText);
       }
-      if (onJSONChange) {
-        onJSONChange(jsonString);
-      }
-
-      setEditingValues(new Map());
       setIsDirty(false);
-      setParseError(null);
       message.success('JSON已保存');
-    } catch (error) {
-      setParseError(error instanceof Error ? error.message : 'JSON格式错误');
-      message.error('JSON格式错误，请检查语法');
+    } else {
+      message.error('JSON格式错误，无法保存');
     }
   };
 
-  // 处理值编辑
-  const handleValueEdit = (node: JSONNode, newValue: any) => {
-    const newEditingValues = new Map(editingValues);
-    newEditingValues.set(node.key, newValue);
-    setEditingValues(newEditingValues);
-    setIsDirty(true);
-    setIsEditing(true);
-
-    // 实时更新JSON
+  // 复制JSON
+  const handleCopy = async () => {
     try {
-      const updatedJSON = updateJSONWithChanges(parsedJSON, newEditingValues);
-      if (onJSONChange) {
-        onJSONChange(formatJSON(updatedJSON));
-      }
-    } catch (error) {
-      // 忽略实时更新时的错误
+      await navigator.clipboard.writeText(jsonText);
+      message.success('JSON已复制到剪贴板');
+    } catch (err) {
+      message.error('复制失败');
+    }
+  };
+
+  // 同步滚动
+  const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
+    if (lineNumbersRef.current) {
+      lineNumbersRef.current.scrollTop = e.currentTarget.scrollTop;
     }
   };
 
@@ -346,342 +428,57 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
     }
   };
 
-  // 获取值的显示文本
-  const getValueDisplay = (node: JSONNode): string => {
-    const editingValue = editingValues.get(node.key);
-    const displayValue = editingValue !== undefined ? editingValue : node.value;
+  // 格式化JSON
+  const handleFormat = () => {
+    const { isValid, errors } = validateJSON(jsonText);
 
-    switch (node.type) {
-      case 'string':
-        return `"${displayValue}"`;
-      case 'number':
-        return displayValue.toString();
-      case 'boolean':
-        return displayValue.toString();
-      case 'null':
-        return 'null';
-      case 'object':
-        return `{${Object.keys(displayValue).length} 个属性}`;
-      case 'array':
-        return `[${displayValue.length} 个元素]`;
-      default:
-        return String(displayValue);
+    if (!isValid) {
+      setParseError(errors[0]?.message || 'JSON格式错误');
+      setJsonErrors(errors);
+      message.error('JSON格式错误，无法格式化');
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(jsonText);
+      const { text, lines } = formatJSONWithLines(parsed);
+      setJsonText(text);
+      setLines(lines);
+      setParseError(null);
+      setJsonErrors([]);
+      setIsDirty(false);
+
+      if (onJSONChange) {
+        onJSONChange(text);
+      }
+
+      message.success('JSON格式化成功');
+    } catch (error) {
+      setParseError(error instanceof Error ? error.message : 'JSON格式错误');
     }
   };
 
-  // 获取节点类型颜色
-  const getTypeColor = (type: string): string => {
-    switch (type) {
-      case 'string':
-        return '#28a745';
-      case 'number':
-        return '#007bff';
-      case 'boolean':
-        return '#fd7e14';
-      case 'null':
-        return '#6c757d';
-      case 'object':
-        return '#6f42c1';
-      case 'array':
-        return '#e83e8c';
-      default:
-        return '#6c757d';
-    }
+  // 检查行是否有错误
+  const hasErrorOnLine = (lineNumber: number): boolean => {
+    return jsonErrors.some((error) => error.line === lineNumber);
   };
 
-  // 渲染可编辑的值
-  const renderEditableValue = (node: JSONNode) => {
-    if (!editable || readOnly || node.isCollapsible) {
-      return (
-        <span
-          style={{
-            flex: 1,
-            fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
-            fontSize: '13px',
-            lineHeight: '1.5',
-            color: getTypeColor(node.type),
-            fontWeight: node.type === 'string' ? 'normal' : '500',
-          }}
-        >
-          {getValueDisplay(node)}
-        </span>
-      );
+  // 初始化JSON文本和行数据
+  useEffect(() => {
+    if (parsedJSON) {
+      const { text, lines } = formatJSONWithLines(parsedJSON);
+      setJsonText(text);
+      setLines(lines);
+      setParseError(null);
+      setJsonErrors([]);
     }
-
-    const editingValue = editingValues.get(node.key);
-    const currentValue = editingValue !== undefined ? editingValue : node.value;
-
-    if (node.type === 'string') {
-      return (
-        <Input
-          value={currentValue}
-          onChange={(e) => handleValueEdit(node, e.target.value)}
-          onKeyDown={handleKeyDown}
-          style={{
-            flex: 1,
-            fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
-            fontSize: '13px',
-            border: '1px solid #ced4da',
-            borderRadius: '3px',
-            padding: '2px 6px',
-            color: getTypeColor(node.type),
-          }}
-          size="small"
-        />
-      );
-    } else if (node.type === 'number') {
-      return (
-        <Input
-          type="number"
-          value={currentValue}
-          onChange={(e) =>
-            handleValueEdit(node, parseFloat(e.target.value) || 0)
-          }
-          onKeyDown={handleKeyDown}
-          style={{
-            flex: 1,
-            fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
-            fontSize: '13px',
-            border: '1px solid #ced4da',
-            borderRadius: '3px',
-            padding: '2px 6px',
-            color: getTypeColor(node.type),
-          }}
-          size="small"
-        />
-      );
-    } else if (node.type === 'boolean') {
-      return (
-        <select
-          value={currentValue.toString()}
-          onChange={(e) => handleValueEdit(node, e.target.value === 'true')}
-          onKeyDown={handleKeyDown}
-          style={{
-            flex: 1,
-            fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
-            fontSize: '13px',
-            border: '1px solid #ced4da',
-            borderRadius: '3px',
-            padding: '2px 6px',
-            backgroundColor: '#ffffff',
-            color: getTypeColor(node.type),
-          }}
-        >
-          <option value="true">true</option>
-          <option value="false">false</option>
-        </select>
-      );
-    } else {
-      return (
-        <span
-          style={{
-            flex: 1,
-            fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
-            fontSize: '13px',
-            lineHeight: '1.5',
-            color: getTypeColor(node.type),
-          }}
-        >
-          {getValueDisplay(node)}
-        </span>
-      );
-    }
-  };
-
-  // 渲染JSON节点
-  const renderJSONNode = (node: JSONNode, index: number): React.ReactNode => {
-    const isExpanded = expandedNodes.has(node.key);
-    const hasChildren = node.children && node.children.length > 0;
-    const isCollapsible = node.isCollapsible;
-    const isEditingThisNode = editingValues.has(node.key);
-
-    return (
-      <div key={node.key} style={{ marginLeft: node.level * 20 }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            padding: '6px 8px',
-            cursor: isCollapsible ? 'pointer' : 'default',
-            backgroundColor: isEditingThisNode
-              ? '#e3f2fd'
-              : isCollapsible
-              ? '#f8f9fa'
-              : 'transparent',
-            borderLeft: isCollapsible ? '3px solid #0d6efd' : 'none',
-            borderRadius: '4px',
-            marginBottom: '2px',
-            transition: 'all 0.2s ease',
-            minHeight: '28px',
-          }}
-          onClick={() => isCollapsible && handleToggleNode(node.key)}
-          onMouseEnter={(e) => {
-            if (isCollapsible) {
-              e.currentTarget.style.backgroundColor = '#e9ecef';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (isCollapsible) {
-              e.currentTarget.style.backgroundColor = isEditingThisNode
-                ? '#e3f2fd'
-                : '#f8f9fa';
-            }
-          }}
-        >
-          {/* 折叠图标 */}
-          {isCollapsible && (
-            <span
-              style={{ marginRight: 8, color: '#0d6efd', fontSize: '12px' }}
-            >
-              {isExpanded ? <CaretDownOutlined /> : <CaretRightOutlined />}
-            </span>
-          )}
-
-          {/* 行号 */}
-          {showLineNumbers && (
-            <span
-              style={{
-                color: '#6c757d',
-                fontSize: '11px',
-                minWidth: '30px',
-                textAlign: 'right',
-                marginRight: '12px',
-                userSelect: 'none',
-                fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
-              }}
-            >
-              {index + 1}
-            </span>
-          )}
-
-          {/* 缩进 */}
-          <span style={{ width: node.level * 16 }} />
-
-          {/* 键名（如果是对象属性） */}
-          {node.propertyName && (
-            <span
-              style={{
-                color: '#212529',
-                fontWeight: '600',
-                marginRight: '8px',
-                fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
-                fontSize: '13px',
-                minWidth: 'fit-content',
-              }}
-            >
-              &quot;{node.propertyName}&quot;:
-            </span>
-          )}
-
-          {/* 数组索引（如果是数组元素） */}
-          {node.arrayIndex !== undefined && (
-            <span
-              style={{
-                color: '#6c757d',
-                fontWeight: '500',
-                marginRight: '8px',
-                fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
-                fontSize: '12px',
-                minWidth: 'fit-content',
-              }}
-            >
-              [{node.arrayIndex}]:
-            </span>
-          )}
-
-          {/* 可编辑的值 */}
-          {renderEditableValue(node)}
-        </div>
-
-        {/* 子节点 */}
-        {hasChildren && isExpanded && (
-          <div>
-            {node.children!.map((child, childIndex) =>
-              renderJSONNode(child, childIndex),
-            )}
-          </div>
-        )}
-
-        {/* 折叠提示 */}
-        {hasChildren && !isExpanded && (
-          <div
-            style={{
-              padding: '4px 8px',
-              marginLeft: 20,
-              color: '#6c757d',
-              fontSize: '11px',
-              fontStyle: 'italic',
-              backgroundColor: '#e9ecef',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              marginBottom: '4px',
-              fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
-            }}
-            onClick={() => handleToggleNode(node.key)}
-          >
-            ... {node.children!.length} 个
-            {node.type === 'object' ? '属性' : '元素'}已折叠
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // 渲染查看模式
-  const renderViewMode = () => {
-    if (parseError) {
-      return (
-        <div style={{ padding: '16px' }}>
-          <div
-            style={{
-              padding: '12px',
-              backgroundColor: '#f8d7da',
-              color: '#721c24',
-              borderRadius: '6px',
-              border: '1px solid #f5c6cb',
-            }}
-          >
-            <Text strong>JSON 解析错误:</Text> {parseError}
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div
-        style={{
-          backgroundColor: '#ffffff',
-          color: '#212529',
-          borderRadius: '6px',
-          overflow: 'auto',
-          padding: '8px 0',
-          fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
-        }}
-      >
-        {jsonNodes.map((node, index) => renderJSONNode(node, index))}
-      </div>
-    );
-  };
+  }, [parsedJSON, collapsedPaths]);
 
   return (
     <Card
       title={
         <Space>
-          <FileTextOutlined style={{ color: '#0d6efd' }} />
           <Text strong>{title}</Text>
-          <Text type="secondary" style={{ fontSize: '12px' }}>
-            JSON
-          </Text>
-          {isEditing && (
-            <Text type="warning" style={{ fontSize: '12px' }}>
-              [编辑中]
-            </Text>
-          )}
-          {isDirty && (
-            <Text type="warning" style={{ fontSize: '12px' }}>
-              (已修改)
-            </Text>
-          )}
         </Space>
       }
       size="small"
@@ -689,53 +486,153 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
       style={{
         ...style,
         height,
-        overflow: 'auto',
-        backgroundColor: '#ffffff',
-        border: '1px solid #dee2e6',
       }}
       extra={
         <Space>
           {isDirty && (
-            <Tooltip title="保存 (Ctrl+S)">
-              <Button
-                type="primary"
-                size="small"
-                icon={<SaveOutlined />}
-                onClick={handleSave}
-                disabled={readOnly}
-              >
-                保存
-              </Button>
-            </Tooltip>
+            <Button
+              type="primary"
+              size="small"
+              onClick={handleFormat}
+              disabled={readOnly}
+            >
+              格式化
+            </Button>
           )}
-          {showExpandButton && (
-            <Tooltip title={isAllExpanded ? '折叠所有' : '展开所有'}>
-              <Button
-                type="text"
-                size="small"
-                icon={isAllExpanded ? <CompressOutlined /> : <ExpandOutlined />}
-                onClick={handleToggleAll}
-              />
-            </Tooltip>
-          )}
-          {showCopyButton && (
-            <Tooltip title="复制JSON">
-              <Button
-                type="text"
-                size="small"
-                icon={<CopyOutlined />}
-                onClick={handleCopy}
-              />
-            </Tooltip>
-          )}
+          <Tooltip title={isAllExpanded ? '折叠所有' : '展开所有'}>
+            <Button
+              type="text"
+              size="small"
+              icon={isAllExpanded ? <CompressOutlined /> : <ExpandOutlined />}
+              onClick={handleToggleAll}
+            />
+          </Tooltip>
+          <Tooltip title="复制JSON">
+            <Button
+              type="text"
+              size="small"
+              icon={<CopyOutlined />}
+              onClick={handleCopy}
+            />
+          </Tooltip>
         </Space>
       }
-      bodyStyle={{
-        padding: 0,
-        backgroundColor: '#ffffff',
-      }}
     >
-      {renderViewMode()}
+      <div
+        style={{
+          display: 'flex',
+        }}
+      >
+        {/* 左侧行号和折叠箭头 */}
+        <div
+          ref={lineNumbersRef}
+          style={{
+            width: '50px',
+            backgroundColor: '#f8f9fa',
+            borderRight: '1px solid #dee2e6',
+            overflow: 'hidden',
+            fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
+            fontSize: '12px',
+            lineHeight: '1.5',
+            color: '#6c757d',
+            userSelect: 'none',
+          }}
+        >
+          {lines.map((line, index) => (
+            <div
+              key={index}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0 8px',
+                height: '20px',
+                cursor: line.isCollapsible ? 'pointer' : 'default',
+                position: 'relative',
+              }}
+              onClick={() =>
+                line.isCollapsible && handleToggleCollapse(line.path)
+              }
+            >
+              <span style={{ fontSize: '11px' }}>{line.lineNumber}</span>
+              <div
+                style={{ display: 'flex', alignItems: 'center', gap: '2px' }}
+              >
+                {hasErrorOnLine(line.lineNumber) && (
+                  <div
+                    style={{
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      backgroundColor: '#dc3545',
+                      flexShrink: 0,
+                    }}
+                    title={
+                      jsonErrors.find((e) => e.line === line.lineNumber)
+                        ?.message
+                    }
+                  />
+                )}
+                {line.isCollapsible && (
+                  <span style={{ fontSize: '10px', color: '#0d6efd' }}>
+                    {line.isCollapsed ? (
+                      <CaretRightOutlined />
+                    ) : (
+                      <CaretDownOutlined />
+                    )}
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* 右侧编辑区域 */}
+        <div style={{ flex: 1, position: 'relative' }}>
+          <textarea
+            ref={textareaRef}
+            value={jsonText}
+            onChange={handleTextChange}
+            onScroll={handleScroll}
+            onKeyDown={handleKeyDown}
+            disabled={readOnly}
+            style={{
+              width: '100%',
+              height: '100%',
+              border: 'none',
+              outline: 'none',
+              resize: 'none',
+              fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
+              fontSize: '12px',
+              lineHeight: '1.5',
+              // backgroundColor: parseError ? '#fff5f5' : '#ffffff',
+              color: parseError ? '#dc3545' : '#212529',
+            }}
+            placeholder="输入JSON数据..."
+          />
+
+          {/* 错误提示 */}
+          {/* {parseError && (
+            <div
+              style={{
+                position: 'absolute',
+                bottom: '-55px',
+                left: '-30px',
+                backgroundColor: '#f8d7da',
+                color: '#721c24',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                fontSize: '8px',
+                border: '1px solid #f5c6cb',
+                width: '80%',
+                wordBreak: 'break-word',
+              }}
+            >
+              {parseError}
+            </div>
+          )} */}
+        </div>
+      </div>
     </Card>
   );
 };
