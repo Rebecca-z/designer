@@ -6,6 +6,8 @@ import {
   VariableItem,
 } from './card-designer-types-updated';
 
+import { normalizeRichTextContent } from './RichTextEditor/RichTextUtils';
+
 const selectHtml = (comp: any) => {
   const selectOptions = (comp.options || [])
     .map(
@@ -1293,7 +1295,6 @@ export const convertToTargetFormat = (data: any): any => {
             // 简单的HTML内容检测和转换
             if (content.includes('<') && content.includes('>')) {
               // 使用临时编辑器转换HTML为JSON
-              const { normalizeRichTextContent } = require('./RichTextUtils');
               converted.content = normalizeRichTextContent(content);
             } else {
               // 纯文本内容，创建基础的JSON结构
@@ -1358,9 +1359,6 @@ export const convertToTargetFormat = (data: any): any => {
               // HTML字符串转JSON
               try {
                 if (langContent.includes('<') && langContent.includes('>')) {
-                  const {
-                    normalizeRichTextContent,
-                  } = require('./RichTextUtils');
                   i18nContent[lang] = normalizeRichTextContent(langContent);
                 } else {
                   i18nContent[lang] = {
