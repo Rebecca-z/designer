@@ -97,9 +97,8 @@ const CardDesigner: React.FC = () => {
         const keys = Object.keys(variable as { [key: string]: any });
         if (keys.length > 0) {
           const variableName = keys[0];
-          cardVariables[variableName] = (variable as { [key: string]: any })[
-            variableName
-          ];
+          // 保存完整的变量信息，包括类型和描述
+          cardVariables[variableName] = variable as { [key: string]: any };
         }
       } else {
         // 兼容旧的Variable格式
@@ -133,9 +132,17 @@ const CardDesigner: React.FC = () => {
     ) {
       const cardVariables = safeCardData.variables;
       const variableItems: VariableItem[] = Object.entries(cardVariables).map(
-        ([name, value]) => ({
-          [name]: value,
-        }),
+        ([name, value]) => {
+          // 如果value是完整的变量对象，直接使用
+          if (typeof value === 'object' && value !== null && name in value) {
+            return value as VariableItem;
+          } else {
+            // 兼容旧格式：只有变量值
+            return {
+              [name]: value,
+            };
+          }
+        },
       );
 
       // console.log('🔄 从卡片数据结构初始化变量:', {

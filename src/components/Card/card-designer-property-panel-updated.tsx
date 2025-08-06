@@ -1259,6 +1259,7 @@ export const PropertyPanel: React.FC<{
 
   // 处理从弹窗添加/编辑变量
   const handleAddVariableFromModal = (variable: Variable) => {
+    console.warn('variable====', variable);
     // 解析模拟数据值
     let parsedValue: any;
     try {
@@ -1278,9 +1279,11 @@ export const PropertyPanel: React.FC<{
       parsedValue = variable.value;
     }
 
-    // 创建{变量名:模拟数据值}格式的对象
+    // 创建{变量名:模拟数据值}格式的对象，并保存类型和描述信息
     const variableObject = {
       [variable.name]: parsedValue,
+      [`${variable.name}_type`]: variable.originalType || variable.type,
+      [`${variable.name}_description`]: variable.description || '',
     };
 
     if (editingVariable) {
@@ -1375,10 +1378,15 @@ export const PropertyPanel: React.FC<{
       case 'text':
         return '文本';
       case 'number':
-        return '数字';
+        return '正数';
+      case 'image':
+        return '图片';
+      case 'array':
+        return '变量数组';
       case 'boolean':
         return '布尔';
       case 'object':
+        // 尝试判断是图片还是数组
         return '对象';
       default:
         return type;
@@ -1392,6 +1400,10 @@ export const PropertyPanel: React.FC<{
         return { bg: '#e6f7ff', text: '#1890ff' };
       case 'number':
         return { bg: '#f6ffed', text: '#52c41a' };
+      case 'image':
+        return { bg: '#fff2e8', text: '#fa541c' };
+      case 'array':
+        return { bg: '#f6ffed', text: '#52c41a' };
       case 'boolean':
         return { bg: '#fff7e6', text: '#fa8c16' };
       case 'object':
@@ -1404,7 +1416,16 @@ export const PropertyPanel: React.FC<{
   // 映射Variable类型到AddVariableModal的初始类型
   const mapVariableTypeToInitialType = (
     type: string,
+    originalType?: string,
   ): 'text' | 'number' | 'image' | 'array' => {
+    // 优先使用原始类型信息
+    if (
+      originalType &&
+      ['text', 'number', 'image', 'array'].includes(originalType)
+    ) {
+      return originalType as 'text' | 'number' | 'image' | 'array';
+    }
+
     switch (type) {
       case 'text':
         return 'text';
@@ -4325,19 +4346,33 @@ export const PropertyPanel: React.FC<{
                     variableName = keys[0];
                     variableValue = (variable as VariableObject)[variableName];
 
-                    // 根据值的类型推断变量类型
-                    if (typeof variableValue === 'string') {
-                      variableType = 'text';
-                    } else if (typeof variableValue === 'number') {
-                      variableType = 'number';
-                    } else if (typeof variableValue === 'boolean') {
-                      variableType = 'boolean';
-                    } else if (Array.isArray(variableValue)) {
-                      variableType = 'array';
-                    } else if (typeof variableValue === 'object') {
-                      variableType = 'object';
+                    // 尝试从保存的类型信息中获取类型
+                    const typeKey = `${variableName}_type`;
+                    const savedType = (variable as VariableObject)[typeKey];
+
+                    if (savedType) {
+                      // 使用保存的类型信息
+                      variableType = savedType;
                     } else {
-                      variableType = 'text';
+                      // 根据值的类型推断变量类型
+                      if (typeof variableValue === 'string') {
+                        variableType = 'text';
+                      } else if (typeof variableValue === 'number') {
+                        variableType = 'number';
+                      } else if (typeof variableValue === 'boolean') {
+                        variableType = 'boolean';
+                      } else if (Array.isArray(variableValue)) {
+                        variableType = 'array';
+                      } else if (typeof variableValue === 'object') {
+                        // 尝试判断是图片还是数组
+                        if (variableValue.img_url) {
+                          variableType = 'image';
+                        } else {
+                          variableType = 'object';
+                        }
+                      } else {
+                        variableType = 'text';
+                      }
                     }
                   } else {
                     // 空对象，使用默认值
@@ -4350,7 +4385,12 @@ export const PropertyPanel: React.FC<{
                   const varAsVariable = variable as Variable;
                   variableName = varAsVariable.name || '未命名变量';
                   variableValue = varAsVariable.value || '';
-                  variableType = varAsVariable.type || 'text';
+                  // 优先使用原始类型信息，如果没有则推断类型
+                  if (varAsVariable.originalType) {
+                    variableType = varAsVariable.originalType;
+                  } else {
+                    variableType = varAsVariable.type || 'text';
+                  }
                 }
 
                 return (
@@ -4396,24 +4436,6 @@ export const PropertyPanel: React.FC<{
                       >
                         {variableName}
                       </div>
-                      <div
-                        style={{
-                          fontSize: '12px',
-                          color: '#8c8c8c',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                        title={
-                          typeof variableValue === 'object'
-                            ? JSON.stringify(variableValue)
-                            : String(variableValue)
-                        }
-                      >
-                        {typeof variableValue === 'object'
-                          ? JSON.stringify(variableValue)
-                          : String(variableValue) || '暂无描述'}
-                      </div>
                     </div>
 
                     {/* 中间：变量类型 */}
@@ -4449,6 +4471,11 @@ export const PropertyPanel: React.FC<{
                         onClick={(e) => {
                           e.stopPropagation();
                           // 创建兼容的Variable对象用于编辑
+                          const descriptionKey = `${variableName}_description`;
+                          const savedDescription = (variable as VariableObject)[
+                            descriptionKey
+                          ];
+
                           const editVariable: Variable = {
                             name: variableName,
                             value:
@@ -4460,6 +4487,12 @@ export const PropertyPanel: React.FC<{
                               | 'number'
                               | 'boolean'
                               | 'object',
+                            originalType: variableType as
+                              | 'text'
+                              | 'number'
+                              | 'image'
+                              | 'array',
+                            description: savedDescription || '',
                           };
                           handleEditVariable(editVariable);
                         }}
@@ -4980,7 +5013,10 @@ export const PropertyPanel: React.FC<{
         onCancel={handleCancelAddVariableModal}
         initialType={
           editingVariable
-            ? mapVariableTypeToInitialType(editingVariable.type)
+            ? mapVariableTypeToInitialType(
+                editingVariable.type,
+                editingVariable.originalType,
+              )
             : undefined
         }
         editingVariable={editingVariable}

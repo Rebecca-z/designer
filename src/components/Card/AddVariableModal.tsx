@@ -92,6 +92,11 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
   const mapVariableTypeToFormType = (
     variableType: string,
   ): 'text' | 'number' | 'image' | 'array' => {
+    // 优先使用原始类型信息
+    if (editingVariable?.originalType) {
+      return editingVariable.originalType;
+    }
+
     switch (variableType) {
       case 'text':
         return 'text';
@@ -129,7 +134,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         form.setFieldsValue({
           type: formType,
           name: editingVariable.name,
-          description: '', // 描述字段暂时为空
+          description: editingVariable.description || '', // 回显描述信息
           mockData: editingVariable.value,
         });
 
@@ -236,6 +241,8 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         name: values.name,
         type: mapTypeToVariableType(values.type),
         value: actualMockData,
+        originalType: values.type, // 保存原始类型信息
+        description: values.description, // 保存描述信息
       };
 
       console.log('💾 提交变量数据:', {
@@ -310,6 +317,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
               json={jsonData}
               title="图片数据"
               onJSONChange={handleJSONChange}
+              isVariableModalOpen={visible}
               height={140}
             />
           </Form.Item>
@@ -329,10 +337,8 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
               json={jsonData}
               title="数组数据"
               onJSONChange={handleJSONChange}
-              editable={true}
-              height={300}
-              showLineNumbers={false}
-              showCopyButton={false}
+              isVariableModalOpen={visible}
+              height={140}
             />
           </Form.Item>
         );
@@ -364,6 +370,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         initialValues={{
           type: initialType,
           mockData: getDefaultMockData(initialType),
+          description: '', // 添加描述字段的初始值
         }}
       >
         {/* 类型选择 */}
@@ -375,6 +382,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
           <Select
             onChange={handleTypeChange}
             disabled={!!editingVariable} // 编辑模式下不允许修改类型
+            value={selectedType} // 确保显示当前选中的类型
           >
             <Option value="text">文本</Option>
             <Option value="number">正数</Option>

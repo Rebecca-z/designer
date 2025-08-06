@@ -19,6 +19,7 @@ export interface JSONEditorProps {
   onJSONChange?: (newJSON: string) => void;
   onSave?: (json: string) => void;
   readOnly?: boolean;
+  isVariableModalOpen?: boolean; // 新增：变量弹窗是否打开
 }
 
 interface LineData {
@@ -47,11 +48,12 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
   onJSONChange,
   onSave,
   readOnly = false,
+  isVariableModalOpen = false, // 新增：变量弹窗是否打开
 }) => {
   const [jsonText, setJsonText] = useState('');
   const [lines, setLines] = useState<LineData[]>([]);
   const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(new Set());
-  const [isDirty, setIsDirty] = useState(false);
+  // const [isDirty, setIsDirty] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
   const [jsonErrors, setJsonErrors] = useState<JSONError[]>([]);
   const [isAllExpanded, setIsAllExpanded] = useState(false);
@@ -348,7 +350,7 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
     setJsonText(newText);
-    setIsDirty(true);
+    // setIsDirty(true);
 
     // 实时校验JSON
     const { isValid, errors } = validateJSON(newText);
@@ -396,7 +398,7 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
       if (onSave) {
         onSave(jsonText);
       }
-      setIsDirty(false);
+      // setIsDirty(false);
       message.success('JSON已保存');
     } else {
       message.error('JSON格式错误，无法保存');
@@ -422,6 +424,38 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
 
   // 处理键盘快捷键
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // 处理Tab键 - 在textarea中插入2个空格而不是切换焦点
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const textarea = e.currentTarget as HTMLTextAreaElement;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const value = textarea.value;
+
+      // 插入2个空格
+      const newValue = value.substring(0, start) + '  ' + value.substring(end);
+      textarea.value = newValue;
+
+      // 设置光标位置到插入的空格后面
+      textarea.selectionStart = textarea.selectionEnd = start + 2;
+
+      // 触发change事件
+      const event = new Event('input', { bubbles: true });
+      textarea.dispatchEvent(event);
+    }
+
+    // 处理撤回快捷键 (Ctrl+Z 或 Cmd+Z)
+    if (e.key === 'z' && (e.ctrlKey || e.metaKey)) {
+      // 如果变量弹窗打开，阻止事件冒泡，让textarea自己处理撤回
+      if (isVariableModalOpen) {
+        e.stopPropagation();
+        return;
+      }
+      // 如果变量弹窗关闭，不阻止默认行为，让textarea自己处理撤回
+      return;
+    }
+
+    // 处理保存快捷键
     if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       handleSave();
@@ -446,13 +480,11 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
       setLines(lines);
       setParseError(null);
       setJsonErrors([]);
-      setIsDirty(false);
+      // setIsDirty(false);
 
       if (onJSONChange) {
         onJSONChange(text);
       }
-
-      message.success('JSON格式化成功');
     } catch (error) {
       setParseError(error instanceof Error ? error.message : 'JSON格式错误');
     }
@@ -489,16 +521,14 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
       }}
       extra={
         <Space>
-          {isDirty && (
-            <Button
-              type="primary"
-              size="small"
+          <Tooltip title="JSON格式化">
+            <span
+              style={{ cursor: 'pointer', fontSize: '12px', fontWeight: '500' }}
               onClick={handleFormat}
-              disabled={readOnly}
             >
-              格式化
-            </Button>
-          )}
+              JSON
+            </span>
+          </Tooltip>
           <Tooltip title={isAllExpanded ? '折叠所有' : '展开所有'}>
             <Button
               type="text"

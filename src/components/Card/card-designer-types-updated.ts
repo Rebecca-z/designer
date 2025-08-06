@@ -319,6 +319,8 @@ export interface Variable {
   name: string;
   value: string;
   type: 'text' | 'number' | 'boolean' | 'object';
+  originalType?: 'text' | 'number' | 'image' | 'array'; // 新增：保存原始类型信息
+  description?: string; // 新增：变量描述
 }
 
 // 新的变量格式：{变量名: 模拟数据值}
