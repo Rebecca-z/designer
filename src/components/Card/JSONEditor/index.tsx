@@ -635,7 +635,6 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
               fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
               fontSize: '12px',
               lineHeight: '1.5',
-              // backgroundColor: parseError ? '#fff5f5' : '#ffffff',
               color: parseError ? '#dc3545' : '#212529',
             }}
             placeholder="输入JSON数据..."

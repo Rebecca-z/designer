@@ -10,8 +10,8 @@ import {
   VariableItem,
 } from './card-designer-types-updated';
 import { replaceVariables } from './card-designer-utils';
-import RichTextStyles from './RichTextStyles';
-import { convertJSONToHTML } from './RichTextUtils';
+import RichTextStyles from './RichTextEditor/RichTextStyles';
+import { convertJSONToHTML } from './RichTextEditor/RichTextUtils';
 
 const { Option } = Select;
 // const { Text } = Typography;

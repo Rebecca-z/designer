@@ -1,23 +1,13 @@
 import { Button, Form, Input, InputNumber, Modal, Select } from 'antd';
 import React, { useEffect, useState } from 'react';
-import { Variable } from './card-designer-types-updated';
-import JSONEditor from './JSONEditor';
+import { Variable } from '../card-designer-types-updated';
+import JSONEditor from '../JSONEditor';
+import type {
+  AddVariableModalProps,
+  VariableFormData,
+  VariableType,
+} from './type';
 const { Option } = Select;
-
-export interface AddVariableModalProps {
-  visible: boolean;
-  onOk: (variable: Variable) => void;
-  onCancel: () => void;
-  initialType?: 'text' | 'number' | 'image' | 'array';
-  editingVariable?: Variable | null; // 新增：编辑的变量
-}
-
-export interface VariableFormData {
-  type: 'text' | 'number' | 'image' | 'array';
-  name: string;
-  description: string;
-  mockData: string;
-}
 
 const AddVariableModal: React.FC<AddVariableModalProps> = ({
   visible,
@@ -27,15 +17,11 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
   editingVariable = null, // 新增：编辑的变量
 }) => {
   const [form] = Form.useForm<VariableFormData>();
-  const [selectedType, setSelectedType] = useState<
-    'text' | 'number' | 'image' | 'array'
-  >(initialType);
+  const [selectedType, setSelectedType] = useState<VariableType>(initialType);
   const [jsonData, setJsonData] = useState<string>(''); // 新增：JSON编辑器数据
 
   // 获取默认模拟数据
-  const getDefaultMockData = (
-    type: 'text' | 'number' | 'image' | 'array',
-  ): string => {
+  const getDefaultMockData = (type: VariableType): string => {
     switch (type) {
       case 'text':
         return '';
@@ -166,7 +152,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
   }, [visible, initialType, editingVariable, form]);
 
   // 处理类型变化
-  const handleTypeChange = (value: 'text' | 'number' | 'image' | 'array') => {
+  const handleTypeChange = (value: VariableType) => {
     setSelectedType(value);
     const defaultData = getDefaultMockData(value);
     form.setFieldsValue({
@@ -221,7 +207,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
 
       // 将自定义类型映射到Variable接口支持的类型
       const mapTypeToVariableType = (
-        type: 'text' | 'number' | 'image' | 'array',
+        type: VariableType,
       ): 'text' | 'number' | 'boolean' | 'object' => {
         switch (type) {
           case 'text':
@@ -319,6 +305,9 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
               onJSONChange={handleJSONChange}
               isVariableModalOpen={visible}
               height={140}
+              style={{
+                padding: 0,
+              }}
             />
           </Form.Item>
         );

@@ -13,7 +13,7 @@ import {
 } from '@ant-design/icons';
 import { Divider, Tabs } from 'antd';
 import React from 'react';
-import DraggableItem from './Designer/DraggableItem';
+import DraggableItem from './Card/Designer/DraggableItem';
 
 const iconMap: Record<string, React.ReactNode> = {
   // 容器

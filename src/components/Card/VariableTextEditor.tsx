@@ -33,15 +33,6 @@ const VariableTextEditor: React.FC<VariableTextEditorProps> = ({
   rows = 4,
   disabled = false,
 }) => {
-  // console.log('🎯 VariableTextEditor 组件初始化:', {
-  //   value,
-  //   variablesCount: variables.length,
-  //   placeholder,
-  //   rows,
-  //   disabled,
-  //   timestamp: new Date().toISOString(),
-  // });
-
   const [editValue, setEditValue] = useState(value);
   const [isEditing, setIsEditing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -227,13 +218,6 @@ const VariableTextEditor: React.FC<VariableTextEditorProps> = ({
   // 渲染预览模式（变量可点击编辑，点击其他地方进入编辑态）
   const renderPreview = () => {
     const parsedContent = parseVariables(editValue);
-
-    // console.log('🎯 renderPreview called:', {
-    //   editValue,
-    //   parsedContentLength: parsedContent.length,
-    //   isEditing,
-    //   timestamp: new Date().toISOString(),
-    // });
 
     return (
       <div

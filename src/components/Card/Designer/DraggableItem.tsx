@@ -1,6 +1,6 @@
 import React from 'react';
 import { useDrag } from 'react-dnd';
-import { DragItem } from '../../types';
+import { DragItem } from '../../../types';
 
 interface DraggableItemProps {
   type: 'component' | 'layout';

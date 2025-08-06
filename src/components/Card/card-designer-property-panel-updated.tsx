@@ -44,7 +44,7 @@ import {
   VariableItem,
   VariableObject,
 } from './card-designer-types-updated';
-import RichTextEditor from './RichTextEditor';
+import RichTextEditor from './RichTextEditor/RichTextEditor';
 import VariableTextEditor from './VariableTextEditor';
 
 const { Option } = Select;
@@ -1698,7 +1698,7 @@ export const PropertyPanel: React.FC<{
     // 如果选中了标题组件，显示标题编辑界面
     if (isTitleSelected) {
       return (
-        <div style={{ padding: '16px' }}>
+        <div>
           <div
             style={{
               marginBottom: '16px',
@@ -2023,7 +2023,7 @@ export const PropertyPanel: React.FC<{
     // 如果选中了按钮组件，显示按钮编辑界面
     if (isButtonComponent) {
       return (
-        <div style={{ padding: '16px' }}>
+        <div>
           <div
             style={{
               marginBottom: '16px',
@@ -2209,7 +2209,7 @@ export const PropertyPanel: React.FC<{
     if (isSelectSingleComponent) {
       const options = (currentComponent as any).options || [];
       return (
-        <div style={{ padding: '16px' }}>
+        <div>
           <div
             style={{
               marginBottom: '16px',
@@ -2586,7 +2586,7 @@ export const PropertyPanel: React.FC<{
     // 如果选中了输入框组件，显示输入框编辑界面
     if (isInputComponent) {
       return (
-        <div style={{ padding: '16px' }}>
+        <div>
           <div
             style={{
               marginBottom: '16px',
@@ -2714,7 +2714,7 @@ export const PropertyPanel: React.FC<{
       };
 
       return (
-        <div style={{ padding: '16px' }}>
+        <div>
           <div
             style={{
               marginBottom: '16px',
@@ -3703,7 +3703,7 @@ export const PropertyPanel: React.FC<{
       };
 
       return (
-        <div style={{ padding: '16px' }}>
+        <div>
           <div
             style={{
               marginBottom: '16px',
@@ -3821,7 +3821,7 @@ export const PropertyPanel: React.FC<{
       const cropMode = imageComponent.crop_mode || 'default';
 
       return (
-        <div style={{ padding: '16px' }}>
+        <div>
           <div
             style={{
               marginBottom: '16px',
@@ -4142,7 +4142,7 @@ export const PropertyPanel: React.FC<{
 
     // 默认显示组件基本信息
     return (
-      <div style={{ padding: '16px' }}>
+      <div>
         <div
           style={{
             marginBottom: '16px',
