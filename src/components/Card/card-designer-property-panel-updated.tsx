@@ -1287,40 +1287,34 @@ export const PropertyPanel: React.FC<{
     };
 
     if (editingVariable) {
-      // 编辑模式：通过变量名称查找并更新现有变量
-      const variableIndex = findVariableIndexByName(editingVariable.name);
+      // 编辑模式：检查变量名称是否发生变化
+      const oldVariableName = editingVariable.name;
+      const newVariableName = variable.name;
 
-      if (variableIndex !== -1) {
-        // 找到变量，更新它
-        const newVariables = [...variables];
-        newVariables[variableIndex] = variableObject;
-        onUpdateVariables(newVariables);
-
-        // console.log('🔄 更新变量:', {
-        //   variableName: editingVariable.name,
-        //   variableIndex,
-        //   oldVariable: variables[variableIndex],
-        //   newVariable: variableObject,
-        //   allVariables: newVariables,
-        // });
+      if (oldVariableName === newVariableName) {
+        // 变量名称没有变化，直接更新
+        const variableIndex = findVariableIndexByName(oldVariableName);
+        if (variableIndex !== -1) {
+          const newVariables = [...variables];
+          newVariables[variableIndex] = variableObject;
+          onUpdateVariables(newVariables);
+        }
       } else {
-        // 没找到变量，作为新变量添加
-        const newVariables = [...variables, variableObject];
+        // 变量名称发生变化，删除旧变量并添加新变量
+        const newVariables = variables.filter((v) => {
+          if (typeof v === 'object' && v !== null) {
+            const keys = Object.keys(v as VariableObject);
+            return keys.length > 0 && keys[0] !== oldVariableName;
+          }
+          return true;
+        });
+        newVariables.push(variableObject);
         onUpdateVariables(newVariables);
-        // console.log('⚠️ 未找到要编辑的变量，作为新变量添加:', {
-        //   variableName: editingVariable.name,
-        //   newVariable: variableObject,
-        //   allVariables: newVariables,
-        // });
       }
     } else {
       // 新增模式：添加新变量
       const newVariables = [...variables, variableObject];
       onUpdateVariables(newVariables);
-      // console.log('➕ 添加新变量:', {
-      //   newVariable: variableObject,
-      //   allVariables: newVariables,
-      // });
     }
     setIsAddVariableModalVisible(false);
     setEditingVariable(null);
@@ -1390,26 +1384,6 @@ export const PropertyPanel: React.FC<{
         return '对象';
       default:
         return type;
-    }
-  };
-
-  // 获取类型颜色
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'text':
-        return { bg: '#e6f7ff', text: '#1890ff' };
-      case 'number':
-        return { bg: '#f6ffed', text: '#52c41a' };
-      case 'image':
-        return { bg: '#fff2e8', text: '#fa541c' };
-      case 'array':
-        return { bg: '#f6ffed', text: '#52c41a' };
-      case 'boolean':
-        return { bg: '#fff7e6', text: '#fa8c16' };
-      case 'object':
-        return { bg: '#f9f0ff', text: '#722ed1' };
-      default:
-        return { bg: '#f5f5f5', text: '#8c8c8c' };
     }
   };
 
@@ -4398,7 +4372,7 @@ export const PropertyPanel: React.FC<{
                     key={`${variableName}-${index}`}
                     className="variable-item"
                     style={{
-                      padding: '12px 16px',
+                      padding: '12px',
                       border: '1px solid #f0f0f0',
                       borderRadius: '8px',
                       marginBottom: '8px',
@@ -4434,24 +4408,11 @@ export const PropertyPanel: React.FC<{
                         }}
                         title={variableName}
                       >
-                        {variableName}
+                        {variableName}{' '}
+                        <span style={{ color: '#999', fontSize: '12px' }}>
+                          ({getTypeLabel(variableType)})
+                        </span>
                       </div>
-                    </div>
-
-                    {/* 中间：变量类型 */}
-                    <div style={{ margin: '0 12px' }}>
-                      <span
-                        style={{
-                          padding: '2px 8px',
-                          borderRadius: '12px',
-                          fontSize: '11px',
-                          fontWeight: 500,
-                          backgroundColor: getTypeColor(variableType).bg,
-                          color: getTypeColor(variableType).text,
-                        }}
-                      >
-                        {getTypeLabel(variableType)}
-                      </span>
                     </div>
 
                     {/* 右侧：操作按钮 */}
@@ -4471,11 +4432,7 @@ export const PropertyPanel: React.FC<{
                         onClick={(e) => {
                           e.stopPropagation();
                           // 创建兼容的Variable对象用于编辑
-                          const descriptionKey = `${variableName}_description`;
-                          const savedDescription = (variable as VariableObject)[
-                            descriptionKey
-                          ];
-
+                          // 由于卡片数据结构中不包含类型和描述信息，我们需要重新构建
                           const editVariable: Variable = {
                             name: variableName,
                             value:
@@ -4492,7 +4449,7 @@ export const PropertyPanel: React.FC<{
                               | 'number'
                               | 'image'
                               | 'array',
-                            description: savedDescription || '',
+                            description: '', // 由于不保存描述信息，编辑时默认为空
                           };
                           handleEditVariable(editVariable);
                         }}

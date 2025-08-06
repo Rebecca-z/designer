@@ -97,12 +97,15 @@ const CardDesigner: React.FC = () => {
         const keys = Object.keys(variable as { [key: string]: any });
         if (keys.length > 0) {
           const variableName = keys[0];
-          // 保存完整的变量信息，包括类型和描述
-          cardVariables[variableName] = variable as { [key: string]: any };
+          // 只保存变量名和模拟数据，不保存类型和描述信息
+          cardVariables[variableName] = (variable as { [key: string]: any })[
+            variableName
+          ];
         }
       } else {
         // 兼容旧的Variable格式
         const varAsVariable = variable as Variable;
+        // 只保存变量名和模拟数据
         cardVariables[varAsVariable.name] = varAsVariable.value;
       }
     });
@@ -133,15 +136,11 @@ const CardDesigner: React.FC = () => {
       const cardVariables = safeCardData.variables;
       const variableItems: VariableItem[] = Object.entries(cardVariables).map(
         ([name, value]) => {
-          // 如果value是完整的变量对象，直接使用
-          if (typeof value === 'object' && value !== null && name in value) {
-            return value as VariableItem;
-          } else {
-            // 兼容旧格式：只有变量值
-            return {
-              [name]: value,
-            };
-          }
+          // 卡片数据结构中只包含变量名和模拟数据
+          // 类型和描述信息需要在本地维护
+          return {
+            [name]: value,
+          };
         },
       );
 

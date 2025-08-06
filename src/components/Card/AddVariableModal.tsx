@@ -381,7 +381,6 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         >
           <Select
             onChange={handleTypeChange}
-            disabled={!!editingVariable} // 编辑模式下不允许修改类型
             value={selectedType} // 确保显示当前选中的类型
           >
             <Option value="text">文本</Option>
@@ -400,7 +399,6 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
           <Input
             placeholder="变量名称应以字母开头、仅支持字母、数字下划线的组合"
             maxLength={50}
-            disabled={!!editingVariable} // 编辑模式下不允许修改名称
           />
         </Form.Item>
 
