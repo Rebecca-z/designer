@@ -2198,6 +2198,11 @@ export const replaceVariables = (
   variables: VariableItem[],
 ): string => {
   if (!text || !variables || variables.length === 0) {
+    console.log('❌ replaceVariables: 缺少文本或变量数据', {
+      text: text,
+      variablesLength: variables?.length,
+      variables: variables,
+    });
     return text;
   }
 
@@ -2217,6 +2222,7 @@ export const replaceVariables = (
   console.log('📋 变量映射表:', {
     variableMap: variableMap,
     mapKeys: Object.keys(variableMap),
+    variablesCount: variables.length,
   });
 
   // 替换变量占位符

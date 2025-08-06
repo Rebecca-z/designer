@@ -45,7 +45,7 @@ import {
   VariableObject,
 } from './card-designer-types-updated';
 import RichTextEditor from './RichTextEditor/RichTextEditor';
-import VariableTextEditor from './VariableTextEditor';
+import VariableTextarea from './VariableTextarea';
 
 const { Option } = Select;
 const { Text } = Typography;
@@ -1290,11 +1290,9 @@ export const PropertyPanel: React.FC<{
       parsedValue = variable.value;
     }
 
-    // 创建{变量名:模拟数据值}格式的对象，并保存类型和描述信息
+    // 创建{变量名:模拟数据值}格式的对象，不包含type和description信息
     const variableObject = {
       [variable.name]: parsedValue,
-      [`${variable.name}_type`]: variable.originalType || variable.type,
-      [`${variable.name}_description`]: variable.description || '',
     };
 
     if (editingVariable) {
@@ -2755,38 +2753,39 @@ export const PropertyPanel: React.FC<{
                     showToolbar={true}
                   />
                 ) : (
-                  <VariableTextEditor
+                  <VariableTextarea
                     value={getTextContent()}
                     onChange={updateTextContent}
                     variables={variables}
-                    onAddVariable={() => setIsAddVariableModalVisible(true)}
-                    onEditVariable={(variableName) => {
-                      // 查找并编辑指定的变量
-                      const variable = variables.find((v) => {
-                        if (typeof v === 'object' && v !== null) {
-                          const keys = Object.keys(v as Record<string, any>);
-                          return keys.length > 0 && keys[0] === variableName;
-                        }
-                        return false;
+                    onAddVariable={(variableObject) => {
+                      // 直接使用VariableTextarea处理后的变量对象
+                      console.log('🔄 VariableTextarea 添加变量:', {
+                        variableObject: variableObject,
+                        timestamp: new Date().toISOString(),
                       });
-                      if (variable) {
-                        // 转换为Variable格式用于编辑
-                        const keys = Object.keys(
-                          variable as Record<string, any>,
-                        );
-                        const variableValue = (variable as Record<string, any>)[
-                          keys[0]
-                        ];
-                        const editingVariable = {
-                          name: variableName,
-                          type: 'text' as const,
-                          value: String(variableValue),
-                        };
-                        setEditingVariable(editingVariable);
-                        setIsAddVariableModalVisible(true);
-                      }
+
+                      // 立即更新变量列表，这会触发：
+                      // 1. 全局变量状态更新
+                      // 2. 卡片数据结构更新
+                      // 3. 画布实时刷新显示变量模拟数据
+                      const newVariables = [...variables, variableObject];
+
+                      console.log('📤 调用 onUpdateVariables:', {
+                        oldVariables: variables,
+                        newVariables: newVariables,
+                        onUpdateVariablesType: typeof onUpdateVariables,
+                      });
+
+                      onUpdateVariables(newVariables);
+
+                      console.log('✅ VariableTextarea 变量更新完成:', {
+                        oldCount: variables.length,
+                        newCount: newVariables.length,
+                        variableObject: variableObject,
+                        timestamp: new Date().toISOString(),
+                      });
                     }}
-                    placeholder="请输入文本内容"
+                    placeholder="请输入文本内容，输入{快速添加变量"
                     rows={4}
                   />
                 )}
@@ -4197,33 +4196,24 @@ export const PropertyPanel: React.FC<{
                     variableName = keys[0];
                     variableValue = (variable as VariableObject)[variableName];
 
-                    // 尝试从保存的类型信息中获取类型
-                    const typeKey = `${variableName}_type`;
-                    const savedType = (variable as VariableObject)[typeKey];
-
-                    if (savedType) {
-                      // 使用保存的类型信息
-                      variableType = savedType;
-                    } else {
-                      // 根据值的类型推断变量类型
-                      if (typeof variableValue === 'string') {
-                        variableType = 'text';
-                      } else if (typeof variableValue === 'number') {
-                        variableType = 'number';
-                      } else if (typeof variableValue === 'boolean') {
-                        variableType = 'boolean';
-                      } else if (Array.isArray(variableValue)) {
-                        variableType = 'array';
-                      } else if (typeof variableValue === 'object') {
-                        // 尝试判断是图片还是数组
-                        if (variableValue.img_url) {
-                          variableType = 'image';
-                        } else {
-                          variableType = 'object';
-                        }
+                    // 根据值的类型推断变量类型
+                    if (typeof variableValue === 'string') {
+                      variableType = 'text';
+                    } else if (typeof variableValue === 'number') {
+                      variableType = 'number';
+                    } else if (typeof variableValue === 'boolean') {
+                      variableType = 'boolean';
+                    } else if (Array.isArray(variableValue)) {
+                      variableType = 'array';
+                    } else if (typeof variableValue === 'object') {
+                      // 尝试判断是图片还是数组
+                      if (variableValue.img_url) {
+                        variableType = 'image';
                       } else {
-                        variableType = 'text';
+                        variableType = 'object';
                       }
+                    } else {
+                      variableType = 'text';
                     }
                   } else {
                     // 空对象，使用默认值
@@ -4309,7 +4299,6 @@ export const PropertyPanel: React.FC<{
                         onClick={(e) => {
                           e.stopPropagation();
                           // 创建兼容的Variable对象用于编辑
-                          // 由于卡片数据结构中不包含类型和描述信息，我们需要重新构建
                           const editVariable: Variable = {
                             name: variableName,
                             value:
@@ -4326,7 +4315,6 @@ export const PropertyPanel: React.FC<{
                               | 'number'
                               | 'image'
                               | 'array',
-                            description: '', // 由于不保存描述信息，编辑时默认为空
                           };
                           handleEditVariable(editVariable);
                         }}

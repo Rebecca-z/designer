@@ -2774,13 +2774,13 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       };
 
       // 处理变量替换
-      // console.log('🔍 文本组件变量替换检查:', {
-      //   componentId: comp.id,
-      //   originalContent: comp.content || '文本内容',
-      //   variablesCount: variables.length,
-      //   variables: variables,
-      //   hasVariables: variables.length > 0,
-      // });
+      console.log('🔍 文本组件变量替换检查:', {
+        componentId: comp.id,
+        originalContent: comp.content || '文本内容',
+        variablesCount: variables.length,
+        variables: variables,
+        hasVariables: variables.length > 0,
+      });
 
       const displayContent = replaceVariables(
         comp.content || '文本内容',

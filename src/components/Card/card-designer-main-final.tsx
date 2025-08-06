@@ -77,15 +77,16 @@ const CardDesigner: React.FC = () => {
     return migratedData;
   }, [history.data]);
 
-  // 处理变量更新 - 同时更新本地状态和卡片数据结构
+  // 处理变量更新 - 同时更新本地状态和卡片数据结构，确保实时刷新画布
   const handleUpdateVariables = (newVariables: VariableItem[]) => {
-    // console.log('🔄 更新变量:', {
-    //   oldVariables: variables,
-    //   newVariables: newVariables,
-    //   timestamp: new Date().toISOString(),
-    // });
+    console.log('🔄 处理变量更新:', {
+      oldVariablesCount: variables.length,
+      newVariablesCount: newVariables.length,
+      newVariables: newVariables,
+      timestamp: new Date().toISOString(),
+    });
 
-    // 更新本地状态
+    // 立即更新本地状态
     setVariables(newVariables);
 
     // 将变量转换为卡片数据结构格式并更新
@@ -93,11 +94,11 @@ const CardDesigner: React.FC = () => {
 
     newVariables.forEach((variable) => {
       if (typeof variable === 'object' && variable !== null) {
-        // 新的格式：{变量名: 模拟数据值}
+        // 新的格式：{变量名: 模拟数据值}，不包含类型和描述信息
         const keys = Object.keys(variable as { [key: string]: any });
         if (keys.length > 0) {
           const variableName = keys[0];
-          // 只保存变量名和模拟数据，不保存类型和描述信息
+          // 只保存变量名和模拟数据
           cardVariables[variableName] = (variable as { [key: string]: any })[
             variableName
           ];
@@ -118,13 +119,18 @@ const CardDesigner: React.FC = () => {
     };
 
     console.log('📝 更新卡片数据结构:', {
-      currentData: currentData,
+      currentVariablesCount: Object.keys(currentData.variables || {}).length,
+      newCardVariablesCount: Object.keys(cardVariables).length,
       cardVariables: cardVariables,
       updatedCardData: updatedCardData,
       timestamp: new Date().toISOString(),
     });
 
+    // 立即更新历史数据，这会触发画布重新渲染
+    console.log('🔄 调用 history.updateData');
     history.updateData(updatedCardData as any);
+
+    console.log('✅ 变量更新完成，画布将实时刷新显示新的变量模拟数据');
   };
 
   // 从卡片数据结构初始化变量
@@ -134,21 +140,23 @@ const CardDesigner: React.FC = () => {
       Object.keys(safeCardData.variables).length > 0
     ) {
       const cardVariables = safeCardData.variables;
-      const variableItems: VariableItem[] = Object.entries(cardVariables).map(
-        ([name, value]) => {
-          // 卡片数据结构中只包含变量名和模拟数据
-          // 类型和描述信息需要在本地维护
-          return {
-            [name]: value,
-          };
-        },
-      );
+      const variableItems: VariableItem[] = [];
 
-      // console.log('🔄 从卡片数据结构初始化变量:', {
-      //   cardVariables: cardVariables,
-      //   variableItems: variableItems,
-      //   timestamp: new Date().toISOString(),
-      // });
+      // 只处理变量名和值，不包含type和description信息
+      Object.entries(cardVariables).forEach(([key, value]) => {
+        // 检查是否是变量名（不包含_type或_description后缀）
+        if (!key.endsWith('_type') && !key.endsWith('_description')) {
+          variableItems.push({
+            [key]: value,
+          });
+        }
+      });
+
+      console.log('🔄 从卡片数据结构初始化变量:', {
+        cardVariables: cardVariables,
+        variableItems: variableItems,
+        timestamp: new Date().toISOString(),
+      });
 
       setVariables(variableItems);
     }
