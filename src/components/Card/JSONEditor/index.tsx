@@ -7,44 +7,15 @@ import {
 } from '@ant-design/icons';
 import { Button, Card, message, Space, Tooltip, Typography } from 'antd';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-
+import style from './index.less';
+import type { JSONEditorProps, JSONError, LineData } from './type';
 const { Text } = Typography;
-
-export interface JSONEditorProps {
-  json: string | object;
-  title?: string;
-  height?: string | number;
-  className?: string;
-  style?: React.CSSProperties;
-  onJSONChange?: (newJSON: string) => void;
-  onSave?: (json: string) => void;
-  readOnly?: boolean;
-  isVariableModalOpen?: boolean; // 新增：变量弹窗是否打开
-}
-
-interface LineData {
-  lineNumber: number;
-  content: string;
-  indent: number;
-  isCollapsible: boolean;
-  isCollapsed: boolean;
-  nodeType: 'object' | 'array' | 'property' | 'value';
-  path: string;
-  originalValue?: any;
-}
-
-interface JSONError {
-  line: number;
-  column: number;
-  message: string;
-}
 
 const JSONEditor: React.FC<JSONEditorProps> = ({
   json: initialJSON,
   title = 'JSON 编辑器',
   height = '400px',
   className,
-  style,
   onJSONChange,
   onSave,
   readOnly = false,
@@ -514,9 +485,8 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
         </Space>
       }
       size="small"
-      className={className}
+      className={`${style.jsonText} ${className}`}
       style={{
-        ...style,
         height,
       }}
       extra={
@@ -548,37 +518,15 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
         </Space>
       }
     >
-      <div
-        style={{
-          display: 'flex',
-        }}
-      >
+      <div className={style.jsonTextContainer}>
         {/* 左侧行号和折叠箭头 */}
-        <div
-          ref={lineNumbersRef}
-          style={{
-            width: '50px',
-            backgroundColor: '#f8f9fa',
-            borderRight: '1px solid #dee2e6',
-            overflow: 'hidden',
-            fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
-            fontSize: '12px',
-            lineHeight: '1.5',
-            color: '#6c757d',
-            userSelect: 'none',
-          }}
-        >
+        <div ref={lineNumbersRef} className={style.jsonSerialMumber}>
           {lines.map((line, index) => (
             <div
               key={index}
+              className={style.collapsibleIcon}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '0 8px',
-                height: '20px',
                 cursor: line.isCollapsible ? 'pointer' : 'default',
-                position: 'relative',
               }}
               onClick={() =>
                 line.isCollapsible && handleToggleCollapse(line.path)
@@ -590,13 +538,7 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
               >
                 {hasErrorOnLine(line.lineNumber) && (
                   <div
-                    style={{
-                      width: '6px',
-                      height: '6px',
-                      borderRadius: '50%',
-                      backgroundColor: '#dc3545',
-                      flexShrink: 0,
-                    }}
+                    className={style.errorDot}
                     title={
                       jsonErrors.find((e) => e.line === line.lineNumber)
                         ?.message
@@ -618,7 +560,7 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
         </div>
 
         {/* 右侧编辑区域 */}
-        <div style={{ flex: 1, position: 'relative' }}>
+        <div className={style.jsonEditorArea}>
           <textarea
             ref={textareaRef}
             value={jsonText}
@@ -626,15 +568,8 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
             onScroll={handleScroll}
             onKeyDown={handleKeyDown}
             disabled={readOnly}
+            className={style.textarea}
             style={{
-              width: '100%',
-              height: '100%',
-              border: 'none',
-              outline: 'none',
-              resize: 'none',
-              fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
-              fontSize: '12px',
-              lineHeight: '1.5',
               color: parseError ? '#dc3545' : '#212529',
             }}
             placeholder="输入JSON数据..."

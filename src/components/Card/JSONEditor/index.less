@@ -1,0 +1,59 @@
+.jsonText {
+  :global {
+    .ant-card-body {
+      padding: 0;
+      height: calc(100% - 38px) !important;
+    }
+  }
+
+  .jsonTextContainer {
+    display: flex;
+    height: 100%;
+
+    .jsonSerialMumber {
+      width: 50px;
+      background-color: #f8f9fa;
+      border-right: 1px solid #dee2e6;
+      overflow: hidden;
+      font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
+      font-size: 12px;
+      line-height: 1.2;
+      color: '#6c757d';
+      user-select: none;
+
+      .collapsibleIcon {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 8px;
+        height: 20px;
+        position: relative;
+
+        .errorDot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background-color: #dc3545;
+          flex-shrink: 0;
+        }
+      }
+    }
+
+    .jsonEditorArea {
+      flex: 1;
+      position: relative;
+
+      .textarea {
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        border: none;
+        outline: none;
+        resize: none;
+        font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+    }
+  }
+}

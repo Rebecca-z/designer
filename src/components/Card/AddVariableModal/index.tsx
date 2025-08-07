@@ -304,10 +304,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
               title="图片数据"
               onJSONChange={handleJSONChange}
               isVariableModalOpen={visible}
-              height={140}
-              style={{
-                padding: 0,
-              }}
+              height={200}
             />
           </Form.Item>
         );
@@ -327,7 +324,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
               title="数组数据"
               onJSONChange={handleJSONChange}
               isVariableModalOpen={visible}
-              height={140}
+              height={300}
             />
           </Form.Item>
         );
