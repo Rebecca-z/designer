@@ -2225,10 +2225,25 @@ export const replaceVariables = (
     variablesCount: variables.length,
   });
 
-  // 替换变量占位符
-  const result = text.replace(/\{\{([^}]+)\}\}/g, (match, variableName) => {
+  // 替换变量占位符（支持{{变量名}}和${变量名}两种格式）
+  let result = text;
+
+  // 替换{{变量名}}格式
+  result = result.replace(/\{\{([^}]+)\}\}/g, (match, variableName) => {
     const replacement = variableMap[variableName] || match;
-    console.log('🔄 变量替换:', {
+    console.log('🔄 变量替换 ({{}}格式):', {
+      match: match,
+      variableName: variableName,
+      replacement: replacement,
+      found: !!variableMap[variableName],
+    });
+    return replacement;
+  });
+
+  // 替换${变量名}格式
+  result = result.replace(/\$\{([^}]+)\}/g, (match, variableName) => {
+    const replacement = variableMap[variableName] || match;
+    console.log('🔄 变量替换 (${}格式):', {
       match: match,
       variableName: variableName,
       replacement: replacement,

@@ -15,6 +15,7 @@ import {
   Card,
   Collapse,
   ColorPicker,
+  Divider,
   Form,
   Input,
   InputNumber,
@@ -45,10 +46,10 @@ import {
   VariableObject,
 } from './card-designer-types-updated';
 import RichTextEditor from './RichTextEditor/RichTextEditor';
-import VariableTextarea from './VariableTextarea';
 
 const { Option } = Select;
 const { Text } = Typography;
+const { TextArea } = Input;
 
 // 可拖拽的组件项
 const DraggableComponent: React.FC<{
@@ -1151,18 +1152,25 @@ export const PropertyPanel: React.FC<{
               'en-US': value,
             },
           };
+          console.log('📝 更新组件属性 (img_url):', {
+            componentId: (updatedComponent as any).id,
+            field,
+            value,
+            realPath,
+          });
           onUpdateComponent(updatedComponent);
         } else {
           const updatedComponent = {
             ...currentComponent,
             [field]: value,
           };
-          // console.log('📝 更新组件属性:', {
-          //   componentId: (updatedComponent as any).id,
-          //   field,
-          //   value,
-          //   realPath,
-          // });
+          console.log('📝 更新组件属性:', {
+            componentId: (updatedComponent as any).id,
+            field,
+            value,
+            realPath,
+            updatedComponent: updatedComponent,
+          });
           onUpdateComponent(updatedComponent);
         }
       }
@@ -2711,6 +2719,141 @@ export const PropertyPanel: React.FC<{
         }
       };
 
+      // 获取绑定的变量名
+      const getBoundVariableName = () => {
+        const boundVariableName =
+          (currentComponent as any).boundVariableName || '';
+        console.log('🔍 获取绑定变量名:', {
+          componentId: currentComponent?.id,
+          boundVariableName: boundVariableName,
+          currentComponent: currentComponent,
+          componentContent: (currentComponent as any).content,
+          componentFull: JSON.stringify(currentComponent, null, 2),
+        });
+        return boundVariableName;
+      };
+
+      // 更新绑定的变量名
+      const updateBoundVariableName = (variableName: string) => {
+        console.log('🔗 更新文本组件绑定变量:', {
+          componentId: currentComponent?.id,
+          variableName: variableName,
+          currentComponent: currentComponent,
+          timestamp: new Date().toISOString(),
+        });
+
+        // 创建完整的更新组件对象
+        const updatedComponent = { ...currentComponent };
+
+        if (variableName) {
+          // 如果选择了变量，更新组件内容为变量占位符
+          const variablePlaceholder = `\${${variableName}}`;
+
+          // 一次性更新所有相关字段
+          (updatedComponent as any).boundVariableName = variableName;
+          (updatedComponent as any).content = variablePlaceholder;
+          (updatedComponent as any).i18n_content = {
+            'en-US': variablePlaceholder,
+          };
+
+          console.log('✅ 文本组件变量绑定完成:', {
+            componentId: updatedComponent?.id,
+            variableName: variableName,
+            content: variablePlaceholder,
+            i18n_content: (updatedComponent as any).i18n_content,
+            updatedComponent: updatedComponent,
+          });
+
+          // 一次性更新组件
+          onUpdateComponent(updatedComponent);
+        } else {
+          // 如果清除了变量绑定，恢复默认内容
+          const defaultContent = isPlainText
+            ? '请输入文本内容'
+            : {
+                type: 'doc',
+                content: [
+                  {
+                    type: 'paragraph',
+                    content: [
+                      {
+                        type: 'text',
+                        text: '请输入富文本内容',
+                      },
+                    ],
+                  },
+                ],
+              };
+
+          // 清除绑定变量并恢复默认内容
+          delete (updatedComponent as any).boundVariableName;
+          (updatedComponent as any).content = defaultContent;
+
+          if (isPlainText) {
+            (updatedComponent as any).i18n_content = {
+              'en-US': 'Enter text content',
+            };
+          }
+
+          console.log('✅ 文本组件变量绑定清除:', {
+            componentId: updatedComponent?.id,
+            content: defaultContent,
+            updatedComponent: updatedComponent,
+          });
+
+          // 一次性更新组件
+          onUpdateComponent(updatedComponent);
+        }
+      };
+
+      // 过滤出文本类型的变量
+      const textVariables = variables.filter((variable) => {
+        if (typeof variable === 'object' && variable !== null) {
+          const keys = Object.keys(variable as Record<string, any>);
+          if (keys.length > 0) {
+            const variableValue = (variable as Record<string, any>)[keys[0]];
+            return typeof variableValue === 'string';
+          }
+        }
+        return false;
+      });
+
+      // 构建变量选项
+      const variableOptions = (() => {
+        console.log('🔍 变量选择器选项构建:', {
+          variablesCount: variables.length,
+          variables: variables,
+          textVariablesCount: textVariables.length,
+          textVariables: textVariables,
+          timestamp: new Date().toISOString(),
+        });
+
+        return textVariables.map((variable) => {
+          const keys = Object.keys(variable as Record<string, any>);
+          const variableName = keys[0];
+          const variableValue = (variable as Record<string, any>)[
+            variableName
+          ] as string;
+          return {
+            label: (
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <span>{variableName}</span>
+                <span style={{ fontSize: '12px', color: '#8c8c8c' }}>
+                  {variableValue}
+                </span>
+              </div>
+            ),
+            value: variableName,
+          };
+        });
+      })();
+
       return (
         <div>
           <div
@@ -2741,6 +2884,7 @@ export const PropertyPanel: React.FC<{
             </div>
             <Form form={form} layout="vertical">
               <Form.Item label="文本内容">
+                {/* 显示文本输入 */}
                 {isRichText ? (
                   <RichTextEditor
                     key={`rich-text-${
@@ -2753,42 +2897,62 @@ export const PropertyPanel: React.FC<{
                     showToolbar={true}
                   />
                 ) : (
-                  <VariableTextarea
+                  <TextArea
                     value={getTextContent()}
-                    onChange={updateTextContent}
-                    variables={variables}
-                    onAddVariable={(variableObject) => {
-                      // 直接使用VariableTextarea处理后的变量对象
-                      console.log('🔄 VariableTextarea 添加变量:', {
-                        variableObject: variableObject,
-                        timestamp: new Date().toISOString(),
-                      });
-
-                      // 立即更新变量列表，这会触发：
-                      // 1. 全局变量状态更新
-                      // 2. 卡片数据结构更新
-                      // 3. 画布实时刷新显示变量模拟数据
-                      const newVariables = [...variables, variableObject];
-
-                      console.log('📤 调用 onUpdateVariables:', {
-                        oldVariables: variables,
-                        newVariables: newVariables,
-                        onUpdateVariablesType: typeof onUpdateVariables,
-                      });
-
-                      onUpdateVariables(newVariables);
-
-                      console.log('✅ VariableTextarea 变量更新完成:', {
-                        oldCount: variables.length,
-                        newCount: newVariables.length,
-                        variableObject: variableObject,
-                        timestamp: new Date().toISOString(),
-                      });
-                    }}
-                    placeholder="请输入文本内容，输入{快速添加变量"
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                      updateTextContent(e.target.value)
+                    }
+                    placeholder="请输入文本内容"
                     rows={4}
+                    style={{ width: '100%' }}
                   />
                 )}
+
+                {/* 变量绑定选择 */}
+                <div style={{ marginTop: 12 }}>
+                  <div
+                    style={{ fontSize: '14px', color: '#666', marginBottom: 8 }}
+                  >
+                    绑定变量
+                  </div>
+                  <Select
+                    value={getBoundVariableName()}
+                    onChange={updateBoundVariableName}
+                    placeholder="请选择要绑定的变量"
+                    style={{ width: '100%' }}
+                    allowClear
+                    dropdownRender={(menu) => (
+                      <div>
+                        {menu}
+                        <Divider style={{ margin: '8px 0' }} />
+                        <div
+                          style={{
+                            padding: '8px 12px',
+                            cursor: 'pointer',
+                            color: '#1890ff',
+                            fontWeight: 500,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                          }}
+                          onClick={() => {
+                            // 打开全局添加变量弹窗
+                            handleAddVariable();
+                          }}
+                        >
+                          <PlusOutlined />
+                          新建变量
+                        </div>
+                      </div>
+                    )}
+                  >
+                    {variableOptions.map((option) => (
+                      <Select.Option key={option.value} value={option.value}>
+                        {option.label}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </div>
               </Form.Item>
             </Form>
           </div>

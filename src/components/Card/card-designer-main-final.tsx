@@ -46,6 +46,7 @@ import {
   Variable,
   VariableItem,
 } from './card-designer-types-updated';
+import { variableCacheManager } from './variable-cache-manager';
 
 const CardDesigner: React.FC = () => {
   // 基础状态
@@ -74,10 +75,26 @@ const CardDesigner: React.FC = () => {
     // 进行数据迁移
     const migratedData = migrateTitleStyle(data);
 
+    console.log('🔄 safeCardData 更新:', {
+      historyDataId: data.id,
+      elementsCount: data.dsl.body.elements.length,
+      variablesCount: Object.keys(data.variables || {}).length,
+      elements: data.dsl.body.elements.map((el, index) => ({
+        index,
+        id: el.id,
+        tag: el.tag,
+        content: (el as any).content,
+        boundVariableName: (el as any).boundVariableName,
+        hasBoundVariable: !!(el as any).boundVariableName,
+        fullElement: JSON.stringify(el, null, 2),
+      })),
+      timestamp: new Date().toISOString(),
+    });
+
     return migratedData;
   }, [history.data]);
 
-  // 处理变量更新 - 同时更新本地状态和卡片数据结构，确保实时刷新画布
+  // 处理变量更新 - 同时更新本地状态、缓存和卡片数据结构
   const handleUpdateVariables = (newVariables: VariableItem[]) => {
     console.log('🔄 处理变量更新:', {
       oldVariablesCount: variables.length,
@@ -88,6 +105,14 @@ const CardDesigner: React.FC = () => {
 
     // 立即更新本地状态
     setVariables(newVariables);
+
+    // 更新变量缓存
+    variableCacheManager.setVariables(newVariables);
+
+    console.log('📦 变量缓存更新完成:', {
+      variablesCount: newVariables.length,
+      cacheStats: variableCacheManager.getCacheStats(),
+    });
 
     // 将变量转换为卡片数据结构格式并更新
     const cardVariables: { [key: string]: any } = {};
@@ -789,16 +814,17 @@ const CardDesigner: React.FC = () => {
     const path = selection.selectedPath;
     let newData = JSON.parse(JSON.stringify(safeCardData));
 
-    // console.log('🔄 开始更新组件:', {
-    //   componentId: updatedComponent.id,
-    //   componentTag: updatedComponent.tag,
-    //   path,
-    //   pathLength: path.length,
-    //   hasStyle: !!(updatedComponent as any).style,
-    //   styleFields: (updatedComponent as any).style
-    //     ? Object.keys((updatedComponent as any).style)
-    //     : [],
-    // });
+    console.log('🔄 开始更新组件:', {
+      componentId: updatedComponent.id,
+      componentTag: updatedComponent.tag,
+      path,
+      pathLength: path.length,
+      hasStyle: !!(updatedComponent as any).style,
+      styleFields: (updatedComponent as any).style
+        ? Object.keys((updatedComponent as any).style)
+        : [],
+      updatedComponent: updatedComponent,
+    });
 
     if (path.length === 4) {
       // 根级组件: ['dsl', 'body', 'elements', index]
@@ -923,10 +949,18 @@ const CardDesigner: React.FC = () => {
       return;
     }
 
-    // console.log('💾 保存更新后的数据到历史记录');
+    console.log('💾 保存更新后的数据到历史记录');
     history.updateData(newData as any);
-    // 移除这行代码，避免重新设置选择状态
-    // selection.selectComponent(updatedComponent, selection.selectedPath);
+    // 重新设置选择状态，确保属性面板和画布获取到最新的组件数据
+    console.log('🔄 重新设置选择状态:', {
+      componentId: updatedComponent.id,
+      componentTag: updatedComponent.tag,
+      content: (updatedComponent as any).content,
+      boundVariableName: (updatedComponent as any).boundVariableName,
+      selectedPath: selection.selectedPath,
+      timestamp: new Date().toISOString(),
+    });
+    selection.selectComponent(updatedComponent, selection.selectedPath);
   };
 
   // 处理卡片属性更新

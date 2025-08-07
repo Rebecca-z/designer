@@ -17,11 +17,13 @@ export interface VariableTextareaProps {
   style?: React.CSSProperties;
 }
 
-// 解析文本中的变量Tag
+// 解析文本中的变量Tag（支持{{变量名}}和${变量名}两种格式）
 const parseVariableTags = (text: string) => {
-  const regex = /\{\{([^}]+)\}\}/g;
   const parts = [];
   let lastIndex = 0;
+
+  // 合并两种格式的正则表达式
+  const regex = /\{\{([^}]+)\}\}|\$\{([^}]+)\}/g;
   let match;
 
   while ((match = regex.exec(text)) !== null) {
@@ -33,14 +35,18 @@ const parseVariableTags = (text: string) => {
       });
     }
 
+    // 确定变量名和完整匹配
+    const variableName = match[1] || match[2]; // 第一个捕获组或第二个捕获组
+    const fullMatch = match[0]; // 完整的匹配
+
     // 添加变量Tag
     parts.push({
       type: 'variable',
-      content: match[1], // 变量名
-      fullMatch: match[0], // 完整的{{变量名}}
+      content: variableName, // 变量名
+      fullMatch: fullMatch, // 完整的变量占位符
     });
 
-    lastIndex = match.index + match[0].length;
+    lastIndex = match.index + fullMatch.length;
   }
 
   // 添加剩余的文本
@@ -126,13 +132,13 @@ const VariableTextarea: React.FC<VariableTextareaProps> = ({
           const beforeCursor = currentValue.substring(0, cursorPosition.start);
           const afterCursor = currentValue.substring(cursorPosition.end);
 
-          // 插入变量Tag
-          const newValue = beforeCursor + `{{${variableName}}}` + afterCursor;
+          // 插入变量Tag（使用${变量名}格式）
+          const newValue = beforeCursor + `\${${variableName}}` + afterCursor;
           onChange(newValue);
 
           // 设置光标位置到变量Tag后面
           const newCursorPos =
-            cursorPosition.start + `{{${variableName}}}`.length;
+            cursorPosition.start + `\${${variableName}}`.length;
           setTimeout(() => {
             textarea.setSelectionRange(newCursorPos, newCursorPos);
             textarea.focus();
@@ -200,13 +206,13 @@ const VariableTextarea: React.FC<VariableTextareaProps> = ({
           const beforeCursor = currentValue.substring(0, cursorPosition.start);
           const afterCursor = currentValue.substring(cursorPosition.end);
 
-          // 插入新变量Tag
-          const newValue = beforeCursor + `{{${variable.name}}}` + afterCursor;
+          // 插入新变量Tag（使用${变量名}格式）
+          const newValue = beforeCursor + `\${${variable.name}}` + afterCursor;
           onChange(newValue);
 
           // 设置光标位置到变量Tag后面
           const newCursorPos =
-            cursorPosition.start + `{{${variable.name}}}`.length;
+            cursorPosition.start + `\${${variable.name}}`.length;
           setTimeout(() => {
             textarea.setSelectionRange(newCursorPos, newCursorPos);
             textarea.focus();

@@ -196,7 +196,22 @@ const Canvas: React.FC<CanvasProps> = ({
           }}
         >
           <ChatInterface
-            elements={data.dsl.body.elements}
+            elements={(() => {
+              console.log('🎨 Canvas elements 数据:', {
+                elementsCount: data.dsl.body.elements.length,
+                elements: data.dsl.body.elements.map((el, index) => ({
+                  index,
+                  id: el.id,
+                  tag: el.tag,
+                  content: el.content,
+                  boundVariableName: (el as any).boundVariableName,
+                  fullElement: JSON.stringify(el, null, 2),
+                  hasBoundVariable: !!(el as any).boundVariableName,
+                })),
+                timestamp: new Date().toISOString(),
+              });
+              return data.dsl.body.elements;
+            })()}
             verticalSpacing={data.dsl.body.vertical_spacing}
             padding={
               data.dsl.body.padding || {

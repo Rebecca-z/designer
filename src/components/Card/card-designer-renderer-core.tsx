@@ -12,6 +12,7 @@ import {
 import { replaceVariables } from './card-designer-utils';
 import RichTextStyles from './RichTextEditor/RichTextStyles';
 import { convertJSONToHTML } from './RichTextEditor/RichTextUtils';
+import { variableCacheManager } from './variable-cache-manager';
 
 const { Option } = Select;
 // const { Text } = Typography;
@@ -2777,22 +2778,101 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       console.log('🔍 文本组件变量替换检查:', {
         componentId: comp.id,
         originalContent: comp.content || '文本内容',
+        boundVariableName: comp.boundVariableName,
         variablesCount: variables.length,
         variables: variables,
         hasVariables: variables.length > 0,
+        variablesKeys: variables
+          .map((v) => {
+            if (typeof v === 'object' && v !== null) {
+              return Object.keys(v as Record<string, any>);
+            }
+            return [];
+          })
+          .flat(),
+        cacheStats: variableCacheManager.getCacheStats(),
+        component: component,
+        comp: comp,
+        componentContent: component.content,
+        compContent: comp.content,
+        componentBoundVariable: (component as any).boundVariableName,
+        compBoundVariable: comp.boundVariableName,
+        componentFull: component,
+        compFull: comp,
       });
 
-      const displayContent = replaceVariables(
-        comp.content || '文本内容',
-        variables,
-      );
+      let displayContent = comp.content || '文本内容';
 
-      // console.log('✅ 文本组件变量替换结果:', {
-      //   componentId: comp.id,
-      //   originalContent: comp.content || '文本内容',
-      //   displayContent: displayContent,
-      //   replaced: comp.content !== displayContent,
-      // });
+      // 如果组件绑定了变量，优先使用变量值
+      if (comp.boundVariableName) {
+        const boundVariableName = comp.boundVariableName;
+
+        // 从缓存中获取变量值
+        const variableValue =
+          variableCacheManager.getVariable(boundVariableName);
+
+        if (variableValue !== undefined) {
+          displayContent = String(variableValue);
+
+          console.log('✅ 文本组件绑定变量显示 (从缓存):', {
+            componentId: comp.id,
+            boundVariableName: boundVariableName,
+            variableValue: variableValue,
+            displayContent: displayContent,
+          });
+        } else {
+          // 如果缓存中没有，尝试从传入的变量列表中查找
+          const boundVariable = variables.find((variable) => {
+            if (typeof variable === 'object' && variable !== null) {
+              const keys = Object.keys(variable as Record<string, any>);
+              return keys.includes(boundVariableName);
+            }
+            return false;
+          });
+
+          if (boundVariable) {
+            const keys = Object.keys(boundVariable as Record<string, any>);
+            const variableValue = (boundVariable as Record<string, any>)[
+              keys[0]
+            ];
+            displayContent = String(variableValue);
+
+            console.log('✅ 文本组件绑定变量显示 (从变量列表):', {
+              componentId: comp.id,
+              boundVariableName: boundVariableName,
+              variableValue: variableValue,
+              displayContent: displayContent,
+            });
+          } else {
+            console.log('⚠️ 文本组件绑定变量未找到:', {
+              componentId: comp.id,
+              boundVariableName: boundVariableName,
+              cacheStats: variableCacheManager.getCacheStats(),
+              availableVariables: variables
+                .map((v) => {
+                  if (typeof v === 'object' && v !== null) {
+                    return Object.keys(v as Record<string, any>);
+                  }
+                  return [];
+                })
+                .flat(),
+            });
+          }
+        }
+      } else {
+        // 使用通用的变量替换逻辑
+        displayContent = replaceVariables(
+          comp.content || '文本内容',
+          variables,
+        );
+      }
+
+      console.log('✅ 文本组件最终显示内容:', {
+        componentId: comp.id,
+        originalContent: comp.content || '文本内容',
+        displayContent: displayContent,
+        boundVariableName: comp.boundVariableName,
+      });
 
       const textContent = (
         <div

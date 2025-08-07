@@ -49,18 +49,18 @@ const VariableTextEditor: React.FC<VariableTextEditorProps> = ({
         }
       }
     }
-    return `{{${variableName}}}`; // 如果找不到变量，返回占位符
+    return `\${${variableName}}`; // 如果找不到变量，返回占位符（使用${}格式）
   };
 
-  // 解析文本中的变量占位符
+  // 解析文本中的变量占位符（支持{{变量名}}和${变量名}两种格式）
   const parseVariables = (text: string): (string | VariableInfo)[] => {
     const result: (string | VariableInfo)[] = [];
-    const regex = /\{\{([^}]+)\}\}/g;
+    const regex = /\{\{([^}]+)\}\}|\$\{([^}]+)\}/g;
     let lastIndex = 0;
     let match;
 
     while ((match = regex.exec(text)) !== null) {
-      const variableName = match[1];
+      const variableName = match[1] || match[2]; // 第一个捕获组或第二个捕获组
       const startIndex = match.index;
       const endIndex = startIndex + match[0].length;
 
@@ -105,10 +105,10 @@ const VariableTextEditor: React.FC<VariableTextEditorProps> = ({
           const end = textArea.selectionEnd;
           const currentValue = editValue;
 
-          // 在光标位置插入变量占位符
+          // 在光标位置插入变量占位符（使用${变量名}格式）
           const newValue =
             currentValue.substring(0, start) +
-            `{{${variableName}}}` +
+            `\${${variableName}}` +
             currentValue.substring(end);
 
           setEditValue(newValue);
@@ -116,7 +116,7 @@ const VariableTextEditor: React.FC<VariableTextEditorProps> = ({
 
           // 设置光标位置到变量占位符后面
           setTimeout(() => {
-            const newCursorPos = start + `{{${variableName}}}`.length;
+            const newCursorPos = start + `\${${variableName}}`.length;
             textArea.setSelectionRange(newCursorPos, newCursorPos);
             textArea.focus();
           }, 0);
@@ -128,7 +128,7 @@ const VariableTextEditor: React.FC<VariableTextEditorProps> = ({
           const textArea = textAreaRef.current?.resizableTextArea?.textArea;
           if (textArea) {
             const currentValue = editValue;
-            const newValue = currentValue + `{{${variableName}}}`;
+            const newValue = currentValue + `\${${variableName}}`;
             setEditValue(newValue);
             onChange(newValue);
 
