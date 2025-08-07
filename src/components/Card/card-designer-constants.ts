@@ -1,10 +1,11 @@
-// constants.ts - 常量配置文件
+//  更新的常量配置文件
 
 import {
   AppstoreOutlined,
   BlockOutlined,
   CheckSquareOutlined,
   ColumnHeightOutlined,
+  CrownOutlined,
   DesktopOutlined,
   EditOutlined,
   FileImageOutlined,
@@ -15,7 +16,11 @@ import {
   SelectOutlined,
   TabletOutlined,
 } from '@ant-design/icons';
-import { ComponentConfig, DeviceConfig } from './card-designer-types';
+import {
+  CardDesignData,
+  ComponentConfig,
+  DeviceConfig,
+} from './card-designer-types-updated';
 
 // 设备尺寸配置
 export const DEVICE_SIZES: Record<string, DeviceConfig> = {
@@ -35,6 +40,7 @@ export const COMPONENT_TYPES: Record<string, ComponentConfig> = {
   },
 
   // 展示组件
+  title: { name: '标题', icon: CrownOutlined, category: 'display' },
   plain_text: { name: '文本', icon: FontSizeOutlined, category: 'display' },
   rich_text: { name: '富文本', icon: EditOutlined, category: 'display' },
   hr: { name: '分割线', icon: LineOutlined, category: 'display' },
@@ -67,9 +73,51 @@ export const COMPONENT_CATEGORIES = [
   { key: 'interactive', title: '交互区块', color: '#722ed1' },
 ];
 
-// 默认配置
+// 生成唯一ID
+const generateId = (): string => {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2);
+};
+
+// 默认卡片配置
+export const DEFAULT_CARD_DATA: CardDesignData = {
+  id: generateId(),
+  name: '空白卡片',
+  dsl: {
+    schema: 0.1,
+    config: {},
+    card_link: {
+      multi_url: {
+        url: '',
+        android_url: '',
+        ios_url: '',
+        pc_url: '',
+      },
+    },
+    // 移除默认的header，只有当用户添加标题组件时才创建
+    body: {
+      direction: 'vertical',
+      vertical_spacing: 8,
+      // padding: {
+      //   top: 16,
+      //   right: 16,
+      //   bottom: 16,
+      //   left: 16,
+      // },
+      elements: [],
+    },
+  },
+  variables: {},
+};
+
+// 向后兼容的默认配置
 export const DEFAULT_DESIGN_DATA = {
   direction: 'vertical' as const,
   vertical_spacing: 5,
   elements: [],
 };
+
+export interface Variable {
+  name: string;
+  value: string;
+  type: 'text' | 'number' | 'boolean' | 'object';
+}

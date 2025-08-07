@@ -36,7 +36,7 @@ import {
   COMPONENT_CATEGORIES,
   COMPONENT_TYPES,
   DEFAULT_CARD_DATA,
-} from './card-designer-constants-updated';
+} from './card-designer-constants';
 import {
   CardDesignData,
   CardPadding,
@@ -46,7 +46,7 @@ import {
   VariableObject,
 } from './card-designer-types-updated';
 import RichTextEditor from './RichTextEditor/RichTextEditor';
-import { textComponentStateManager } from './text-component-state-manager';
+import { textComponentStateManager } from './Variable/text-component-state-manager';
 
 const { Option } = Select;
 const { Text } = Typography;

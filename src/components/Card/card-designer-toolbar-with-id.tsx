@@ -21,7 +21,7 @@ import {
   message,
 } from 'antd';
 import React from 'react';
-import { DEVICE_SIZES } from './card-designer-constants-updated';
+import { DEVICE_SIZES } from './card-designer-constants';
 import { ComponentType } from './card-designer-types-updated';
 
 const { Text } = Typography;

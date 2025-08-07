@@ -1,6 +1,6 @@
 // variable-cache-manager.ts - 变量缓存管理器
 
-import { VariableItem } from './card-designer-types-updated';
+import { VariableItem } from '../card-designer-types-updated';
 
 // 变量缓存接口
 interface VariableCache {

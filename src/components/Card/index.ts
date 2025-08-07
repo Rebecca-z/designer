@@ -45,7 +45,7 @@ export { default as RichTextEditor } from './RichTextEditor/RichTextEditor';
 // export { default as ComponentRendererCore } from './card-designer-renderer-core';
 
 // ==================== 拖拽组件 ====================
-// export { default as DragWrapper } from './card-designer-drag-wrapper';
+// 已删除未使用的拖拽组件
 
 // ==================== 错误处理 ====================
 // export { default as ErrorBoundary } from './ErrorBoundary';
@@ -103,14 +103,6 @@ export { default as RichTextEditor } from './RichTextEditor/RichTextEditor';
 //   SelectComponent,
 //   Variable,
 // } from './card-designer-types';
-
-// ==================== 常量定义 ====================
-export {
-  COMPONENT_CATEGORIES,
-  COMPONENT_TYPES,
-  DEFAULT_DESIGN_DATA,
-  DEVICE_SIZES,
-} from './card-designer-constants';
 
 // ==================== 默认导出 ====================
 export { default } from './card-designer-main-final';

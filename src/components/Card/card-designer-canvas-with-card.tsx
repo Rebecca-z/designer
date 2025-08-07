@@ -7,7 +7,7 @@ import {
   DeviceIndicator,
 } from './card-designer-canvas-components';
 import ChatInterface from './card-designer-chat-interface';
-import { DEVICE_SIZES } from './card-designer-constants-updated';
+import { DEVICE_SIZES } from './card-designer-constants';
 import { CardDesignData, ComponentType } from './card-designer-types-updated';
 
 interface CanvasProps {

@@ -53,33 +53,6 @@ interface ComponentRendererProps {
   verticalSpacing?: number;
 }
 
-// 检查组件是否为容器类型
-// const isContainerComponent = (componentType: string): boolean => {
-//   return componentType === 'form' || componentType === 'column_set';
-// };
-
-// // 检查是否可以在目标容器中放置指定类型的组件
-// const canDropInContainer = (
-//   draggedType: string,
-//   targetPath: (string | number)[],
-// ): boolean => {
-//   // 容器组件不能嵌套到其他容器中
-//   if (isContainerComponent(draggedType)) {
-//     // 检查是否要放到容器内部（非根节点）
-//     return !targetPath.some(
-//       (segment) => segment === 'elements' || segment === 'columns',
-//     );
-//   }
-//   return true;
-// };
-
-// // 获取容器类型（用于错误提示）
-// const getContainerType = (path: (string | number)[]): string => {
-//   if (path.includes('columns')) return '分栏容器';
-//   if (path.includes('elements') && path.length > 2) return '表单容器';
-//   return '画布';
-// };
-
 // 检查两个路径是否指向同一个组件
 const isSamePath = (
   path1: (string | number)[] | null,
@@ -89,134 +62,10 @@ const isSamePath = (
   return JSON.stringify(path1) === JSON.stringify(path2);
 };
 
-// 容器拖拽区域组件
-// const ContainerDropZone: React.FC<{
-//   targetPath: (string | number)[];
-//   placeholder: string;
-//   children?: React.ReactNode;
-//   onContainerDrop?: (
-//     draggedItem: DragItem,
-//     targetPath: (string | number)[],
-//     dropIndex?: number,
-//   ) => void;
-// }> = ({ targetPath, placeholder, children, onContainerDrop }) => {
-//   const [{ isOver, canDrop }, drop] = useDrop({
-//     accept: ['component', 'existing-component'],
-//     canDrop: (item: DragItem) => {
-//       // 检查是否可以在此容器中放置
-//       if (item.isNew) {
-//         return canDropInContainer(item.type, targetPath);
-//       } else if (item.component) {
-//         return canDropInContainer(item.component.tag, targetPath);
-//       }
-//       return false;
-//     },
-//     drop: (item: DragItem, monitor) => {
-//       if (monitor.didDrop()) return;
-
-//       // 检查拖拽限制
-//       if (item.isNew && !canDropInContainer(item.type, targetPath)) {
-//         message.warning(`容器组件不能嵌套到${getContainerType(targetPath)}中`);
-//         return;
-//       } else if (
-//         item.component &&
-//         !canDropInContainer(item.component.tag, targetPath)
-//       ) {
-//         message.warning(`容器组件不能嵌套到${getContainerType(targetPath)}中`);
-//         return;
-//       }
-
-//       onContainerDrop?.(item, targetPath);
-//     },
-//     collect: (monitor) => ({
-//       isOver: monitor.isOver({ shallow: true }),
-//       canDrop: monitor.canDrop(),
-//     }),
-//   });
-
-//   const dropZoneStyle = {
-//     minHeight: children ? 'auto' : '60px',
-//     border: isOver && canDrop ? '2px dashed #1890ff' : '2px dashed #d9d9d9',
-//     borderRadius: '4px',
-//     padding: '8px',
-//     backgroundColor: isOver && canDrop ? 'rgba(24, 144, 255, 0.05)' : '#fafafa',
-//     position: 'relative' as const,
-//     transition: 'all 0.2s ease',
-//   };
-
-//   return (
-//     <div ref={drop} style={dropZoneStyle}>
-//       {children || (
-//         <div
-//           style={{
-//             display: 'flex',
-//             alignItems: 'center',
-//             justifyContent: 'center',
-//             height: '60px',
-//             color: '#999',
-//             fontSize: '12px',
-//             textAlign: 'center',
-//           }}
-//         >
-//           <PlusOutlined style={{ marginRight: '4px' }} />
-//           {placeholder}
-//         </div>
-//       )}
-
-//       {isOver && canDrop && (
-//         <div
-//           style={{
-//             position: 'absolute',
-//             top: '50%',
-//             left: '50%',
-//             transform: 'translate(-50%, -50%)',
-//             backgroundColor: 'rgba(24, 144, 255, 0.9)',
-//             color: 'white',
-//             padding: '4px 8px',
-//             borderRadius: '4px',
-//             fontSize: '12px',
-//             fontWeight: 'bold',
-//             pointerEvents: 'none',
-//             zIndex: 1000,
-//           }}
-//         >
-//           释放以添加组件
-//         </div>
-//       )}
-
-//       {isOver && !canDrop && (
-//         <div
-//           style={{
-//             position: 'absolute',
-//             top: '50%',
-//             left: '50%',
-//             transform: 'translate(-50%, -50%)',
-//             backgroundColor: 'rgba(255, 77, 79, 0.9)',
-//             color: 'white',
-//             padding: '4px 8px',
-//             borderRadius: '4px',
-//             fontSize: '12px',
-//             fontWeight: 'bold',
-//             pointerEvents: 'none',
-//             zIndex: 1000,
-//           }}
-//         >
-//           ❌ 容器组件不能嵌套
-//         </div>
-//       )}
-//     </div>
-//   );
-// };
-
 const ComponentRenderer: React.FC<ComponentRendererProps> = ({
   component,
   onSelect,
-  // isSelected,
-  // selectedComponent,
   selectedPath,
-  // hoveredPath,
-  // isHovered,
-  // onUpdate,
   onDelete,
   onCopy,
   path,
@@ -231,7 +80,6 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
 }) => {
   // 安全检查 - 防止组件为 undefined 或 null
   if (!component) {
-    // console.warn('ComponentRenderer: component is null or undefined', { path });
     return (
       <div
         style={{
@@ -251,10 +99,6 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
 
   // 检查组件是否有基本属性
   if (!component.tag || !component.id) {
-    // console.warn('ComponentRenderer: component missing required properties', {
-    //   component,
-    //   path,
-    // });
     return (
       <div
         style={{
@@ -279,23 +123,9 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
   const handleClick = (e: React.MouseEvent) => {
     if (isPreview) return;
 
-    // console.log('🎯 组件点击处理:', {
-    //   componentId: component.id,
-    //   componentTag: component.tag,
-    //   path,
-    //   targetTag: (e.target as HTMLElement)?.tagName,
-    //   targetClass: (e.target as HTMLElement)?.className,
-    // });
-
     // 立即阻止事件冒泡，防止触发卡片选中
     e.stopPropagation();
     e.preventDefault();
-
-    // console.log('✅ 处理组件选中:', {
-    //   componentId: component.id,
-    //   componentTag: component.tag,
-    //   path,
-    // });
 
     // 直接处理组件选中
     onSelect(component, path);

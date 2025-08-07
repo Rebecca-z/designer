@@ -8,10 +8,7 @@ import {
 
 // 其他导入
 import Canvas from './card-designer-canvas-with-card';
-import {
-  DEFAULT_CARD_DATA,
-  DEVICE_SIZES,
-} from './card-designer-constants-updated';
+import { DEFAULT_CARD_DATA, DEVICE_SIZES } from './card-designer-constants';
 import Modals from './card-designer-modals';
 import Toolbar from './card-designer-toolbar-with-id';
 import { migrateTitleStyle } from './card-designer-utils';
@@ -46,7 +43,7 @@ import {
   Variable,
   VariableItem,
 } from './card-designer-types-updated';
-import { variableCacheManager } from './variable-cache-manager';
+import { variableCacheManager } from './Variable/variable-cache-manager';
 
 const CardDesigner: React.FC = () => {
   // 基础状态

@@ -9,8 +9,7 @@ import {
 import { Button, Modal, Space, Typography, Upload, message } from 'antd';
 import React from 'react';
 import ComponentRenderer from './card-designer-components';
-import { DEVICE_SIZES } from './card-designer-constants';
-import { Variable } from './card-designer-types';
+import { DEVICE_SIZES, Variable } from './card-designer-constants';
 import { generatePreviewHTML } from './card-designer-utils';
 import ErrorBoundary from './ErrorBoundary';
 
