@@ -49,6 +49,8 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
     text: string,
   ): { isValid: boolean; errors: JSONError[] } => {
     const errors: JSONError[] = [];
+    setCollapsedPaths(new Set());
+    setIsAllExpanded(false);
 
     try {
       JSON.parse(text);
@@ -142,32 +144,51 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
           const itemIndent = indent + 2;
 
           if (typeof item === 'object' && item !== null) {
-            const formattedValue = formatValue(item, itemIndent, itemPath);
-            // 对于对象和数组，只添加第一行到行数据中
-            const firstLine = formattedValue.split('\n')[0];
-            lines.push({
-              lineNumber,
-              content: firstLine,
-              indent: itemIndent,
-              isCollapsible: false,
-              isCollapsed: false,
-              nodeType: 'value',
-              path: itemPath,
-              originalValue: item,
-            });
-            lineNumber++;
-            // 处理嵌套的格式化，确保正确的缩进
-            const nestedLines = formattedValue.split('\n');
-            if (nestedLines.length > 1) {
-              // 为嵌套内容添加额外的缩进
-              return nestedLines
-                .map((line, index) => {
-                  if (index === 0) return line;
-                  return '  ' + line;
-                })
-                .join('\n');
+            // 检查当前数组项是否被折叠
+            const isItemCollapsed = collapsedPaths.has(itemPath);
+
+            if (isItemCollapsed) {
+              // 如果数组项被折叠，只添加一行
+              const keys = Object.keys(item);
+              lines.push({
+                lineNumber,
+                content: `{${keys.length} properties}`,
+                indent: itemIndent,
+                isCollapsible: true,
+                isCollapsed: true,
+                nodeType: 'object',
+                path: itemPath,
+                originalValue: item,
+              });
+              lineNumber++;
+              return `{${keys.length} properties}`;
+            } else {
+              // 如果数组项展开，处理所有嵌套行
+              const formattedValue = formatValue(item, itemIndent, itemPath);
+              const nestedLines = formattedValue.split('\n');
+
+              // 为嵌套对象的每一行都添加行号
+              nestedLines.forEach((line, lineIndex) => {
+                const actualIndent =
+                  lineIndex === 0 ? itemIndent : itemIndent + 2;
+                lines.push({
+                  lineNumber,
+                  content: line,
+                  indent: actualIndent,
+                  isCollapsible: false,
+                  isCollapsed: false,
+                  nodeType: 'value',
+                  path:
+                    lineIndex === 0
+                      ? itemPath
+                      : `${itemPath}_line_${lineIndex}`,
+                  originalValue: lineIndex === 0 ? item : undefined,
+                });
+                lineNumber++;
+              });
+
+              return formattedValue;
             }
-            return formattedValue;
           } else {
             const content =
               typeof item === 'string' ? `"${item}"` : String(item);
@@ -243,33 +264,56 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
           const propValue = value[key];
 
           if (typeof propValue === 'object' && propValue !== null) {
-            const formattedValue = formatValue(propValue, propIndent, propPath);
-            // 对于对象和数组，只添加第一行到行数据中
-            const firstLine = formattedValue.split('\n')[0];
-            lines.push({
-              lineNumber,
-              content: `"${key}": ${firstLine}`,
-              indent: propIndent,
-              isCollapsible: false,
-              isCollapsed: false,
-              nodeType: 'property',
-              path: propPath,
-              originalValue: propValue,
-            });
-            lineNumber++;
-            // 处理嵌套的格式化，确保正确的缩进
-            const nestedLines = formattedValue.split('\n');
-            if (nestedLines.length > 1) {
-              // 为嵌套内容添加额外的缩进
-              const nestedFormatted = nestedLines
-                .map((line, index) => {
-                  if (index === 0) return line;
-                  return '  ' + line;
-                })
-                .join('\n');
-              return `"${key}": ${nestedFormatted}`;
+            // 检查当前属性值是否被折叠
+            const isPropCollapsed = collapsedPaths.has(propPath);
+
+            if (isPropCollapsed) {
+              // 如果属性值被折叠，只添加一行
+              const propKeys = Object.keys(propValue);
+              lines.push({
+                lineNumber,
+                content: `"${key}": {${propKeys.length} properties}`,
+                indent: propIndent,
+                isCollapsible: true,
+                isCollapsed: true,
+                nodeType: 'property',
+                path: propPath,
+                originalValue: propValue,
+              });
+              lineNumber++;
+              return `"${key}": {${propKeys.length} properties}`;
+            } else {
+              // 如果属性值展开，处理所有嵌套行
+              const formattedValue = formatValue(
+                propValue,
+                propIndent,
+                propPath,
+              );
+              const nestedLines = formattedValue.split('\n');
+
+              // 为嵌套对象的每一行都添加行号
+              nestedLines.forEach((line, lineIndex) => {
+                const content = lineIndex === 0 ? `"${key}": ${line}` : line;
+                const actualIndent =
+                  lineIndex === 0 ? propIndent : propIndent + 2;
+                lines.push({
+                  lineNumber,
+                  content,
+                  indent: actualIndent,
+                  isCollapsible: false,
+                  isCollapsed: false,
+                  nodeType: 'property',
+                  path:
+                    lineIndex === 0
+                      ? propPath
+                      : `${propPath}_line_${lineIndex}`,
+                  originalValue: lineIndex === 0 ? propValue : undefined,
+                });
+                lineNumber++;
+              });
+
+              return `"${key}": ${formattedValue}`;
             }
-            return `"${key}": ${formattedValue}`;
           } else {
             const content =
               typeof propValue === 'string'
@@ -379,8 +423,25 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
   // 复制JSON
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(jsonText);
-      message.success('JSON已复制到剪贴板');
+      setCollapsedPaths(new Set());
+      setIsAllExpanded(false);
+
+      try {
+        // 重新格式化JSON以获取完整的展开文本
+        const { isValid } = validateJSON(jsonText);
+        if (isValid) {
+          const parsed = JSON.parse(jsonText);
+          const { text } = formatJSONWithLines(parsed);
+          await navigator.clipboard.writeText(text);
+          message.success('JSON已复制到剪贴板');
+        } else {
+          // 如果JSON无效，直接复制当前文本
+          await navigator.clipboard.writeText(jsonText);
+          message.success('JSON已复制到剪贴板');
+        }
+      } catch (err) {
+        message.error('复制失败');
+      }
     } catch (err) {
       message.error('复制失败');
     }
