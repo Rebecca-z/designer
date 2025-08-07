@@ -70,7 +70,6 @@ export interface TextComponent extends ComponentBase {
   i18n_content?: { [key: string]: string | any };
   fontSize?: 12 | 14 | 16; // 新增：字体大小
   numberOfLines?: number; // 新增：最大显示行数
-  boundVariableName?: string; // 新增：绑定的变量名
 }
 
 export interface PlainTextComponent extends ComponentBase {

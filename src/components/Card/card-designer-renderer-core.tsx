@@ -12,6 +12,7 @@ import {
 import { replaceVariables } from './card-designer-utils';
 import RichTextStyles from './RichTextEditor/RichTextStyles';
 import { convertJSONToHTML } from './RichTextEditor/RichTextUtils';
+import { textComponentStateManager } from './text-component-state-manager';
 import { variableCacheManager } from './variable-cache-manager';
 
 const { Option } = Select;
@@ -2778,7 +2779,12 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       console.log('🔍 文本组件变量替换检查:', {
         componentId: comp.id,
         originalContent: comp.content || '文本内容',
-        boundVariableName: comp.boundVariableName,
+        userEditedContent: textComponentStateManager.getUserEditedContent(
+          comp.id,
+        ),
+        boundVariableName: textComponentStateManager.getBoundVariableName(
+          comp.id,
+        ),
         variablesCount: variables.length,
         variables: variables,
         hasVariables: variables.length > 0,
@@ -2795,18 +2801,24 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         comp: comp,
         componentContent: component.content,
         compContent: comp.content,
-        componentBoundVariable: (component as any).boundVariableName,
-        compBoundVariable: comp.boundVariableName,
+        componentBoundVariable: textComponentStateManager.getBoundVariableName(
+          comp.id,
+        ),
+        compBoundVariable: textComponentStateManager.getBoundVariableName(
+          comp.id,
+        ),
         componentFull: component,
         compFull: comp,
       });
 
-      let displayContent = comp.content || '文本内容';
+      // 确定要显示的内容
+      let displayContent: string;
 
       // 如果组件绑定了变量，优先使用变量值
-      if (comp.boundVariableName) {
-        const boundVariableName = comp.boundVariableName;
-
+      const boundVariableName = textComponentStateManager.getBoundVariableName(
+        comp.id,
+      );
+      if (boundVariableName) {
         // 从缓存中获取变量值
         const variableValue =
           variableCacheManager.getVariable(boundVariableName);
@@ -2844,34 +2856,53 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               displayContent: displayContent,
             });
           } else {
-            console.log('⚠️ 文本组件绑定变量未找到:', {
+            // 如果找不到变量值，显示用户编辑的内容或默认内容
+            const userEditedContent =
+              textComponentStateManager.getUserEditedContent(comp.id);
+            if (userEditedContent !== undefined) {
+              displayContent = userEditedContent;
+            } else {
+              displayContent = comp.content || '文本内容';
+            }
+
+            console.log('⚠️ 文本组件绑定变量未找到，显示用户编辑内容:', {
               componentId: comp.id,
               boundVariableName: boundVariableName,
-              cacheStats: variableCacheManager.getCacheStats(),
-              availableVariables: variables
-                .map((v) => {
-                  if (typeof v === 'object' && v !== null) {
-                    return Object.keys(v as Record<string, any>);
-                  }
-                  return [];
-                })
-                .flat(),
+              userEditedContent: userEditedContent,
+              displayContent: displayContent,
             });
           }
         }
       } else {
-        // 使用通用的变量替换逻辑
-        displayContent = replaceVariables(
-          comp.content || '文本内容',
-          variables,
-        );
+        // 如果没有绑定变量，优先显示用户编辑的内容
+        const userEditedContent =
+          textComponentStateManager.getUserEditedContent(comp.id);
+        if (userEditedContent !== undefined) {
+          displayContent = userEditedContent;
+        } else {
+          // 使用通用的变量替换逻辑
+          displayContent = replaceVariables(
+            comp.content || '文本内容',
+            variables,
+          );
+        }
+
+        console.log('✅ 文本组件显示用户编辑内容:', {
+          componentId: comp.id,
+          userEditedContent: userEditedContent,
+          displayContent: displayContent,
+          boundVariableName: boundVariableName,
+        });
       }
 
       console.log('✅ 文本组件最终显示内容:', {
         componentId: comp.id,
         originalContent: comp.content || '文本内容',
+        userEditedContent: textComponentStateManager.getUserEditedContent(
+          comp.id,
+        ),
         displayContent: displayContent,
-        boundVariableName: comp.boundVariableName,
+        boundVariableName: boundVariableName,
       });
 
       const textContent = (

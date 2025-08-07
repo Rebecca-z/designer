@@ -46,6 +46,7 @@ import {
   VariableObject,
 } from './card-designer-types-updated';
 import RichTextEditor from './RichTextEditor/RichTextEditor';
+import { textComponentStateManager } from './text-component-state-manager';
 
 const { Option } = Select;
 const { Text } = Typography;
@@ -2684,9 +2685,29 @@ export const PropertyPanel: React.FC<{
       const isPlainText = currentComponent.tag === 'plain_text';
       const isRichText = currentComponent.tag === 'rich_text';
 
-      // 获取文本内容
+      // 获取文本内容 - 始终显示用户编辑的内容，不跟随变量绑定
       const getTextContent = () => {
         if (!currentComponent) return '';
+
+        // 从状态管理器获取用户编辑的内容
+        const userEditedContent =
+          textComponentStateManager.getUserEditedContent(currentComponent.id);
+
+        console.log('🔍 getTextContent 调用:', {
+          componentId: currentComponent.id,
+          userEditedContent: userEditedContent,
+          hasUserContent: userEditedContent !== undefined,
+          boundVariableName: textComponentStateManager.getBoundVariableName(
+            currentComponent.id,
+          ),
+          componentContent: (currentComponent as any).content,
+        });
+
+        if (userEditedContent !== undefined) {
+          return userEditedContent;
+        }
+
+        // 如果没有用户编辑的内容，使用组件原始内容
         if (isPlainText) {
           return (currentComponent as any).content || '';
         } else if (isRichText) {
@@ -2710,24 +2731,68 @@ export const PropertyPanel: React.FC<{
         return '';
       };
 
-      // 更新文本内容
+      // 更新文本内容 - 保存用户编辑的内容
       const updateTextContent = (value: any) => {
-        if (isPlainText) {
-          handleValueChange('content', value);
-        } else if (isRichText) {
-          handleValueChange('content', value);
+        console.log('📝 用户编辑文本内容:', {
+          componentId: currentComponent?.id,
+          value: value,
+          timestamp: new Date().toISOString(),
+        });
+
+        // 保存用户编辑的内容到状态管理器
+        textComponentStateManager.setUserEditedContent(
+          currentComponent.id,
+          value,
+        );
+
+        // 创建更新的组件对象
+        const updatedComponent = { ...currentComponent };
+
+        // 如果当前没有绑定变量，也更新content字段
+        const boundVariableName =
+          textComponentStateManager.getBoundVariableName(currentComponent.id);
+        if (!boundVariableName) {
+          if (isPlainText) {
+            (updatedComponent as any).content = value;
+            (updatedComponent as any).i18n_content = {
+              'en-US': value,
+            };
+          } else if (isRichText) {
+            (updatedComponent as any).content = value;
+          }
+        } else {
+          // 如果有绑定变量，不更新全局数据，只保存用户编辑内容到状态管理器
+          console.log('📝 有绑定变量时，只保存用户编辑内容到状态管理器:', {
+            componentId: currentComponent?.id,
+            value: value,
+            boundVariableName: boundVariableName,
+          });
         }
+
+        console.log('✅ 文本内容更新完成:', {
+          componentId: updatedComponent?.id,
+          userEditedContent: value,
+          boundVariableName: boundVariableName,
+          updatedComponent: updatedComponent,
+        });
+
+        // 更新组件
+        onUpdateComponent(updatedComponent);
       };
 
       // 获取绑定的变量名
       const getBoundVariableName = () => {
         const boundVariableName =
-          (currentComponent as any).boundVariableName || '';
+          textComponentStateManager.getBoundVariableName(currentComponent.id) ||
+          '';
         console.log('🔍 获取绑定变量名:', {
           componentId: currentComponent?.id,
           boundVariableName: boundVariableName,
           currentComponent: currentComponent,
           componentContent: (currentComponent as any).content,
+          userEditedContent: textComponentStateManager.getUserEditedContent(
+            currentComponent.id,
+          ),
           componentFull: JSON.stringify(currentComponent, null, 2),
         });
         return boundVariableName;
@@ -2735,10 +2800,15 @@ export const PropertyPanel: React.FC<{
 
       // 更新绑定的变量名
       const updateBoundVariableName = (variableName: string) => {
+        // 在更新前保存当前的用户编辑内容
+        const currentUserEditedContent =
+          textComponentStateManager.getUserEditedContent(currentComponent.id);
+
         console.log('🔗 更新文本组件绑定变量:', {
           componentId: currentComponent?.id,
           variableName: variableName,
           currentComponent: currentComponent,
+          currentUserEditedContent: currentUserEditedContent,
           timestamp: new Date().toISOString(),
         });
 
@@ -2746,62 +2816,105 @@ export const PropertyPanel: React.FC<{
         const updatedComponent = { ...currentComponent };
 
         if (variableName) {
-          // 如果选择了变量，更新组件内容为变量占位符
-          const variablePlaceholder = `\${${variableName}}`;
+          // 如果选择了变量，设置绑定变量名到状态管理器
+          textComponentStateManager.setBoundVariableName(
+            currentComponent.id,
+            variableName,
+          );
 
-          // 一次性更新所有相关字段
-          (updatedComponent as any).boundVariableName = variableName;
+          // 如果用户还没有编辑过文本，将组件的原始内容保存为用户编辑内容
+          if (currentUserEditedContent === undefined) {
+            const originalContent = (currentComponent as any).content || '';
+            textComponentStateManager.setUserEditedContent(
+              currentComponent.id,
+              originalContent,
+            );
+            console.log('📝 保存组件原始内容为用户编辑内容:', {
+              componentId: currentComponent.id,
+              originalContent: originalContent,
+            });
+          } else {
+            // 确保用户编辑的内容不被清除
+            textComponentStateManager.setUserEditedContent(
+              currentComponent.id,
+              currentUserEditedContent,
+            );
+          }
+
+          // 更新全局数据中的content和i18n_content为变量占位符格式
+          const variablePlaceholder = `\${${variableName}}`;
           (updatedComponent as any).content = variablePlaceholder;
           (updatedComponent as any).i18n_content = {
             'en-US': variablePlaceholder,
           };
 
-          console.log('✅ 文本组件变量绑定完成:', {
+          console.log('✅ 文本组件变量绑定完成 (更新全局数据):', {
             componentId: updatedComponent?.id,
             variableName: variableName,
             content: variablePlaceholder,
             i18n_content: (updatedComponent as any).i18n_content,
+            userEditedContent: textComponentStateManager.getUserEditedContent(
+              currentComponent.id,
+            ),
             updatedComponent: updatedComponent,
           });
 
-          // 一次性更新组件
+          // 更新组件但不触发文本输入框重新渲染
           onUpdateComponent(updatedComponent);
         } else {
-          // 如果清除了变量绑定，恢复默认内容
-          const defaultContent = isPlainText
-            ? '请输入文本内容'
-            : {
-                type: 'doc',
-                content: [
-                  {
-                    type: 'paragraph',
-                    content: [
-                      {
-                        type: 'text',
-                        text: '请输入富文本内容',
-                      },
-                    ],
-                  },
-                ],
+          // 如果清除了变量绑定，使用文本输入框中的内容作为最终文本
+          const userEditedContent =
+            textComponentStateManager.getUserEditedContent(currentComponent.id);
+
+          if (userEditedContent !== undefined) {
+            // 使用用户编辑的内容作为最终文本
+            (updatedComponent as any).content = userEditedContent;
+            if (isPlainText) {
+              (updatedComponent as any).i18n_content = {
+                'en-US': userEditedContent,
               };
+            }
+          } else {
+            // 如果没有用户编辑的内容，使用默认内容
+            const defaultContent = isPlainText
+              ? '请输入文本内容'
+              : {
+                  type: 'doc',
+                  content: [
+                    {
+                      type: 'paragraph',
+                      content: [
+                        {
+                          type: 'text',
+                          text: '请输入富文本内容',
+                        },
+                      ],
+                    },
+                  ],
+                };
 
-          // 清除绑定变量并恢复默认内容
-          delete (updatedComponent as any).boundVariableName;
-          (updatedComponent as any).content = defaultContent;
-
-          if (isPlainText) {
-            (updatedComponent as any).i18n_content = {
-              'en-US': 'Enter text content',
-            };
+            (updatedComponent as any).content = defaultContent;
+            if (isPlainText) {
+              (updatedComponent as any).i18n_content = {
+                'en-US': 'Enter text content',
+              };
+            }
           }
 
-          console.log('✅ 文本组件变量绑定清除:', {
+          // 清除绑定变量
+          textComponentStateManager.setBoundVariableName(
+            currentComponent.id,
+            undefined,
+          );
+
+          console.log('✅ 文本组件变量绑定清除 (使用文本输入框内容):', {
             componentId: updatedComponent?.id,
-            content: defaultContent,
+            userEditedContent: userEditedContent,
+            content: (updatedComponent as any).content,
             updatedComponent: updatedComponent,
           });
 
-          // 一次性更新组件
+          // 更新组件
           onUpdateComponent(updatedComponent);
         }
       };
