@@ -18,6 +18,7 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
   className,
   onSave,
   readOnly = false,
+  isVariableModalOpen = false, // 新增：变量弹窗是否打开
 }) => {
   const [jsonText, setJsonText] = useState('');
   const [lines, setLines] = useState<LineData[]>([]);
@@ -31,6 +32,11 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
   const [isUpdatingFromCollapse, setIsUpdatingFromCollapse] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
+
+  // 新增：撤销/重做功能
+  const [history, setHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [isUndoRedoAction, setIsUndoRedoAction] = useState(false);
 
   // 解析初始JSON
   const parsedJSON = useMemo(() => {
@@ -662,11 +668,118 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
     return { text, lines };
   };
 
+  // 添加历史记录
+  const addToHistory = (text: string) => {
+    if (isUndoRedoAction) {
+      setIsUndoRedoAction(false);
+      return;
+    }
+
+    setHistory((prev) => {
+      const newHistory = prev.slice(0, historyIndex + 1);
+      newHistory.push(text);
+      // 限制历史记录数量，避免内存泄漏
+      if (newHistory.length > 50) {
+        newHistory.shift();
+      }
+      return newHistory;
+    });
+    setHistoryIndex((prev) => prev + 1);
+  };
+
+  // 撤销功能
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      setIsUndoRedoAction(true);
+      const newIndex = historyIndex - 1;
+      const previousText = history[newIndex];
+      setJsonText(previousText);
+      setHistoryIndex(newIndex);
+
+      // 更新相关状态
+      const { isValid, errors } = validateJSON(previousText);
+      if (!isValid) {
+        setParseError(errors[0]?.message || 'JSON格式错误');
+        setJsonErrors(errors);
+      } else {
+        setParseError(null);
+        setJsonErrors([]);
+        try {
+          const parsed = JSON.parse(previousText);
+          setLastValidJson(parsed);
+          if (!isFormatting && !isUpdatingFromCollapse) {
+            const { lines: newLines } = formatJSONWithLines(parsed, false);
+            setLines(newLines);
+          }
+        } catch (error) {
+          // 忽略解析错误
+        }
+      }
+    }
+  };
+
+  // 重做功能
+  const handleRedo = () => {
+    if (historyIndex < history.length - 1) {
+      setIsUndoRedoAction(true);
+      const newIndex = historyIndex + 1;
+      const nextText = history[newIndex];
+      setJsonText(nextText);
+      setHistoryIndex(newIndex);
+
+      // 更新相关状态
+      const { isValid, errors } = validateJSON(nextText);
+      if (!isValid) {
+        setParseError(errors[0]?.message || 'JSON格式错误');
+        setJsonErrors(errors);
+      } else {
+        setParseError(null);
+        setJsonErrors([]);
+        try {
+          const parsed = JSON.parse(nextText);
+          setLastValidJson(parsed);
+          if (!isFormatting && !isUpdatingFromCollapse) {
+            const { lines: newLines } = formatJSONWithLines(parsed, false);
+            setLines(newLines);
+          }
+        } catch (error) {
+          // 忽略解析错误
+        }
+      }
+    }
+  };
+
+  // 插入空格到光标位置
+  const insertSpacesAtCursor = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const currentText = jsonText;
+
+    // 插入两个空格（标准缩进）
+    const newText = currentText.slice(0, start) + '  ' + currentText.slice(end);
+    setJsonText(newText);
+
+    // 设置光标位置到插入的空格后面
+    setTimeout(() => {
+      if (textarea) {
+        textarea.selectionStart = start + 2;
+        textarea.selectionEnd = start + 2;
+        textarea.focus();
+      }
+    }, 0);
+  };
+
   // 处理文本变化
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
     setJsonText(newText);
     setIsUserEditing(true);
+
+    // 添加到历史记录
+    addToHistory(newText);
 
     const { isValid, errors } = validateJSON(newText);
     if (!isValid) {
@@ -784,8 +897,8 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
     }
   };
 
-  // 复制JSON
-  const handleCopy = async () => {
+  // 复制全部JSON
+  const handleCopyAll = async () => {
     try {
       // 先展开所有数据
       setCollapsedPaths(new Set());
@@ -842,9 +955,36 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
 
       message.success('JSON已复制到剪贴板');
     } catch (error) {
-      console.error('Error in handleCopy:', error);
+      console.error('Error in handleCopyAll:', error);
       message.error('复制失败');
     }
+  };
+
+  // 复制选中文本
+  const handleCopySelected = async () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    // 检查是否有选中的文本
+    const selectedText = textarea.value.substring(
+      textarea.selectionStart,
+      textarea.selectionEnd,
+    );
+
+    if (selectedText && selectedText.trim() !== '') {
+      // 如果有选中的文本，直接复制选中的内容
+      await navigator.clipboard.writeText(selectedText);
+      message.success('选中内容已复制到剪贴板');
+      return;
+    }
+
+    // 如果没有选中文本，复制全部内容
+    await handleCopyAll();
+  };
+
+  // 复制JSON（保持向后兼容）
+  const handleCopy = async () => {
+    await handleCopyAll();
   };
 
   // 处理滚动同步
@@ -856,6 +996,34 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
 
   // 处理键盘事件
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // 只在变量弹窗打开且textarea激活时处理特殊快捷键
+    if (isVariableModalOpen && document.activeElement === textareaRef.current) {
+      // Command+Z 或 Ctrl+Z：撤销
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleUndo();
+        return;
+      }
+
+      // Command+Shift+Z 或 Ctrl+Shift+Z：重做
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleRedo();
+        return;
+      }
+
+      // Tab键：插入空格
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        e.stopPropagation();
+        insertSpacesAtCursor();
+        return;
+      }
+    }
+
+    // 原有的快捷键处理
     if (e.ctrlKey || e.metaKey) {
       switch (e.key) {
         case 's':
@@ -864,7 +1032,15 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
           break;
         case 'c':
           e.preventDefault();
-          handleCopy();
+          // 在变量弹窗中，优先复制选中文本
+          if (
+            isVariableModalOpen &&
+            document.activeElement === textareaRef.current
+          ) {
+            handleCopySelected();
+          } else {
+            handleCopy();
+          }
           break;
       }
     }
@@ -967,6 +1143,10 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
       setJsonErrors([]);
       setIsUserEditing(false);
       setLastValidJson(parsedJSON);
+
+      // 初始化历史记录
+      setHistory([text]);
+      setHistoryIndex(0);
 
       setIsFormatting(false);
     }
