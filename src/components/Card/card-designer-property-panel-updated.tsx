@@ -1390,7 +1390,7 @@ export const PropertyPanel: React.FC<{
       case 'text':
         return '文本';
       case 'number':
-        return '正数';
+        return '整数';
       case 'image':
         return '图片';
       case 'array':

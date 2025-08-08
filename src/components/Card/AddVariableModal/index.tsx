@@ -29,7 +29,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
       case 'text':
         return '';
       case 'number':
-        return '0';
+        return '1';
       case 'image':
         return JSON.stringify(
           {
@@ -394,6 +394,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
               placeholder="请输入数字"
               min={-999999}
               max={999999}
+              defaultValue={1}
             />
           </Form.Item>
         );
@@ -559,7 +560,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
             value={selectedType} // 确保显示当前选中的类型
           >
             <Option value="text">文本</Option>
-            <Option value="number">正数</Option>
+            <Option value="number">整数</Option>
             <Option value="image">图片</Option>
             <Option value="imageArray">图片数组</Option>
             <Option value="array">选项数组</Option>
