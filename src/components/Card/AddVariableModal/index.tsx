@@ -1,7 +1,7 @@
 import { Button, Form, Input, InputNumber, Modal, Select } from 'antd';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Variable } from '../card-designer-types-updated';
-import JSONEditor from '../JSONEditor';
+import JSONEditor, { JSONEditorRef } from '../JSONEditor';
 import type {
   AddVariableModalProps,
   VariableFormData,
@@ -16,6 +16,8 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
   initialType = 'text',
   editingVariable = null, // 新增：编辑的变量
 }) => {
+  const jsonEditorRef = useRef<JSONEditorRef>(null);
+
   const [form] = Form.useForm<VariableFormData>();
   const [selectedType, setSelectedType] = useState<VariableType>(initialType);
   const [jsonData, setJsonData] = useState<string>(''); // 新增：JSON编辑器数据
@@ -108,49 +110,6 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
     }
   };
 
-  // 当弹窗打开时重置表单或回显编辑数据
-  useEffect(() => {
-    if (visible) {
-      if (editingVariable) {
-        // 编辑模式：回显数据
-        const formType = mapVariableTypeToFormType(editingVariable.type);
-        setSelectedType(formType);
-
-        // 设置表单数据
-        form.setFieldsValue({
-          type: formType,
-          name: editingVariable.name,
-          description: editingVariable.description || '', // 回显描述信息
-          mockData: editingVariable.value,
-        });
-
-        // 设置JSON编辑器数据
-        setJsonData(editingVariable.value);
-
-        console.log('🔄 回显编辑数据:', {
-          editingVariable,
-          formType,
-          mockData: editingVariable.value,
-        });
-      } else {
-        // 新增模式：重置表单，使用传入的初始化数据
-        form.resetFields();
-        setSelectedType(initialType);
-        const defaultData = getDefaultMockData(initialType);
-        form.setFieldsValue({
-          type: initialType,
-          mockData: defaultData,
-        });
-        setJsonData(defaultData);
-
-        console.log('➕ 重置新增表单:', {
-          initialType,
-          defaultData,
-        });
-      }
-    }
-  }, [visible, initialType, editingVariable, form]);
-
   // 处理类型变化
   const handleTypeChange = (value: VariableType) => {
     setSelectedType(value);
@@ -197,9 +156,76 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
   // 处理提交
   const handleSubmit = async () => {
     try {
+      // 先获取表单数据
       const values = await form.validateFields();
 
-      // 获取实际的模拟数据（优先使用JSON编辑器的数据）
+      // 如果是数组或图片类型，需要验证JSON编辑器
+      if (selectedType === 'array' || selectedType === 'image') {
+        if (jsonEditorRef.current) {
+          const { formatJSON, validateJSON, getFormattedJSON } =
+            jsonEditorRef.current;
+
+          console.log('开始验证JSON编辑器...');
+
+          // 先验证原始内容，不进行格式化
+          const { isValid: originalValid, errors: originalErrors } =
+            validateJSON();
+          console.warn('原始JSON验证结果:', {
+            isValid: originalValid,
+            errors: originalErrors,
+          });
+
+          if (!originalValid) {
+            console.error('JSON格式错误，请检查输入:', originalErrors);
+            return;
+          }
+
+          // 原始内容有效，进行格式化
+          await formatJSON();
+          const { isValid, errors } = validateJSON();
+          console.warn('格式化后JSON验证结果:', { isValid, errors });
+
+          if (isValid) {
+            const result = getFormattedJSON();
+            console.warn('result=====', result);
+            if (result?.success && result.data) {
+              console.warn('格式化后的JSON:', JSON.parse(result.data));
+
+              // 构建Variable对象
+              const variable: Variable = {
+                name: values.name,
+                type: 'object',
+                value: result.data,
+                originalType: selectedType,
+                description: values.description || '',
+              };
+
+              console.log('💾 提交变量数据:', {
+                isEditing: !!editingVariable,
+                variable,
+                formattedJsonData: result.data,
+              });
+
+              onOk(variable);
+              form.resetFields();
+              setJsonData('');
+              return;
+            } else {
+              console.error('获取格式化JSON失败:', result?.error);
+              return;
+            }
+          } else {
+            console.error('格式化后JSON验证失败:', errors);
+            return;
+          }
+        } else {
+          console.error('JSON编辑器引用不存在');
+          return;
+        }
+      }
+
+      return;
+      // 对于非JSON类型，使用原有的逻辑
       let actualMockData = values.mockData;
       if (selectedType === 'image' || selectedType === 'array') {
         actualMockData = jsonData;
@@ -227,8 +253,8 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         name: values.name,
         type: mapTypeToVariableType(values.type),
         value: actualMockData,
-        originalType: values.type, // 保存原始类型信息
-        description: values.description, // 保存描述信息
+        originalType: values.type,
+        description: values.description || '',
       };
 
       console.log('💾 提交变量数据:', {
@@ -300,6 +326,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
             ]}
           >
             <JSONEditor
+              ref={jsonEditorRef}
               json={jsonData}
               title="图片数据"
               onJSONChange={handleJSONChange}
@@ -320,6 +347,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
             ]}
           >
             <JSONEditor
+              ref={jsonEditorRef}
               json={jsonData}
               title="数组数据"
               onJSONChange={handleJSONChange}
@@ -333,6 +361,49 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         return null;
     }
   };
+
+  // 当弹窗打开时重置表单或回显编辑数据
+  useEffect(() => {
+    if (visible) {
+      if (editingVariable) {
+        // 编辑模式：回显数据
+        const formType = mapVariableTypeToFormType(editingVariable.type);
+        setSelectedType(formType);
+
+        // 设置表单数据
+        form.setFieldsValue({
+          type: formType,
+          name: editingVariable.name,
+          description: editingVariable.description || '', // 回显描述信息
+          mockData: editingVariable.value,
+        });
+
+        // 设置JSON编辑器数据
+        setJsonData(editingVariable.value);
+
+        console.log('🔄 回显编辑数据:', {
+          editingVariable,
+          formType,
+          mockData: editingVariable.value,
+        });
+      } else {
+        // 新增模式：重置表单，使用传入的初始化数据
+        form.resetFields();
+        setSelectedType(initialType);
+        const defaultData = getDefaultMockData(initialType);
+        form.setFieldsValue({
+          type: initialType,
+          mockData: defaultData,
+        });
+        setJsonData(defaultData);
+
+        console.log('➕ 重置新增表单:', {
+          initialType,
+          defaultData,
+        });
+      }
+    }
+  }, [visible, initialType, editingVariable, form]);
 
   return (
     <Modal
