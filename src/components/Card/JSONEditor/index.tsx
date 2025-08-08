@@ -710,6 +710,14 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
           if (!isFormatting && !isUpdatingFromCollapse) {
             const { lines: newLines } = formatJSONWithLines(parsed, false);
             setLines(newLines);
+            // 更新isAllExpanded状态
+            const collapsibleLines = newLines.filter(
+              (line) => line.isCollapsible,
+            );
+            const allExpanded = collapsibleLines.every(
+              (line) => !collapsedPaths.has(line.path),
+            );
+            setIsAllExpanded(allExpanded);
           }
         } catch (error) {
           // 忽略解析错误
@@ -741,6 +749,14 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
           if (!isFormatting && !isUpdatingFromCollapse) {
             const { lines: newLines } = formatJSONWithLines(parsed, false);
             setLines(newLines);
+            // 更新isAllExpanded状态
+            const collapsibleLines = newLines.filter(
+              (line) => line.isCollapsible,
+            );
+            const allExpanded = collapsibleLines.every(
+              (line) => !collapsedPaths.has(line.path),
+            );
+            setIsAllExpanded(allExpanded);
           }
         } catch (error) {
           // 忽略解析错误
@@ -795,6 +811,14 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
         if (!isFormatting && !isUpdatingFromCollapse) {
           const { lines: newLines } = formatJSONWithLines(parsed, false);
           setLines(newLines);
+          // 更新isAllExpanded状态
+          const collapsibleLines = newLines.filter(
+            (line) => line.isCollapsible,
+          );
+          const allExpanded = collapsibleLines.every(
+            (line) => !collapsedPaths.has(line.path),
+          );
+          setIsAllExpanded(allExpanded);
         }
       } catch (error) {
         // 忽略解析错误
@@ -831,6 +855,13 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
     // 设置折叠状态
     setCollapsedPaths(newCollapsedPaths);
 
+    // 更新isAllExpanded状态
+    const collapsibleLines = lines.filter((line) => line.isCollapsible);
+    const allExpanded = collapsibleLines.every(
+      (line) => !newCollapsedPaths.has(line.path),
+    );
+    setIsAllExpanded(allExpanded);
+
     // 延迟重置标志，确保状态更新完成
     setTimeout(() => {
       setIsUpdatingFromCollapse(false);
@@ -844,15 +875,17 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
     let newCollapsedPaths: Set<string>;
 
     if (isAllExpanded) {
-      newCollapsedPaths = new Set();
-      setIsAllExpanded(false);
-    } else {
+      // 当前是展开状态，点击后折叠所有
       newCollapsedPaths = new Set<string>();
       lines.forEach((line) => {
         if (line.isCollapsible) {
           newCollapsedPaths.add(line.path);
         }
       });
+      setIsAllExpanded(false);
+    } else {
+      // 当前是折叠状态，点击后展开所有
+      newCollapsedPaths = new Set();
       setIsAllExpanded(true);
     }
 
@@ -1147,6 +1180,11 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
       // 初始化历史记录
       setHistory([text]);
       setHistoryIndex(0);
+
+      // 初始化时，如果没有任何折叠的路径，说明所有数据都是展开的
+      // 检查是否有可折叠的行，如果有且都没有折叠，则设置为展开状态
+      const hasCollapsibleLines = newLines.some((line) => line.isCollapsible);
+      setIsAllExpanded(hasCollapsibleLines && collapsedPaths.size === 0);
 
       setIsFormatting(false);
     }
