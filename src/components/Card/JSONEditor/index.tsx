@@ -856,6 +856,18 @@ const JSONEditor = forwardRef<JSONEditorRef, JSONEditorProps>(
     const handleToggleCollapse = (path: string) => {
       console.log('Toggle collapse for path:', path);
 
+      // 首先检查当前JSON是否有错误
+      const { isValid } = validateJSON(jsonText);
+
+      // 如果有错误且内容飘红，直接提示用户并返回
+      if (!isValid && parseError) {
+        console.log(
+          'JSON has errors, showing error message for toggle collapse',
+        );
+        message.error('JSON格式错误，请先修复错误再展开/折叠');
+        return;
+      }
+
       // 立即更新折叠状态
       const newCollapsedPaths = new Set(collapsedPaths);
       if (newCollapsedPaths.has(path)) {
@@ -866,6 +878,24 @@ const JSONEditor = forwardRef<JSONEditorRef, JSONEditorProps>(
 
       // 设置更新标志
       setIsUpdatingFromCollapse(true);
+
+      // 如果用户正在编辑且有错误，保持用户的原始内容
+      if (isUserEditing && parseError) {
+        // 只更新折叠状态，不重新格式化文本
+        setCollapsedPaths(newCollapsedPaths);
+
+        // 更新isAllExpanded状态
+        const collapsibleLines = lines.filter((line) => line.isCollapsible);
+        const allExpanded = collapsibleLines.every(
+          (line) => !newCollapsedPaths.has(line.path),
+        );
+        setIsAllExpanded(allExpanded);
+
+        setTimeout(() => {
+          setIsUpdatingFromCollapse(false);
+        }, 50);
+        return;
+      }
 
       // 立即更新文本内容和行数据
       if (lastValidJson) {
@@ -896,6 +926,16 @@ const JSONEditor = forwardRef<JSONEditorRef, JSONEditorProps>(
 
     // 展开/折叠所有
     const handleToggleAll = () => {
+      // 首先检查当前JSON是否有错误
+      const { isValid } = validateJSON(jsonText);
+
+      // 如果有错误且内容飘红，直接提示用户并返回
+      if (!isValid && parseError) {
+        console.log('JSON has errors, showing error message for toggle all');
+        message.error('JSON格式错误，请先修复错误再展开/折叠');
+        return;
+      }
+
       setIsUpdatingFromCollapse(true);
 
       let newCollapsedPaths: Set<string>;
@@ -913,6 +953,17 @@ const JSONEditor = forwardRef<JSONEditorRef, JSONEditorProps>(
         // 当前是折叠状态，点击后展开所有
         newCollapsedPaths = new Set();
         setIsAllExpanded(true);
+      }
+
+      // 如果用户正在编辑且有错误，保持用户的原始内容
+      if (isUserEditing && parseError) {
+        // 只更新折叠状态，不重新格式化文本
+        setCollapsedPaths(newCollapsedPaths);
+
+        setTimeout(() => {
+          setIsUpdatingFromCollapse(false);
+        }, 100);
+        return;
       }
 
       // 立即更新文本内容
@@ -959,6 +1010,16 @@ const JSONEditor = forwardRef<JSONEditorRef, JSONEditorProps>(
     // 复制全部JSON
     const handleCopyAll = async () => {
       try {
+        // 首先检查当前JSON是否有错误
+        const { isValid } = validateJSON(jsonText);
+
+        // 如果有错误且内容飘红，直接提示用户并返回
+        if (!isValid && parseError) {
+          console.log('JSON has errors, showing error message for copy');
+          message.error('JSON格式错误，请先修复错误再复制');
+          return;
+        }
+
         // 先展开所有数据
         setCollapsedPaths(new Set());
         setIsAllExpanded(true);
@@ -1114,6 +1175,17 @@ const JSONEditor = forwardRef<JSONEditorRef, JSONEditorProps>(
 
       return new Promise((resolve, reject) => {
         try {
+          // 首先检查当前JSON是否有错误
+          const { isValid } = validateJSON(jsonText);
+
+          // 如果有错误且内容飘红，直接提示用户并返回
+          if (!isValid && parseError) {
+            console.log('JSON has errors, showing error message');
+            message.error('JSON格式错误，请先修复错误再格式化');
+            resolve();
+            return;
+          }
+
           setIsFormatting(true);
 
           // 先展开所有数据
@@ -1125,7 +1197,6 @@ const JSONEditor = forwardRef<JSONEditorRef, JSONEditorProps>(
 
           if (!jsonToFormat) {
             // 如果没有lastValidJson，尝试解析当前文本
-            const { isValid } = validateJSON(jsonText);
             console.log('JSON validation result:', { isValid });
 
             if (!isValid) {
@@ -1345,7 +1416,8 @@ const JSONEditor = forwardRef<JSONEditorRef, JSONEditorProps>(
         lastValidJson &&
         isUserEditing &&
         !isFormatting &&
-        !isUpdatingFromCollapse
+        !isUpdatingFromCollapse &&
+        !parseError // 如果有错误，不重新格式化
       ) {
         const { lines: newLines } = formatJSONWithLines(
           lastValidJson,
@@ -1354,11 +1426,16 @@ const JSONEditor = forwardRef<JSONEditorRef, JSONEditorProps>(
         );
         setLines(newLines);
       }
-    }, [lastValidJson, isUserEditing, collapsedPaths]);
+    }, [lastValidJson, isUserEditing, collapsedPaths, parseError]);
 
     // 当折叠状态变化时，重新格式化行数据
     useEffect(() => {
-      if (lastValidJson && !isFormatting && !isUpdatingFromCollapse) {
+      if (
+        lastValidJson &&
+        !isFormatting &&
+        !isUpdatingFromCollapse &&
+        !parseError // 如果有错误，不重新格式化
+      ) {
         const { lines: newLines } = formatJSONWithLines(
           lastValidJson,
           false,
@@ -1366,7 +1443,7 @@ const JSONEditor = forwardRef<JSONEditorRef, JSONEditorProps>(
         );
         setLines(newLines);
       }
-    }, [collapsedPaths, lastValidJson, isUpdatingFromCollapse]);
+    }, [collapsedPaths, lastValidJson, isUpdatingFromCollapse, parseError]);
 
     return (
       <Card
@@ -1430,9 +1507,11 @@ const JSONEditor = forwardRef<JSONEditorRef, JSONEditorProps>(
                   fontSize: '12px',
                   lineHeight: '20px',
                 }}
-                onClick={() =>
-                  line.isCollapsible && handleToggleCollapse(line.path)
-                }
+                onClick={() => {
+                  if (line.isCollapsible) {
+                    handleToggleCollapse(line.path);
+                  }
+                }}
               >
                 <span style={{ fontSize: '11px' }}>{line.lineNumber}</span>
                 <div
