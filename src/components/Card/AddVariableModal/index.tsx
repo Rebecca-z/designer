@@ -2,6 +2,7 @@ import { Button, Form, Input, InputNumber, Modal, Select } from 'antd';
 import React, { useEffect, useRef, useState } from 'react';
 import { Variable } from '../card-designer-types-updated';
 import JSONEditor, { JSONEditorRef } from '../JSONEditor';
+import RichTextEditor from '../RichTextEditor/RichTextEditor';
 import type {
   AddVariableModalProps,
   VariableFormData,
@@ -71,6 +72,21 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
           null,
           2,
         );
+      case 'richtext':
+        return JSON.stringify({
+          type: 'doc',
+          content: [
+            {
+              type: 'paragraph',
+              content: [
+                {
+                  type: 'text',
+                  text: '请输入富文本内容...',
+                },
+              ],
+            },
+          ],
+        });
       default:
         return '';
     }
@@ -79,7 +95,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
   // 将Variable类型映射到表单类型
   const mapVariableTypeToFormType = (
     variableType: string,
-  ): 'text' | 'number' | 'image' | 'array' => {
+  ): 'text' | 'number' | 'image' | 'array' | 'richtext' => {
     // 优先使用原始类型信息
     if (editingVariable?.originalType) {
       return editingVariable.originalType;
@@ -100,6 +116,8 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
             return 'image';
           } else if (Array.isArray(parsed)) {
             return 'array';
+          } else if (parsed.type === 'doc') {
+            return 'richtext';
           }
         } catch (e) {
           // 解析失败，默认为图片
@@ -158,6 +176,29 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
     try {
       // 先获取表单数据
       const values = await form.validateFields();
+
+      // 如果是富文本类型，直接处理富文本编辑器数据
+      if (selectedType === 'richtext') {
+        // 构建Variable对象
+        const variable: Variable = {
+          name: values.name,
+          type: 'object',
+          value: jsonData,
+          originalType: selectedType,
+          description: values.description || '',
+        };
+
+        console.log('💾 提交富文本变量数据:', {
+          isEditing: !!editingVariable,
+          variable,
+          richTextData: jsonData,
+        });
+
+        onOk(variable);
+        form.resetFields();
+        setJsonData('');
+        return;
+      }
 
       // 如果是数组或图片类型，需要验证JSON编辑器
       if (selectedType === 'array' || selectedType === 'image') {
@@ -242,6 +283,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
             return 'number';
           case 'image':
           case 'array':
+          case 'richtext':
             return 'object';
           default:
             return 'text';
@@ -283,6 +325,25 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
   const handleJSONChange = (newData: string) => {
     setJsonData(newData);
     console.log('📝 JSON数据变化:', newData);
+  };
+
+  // 处理富文本编辑器数据变化
+  const handleRichTextChange = (newData: any) => {
+    const jsonString = JSON.stringify(newData);
+    setJsonData(jsonString);
+    form.setFieldsValue({ mockData: jsonString });
+    console.log('📝 富文本数据变化:', jsonString);
+  };
+
+  // 获取富文本编辑器的值
+  const getRichTextValue = () => {
+    if (!jsonData) return undefined;
+    try {
+      return JSON.parse(jsonData);
+    } catch (error) {
+      console.error('解析富文本数据失败:', error);
+      return undefined;
+    }
   };
 
   // 渲染模拟数据输入组件
@@ -355,6 +416,20 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
               height={200}
             />
           </Form.Item>
+        );
+
+      case 'richtext':
+        return (
+          <div>
+            <div style={{ marginBottom: 8, fontWeight: 500 }}>模拟数据</div>
+            <RichTextEditor
+              value={getRichTextValue()}
+              onChange={handleRichTextChange}
+              placeholder="请输入富文本内容..."
+              height={200}
+              showToolbar={true}
+            />
+          </div>
         );
 
       default:
@@ -444,6 +519,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
             <Option value="number">正数</Option>
             <Option value="image">图片</Option>
             <Option value="array">变量数组</Option>
+            <Option value="richtext">富文本</Option>
           </Select>
         </Form.Item>
 
