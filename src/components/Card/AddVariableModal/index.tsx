@@ -73,20 +73,20 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
           2,
         );
       case 'richtext':
-        return JSON.stringify({
-          type: 'doc',
-          content: [
+        return '';
+      case 'imageArray':
+        return JSON.stringify(
+          [
             {
-              type: 'paragraph',
-              content: [
-                {
-                  type: 'text',
-                  text: '请输入富文本内容...',
-                },
-              ],
+              img_key: 'img_v2_9dd98485-2900-4d65-ada9-e31d1408dcfg',
+            },
+            {
+              img_key: 'img_v2_9dd98485-2900-4d65-ada9-e31d1408dcfg',
             },
           ],
-        });
+          null,
+          2,
+        );
       default:
         return '';
     }
@@ -95,7 +95,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
   // 将Variable类型映射到表单类型
   const mapVariableTypeToFormType = (
     variableType: string,
-  ): 'text' | 'number' | 'image' | 'array' | 'richtext' => {
+  ): 'text' | 'number' | 'image' | 'array' | 'richtext' | 'imageArray' => {
     // 优先使用原始类型信息
     if (editingVariable?.originalType) {
       return editingVariable.originalType;
@@ -115,6 +115,10 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
           if (parsed.img_url) {
             return 'image';
           } else if (Array.isArray(parsed)) {
+            // 检查是否为图片数组
+            if (parsed.length > 0 && parsed[0].img_key) {
+              return 'imageArray';
+            }
             return 'array';
           } else if (parsed.type === 'doc') {
             return 'richtext';
@@ -200,8 +204,12 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         return;
       }
 
-      // 如果是数组或图片类型，需要验证JSON编辑器
-      if (selectedType === 'array' || selectedType === 'image') {
+      // 如果是数组、图片或图片数组类型，需要验证JSON编辑器
+      if (
+        selectedType === 'array' ||
+        selectedType === 'image' ||
+        selectedType === 'imageArray'
+      ) {
         if (jsonEditorRef.current) {
           const { formatJSON, validateJSON, getFormattedJSON } =
             jsonEditorRef.current;
@@ -284,6 +292,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
           case 'image':
           case 'array':
           case 'richtext':
+          case 'imageArray':
             return 'object';
           default:
             return 'text';
@@ -418,6 +427,27 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
           </Form.Item>
         );
 
+      case 'imageArray':
+        return (
+          <Form.Item
+            name="mockData"
+            label="模拟数据"
+            rules={[
+              { required: true, message: '请输入模拟数据' },
+              { validator: validateJSON },
+            ]}
+          >
+            <JSONEditor
+              ref={jsonEditorRef}
+              json={jsonData}
+              title="图片数组数据"
+              onJSONChange={handleJSONChange}
+              isVariableModalOpen={visible}
+              height={200}
+            />
+          </Form.Item>
+        );
+
       case 'richtext':
         return (
           <div>
@@ -518,7 +548,8 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
             <Option value="text">文本</Option>
             <Option value="number">正数</Option>
             <Option value="image">图片</Option>
-            <Option value="array">变量数组</Option>
+            <Option value="imageArray">图片数组</Option>
+            <Option value="array">选项数组</Option>
             <Option value="richtext">富文本</Option>
           </Select>
         </Form.Item>

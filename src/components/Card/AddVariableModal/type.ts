@@ -1,6 +1,12 @@
 import { Variable } from '../card-designer-types-updated';
 
-export type VariableType = 'text' | 'number' | 'image' | 'array' | 'richtext';
+export type VariableType =
+  | 'text'
+  | 'number'
+  | 'image'
+  | 'array'
+  | 'richtext'
+  | 'imageArray';
 
 export interface AddVariableModalProps {
   visible: boolean;

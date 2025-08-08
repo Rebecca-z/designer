@@ -1394,7 +1394,11 @@ export const PropertyPanel: React.FC<{
       case 'image':
         return '图片';
       case 'array':
-        return '变量数组';
+        return '选项数组';
+      case 'imageArray':
+        return '图片数组';
+      case 'richtext':
+        return '富文本';
       case 'boolean':
         return '布尔';
       case 'object':
@@ -1409,13 +1413,21 @@ export const PropertyPanel: React.FC<{
   const mapVariableTypeToInitialType = (
     type: string,
     originalType?: string,
-  ): 'text' | 'number' | 'image' | 'array' => {
+  ): 'text' | 'number' | 'image' | 'array' | 'imageArray' | 'richtext' => {
     // 优先使用原始类型信息
     if (
       originalType &&
-      ['text', 'number', 'image', 'array'].includes(originalType)
+      ['text', 'number', 'image', 'array', 'imageArray', 'richtext'].includes(
+        originalType,
+      )
     ) {
-      return originalType as 'text' | 'number' | 'image' | 'array';
+      return originalType as
+        | 'text'
+        | 'number'
+        | 'image'
+        | 'array'
+        | 'imageArray'
+        | 'richtext';
     }
 
     switch (type) {
@@ -4481,11 +4493,21 @@ export const PropertyPanel: React.FC<{
                     } else if (typeof variableValue === 'boolean') {
                       variableType = 'boolean';
                     } else if (Array.isArray(variableValue)) {
-                      variableType = 'array';
+                      // 检查是否为图片数组
+                      if (
+                        variableValue.length > 0 &&
+                        variableValue[0].img_key
+                      ) {
+                        variableType = 'imageArray';
+                      } else {
+                        variableType = 'array';
+                      }
                     } else if (typeof variableValue === 'object') {
                       // 尝试判断是图片还是数组
                       if (variableValue.img_url) {
                         variableType = 'image';
+                      } else if (variableValue.type === 'doc') {
+                        variableType = 'richtext';
                       } else {
                         variableType = 'object';
                       }
