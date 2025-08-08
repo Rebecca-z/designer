@@ -73,7 +73,21 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
           2,
         );
       case 'richtext':
-        return '';
+        return JSON.stringify({
+          type: 'doc',
+          content: [
+            {
+              type: 'paragraph',
+              attrs: { textAlign: 'left' },
+              content: [
+                {
+                  type: 'text',
+                  text: '请输入富文本内容...',
+                },
+              ],
+            },
+          ],
+        });
       case 'imageArray':
         return JSON.stringify(
           [
@@ -273,7 +287,6 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         }
       }
 
-      return;
       // 对于非JSON类型，使用原有的逻辑
       let actualMockData = values.mockData;
       if (selectedType === 'image' || selectedType === 'array') {

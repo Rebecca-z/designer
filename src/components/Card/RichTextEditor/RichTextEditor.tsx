@@ -91,6 +91,21 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     content: value,
     onUpdate: ({ editor }) => {
       const json = editor.getJSON();
+
+      // 修复：确保所有段落都有明确的 textAlign 属性
+      if (json.content) {
+        const processNode = (node: any) => {
+          if (node.type === 'paragraph' && !node.attrs?.textAlign) {
+            node.attrs = { ...node.attrs, textAlign: 'left' };
+          }
+          if (node.content) {
+            node.content.forEach(processNode);
+          }
+        };
+
+        json.content.forEach(processNode);
+      }
+
       onChange?.(json);
     },
     editable: !disabled,
@@ -131,6 +146,24 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         // 使用setContent方法更新编辑器内容
         editor.commands.setContent(value, { emitUpdate: false }); // 不触发onUpdate事件
       }
+    }
+  }, [editor, value]);
+
+  // 修复：确保编辑器初始化时有正确的默认内容
+  React.useEffect(() => {
+    if (editor && !value) {
+      // 如果没有内容，设置默认的段落结构
+      const defaultContent = {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            attrs: { textAlign: 'left' },
+            content: [],
+          },
+        ],
+      };
+      editor.commands.setContent(defaultContent, { emitUpdate: false });
     }
   }, [editor, value]);
 
@@ -197,6 +230,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const setTextAlign = useCallback(
     (align: string) => {
       if (editor) {
+        // 确保明确设置 textAlign 属性，而不是 null
         editor.chain().focus().setTextAlign(align).run();
       }
     },
@@ -325,7 +359,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
               onClick={() => setTextAlign('left')}
               style={getButtonStyle(
                 editor?.isActive({ textAlign: 'left' }) ||
-                  !editor?.getAttributes('paragraph').textAlign,
+                  !editor?.getAttributes('paragraph').textAlign ||
+                  editor?.getAttributes('paragraph').textAlign === null,
               )}
             />
             <Button
