@@ -133,7 +133,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
           mockData: editingVariable.value,
         });
       } else {
-        // 新增模式：重置表单
+        // 新增模式：重置表单，使用传入的初始化数据
         form.resetFields();
         setSelectedType(initialType);
         const defaultData = getDefaultMockData(initialType);
@@ -324,7 +324,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
               title="数组数据"
               onJSONChange={handleJSONChange}
               isVariableModalOpen={visible}
-              height={300}
+              height={200}
             />
           </Form.Item>
         );

@@ -4576,6 +4576,10 @@ export const PropertyPanel: React.FC<{
                         onClick={(e) => {
                           e.stopPropagation();
                           // 创建兼容的Variable对象用于编辑
+                          console.warn(
+                            'variableValue for edit:',
+                            variableValue,
+                          );
                           const editVariable: Variable = {
                             name: variableName,
                             value:

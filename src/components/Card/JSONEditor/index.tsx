@@ -16,18 +16,19 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
   title = 'JSON 编辑器',
   height = '400px',
   className,
-  onJSONChange,
   onSave,
   readOnly = false,
-  isVariableModalOpen = false, // 新增：变量弹窗是否打开
 }) => {
   const [jsonText, setJsonText] = useState('');
   const [lines, setLines] = useState<LineData[]>([]);
   const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(new Set());
-  // const [isDirty, setIsDirty] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
   const [jsonErrors, setJsonErrors] = useState<JSONError[]>([]);
   const [isAllExpanded, setIsAllExpanded] = useState(false);
+  const [isUserEditing, setIsUserEditing] = useState(false);
+  const [isFormatting, setIsFormatting] = useState(false);
+  const [lastValidJson, setLastValidJson] = useState<any>(null);
+  const [isUpdatingFromCollapse, setIsUpdatingFromCollapse] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
 
@@ -35,7 +36,8 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
   const parsedJSON = useMemo(() => {
     if (typeof initialJSON === 'string') {
       try {
-        return JSON.parse(initialJSON);
+        const parsed = JSON.parse(initialJSON);
+        return parsed;
       } catch (error) {
         setParseError(error instanceof Error ? error.message : 'JSON解析错误');
         return null;
@@ -49,8 +51,6 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
     text: string,
   ): { isValid: boolean; errors: JSONError[] } => {
     const errors: JSONError[] = [];
-    setCollapsedPaths(new Set());
-    setIsAllExpanded(false);
 
     try {
       JSON.parse(text);
@@ -59,7 +59,6 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
       const errorMessage =
         error instanceof Error ? error.message : 'JSON格式错误';
 
-      // 尝试解析错误位置
       if (error instanceof SyntaxError) {
         const match = errorMessage.match(/position (\d+)/);
         if (match) {
@@ -68,7 +67,7 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
           let currentPos = 0;
 
           for (let lineNum = 0; lineNum < lines.length; lineNum++) {
-            const lineLength = lines[lineNum].length + 1; // +1 for newline
+            const lineLength = lines[lineNum].length + 1;
             if (currentPos + lineLength > position) {
               const column = position - currentPos;
               errors.push({
@@ -83,7 +82,6 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
         }
       }
 
-      // 如果没有找到具体位置，添加通用错误
       if (errors.length === 0) {
         errors.push({
           line: 1,
@@ -99,20 +97,35 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
   // 格式化JSON并生成行数据
   const formatJSONWithLines = (
     obj: any,
+    forceExpand: boolean = false,
+    currentCollapsedPaths?: Set<string>,
   ): { text: string; lines: LineData[] } => {
+    const collapsedPathsToUse = currentCollapsedPaths || collapsedPaths;
     const lines: LineData[] = [];
     let lineNumber = 1;
 
-    const formatValue = (value: any, indent: number, path: string): string => {
-      if (value === null) return 'null';
-      if (typeof value === 'string') return `"${value}"`;
-      if (typeof value === 'number' || typeof value === 'boolean')
-        return String(value);
+    const buildJSONFromLines = (lines: LineData[]): string => {
+      return lines
+        .map((line) => {
+          const indent = '  '.repeat(line.indent);
+          return `${indent}${line.content}`;
+        })
+        .join('\n');
+    };
 
+    const formatValue = (value: any, indent: number, path: string): void => {
+      if (value === null) return;
+      if (typeof value === 'string') return;
+      if (typeof value === 'number' || typeof value === 'boolean') return;
+
+      if (path === 'root') {
+        lines.length = 0;
+        lineNumber = 1;
+      }
+
+      // 处理数组
       if (Array.isArray(value)) {
-        if (value.length === 0) return '[]';
-
-        const isCollapsed = collapsedPaths.has(path);
+        const isCollapsed = forceExpand ? false : collapsedPathsToUse.has(path);
         if (isCollapsed) {
           lines.push({
             lineNumber,
@@ -122,12 +135,12 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
             isCollapsed: true,
             nodeType: 'array',
             path,
+            originalValue: value,
           });
           lineNumber++;
-          return `[${value.length} items]`;
+          return;
         }
 
-        // 添加开始括号行
         lines.push({
           lineNumber,
           content: '[',
@@ -139,20 +152,22 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
         });
         lineNumber++;
 
-        const items = value.map((item, index) => {
+        value.forEach((item, index) => {
           const itemPath = `${path}[${index}]`;
           const itemIndent = indent + 2;
 
           if (typeof item === 'object' && item !== null) {
-            // 检查当前数组项是否被折叠
-            const isItemCollapsed = collapsedPaths.has(itemPath);
+            const isItemCollapsed = forceExpand
+              ? false
+              : collapsedPathsToUse.has(itemPath);
 
             if (isItemCollapsed) {
-              // 如果数组项被折叠，只添加一行
               const keys = Object.keys(item);
               lines.push({
                 lineNumber,
-                content: `{${keys.length} properties}`,
+                content: `{${keys.length} properties}${
+                  index < value.length - 1 ? ',' : ''
+                }`,
                 indent: itemIndent,
                 isCollapsible: true,
                 isCollapsed: true,
@@ -161,40 +176,229 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
                 originalValue: item,
               });
               lineNumber++;
-              return `{${keys.length} properties}`;
             } else {
-              // 如果数组项展开，处理所有嵌套行
-              const formattedValue = formatValue(item, itemIndent, itemPath);
-              const nestedLines = formattedValue.split('\n');
+              lines.push({
+                lineNumber,
+                content: '{',
+                indent: itemIndent,
+                isCollapsible: true,
+                isCollapsed: false,
+                nodeType: 'object',
+                path: itemPath,
+              });
+              lineNumber++;
 
-              // 为嵌套对象的每一行都添加行号
-              nestedLines.forEach((line, lineIndex) => {
-                const actualIndent =
-                  lineIndex === 0 ? itemIndent : itemIndent + 2;
-                lines.push({
-                  lineNumber,
-                  content: line,
-                  indent: actualIndent,
-                  isCollapsible: false,
-                  isCollapsed: false,
-                  nodeType: 'value',
-                  path:
-                    lineIndex === 0
-                      ? itemPath
-                      : `${itemPath}_line_${lineIndex}`,
-                  originalValue: lineIndex === 0 ? item : undefined,
-                });
-                lineNumber++;
+              const keys = Object.keys(item);
+              keys.forEach((key, keyIndex) => {
+                const propPath = `${itemPath}.${key}`;
+                const propIndent = itemIndent + 2;
+                const propValue = item[key];
+
+                if (typeof propValue === 'object' && propValue !== null) {
+                  const isPropCollapsed = forceExpand
+                    ? false
+                    : collapsedPathsToUse.has(propPath);
+
+                  if (isPropCollapsed) {
+                    const propKeys = Object.keys(propValue);
+                    lines.push({
+                      lineNumber,
+                      content: `"${key}": {${propKeys.length} properties}${
+                        keyIndex < keys.length - 1 ? ',' : ''
+                      }`,
+                      indent: propIndent,
+                      isCollapsible: true,
+                      isCollapsed: true,
+                      nodeType: 'property',
+                      path: propPath,
+                      originalValue: propValue,
+                    });
+                    lineNumber++;
+                  } else {
+                    lines.push({
+                      lineNumber,
+                      content: `"${key}": {`,
+                      indent: propIndent,
+                      isCollapsible: true,
+                      isCollapsed: false,
+                      nodeType: 'property',
+                      path: propPath,
+                    });
+                    lineNumber++;
+
+                    const propKeys = Object.keys(propValue);
+                    propKeys.forEach((propKey, propKeyIndex) => {
+                      const nestedPropPath = `${propPath}.${propKey}`;
+                      const nestedPropIndent = propIndent + 2;
+                      const nestedPropValue = propValue[propKey];
+
+                      if (
+                        typeof nestedPropValue === 'object' &&
+                        nestedPropValue !== null
+                      ) {
+                        const isNestedPropCollapsed = forceExpand
+                          ? false
+                          : collapsedPathsToUse.has(nestedPropPath);
+
+                        if (isNestedPropCollapsed) {
+                          const nestedPropKeys = Object.keys(nestedPropValue);
+                          lines.push({
+                            lineNumber,
+                            content: `"${propKey}": {${
+                              nestedPropKeys.length
+                            } properties}${
+                              propKeyIndex < propKeys.length - 1 ? ',' : ''
+                            }`,
+                            indent: nestedPropIndent,
+                            isCollapsible: true,
+                            isCollapsed: true,
+                            nodeType: 'property',
+                            path: nestedPropPath,
+                            originalValue: nestedPropValue,
+                          });
+                          lineNumber++;
+                        } else {
+                          lines.push({
+                            lineNumber,
+                            content: `"${propKey}": {`,
+                            indent: nestedPropIndent,
+                            isCollapsible: true,
+                            isCollapsed: false,
+                            nodeType: 'property',
+                            path: nestedPropPath,
+                          });
+                          lineNumber++;
+
+                          const nestedPropKeys = Object.keys(nestedPropValue);
+                          nestedPropKeys.forEach(
+                            (nestedKey, nestedKeyIndex) => {
+                              const finalPropPath = `${nestedPropPath}.${nestedKey}`;
+                              const finalPropIndent = nestedPropIndent + 2;
+                              const finalPropValue = nestedPropValue[nestedKey];
+
+                              const content =
+                                typeof finalPropValue === 'string'
+                                  ? `"${finalPropValue}"`
+                                  : typeof finalPropValue === 'object' &&
+                                    finalPropValue !== null
+                                  ? JSON.stringify(finalPropValue)
+                                  : String(finalPropValue);
+                              const fullContent = `"${nestedKey}": ${content}${
+                                nestedKeyIndex < nestedPropKeys.length - 1
+                                  ? ','
+                                  : ''
+                              }`;
+                              lines.push({
+                                lineNumber,
+                                content: fullContent,
+                                indent: finalPropIndent,
+                                isCollapsible: false,
+                                isCollapsed: false,
+                                nodeType: 'property',
+                                path: finalPropPath,
+                                originalValue: finalPropValue,
+                              });
+                              lineNumber++;
+                            },
+                          );
+
+                          lines.push({
+                            lineNumber,
+                            content: `}${
+                              propKeyIndex < propKeys.length - 1 ? ',' : ''
+                            }`,
+                            indent: nestedPropIndent,
+                            isCollapsible: false,
+                            isCollapsed: false,
+                            nodeType: 'value',
+                            path: `${nestedPropPath}_end`,
+                          });
+                          lineNumber++;
+                        }
+                      } else {
+                        const content =
+                          typeof nestedPropValue === 'string'
+                            ? `"${nestedPropValue}"`
+                            : typeof nestedPropValue === 'object' &&
+                              nestedPropValue !== null
+                            ? JSON.stringify(nestedPropValue)
+                            : String(nestedPropValue);
+                        const fullContent = `"${propKey}": ${content}${
+                          propKeyIndex < propKeys.length - 1 ? ',' : ''
+                        }`;
+                        lines.push({
+                          lineNumber,
+                          content: fullContent,
+                          indent: nestedPropIndent,
+                          isCollapsible: false,
+                          isCollapsed: false,
+                          nodeType: 'property',
+                          path: nestedPropPath,
+                          originalValue: nestedPropValue,
+                        });
+                        lineNumber++;
+                      }
+                    });
+
+                    lines.push({
+                      lineNumber,
+                      content: `}${keyIndex < keys.length - 1 ? ',' : ''}`,
+                      indent: propIndent,
+                      isCollapsible: false,
+                      isCollapsed: false,
+                      nodeType: 'value',
+                      path: `${propPath}_end`,
+                    });
+                    lineNumber++;
+                  }
+                } else {
+                  const content =
+                    typeof propValue === 'string'
+                      ? `"${propValue}"`
+                      : typeof propValue === 'object' && propValue !== null
+                      ? JSON.stringify(propValue)
+                      : String(propValue);
+                  const fullContent = `"${key}": ${content}${
+                    keyIndex < keys.length - 1 ? ',' : ''
+                  }`;
+                  lines.push({
+                    lineNumber,
+                    content: fullContent,
+                    indent: propIndent,
+                    isCollapsible: false,
+                    isCollapsed: false,
+                    nodeType: 'property',
+                    path: propPath,
+                    originalValue: propValue,
+                  });
+                  lineNumber++;
+                }
               });
 
-              return formattedValue;
+              lines.push({
+                lineNumber,
+                content: `}${index < value.length - 1 ? ',' : ''}`,
+                indent: itemIndent,
+                isCollapsible: false,
+                isCollapsed: false,
+                nodeType: 'value',
+                path: `${itemPath}_end`,
+              });
+              lineNumber++;
             }
           } else {
             const content =
-              typeof item === 'string' ? `"${item}"` : String(item);
+              typeof item === 'string'
+                ? `"${item}"`
+                : typeof item === 'object' && item !== null
+                ? JSON.stringify(item)
+                : String(item);
+            const fullContent = `${content}${
+              index < value.length - 1 ? ',' : ''
+            }`;
             lines.push({
               lineNumber,
-              content,
+              content: fullContent,
               indent: itemIndent,
               isCollapsible: false,
               isCollapsed: false,
@@ -203,11 +407,9 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
               originalValue: item,
             });
             lineNumber++;
-            return content;
           }
         });
 
-        // 添加结束括号行，与开始括号对齐
         lines.push({
           lineNumber,
           content: ']',
@@ -218,20 +420,20 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
           path: `${path}_end`,
         });
         lineNumber++;
-
-        // 使用正确的缩进格式
-        const indentSpaces = '  '.repeat(indent);
-        const itemIndentSpaces = '  '.repeat(indent + 1);
-        return `[\n${items
-          .map((item) => `${itemIndentSpaces}${item}`)
-          .join(',\n')}\n${indentSpaces}]`;
+        return;
       }
 
-      if (typeof value === 'object' && value !== null) {
+      // 处理对象类型
+      if (
+        typeof value === 'object' &&
+        value !== null &&
+        !Array.isArray(value)
+      ) {
         const keys = Object.keys(value);
-        if (keys.length === 0) return '{}';
+        if (keys.length === 0) return;
 
-        const isCollapsed = collapsedPaths.has(path);
+        const isCollapsed = forceExpand ? false : collapsedPathsToUse.has(path);
+
         if (isCollapsed) {
           lines.push({
             lineNumber,
@@ -241,12 +443,12 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
             isCollapsed: true,
             nodeType: 'object',
             path,
+            originalValue: value,
           });
           lineNumber++;
-          return `{${keys.length} properties}`;
+          return;
         }
 
-        // 添加开始大括号行
         lines.push({
           lineNumber,
           content: '{',
@@ -258,21 +460,23 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
         });
         lineNumber++;
 
-        const properties = keys.map((key) => {
+        keys.forEach((key, keyIndex) => {
           const propPath = `${path}.${key}`;
           const propIndent = indent + 2;
           const propValue = value[key];
 
           if (typeof propValue === 'object' && propValue !== null) {
-            // 检查当前属性值是否被折叠
-            const isPropCollapsed = collapsedPaths.has(propPath);
+            const isPropCollapsed = forceExpand
+              ? false
+              : collapsedPathsToUse.has(propPath);
 
             if (isPropCollapsed) {
-              // 如果属性值被折叠，只添加一行
               const propKeys = Object.keys(propValue);
               lines.push({
                 lineNumber,
-                content: `"${key}": {${propKeys.length} properties}`,
+                content: `"${key}": {${propKeys.length} properties}${
+                  keyIndex < keys.length - 1 ? ',' : ''
+                }`,
                 indent: propIndent,
                 isCollapsible: true,
                 isCollapsed: true,
@@ -281,47 +485,152 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
                 originalValue: propValue,
               });
               lineNumber++;
-              return `"${key}": {${propKeys.length} properties}`;
             } else {
-              // 如果属性值展开，处理所有嵌套行
-              const formattedValue = formatValue(
-                propValue,
-                propIndent,
-                propPath,
-              );
-              const nestedLines = formattedValue.split('\n');
+              lines.push({
+                lineNumber,
+                content: `"${key}": {`,
+                indent: propIndent,
+                isCollapsible: true,
+                isCollapsed: false,
+                nodeType: 'property',
+                path: propPath,
+              });
+              lineNumber++;
 
-              // 为嵌套对象的每一行都添加行号
-              nestedLines.forEach((line, lineIndex) => {
-                const content = lineIndex === 0 ? `"${key}": ${line}` : line;
-                const actualIndent =
-                  lineIndex === 0 ? propIndent : propIndent + 2;
-                lines.push({
-                  lineNumber,
-                  content,
-                  indent: actualIndent,
-                  isCollapsible: false,
-                  isCollapsed: false,
-                  nodeType: 'property',
-                  path:
-                    lineIndex === 0
-                      ? propPath
-                      : `${propPath}_line_${lineIndex}`,
-                  originalValue: lineIndex === 0 ? propValue : undefined,
-                });
-                lineNumber++;
+              const propKeys = Object.keys(propValue);
+              propKeys.forEach((propKey, propKeyIndex) => {
+                const nestedPropPath = `${propPath}.${propKey}`;
+                const nestedPropIndent = propIndent + 2;
+                const nestedPropValue = propValue[propKey];
+
+                if (
+                  typeof nestedPropValue === 'object' &&
+                  nestedPropValue !== null
+                ) {
+                  const isNestedPropCollapsed = forceExpand
+                    ? false
+                    : collapsedPathsToUse.has(nestedPropPath);
+
+                  if (isNestedPropCollapsed) {
+                    const nestedPropKeys = Object.keys(nestedPropValue);
+                    lines.push({
+                      lineNumber,
+                      content: `"${propKey}": {${
+                        nestedPropKeys.length
+                      } properties}${
+                        propKeyIndex < propKeys.length - 1 ? ',' : ''
+                      }`,
+                      indent: nestedPropIndent,
+                      isCollapsible: true,
+                      isCollapsed: true,
+                      nodeType: 'property',
+                      path: nestedPropPath,
+                      originalValue: nestedPropValue,
+                    });
+                    lineNumber++;
+                  } else {
+                    lines.push({
+                      lineNumber,
+                      content: `"${propKey}": {`,
+                      indent: nestedPropIndent,
+                      isCollapsible: true,
+                      isCollapsed: false,
+                      nodeType: 'property',
+                      path: nestedPropPath,
+                    });
+                    lineNumber++;
+
+                    const nestedPropKeys = Object.keys(nestedPropValue);
+                    nestedPropKeys.forEach((nestedKey, nestedKeyIndex) => {
+                      const finalPropPath = `${nestedPropPath}.${nestedKey}`;
+                      const finalPropIndent = nestedPropIndent + 2;
+                      const finalPropValue = nestedPropValue[nestedKey];
+
+                      const content =
+                        typeof finalPropValue === 'string'
+                          ? `"${finalPropValue}"`
+                          : typeof finalPropValue === 'object' &&
+                            finalPropValue !== null
+                          ? JSON.stringify(finalPropValue)
+                          : String(finalPropValue);
+                      const fullContent = `"${nestedKey}": ${content}${
+                        nestedKeyIndex < nestedPropKeys.length - 1 ? ',' : ''
+                      }`;
+                      lines.push({
+                        lineNumber,
+                        content: fullContent,
+                        indent: finalPropIndent,
+                        isCollapsible: false,
+                        isCollapsed: false,
+                        nodeType: 'property',
+                        path: finalPropPath,
+                        originalValue: finalPropValue,
+                      });
+                      lineNumber++;
+                    });
+
+                    lines.push({
+                      lineNumber,
+                      content: `}${
+                        propKeyIndex < propKeys.length - 1 ? ',' : ''
+                      }`,
+                      indent: nestedPropIndent,
+                      isCollapsible: false,
+                      isCollapsed: false,
+                      nodeType: 'value',
+                      path: `${nestedPropPath}_end`,
+                    });
+                    lineNumber++;
+                  }
+                } else {
+                  const content =
+                    typeof nestedPropValue === 'string'
+                      ? `"${nestedPropValue}"`
+                      : typeof nestedPropValue === 'object' &&
+                        nestedPropValue !== null
+                      ? JSON.stringify(nestedPropValue)
+                      : String(nestedPropValue);
+                  const fullContent = `"${propKey}": ${content}${
+                    propKeyIndex < propKeys.length - 1 ? ',' : ''
+                  }`;
+                  lines.push({
+                    lineNumber,
+                    content: fullContent,
+                    indent: nestedPropIndent,
+                    isCollapsible: false,
+                    isCollapsed: false,
+                    nodeType: 'property',
+                    path: nestedPropPath,
+                    originalValue: nestedPropValue,
+                  });
+                  lineNumber++;
+                }
               });
 
-              return `"${key}": ${formattedValue}`;
+              lines.push({
+                lineNumber,
+                content: `}${keyIndex < keys.length - 1 ? ',' : ''}`,
+                indent: propIndent,
+                isCollapsible: false,
+                isCollapsed: false,
+                nodeType: 'value',
+                path: `${propPath}_end`,
+              });
+              lineNumber++;
             }
           } else {
             const content =
               typeof propValue === 'string'
                 ? `"${propValue}"`
+                : typeof propValue === 'object' && propValue !== null
+                ? JSON.stringify(propValue)
                 : String(propValue);
+            const fullContent = `"${key}": ${content}${
+              keyIndex < keys.length - 1 ? ',' : ''
+            }`;
             lines.push({
               lineNumber,
-              content: `"${key}": ${content}`,
+              content: fullContent,
               indent: propIndent,
               isCollapsible: false,
               isCollapsed: false,
@@ -330,11 +639,9 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
               originalValue: propValue,
             });
             lineNumber++;
-            return `"${key}": ${content}`;
           }
         });
 
-        // 添加结束大括号行，与开始大括号对齐
         lines.push({
           lineNumber,
           content: '}',
@@ -345,19 +652,13 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
           path: `${path}_end`,
         });
         lineNumber++;
-
-        // 使用正确的缩进格式
-        const indentSpaces = '  '.repeat(indent);
-        const propIndentSpaces = '  '.repeat(indent + 1);
-        return `{\n${properties
-          .map((prop) => `${propIndentSpaces}${prop}`)
-          .join(',\n')}\n${indentSpaces}}`;
       }
 
-      return String(value);
+      return;
     };
 
-    const text = formatValue(obj, 0, 'root');
+    formatValue(obj, 0, 'root');
+    const text = buildJSONFromLines(lines);
     return { text, lines };
   };
 
@@ -365,9 +666,8 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
     setJsonText(newText);
-    // setIsDirty(true);
+    setIsUserEditing(true);
 
-    // 实时校验JSON
     const { isValid, errors } = validateJSON(newText);
     if (!isValid) {
       setParseError(errors[0]?.message || 'JSON格式错误');
@@ -375,46 +675,110 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
     } else {
       setParseError(null);
       setJsonErrors([]);
+      try {
+        const parsed = JSON.parse(newText);
+        setLastValidJson(parsed);
+        // 重新格式化行数据以保持折叠状态
+        if (!isFormatting && !isUpdatingFromCollapse) {
+          const { lines: newLines } = formatJSONWithLines(parsed, false);
+          setLines(newLines);
+        }
+      } catch (error) {
+        // 忽略解析错误
+      }
     }
   };
 
   // 处理折叠/展开
   const handleToggleCollapse = (path: string) => {
+    console.log('Toggle collapse for path:', path);
+
+    // 立即更新折叠状态
     const newCollapsedPaths = new Set(collapsedPaths);
     if (newCollapsedPaths.has(path)) {
       newCollapsedPaths.delete(path);
     } else {
       newCollapsedPaths.add(path);
     }
+
+    // 设置更新标志
+    setIsUpdatingFromCollapse(true);
+
+    // 立即更新文本内容和行数据
+    if (lastValidJson) {
+      const { text: newText, lines: newLines } = formatJSONWithLines(
+        lastValidJson,
+        false,
+        newCollapsedPaths,
+      );
+      setJsonText(newText);
+      setLines(newLines);
+    }
+
+    // 设置折叠状态
     setCollapsedPaths(newCollapsedPaths);
+
+    // 延迟重置标志，确保状态更新完成
+    setTimeout(() => {
+      setIsUpdatingFromCollapse(false);
+    }, 50);
   };
 
   // 展开/折叠所有
   const handleToggleAll = () => {
+    setIsUpdatingFromCollapse(true);
+
+    let newCollapsedPaths: Set<string>;
+
     if (isAllExpanded) {
-      setCollapsedPaths(new Set());
+      newCollapsedPaths = new Set();
       setIsAllExpanded(false);
     } else {
-      const allPaths = new Set<string>();
+      newCollapsedPaths = new Set<string>();
       lines.forEach((line) => {
         if (line.isCollapsible) {
-          allPaths.add(line.path);
+          newCollapsedPaths.add(line.path);
         }
       });
-      setCollapsedPaths(allPaths);
       setIsAllExpanded(true);
     }
+
+    // 立即更新文本内容
+    if (lastValidJson) {
+      const { text: newText, lines: newLines } = formatJSONWithLines(
+        lastValidJson,
+        false,
+        newCollapsedPaths,
+      );
+      setJsonText(newText);
+      setLines(newLines);
+    }
+
+    // 设置折叠状态
+    setCollapsedPaths(newCollapsedPaths);
+
+    setTimeout(() => {
+      setIsUpdatingFromCollapse(false);
+    }, 100);
   };
 
   // 保存JSON
   const handleSave = () => {
     const { isValid } = validateJSON(jsonText);
     if (isValid) {
-      if (onSave) {
-        onSave(jsonText);
+      try {
+        const parsed = JSON.parse(jsonText);
+        const { text } = formatJSONWithLines(parsed, true);
+        if (onSave) {
+          onSave(text);
+        }
+        message.success('JSON已保存');
+      } catch (error) {
+        if (onSave) {
+          onSave(jsonText);
+        }
+        message.success('JSON已保存');
       }
-      // setIsDirty(false);
-      message.success('JSON已保存');
     } else {
       message.error('JSON格式错误，无法保存');
     }
@@ -423,102 +787,166 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
   // 复制JSON
   const handleCopy = async () => {
     try {
+      // 先展开所有数据
       setCollapsedPaths(new Set());
-      setIsAllExpanded(false);
+      setIsAllExpanded(true);
 
-      try {
-        // 重新格式化JSON以获取完整的展开文本
+      // 使用lastValidJson而不是当前的jsonText来复制
+      let jsonToCopy = lastValidJson;
+
+      if (!jsonToCopy) {
+        // 如果没有lastValidJson，尝试解析当前文本
         const { isValid } = validateJSON(jsonText);
-        if (isValid) {
-          const parsed = JSON.parse(jsonText);
-          const { text } = formatJSONWithLines(parsed);
-          await navigator.clipboard.writeText(text);
-          message.success('JSON已复制到剪贴板');
+
+        if (!isValid) {
+          // 尝试修复JSON格式
+          let fixedJson = jsonText;
+
+          // 移除所有折叠的占位符文本
+          fixedJson = fixedJson.replace(/\{[^}]*properties\}/g, '{}');
+          fixedJson = fixedJson.replace(/\[\d+\s*items\]/g, '[]');
+
+          fixedJson = fixedJson.replace(/}(\s*)(?=")/g, '},\n$1');
+          fixedJson = fixedJson.replace(/}(\s*)(?={)/g, '},\n$1');
+          fixedJson = fixedJson.replace(
+            /"([^"]+)"\s*:\s*([^,}\s][^,}]*?)\s*(?=")/g,
+            '"$1": $2,\n',
+          );
+          fixedJson = fixedJson.replace(/,(\s*[}\]])/g, '$1');
+
+          const { isValid: isFixedValid } = validateJSON(fixedJson);
+          if (isFixedValid) {
+            jsonToCopy = JSON.parse(fixedJson);
+          } else {
+            // 如果无法修复，直接复制当前文本
+            await navigator.clipboard.writeText(jsonText);
+            message.success('JSON已复制到剪贴板');
+            return;
+          }
         } else {
-          // 如果JSON无效，直接复制当前文本
-          await navigator.clipboard.writeText(jsonText);
-          message.success('JSON已复制到剪贴板');
+          jsonToCopy = JSON.parse(jsonText);
         }
-      } catch (err) {
-        message.error('复制失败');
       }
-    } catch (err) {
+
+      // 格式化并复制完整的JSON
+      const { text, lines: newLines } = formatJSONWithLines(jsonToCopy, true);
+      await navigator.clipboard.writeText(text);
+
+      // 更新UI显示为展开状态
+      setJsonText(text);
+      setLines(newLines);
+      setParseError(null);
+      setJsonErrors([]);
+      setIsUserEditing(true);
+      setLastValidJson(jsonToCopy);
+
+      message.success('JSON已复制到剪贴板');
+    } catch (error) {
+      console.error('Error in handleCopy:', error);
       message.error('复制失败');
     }
   };
 
-  // 同步滚动
+  // 处理滚动同步
   const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
     if (lineNumbersRef.current) {
       lineNumbersRef.current.scrollTop = e.currentTarget.scrollTop;
     }
   };
 
-  // 处理键盘快捷键
+  // 处理键盘事件
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // 处理Tab键 - 在textarea中插入2个空格而不是切换焦点
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const textarea = e.currentTarget as HTMLTextAreaElement;
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const value = textarea.value;
-
-      // 插入2个空格
-      const newValue = value.substring(0, start) + '  ' + value.substring(end);
-      textarea.value = newValue;
-
-      // 设置光标位置到插入的空格后面
-      textarea.selectionStart = textarea.selectionEnd = start + 2;
-
-      // 触发change事件
-      const event = new Event('input', { bubbles: true });
-      textarea.dispatchEvent(event);
-    }
-
-    // 处理撤回快捷键 (Ctrl+Z 或 Cmd+Z)
-    if (e.key === 'z' && (e.ctrlKey || e.metaKey)) {
-      // 如果变量弹窗打开，阻止事件冒泡，让textarea自己处理撤回
-      if (isVariableModalOpen) {
-        e.stopPropagation();
-        return;
+    if (e.ctrlKey || e.metaKey) {
+      switch (e.key) {
+        case 's':
+          e.preventDefault();
+          handleSave();
+          break;
+        case 'c':
+          e.preventDefault();
+          handleCopy();
+          break;
       }
-      // 如果变量弹窗关闭，不阻止默认行为，让textarea自己处理撤回
-      return;
-    }
-
-    // 处理保存快捷键
-    if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
-      handleSave();
     }
   };
 
   // 格式化JSON
   const handleFormat = () => {
-    const { isValid, errors } = validateJSON(jsonText);
-
-    if (!isValid) {
-      setParseError(errors[0]?.message || 'JSON格式错误');
-      setJsonErrors(errors);
-      message.error('JSON格式错误，无法格式化');
-      return;
-    }
+    console.log('handleFormat called, jsonText:', jsonText);
 
     try {
-      const parsed = JSON.parse(jsonText);
-      const { text, lines } = formatJSONWithLines(parsed);
+      setIsFormatting(true);
+
+      // 先展开所有数据
+      setCollapsedPaths(new Set());
+      setIsAllExpanded(true);
+
+      // 使用lastValidJson而不是当前的jsonText来格式化
+      let jsonToFormat = lastValidJson;
+
+      if (!jsonToFormat) {
+        // 如果没有lastValidJson，尝试解析当前文本
+        const { isValid } = validateJSON(jsonText);
+        console.log('JSON validation result:', { isValid });
+
+        if (!isValid) {
+          console.log('JSON is invalid, attempting to fix format');
+
+          let fixedJson = jsonText;
+          console.log('Original JSON:', fixedJson);
+
+          // 移除所有折叠的占位符文本
+          fixedJson = fixedJson.replace(/\{[^}]*properties\}/g, '{}');
+          fixedJson = fixedJson.replace(/\[\d+\s*items\]/g, '[]');
+
+          fixedJson = fixedJson.replace(/}(\s*)(?=")/g, '},\n$1');
+          console.log('After fixing object property commas:', fixedJson);
+
+          fixedJson = fixedJson.replace(/}(\s*)(?={)/g, '},\n$1');
+          console.log('After fixing array element commas:', fixedJson);
+
+          fixedJson = fixedJson.replace(
+            /"([^"]+)"\s*:\s*([^,}\s][^,}]*?)\s*(?=")/g,
+            '"$1": $2,\n',
+          );
+          console.log('After fixing property value commas:', fixedJson);
+
+          fixedJson = fixedJson.replace(/,(\s*[}\]])/g, '$1');
+          console.log('Final fixed JSON:', fixedJson);
+
+          const { isValid: isFixedValid } = validateJSON(fixedJson);
+          console.log('Fixed JSON validation result:', { isFixedValid });
+          if (isFixedValid) {
+            console.log('JSON format fixed successfully');
+            jsonToFormat = JSON.parse(fixedJson);
+          } else {
+            console.log('JSON format could not be fixed automatically');
+            message.error('JSON格式错误，无法自动修复');
+            return;
+          }
+        } else {
+          jsonToFormat = JSON.parse(jsonText);
+        }
+      }
+
+      console.log('JSON to format:', jsonToFormat);
+
+      const { text, lines: newLines } = formatJSONWithLines(jsonToFormat, true);
+      console.log('Formatted result:', { text, lines: newLines });
+
       setJsonText(text);
-      setLines(lines);
+      setLines(newLines);
       setParseError(null);
       setJsonErrors([]);
-      // setIsDirty(false);
+      setIsUserEditing(true);
+      setLastValidJson(jsonToFormat);
 
-      if (onJSONChange) {
-        onJSONChange(text);
-      }
+      message.success('JSON格式化完成');
     } catch (error) {
-      setParseError(error instanceof Error ? error.message : 'JSON格式错误');
+      console.error('Error in handleFormat:', error);
+      message.error('JSON格式错误');
+    } finally {
+      setIsFormatting(false);
     }
   };
 
@@ -527,16 +955,51 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
     return jsonErrors.some((error) => error.line === lineNumber);
   };
 
-  // 初始化JSON文本和行数据
+  // 初始化时格式化JSON
   useEffect(() => {
     if (parsedJSON) {
-      const { text, lines } = formatJSONWithLines(parsedJSON);
+      setIsFormatting(true);
+
+      const { text, lines: newLines } = formatJSONWithLines(parsedJSON, false);
       setJsonText(text);
-      setLines(lines);
+      setLines(newLines);
       setParseError(null);
       setJsonErrors([]);
+      setIsUserEditing(false);
+      setLastValidJson(parsedJSON);
+
+      setIsFormatting(false);
     }
-  }, [parsedJSON, collapsedPaths]);
+  }, [parsedJSON]);
+
+  // 当lastValidJson变化时，重新格式化行数据（保持当前的折叠状态）
+  useEffect(() => {
+    if (
+      lastValidJson &&
+      isUserEditing &&
+      !isFormatting &&
+      !isUpdatingFromCollapse
+    ) {
+      const { lines: newLines } = formatJSONWithLines(
+        lastValidJson,
+        false,
+        collapsedPaths,
+      );
+      setLines(newLines);
+    }
+  }, [lastValidJson, isUserEditing, collapsedPaths]);
+
+  // 当折叠状态变化时，重新格式化行数据
+  useEffect(() => {
+    if (lastValidJson && !isFormatting && !isUpdatingFromCollapse) {
+      const { lines: newLines } = formatJSONWithLines(
+        lastValidJson,
+        false,
+        collapsedPaths,
+      );
+      setLines(newLines);
+    }
+  }, [collapsedPaths, lastValidJson, isUpdatingFromCollapse]);
 
   return (
     <Card
@@ -588,6 +1051,13 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
               className={style.collapsibleIcon}
               style={{
                 cursor: line.isCollapsible ? 'pointer' : 'default',
+                height: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0 4px',
+                fontSize: '12px',
+                lineHeight: '20px',
               }}
               onClick={() =>
                 line.isCollapsible && handleToggleCollapse(line.path)
@@ -632,30 +1102,11 @@ const JSONEditor: React.FC<JSONEditorProps> = ({
             className={style.textarea}
             style={{
               color: parseError ? '#dc3545' : '#212529',
+              lineHeight: '20px',
+              fontSize: '12px',
             }}
             placeholder="输入JSON数据..."
           />
-
-          {/* 错误提示 */}
-          {/* {parseError && (
-            <div
-              style={{
-                position: 'absolute',
-                bottom: '-55px',
-                left: '-30px',
-                backgroundColor: '#f8d7da',
-                color: '#721c24',
-                padding: '4px 8px',
-                borderRadius: '4px',
-                fontSize: '8px',
-                border: '1px solid #f5c6cb',
-                width: '80%',
-                wordBreak: 'break-word',
-              }}
-            >
-              {parseError}
-            </div>
-          )} */}
         </div>
       </div>
     </Card>
