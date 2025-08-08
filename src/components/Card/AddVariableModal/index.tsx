@@ -22,6 +22,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
   const [form] = Form.useForm<VariableFormData>();
   const [selectedType, setSelectedType] = useState<VariableType>(initialType);
   const [jsonData, setJsonData] = useState<string>(''); // 新增：JSON编辑器数据
+  const [jsonError, setJsonError] = useState<string>(''); // 新增：JSON错误信息
 
   // 获取默认模拟数据
   const getDefaultMockData = (type: VariableType): string => {
@@ -154,6 +155,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
       mockData: defaultData,
     });
     setJsonData(defaultData);
+    setJsonError(''); // 切换类型时清除错误信息
   };
 
   // 验证变量名称
@@ -215,6 +217,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         onOk(variable);
         form.resetFields();
         setJsonData('');
+        setJsonError(''); // 清除错误信息
         return;
       }
 
@@ -240,6 +243,10 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
 
           if (!originalValid) {
             console.error('JSON格式错误，请检查输入:', originalErrors);
+            const errorMessage =
+              originalErrors[0]?.message ||
+              'SyntaxError: Unexpected end of JSON input';
+            setJsonError(errorMessage);
             return;
           }
 
@@ -272,17 +279,25 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
               onOk(variable);
               form.resetFields();
               setJsonData('');
+              setJsonError(''); // 清除错误信息
               return;
             } else {
               console.error('获取格式化JSON失败:', result?.error);
+              const errorMessage =
+                result?.error || 'SyntaxError: Unexpected end of JSON input';
+              setJsonError(errorMessage);
               return;
             }
           } else {
             console.error('格式化后JSON验证失败:', errors);
+            const errorMessage =
+              errors[0]?.message || 'SyntaxError: Unexpected end of JSON input';
+            setJsonError(errorMessage);
             return;
           }
         } else {
           console.error('JSON编辑器引用不存在');
+          setJsonError('JSON编辑器初始化失败');
           return;
         }
       }
@@ -338,14 +353,23 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
 
   // 处理取消
   const handleCancel = () => {
+    // 如果有JSON错误，阻止弹窗关闭
+    if (jsonError) {
+      return;
+    }
     form.resetFields();
     setJsonData('');
+    setJsonError(''); // 清除错误信息
     onCancel();
   };
 
   // 处理JSON编辑器数据变化
   const handleJSONChange = (newData: string) => {
     setJsonData(newData);
+    // 当用户修改JSON内容时，清除错误信息
+    if (jsonError) {
+      setJsonError('');
+    }
     console.log('📝 JSON数据变化:', newData);
   };
 
@@ -401,65 +425,92 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
 
       case 'image':
         return (
-          <Form.Item
-            name="mockData"
-            label="模拟数据"
-            rules={[
-              { required: true, message: '请输入模拟数据' },
-              { validator: validateJSON },
-            ]}
-          >
-            <JSONEditor
-              ref={jsonEditorRef}
-              json={jsonData}
-              title="图片数据"
-              onJSONChange={handleJSONChange}
-              isVariableModalOpen={visible}
-              height={200}
-            />
-          </Form.Item>
+          <div>
+            <Form.Item
+              name="mockData"
+              label="模拟数据"
+              rules={[
+                { required: true, message: '请输入模拟数据' },
+                { validator: validateJSON },
+              ]}
+            >
+              <JSONEditor
+                ref={jsonEditorRef}
+                json={jsonData}
+                title="图片数据"
+                onJSONChange={handleJSONChange}
+                isVariableModalOpen={visible}
+                height={200}
+              />
+            </Form.Item>
+            {jsonError && (
+              <div
+                style={{ color: '#ff4d4f', fontSize: '12px', marginTop: '4px' }}
+              >
+                {jsonError}
+              </div>
+            )}
+          </div>
         );
 
       case 'array':
         return (
-          <Form.Item
-            name="mockData"
-            label="模拟数据"
-            rules={[
-              { required: true, message: '请输入模拟数据' },
-              { validator: validateJSON },
-            ]}
-          >
-            <JSONEditor
-              ref={jsonEditorRef}
-              json={jsonData}
-              title="数组数据"
-              onJSONChange={handleJSONChange}
-              isVariableModalOpen={visible}
-              height={200}
-            />
-          </Form.Item>
+          <div>
+            <Form.Item
+              name="mockData"
+              label="模拟数据"
+              rules={[
+                { required: true, message: '请输入模拟数据' },
+                { validator: validateJSON },
+              ]}
+            >
+              <JSONEditor
+                ref={jsonEditorRef}
+                json={jsonData}
+                title="数组数据"
+                onJSONChange={handleJSONChange}
+                isVariableModalOpen={visible}
+                height={200}
+              />
+            </Form.Item>
+            {jsonError && (
+              <div
+                style={{ color: '#ff4d4f', fontSize: '12px', marginTop: '4px' }}
+              >
+                {jsonError}
+              </div>
+            )}
+          </div>
         );
 
       case 'imageArray':
         return (
-          <Form.Item
-            name="mockData"
-            label="模拟数据"
-            rules={[
-              { required: true, message: '请输入模拟数据' },
-              { validator: validateJSON },
-            ]}
-          >
-            <JSONEditor
-              ref={jsonEditorRef}
-              json={jsonData}
-              title="图片数组数据"
-              onJSONChange={handleJSONChange}
-              isVariableModalOpen={visible}
-              height={200}
-            />
-          </Form.Item>
+          <div>
+            <Form.Item
+              name="mockData"
+              label="模拟数据"
+              rules={[
+                { required: true, message: '请输入模拟数据' },
+                { validator: validateJSON },
+              ]}
+            >
+              <JSONEditor
+                ref={jsonEditorRef}
+                json={jsonData}
+                title="图片数组数据"
+                onJSONChange={handleJSONChange}
+                isVariableModalOpen={visible}
+                height={200}
+              />
+            </Form.Item>
+            {jsonError && (
+              <div
+                style={{ color: '#ff4d4f', fontSize: '12px', marginTop: '4px' }}
+              >
+                {jsonError}
+              </div>
+            )}
+          </div>
         );
 
       case 'richtext':
@@ -529,11 +580,18 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
       title={editingVariable ? '编辑变量' : '添加变量'}
       open={visible}
       onCancel={handleCancel}
+      maskClosable={!jsonError}
+      keyboard={!jsonError}
       footer={[
         <Button key="cancel" onClick={handleCancel}>
           取消
         </Button>,
-        <Button key="submit" type="primary" onClick={handleSubmit}>
+        <Button
+          key="submit"
+          type="primary"
+          onClick={handleSubmit}
+          disabled={!!jsonError}
+        >
           {editingVariable ? '更新' : '提交'}
         </Button>,
       ]}
