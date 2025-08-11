@@ -25,7 +25,6 @@ import {
   Tabs,
   Tree,
   Typography,
-  Upload,
 } from 'antd';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDrag } from 'react-dnd';
@@ -43,6 +42,7 @@ import {
   VariableItem,
   VariableObject,
 } from './card-designer-types-updated';
+import ImageUpload from './ImageUpload';
 import RichTextEditor from './RichTextEditor/RichTextEditor';
 import { textComponentStateManager } from './Variable/text-component-state-manager';
 
@@ -4172,36 +4172,36 @@ export const PropertyPanel: React.FC<{
                         }}
                         placeholder="请输入图片的路径"
                       />
-                      <Upload
-                        accept="image/*"
-                        showUploadList={false}
-                        beforeUpload={(file) => {
-                          // 创建本地URL用于预览
-                          const reader = new FileReader();
-                          reader.onload = (e) => {
-                            const imageUrl = e.target?.result as string;
-                            const newImgList = [
-                              ...(imgCombComponent.img_list || []),
-                            ];
-                            newImgList[index] = {
-                              ...newImgList[index],
-                              img_url: imageUrl,
-                              i18n_img_url: {
-                                'en-US': imageUrl,
-                              },
-                            };
-                            const updatedComponent = {
-                              ...currentComponent,
-                              img_list: newImgList,
-                            };
-                            onUpdateComponent(updatedComponent);
+                      <ImageUpload
+                        onUploadSuccess={(imageUrl) => {
+                          console.log('📁 多图混排上传成功，更新组件:', {
+                            componentId: imgCombComponent.id,
+                            imageIndex: index,
+                            imageUrlLength: imageUrl.length,
+                          });
+
+                          const newImgList = [
+                            ...(imgCombComponent.img_list || []),
+                          ];
+                          newImgList[index] = {
+                            ...newImgList[index],
+                            img_url: imageUrl,
+                            i18n_img_url: {
+                              'en-US': imageUrl,
+                            },
                           };
-                          reader.readAsDataURL(file);
-                          return false; // 阻止自动上传
+                          const updatedComponent = {
+                            ...currentComponent,
+                            img_list: newImgList,
+                          };
+                          onUpdateComponent(updatedComponent);
                         }}
-                      >
-                        <Button type="link" icon={<UploadOutlined />} />
-                      </Upload>
+                        buttonProps={{
+                          type: 'default',
+                          icon: <UploadOutlined />,
+                          title: '上传图片',
+                        }}
+                      />
                     </Form.Item>
                   </div>
                 ),
@@ -4455,48 +4455,28 @@ export const PropertyPanel: React.FC<{
                         ) : null
                       }
                     />
-                    <Upload
-                      accept="image/*"
-                      showUploadList={false}
+                    <ImageUpload
                       disabled={!!getBoundVariableName()} // 绑定变量时禁用上传
-                      beforeUpload={(file) => {
-                        console.log('📁 开始上传图片:', {
-                          fileName: file.name,
-                          fileSize: file.size,
-                          fileType: file.type,
+                      onUploadSuccess={(imageUrl) => {
+                        console.log('📁 图片组件上传成功，更新组件:', {
                           componentId: imageComponent.id,
+                          imageUrlLength: imageUrl.length,
                         });
-
-                        // 创建本地URL用于预览
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                          const imageUrl = e.target?.result as string;
-                          console.log('📁 图片上传成功，更新组件:', {
-                            componentId: imageComponent.id,
-                            imageUrl: imageUrl.substring(0, 50) + '...',
-                            imageUrlLength: imageUrl.length,
-                          });
-
-                          // 直接更新图片URL
-                          handleValueChange('img_url', imageUrl);
-                        };
-                        reader.readAsDataURL(file);
-                        return false; // 阻止自动上传
+                        // 直接更新图片URL
+                        handleValueChange('img_url', imageUrl);
                       }}
-                    >
-                      <Button
-                        type="primary"
-                        icon={<UploadOutlined />}
-                        style={{
-                          width: '40px',
-                          height: '32px',
-                          padding: 0,
-                          borderRadius: '0 6px 6px 0',
-                        }}
-                        title="上传图片"
-                        disabled={!!getBoundVariableName()}
-                      />
-                    </Upload>
+                      style={{
+                        width: '40px',
+                        height: '32px',
+                        padding: 0,
+                        borderRadius: '0 6px 6px 0',
+                      }}
+                      buttonProps={{
+                        type: 'primary',
+                        icon: <UploadOutlined />,
+                        title: '上传图片',
+                      }}
+                    />
                   </Input.Group>
                 </Form.Item>
 
