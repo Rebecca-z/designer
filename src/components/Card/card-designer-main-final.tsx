@@ -57,8 +57,6 @@ const CardDesigner: React.FC = () => {
   const outline = useOutlineTree();
   const focus = useFocusManagement();
   const clipboard = useClipboard();
-  // const deletion = useComponentDeletion();
-  // const update = useComponentUpdate();
   const config = useConfigManagement();
 
   // 安全检查：确保数据结构完整，并进行数据迁移
@@ -399,12 +397,6 @@ const CardDesigner: React.FC = () => {
           columnSetComponent.columns &&
           columnSetComponent.columns[columnIndex]
         ) {
-          // console.log('✅ 根级别分栏列选择状态有效:', {
-          //   columnSetIndex,
-          //   columnIndex,
-          //   columnSetId: columnSetComponent.id,
-          //   selectedComponentId: selection.selectedComponent?.id,
-          // });
           return; // 分栏列选择状态有效
         } else {
           console.log('❌ 根级别分栏列选择状态无效，清除选择');
@@ -519,11 +511,6 @@ const CardDesigner: React.FC = () => {
 
     let newData = JSON.parse(JSON.stringify(safeCardData));
 
-    // console.log('🗑️ 删除组件:', {
-    //   path,
-    //   pathLength: path.length,
-    // });
-
     // 检查是否删除的是标题组件
     let isDeletingTitle = false;
     if (path.length === 4) {
@@ -548,11 +535,6 @@ const CardDesigner: React.FC = () => {
         isDeletingTitle =
           componentToDelete && componentToDelete.tag === 'title';
         formComponent.elements.splice(componentIndex, 1);
-        // console.log('🗑️ 删除表单内组件:', {
-        //   formIndex,
-        //   componentIndex,
-        //   isTitle: isDeletingTitle,
-        // });
       }
     } else if (path.length === 6 && path[4] === 'columns') {
       // 删除分栏列: ['dsl', 'body', 'elements', columnSetIndex, 'columns', columnIndex]
@@ -579,11 +561,6 @@ const CardDesigner: React.FC = () => {
 
         // 删除指定的分栏列
         columnSetComponent.columns.splice(columnIndex, 1);
-        // console.log('🗑️ 删除分栏列:', {
-        //   columnSetIndex,
-        //   columnIndex,
-        //   remainingColumns: columnSetComponent.columns.length,
-        // });
 
         // 如果删除后没有列了，删除整个分栏组件
         if (columnSetComponent.columns.length === 0) {
@@ -597,13 +574,6 @@ const CardDesigner: React.FC = () => {
               flex: col.flex || 1, // 确保每列都有flex属性，默认为1
             }),
           );
-
-          // console.log('🔄 删除分栏列后重新计算列宽:', {
-          //   remainingColumns: columnSetComponent.columns.length,
-          //   columnWidths: columnSetComponent.columns.map(
-          //     (col: any) => col.width,
-          //   ),
-          // });
         }
 
         // 如果当前选中的是被删除的列或之后的列，需要重置选中状态
@@ -654,12 +624,6 @@ const CardDesigner: React.FC = () => {
 
           // 删除指定的分栏列
           columnSetComponent.columns.splice(columnIndex, 1);
-          // console.log('🗑️ 删除表单内分栏列:', {
-          //   formIndex,
-          //   columnSetIndex,
-          //   columnIndex,
-          //   remainingColumns: columnSetComponent.columns.length,
-          // });
 
           // 如果删除后没有列了，删除整个分栏组件
           if (columnSetComponent.columns.length === 0) {
@@ -673,13 +637,6 @@ const CardDesigner: React.FC = () => {
                 flex: col.flex || 1, // 确保每列都有flex属性，默认为1
               }),
             );
-
-            // console.log('🔄 删除表单内分栏列后重新计算列宽:', {
-            //   remainingColumns: columnSetComponent.columns.length,
-            //   columnWidths: columnSetComponent.columns.map(
-            //     (col: any) => col.width,
-            //   ),
-            // });
           }
 
           // 如果当前选中的是被删除的列或之后的列，需要重置选中状态
@@ -719,12 +676,6 @@ const CardDesigner: React.FC = () => {
           isDeletingTitle =
             componentToDelete && componentToDelete.tag === 'title';
           column.elements.splice(componentIndex, 1);
-          // console.log('🗑️ 删除分栏内组件:', {
-          //   columnSetIndex,
-          //   columnIndex,
-          //   componentIndex,
-          //   isTitle: isDeletingTitle,
-          // });
         }
       }
     } else if (

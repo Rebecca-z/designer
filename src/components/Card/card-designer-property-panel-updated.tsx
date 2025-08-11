@@ -937,6 +937,8 @@ export const PropertyPanel: React.FC<{
   const [isAddVariableModalVisible, setIsAddVariableModalVisible] =
     useState(false);
   const [editingVariable, setEditingVariable] = useState<Variable | null>(null);
+  const [isVariableModalFromVariablesTab, setIsVariableModalFromVariablesTab] =
+    useState(false); // 新增：标识变量弹窗是否来自变量Tab
 
   // 事件管理相关状态
   const [isEventEditModalVisible, setIsEventEditModalVisible] = useState(false);
@@ -978,6 +980,24 @@ export const PropertyPanel: React.FC<{
     currentComponent?.id,
     (currentComponent as any)?.img_source,
     (currentComponent as any)?.variable_name,
+  ]);
+
+  // 监听AddVariableModal相关状态变化
+  useEffect(() => {
+    if (isAddVariableModalVisible) {
+      console.log('🔍 AddVariableModal 状态变化:', {
+        isAddVariableModalVisible,
+        isVariableModalFromVariablesTab,
+        currentComponent: currentComponent?.tag,
+        componentType: isVariableModalFromVariablesTab
+          ? undefined
+          : currentComponent?.tag,
+      });
+    }
+  }, [
+    isAddVariableModalVisible,
+    isVariableModalFromVariablesTab,
+    currentComponent,
   ]);
 
   // 检查是否为交互组件
@@ -1248,10 +1268,29 @@ export const PropertyPanel: React.FC<{
     onUpdateCard({ cardData: updatedCardData });
   };
 
-  // 处理添加变量
+  // 处理添加变量（来自变量Tab）
   const handleAddVariable = () => {
+    console.log('🔧 变量Tab: 点击添加自定义变量按钮');
     setEditingVariable(null); // 清空编辑状态
+    setIsVariableModalFromVariablesTab(true); // 设置标识：来自变量Tab
     setIsAddVariableModalVisible(true);
+    console.log('✅ 变量Tab: 设置标志完成', {
+      isVariableModalFromVariablesTab: true,
+      isAddVariableModalVisible: true,
+    });
+  };
+
+  // 处理从组件属性添加变量（保持组件类型过滤）
+  const handleAddVariableFromComponent = () => {
+    console.log('🔧 组件属性: 点击添加变量按钮');
+    setEditingVariable(null); // 清空编辑状态
+    setIsVariableModalFromVariablesTab(false); // 设置标识：来自组件属性
+    setIsAddVariableModalVisible(true);
+    console.log('✅ 组件属性: 设置标志完成', {
+      isVariableModalFromVariablesTab: false,
+      isAddVariableModalVisible: true,
+      currentComponentType: currentComponent?.tag,
+    });
   };
 
   // 处理编辑变量
@@ -1336,12 +1375,14 @@ export const PropertyPanel: React.FC<{
     }
     setIsAddVariableModalVisible(false);
     setEditingVariable(null);
+    setIsVariableModalFromVariablesTab(false); // 重置标识
   };
 
   // 处理取消添加变量
   const handleCancelAddVariableModal = () => {
     setIsAddVariableModalVisible(false);
     setEditingVariable(null);
+    setIsVariableModalFromVariablesTab(false); // 重置标识
   };
 
   // 将VariableItem[]转换为Variable[]用于EventEditModal
@@ -2931,34 +2972,86 @@ export const PropertyPanel: React.FC<{
         }
       };
 
-      // 过滤出文本类型的变量
-      const textVariables = variables.filter((variable) => {
-        if (typeof variable === 'object' && variable !== null) {
-          const keys = Object.keys(variable as Record<string, any>);
-          if (keys.length > 0) {
-            const variableValue = (variable as Record<string, any>)[keys[0]];
-            return typeof variableValue === 'string';
+      // 根据组件类型过滤变量
+      const getFilteredVariables = (componentType: string) => {
+        return variables.filter((variable) => {
+          if (typeof variable === 'object' && variable !== null) {
+            const keys = Object.keys(variable as Record<string, any>);
+            if (keys.length > 0) {
+              const variableValue = (variable as Record<string, any>)[keys[0]];
+
+              // 根据组件类型过滤变量
+              switch (componentType) {
+                case 'plain_text':
+                  // 普通文本组件只显示文本类型的变量
+                  return typeof variableValue === 'string';
+                case 'rich_text': {
+                  // 富文本组件显示文本类型和富文本类型的变量
+                  const isStringType = typeof variableValue === 'string';
+                  const isRichTextType =
+                    typeof variableValue === 'object' &&
+                    variableValue?.type === 'doc';
+                  const shouldShow = isRichTextType;
+                  console.log('🔍 富文本组件变量筛选:', {
+                    variableName: keys[0],
+                    variableValue,
+                    isStringType,
+                    isRichTextType,
+                    shouldShow,
+                  });
+                  return shouldShow;
+                }
+                case 'img':
+                  // 图片组件显示图片相关类型的变量
+                  return (
+                    typeof variableValue === 'object' &&
+                    (variableValue?.img_url ||
+                      variableValue?.url ||
+                      Array.isArray(variableValue))
+                  );
+                case 'input':
+                  // 输入框组件显示文本和数字类型的变量
+                  return (
+                    typeof variableValue === 'string' ||
+                    typeof variableValue === 'number'
+                  );
+                case 'select_static':
+                case 'multi_select_static':
+                  // 选择器组件显示数组类型的变量
+                  return Array.isArray(variableValue);
+                case 'button':
+                  // 按钮组件显示文本类型的变量
+                  return typeof variableValue === 'string';
+                default:
+                  // 其他组件类型显示所有类型的变量
+                  return true;
+              }
+            }
           }
-        }
-        return false;
-      });
+          return false;
+        });
+      };
+
+      // 获取过滤后的变量
+      const filteredVariables = getFilteredVariables(
+        currentComponent?.tag || '',
+      );
 
       // 构建变量选项
       const variableOptions = (() => {
         console.log('🔍 变量选择器选项构建:', {
           variablesCount: variables.length,
           variables: variables,
-          textVariablesCount: textVariables.length,
-          textVariables: textVariables,
+          filteredVariablesCount: filteredVariables.length,
+          filteredVariables: filteredVariables,
+          componentType: currentComponent?.tag,
           timestamp: new Date().toISOString(),
         });
 
-        return textVariables.map((variable) => {
+        return filteredVariables.map((variable: any) => {
           const keys = Object.keys(variable as Record<string, any>);
           const variableName = keys[0];
-          const variableValue = (variable as Record<string, any>)[
-            variableName
-          ] as string;
+          const variableValue = (variable as Record<string, any>)[variableName];
           return {
             label: (
               <div
@@ -2970,7 +3063,26 @@ export const PropertyPanel: React.FC<{
               >
                 <span>{variableName}</span>
                 <span style={{ fontSize: '12px', color: '#8c8c8c' }}>
-                  {variableValue}
+                  {(() => {
+                    if (
+                      typeof variableValue === 'object' &&
+                      variableValue !== null
+                    ) {
+                      if (Array.isArray(variableValue)) {
+                        return `数组 (${variableValue.length})`;
+                      } else if ((variableValue as any).type === 'doc') {
+                        return '富文本内容';
+                      } else {
+                        return '对象';
+                      }
+                    } else {
+                      const strValue = String(variableValue);
+                      return (
+                        strValue.substring(0, 20) +
+                        (strValue.length > 20 ? '...' : '')
+                      );
+                    }
+                  })()}
                 </span>
               </div>
             ),
@@ -3061,8 +3173,8 @@ export const PropertyPanel: React.FC<{
                             gap: '8px',
                           }}
                           onClick={() => {
-                            // 打开全局添加变量弹窗
-                            handleAddVariable();
+                            // 打开添加变量弹窗（保持组件类型过滤）
+                            handleAddVariableFromComponent();
                           }}
                         >
                           <PlusOutlined />
@@ -4246,38 +4358,234 @@ export const PropertyPanel: React.FC<{
                             }}
                             placeholder="请选择变量"
                             allowClear
-                          >
-                            {variables.map((variable, index) => {
-                              let variableName = '';
-                              if (
-                                typeof variable === 'object' &&
-                                variable !== null
-                              ) {
-                                const keys = Object.keys(variable as any);
-                                variableName =
-                                  keys.length > 0 ? keys[0] : '未命名变量';
-                              } else {
-                                variableName =
-                                  (variable as any).name || '未命名变量';
-                              }
-                              return (
-                                <Option
-                                  key={`${variableName}-${index}`}
-                                  value={variableName}
+                            dropdownRender={(menu) => (
+                              <div>
+                                {menu}
+                                <Divider style={{ margin: '8px 0' }} />
+                                <div
+                                  style={{
+                                    padding: '8px 12px',
+                                    cursor: 'pointer',
+                                    color: '#1890ff',
+                                    fontWeight: 500,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                  }}
+                                  onClick={() => {
+                                    // 打开添加变量弹窗（保持组件类型过滤）
+                                    handleAddVariableFromComponent();
+                                  }}
                                 >
-                                  {variableName}
-                                </Option>
+                                  <PlusOutlined />
+                                  新建变量
+                                </div>
+                              </div>
+                            )}
+                          >
+                            {(() => {
+                              // 根据组件类型过滤变量 - 图片组件只显示图片相关类型的变量
+                              const filteredImageVariables = variables.filter(
+                                (variable) => {
+                                  if (
+                                    typeof variable === 'object' &&
+                                    variable !== null
+                                  ) {
+                                    const keys = Object.keys(
+                                      variable as Record<string, any>,
+                                    );
+                                    if (keys.length > 0) {
+                                      const variableValue = (
+                                        variable as Record<string, any>
+                                      )[keys[0]];
+
+                                      // 图片组件显示图片相关类型的变量
+                                      return (
+                                        typeof variableValue === 'object' &&
+                                        (variableValue?.img_url ||
+                                          variableValue?.url ||
+                                          Array.isArray(variableValue))
+                                      );
+                                    }
+                                  }
+                                  return false;
+                                },
                               );
-                            })}
+
+                              console.log('🖼️ 图片组件变量过滤:', {
+                                totalVariables: variables.length,
+                                filteredCount: filteredImageVariables.length,
+                                filteredVariables: filteredImageVariables,
+                                componentType: 'img',
+                                timestamp: new Date().toISOString(),
+                              });
+
+                              return filteredImageVariables.map(
+                                (variable: any, index: number) => {
+                                  let variableName = '';
+                                  let variableValue = '';
+                                  if (
+                                    typeof variable === 'object' &&
+                                    variable !== null
+                                  ) {
+                                    const keys = Object.keys(variable as any);
+                                    variableName =
+                                      keys.length > 0 ? keys[0] : '未命名变量';
+                                    variableValue = (variable as any)[
+                                      variableName
+                                    ];
+                                  } else {
+                                    variableName =
+                                      (variable as any).name || '未命名变量';
+                                    variableValue =
+                                      (variable as any).value || '';
+                                  }
+                                  return (
+                                    <Option
+                                      key={`${variableName}-${index}`}
+                                      value={variableName}
+                                    >
+                                      <div
+                                        style={{
+                                          display: 'flex',
+                                          justifyContent: 'space-between',
+                                          alignItems: 'center',
+                                        }}
+                                      >
+                                        <span>{variableName}</span>
+                                        <span
+                                          style={{
+                                            fontSize: '12px',
+                                            color: '#8c8c8c',
+                                          }}
+                                        >
+                                          {typeof variableValue === 'object'
+                                            ? '图片对象'
+                                            : Array.isArray(variableValue)
+                                            ? `数组 (${variableValue.length})`
+                                            : String(variableValue).substring(
+                                                0,
+                                                20,
+                                              ) +
+                                              (String(variableValue).length > 20
+                                                ? '...'
+                                                : '')}
+                                        </span>
+                                      </div>
+                                    </Option>
+                                  );
+                                },
+                              );
+                            })()}
                           </Select>
                           <Button
-                            type="dashed"
+                            size="small"
+                            type="primary"
                             onClick={() => {
-                              setIsAddVariableModalVisible(true);
+                              // 打开添加变量弹窗（保持组件类型过滤）
+                              handleAddVariableFromComponent();
                             }}
                           >
-                            新增
+                            新建
                           </Button>
+                        </div>
+                      </Form.Item>
+                    )}
+
+                    {/* 图片预览 */}
+                    {(imageComponent.img_url ||
+                      (imgSource === 'variable' &&
+                        imageComponent.variable_name)) && (
+                      <Form.Item label="图片预览">
+                        <div
+                          style={{
+                            width: '100%',
+                            height: '150px',
+                            border: '1px dashed #d9d9d9',
+                            borderRadius: '6px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            overflow: 'hidden',
+                            backgroundColor: '#fafafa',
+                          }}
+                        >
+                          {(() => {
+                            let previewUrl = '';
+
+                            if (
+                              imgSource === 'variable' &&
+                              imageComponent.variable_name
+                            ) {
+                              // 从变量中获取图片URL
+                              const selectedVariable = variables.find((v) => {
+                                if (typeof v === 'object' && v !== null) {
+                                  return Object.keys(v as any).includes(
+                                    imageComponent.variable_name,
+                                  );
+                                }
+                                return false;
+                              });
+                              if (selectedVariable) {
+                                const variableValue = (selectedVariable as any)[
+                                  imageComponent.variable_name
+                                ];
+                                if (
+                                  typeof variableValue === 'object' &&
+                                  variableValue?.img_url
+                                ) {
+                                  previewUrl = variableValue.img_url;
+                                } else if (typeof variableValue === 'string') {
+                                  previewUrl = variableValue;
+                                }
+                              }
+                            } else {
+                              previewUrl = imageComponent.img_url;
+                            }
+
+                            if (previewUrl) {
+                              return (
+                                <img
+                                  src={previewUrl}
+                                  alt="图片预览"
+                                  style={{
+                                    maxWidth: '100%',
+                                    maxHeight: '100%',
+                                    objectFit: 'contain',
+                                  }}
+                                  onError={(e) => {
+                                    console.error(
+                                      '❌ 图片加载失败:',
+                                      previewUrl,
+                                    );
+                                    (
+                                      e.target as HTMLImageElement
+                                    ).style.display = 'none';
+                                  }}
+                                />
+                              );
+                            } else {
+                              return (
+                                <div
+                                  style={{ textAlign: 'center', color: '#999' }}
+                                >
+                                  <div
+                                    style={{
+                                      fontSize: '24px',
+                                      marginBottom: '8px',
+                                    }}
+                                  >
+                                    🖼️
+                                  </div>
+                                  <div style={{ fontSize: '12px' }}>
+                                    {imgSource === 'variable'
+                                      ? '请选择图片变量'
+                                      : '暂无图片'}
+                                  </div>
+                                </div>
+                              );
+                            }
+                          })()}
                         </div>
                       </Form.Item>
                     )}
@@ -5130,7 +5438,6 @@ export const PropertyPanel: React.FC<{
         size="small"
         items={TabItems}
       ></Tabs>
-
       {/* 新增变量弹窗 */}
       <AddVariableModal
         visible={isAddVariableModalVisible}
@@ -5145,8 +5452,12 @@ export const PropertyPanel: React.FC<{
             : undefined
         }
         editingVariable={editingVariable}
+        componentType={
+          isVariableModalFromVariablesTab
+            ? undefined // 来自变量Tab时不传递组件类型，显示全部类型
+            : currentComponent?.tag // 来自组件属性时传递组件类型，进行过滤
+        }
       />
-
       {/* 事件编辑弹窗 */}
       <EventEditModal
         visible={isEventEditModalVisible}
@@ -5162,6 +5473,7 @@ export const PropertyPanel: React.FC<{
         }
         onAddVariable={() => {
           setIsEventEditModalVisible(false);
+          setIsVariableModalFromVariablesTab(false); // 确保不来自变量Tab
           setIsAddVariableModalVisible(true);
         }}
       />

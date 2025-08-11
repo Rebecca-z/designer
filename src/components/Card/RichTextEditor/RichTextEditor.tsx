@@ -60,6 +60,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const [linkModalVisible, setLinkModalVisible] = React.useState(false);
   const [linkUrl, setLinkUrl] = React.useState('');
   const [linkText, setLinkText] = React.useState('');
+  const isInternalUpdateRef = React.useRef(false);
 
   const editor = useEditor({
     extensions: [
@@ -90,6 +91,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     ],
     content: value,
     onUpdate: ({ editor }) => {
+      // 如果是内部更新，跳过onChange回调
+      if (isInternalUpdateRef.current) {
+        return;
+      }
+
       const json = editor.getJSON();
 
       // 修复：确保所有段落都有明确的 textAlign 属性
@@ -120,13 +126,35 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
   // ✅ 修复：监听value变化，更新编辑器内容
   React.useEffect(() => {
-    if (editor && value !== undefined) {
+    if (editor && value !== undefined && value !== null) {
       // 获取当前编辑器的JSON内容
       const currentContent = editor.getJSON();
 
+      // 深度比较JSON内容，忽略不重要的属性差异
+      const normalizeContent = (content: any) => {
+        if (!content) return null;
+        const normalized = JSON.parse(JSON.stringify(content));
+        // 确保段落有默认的textAlign属性
+        if (normalized.content) {
+          const processNode = (node: any) => {
+            if (node.type === 'paragraph' && !node.attrs?.textAlign) {
+              node.attrs = { ...node.attrs, textAlign: 'left' };
+            }
+            if (node.content) {
+              node.content.forEach(processNode);
+            }
+          };
+          normalized.content.forEach(processNode);
+        }
+        return normalized;
+      };
+
+      const normalizedCurrent = normalizeContent(currentContent);
+      const normalizedValue = normalizeContent(value);
+
       // 比较新值和当前内容是否不同（避免不必要的更新）
       const isSameContent =
-        JSON.stringify(currentContent) === JSON.stringify(value);
+        JSON.stringify(normalizedCurrent) === JSON.stringify(normalizedValue);
 
       console.log('🔄 RichTextEditor value变化检查:', {
         hasEditor: !!editor,
@@ -137,14 +165,22 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         timestamp: new Date().toISOString(),
       });
 
-      if (!isSameContent) {
+      if (!isSameContent && normalizedValue) {
         console.log('✅ 更新富文本编辑器内容:', {
-          from: currentContent,
-          to: value,
+          from: normalizedCurrent,
+          to: normalizedValue,
         });
 
+        // 标记为内部更新，避免触发onChange
+        isInternalUpdateRef.current = true;
+
         // 使用setContent方法更新编辑器内容
-        editor.commands.setContent(value, { emitUpdate: false }); // 不触发onUpdate事件
+        editor.commands.setContent(normalizedValue, { emitUpdate: false }); // 不触发onUpdate事件
+
+        // 重置内部更新标记
+        setTimeout(() => {
+          isInternalUpdateRef.current = false;
+        }, 0);
       }
     }
   }, [editor, value]);

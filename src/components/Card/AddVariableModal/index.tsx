@@ -1,5 +1,11 @@
 import { Button, Form, Input, InputNumber, Modal, Select } from 'antd';
-import React, { useEffect, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Variable } from '../card-designer-types-updated';
 import JSONEditor, { JSONEditorRef } from '../JSONEditor';
 import RichTextEditor from '../RichTextEditor/RichTextEditor';
@@ -16,6 +22,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
   onCancel,
   initialType = 'text',
   editingVariable = null, // 新增：编辑的变量
+  componentType, // 新增：当前选中组件的类型
 }) => {
   const jsonEditorRef = useRef<JSONEditorRef>(null);
 
@@ -23,6 +30,83 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
   const [selectedType, setSelectedType] = useState<VariableType>(initialType);
   const [jsonData, setJsonData] = useState<string>(''); // 新增：JSON编辑器数据
   const [jsonError, setJsonError] = useState<string>(''); // 新增：JSON错误信息
+  const [isFirstOpen, setIsFirstOpen] = useState<boolean>(true); // 新增：跟踪是否是首次打开
+  const [isUserEditing, setIsUserEditing] = useState<boolean>(false); // 新增：跟踪用户是否正在编辑
+
+  // 根据组件类型过滤可用的变量类型
+  const getAvailableVariableTypes = (
+    componentType?: string,
+  ): VariableType[] => {
+    console.log('🔍 获取可用变量类型:', { componentType });
+
+    if (!componentType) {
+      // 如果没有组件类型信息，返回所有类型
+      console.log('✅ 无组件类型，返回所有变量类型');
+      return ['text', 'number', 'image', 'imageArray', 'array', 'richtext'];
+    }
+
+    // 根据组件类型返回对应的变量类型
+    switch (componentType) {
+      case 'plain_text':
+        return ['text'];
+      case 'rich_text':
+        return ['richtext'];
+      case 'img':
+        return ['image', 'imageArray'];
+      case 'input':
+        return ['text', 'number'];
+      case 'select_static':
+      case 'multi_select_static':
+        return ['array'];
+      case 'button':
+        return ['text'];
+      default:
+        // 其他组件类型返回所有类型
+        console.log('❓ 未知组件类型，返回所有变量类型');
+        return ['text', 'number', 'image', 'imageArray', 'array', 'richtext'];
+    }
+  };
+
+  // 根据组件类型获取默认的变量类型
+  const getDefaultVariableType = (componentType?: string): VariableType => {
+    if (!componentType) {
+      return initialType;
+    }
+
+    // 根据组件类型返回默认的变量类型
+    switch (componentType) {
+      case 'plain_text':
+        return 'text';
+      case 'rich_text':
+        return 'richtext';
+      case 'img':
+        return 'image';
+      case 'input':
+        return 'text';
+      case 'select_static':
+      case 'multi_select_static':
+        return 'array';
+      case 'button':
+        return 'text';
+      default:
+        return initialType;
+    }
+  };
+
+  // 获取可用的变量类型
+  const availableTypes = getAvailableVariableTypes(componentType);
+
+  // 获取默认的变量类型
+  const defaultType = getDefaultVariableType(componentType);
+
+  // 调试信息
+  console.log('🔧 AddVariableModal 状态:', {
+    componentType,
+    availableTypes,
+    defaultType,
+    selectedType,
+    initialType,
+  });
 
   // 获取默认模拟数据
   const getDefaultMockData = (type: VariableType): string => {
@@ -93,10 +177,10 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         return JSON.stringify(
           [
             {
-              img_key: 'img_v2_9dd98485-2900-4d65-ada9-e31d1408dcfg',
+              img_url: 'img_v2_9dd98485-2900-4d65-ada9-e31d1408dcfg',
             },
             {
-              img_key: 'img_v2_9dd98485-2900-4d65-ada9-e31d1408dcfg',
+              img_url: 'img_v2_9dd98485-2900-4d65-ada9-e31d1408dcfg',
             },
           ],
           null,
@@ -106,6 +190,16 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         return '';
     }
   };
+
+  // 使用useMemo确保Form的initialValues能够正确反映当前状态
+  const formInitialValues = useMemo(
+    () => ({
+      type: selectedType,
+      mockData: getDefaultMockData(selectedType),
+      description: '',
+    }),
+    [selectedType],
+  );
 
   // 将Variable类型映射到表单类型
   const mapVariableTypeToFormType = (
@@ -149,13 +243,26 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
 
   // 处理类型变化
   const handleTypeChange = (value: VariableType) => {
+    console.log('🔄 类型变更:', { oldType: selectedType, newType: value });
+
     setSelectedType(value);
+    setIsUserEditing(false); // 重置用户编辑状态
     const defaultData = getDefaultMockData(value);
+
+    // 更新表单值
     form.setFieldsValue({
+      type: value,
       mockData: defaultData,
     });
+
     setJsonData(defaultData);
     setJsonError(''); // 切换类型时清除错误信息
+
+    console.log('✅ 类型变更完成:', {
+      selectedType: value,
+      mockData: defaultData,
+      formType: form.getFieldValue('type'),
+    });
   };
 
   // 验证变量名称
@@ -218,6 +325,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         form.resetFields();
         setJsonData('');
         setJsonError(''); // 清除错误信息
+        setIsUserEditing(false); // 重置用户编辑状态
         return;
       }
 
@@ -280,11 +388,16 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
               form.resetFields();
               setJsonData('');
               setJsonError(''); // 清除错误信息
+              setIsUserEditing(false); // 重置用户编辑状态
               return;
             } else {
-              console.error('获取格式化JSON失败:', result?.error);
+              console.error(
+                '获取格式化JSON失败:',
+                result?.success ? '未知错误' : result?.error,
+              );
               const errorMessage =
-                result?.error || 'SyntaxError: Unexpected end of JSON input';
+                (result?.success ? '未知错误' : result?.error) ||
+                'SyntaxError: Unexpected end of JSON input';
               setJsonError(errorMessage);
               return;
             }
@@ -304,7 +417,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
 
       // 对于非JSON类型，使用原有的逻辑
       let actualMockData = values.mockData;
-      if (selectedType === 'image' || selectedType === 'array') {
+      if (['image', 'array', 'imageArray'].includes(selectedType)) {
         actualMockData = jsonData;
       }
 
@@ -346,6 +459,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
       onOk(variable);
       form.resetFields();
       setJsonData('');
+      setIsUserEditing(false); // 重置用户编辑状态
     } catch (error) {
       console.error('表单验证失败:', error);
     }
@@ -360,6 +474,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
     form.resetFields();
     setJsonData('');
     setJsonError(''); // 清除错误信息
+    setIsUserEditing(false); // 重置用户编辑状态
     onCancel();
   };
 
@@ -374,15 +489,23 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
   };
 
   // 处理富文本编辑器数据变化
-  const handleRichTextChange = (newData: any) => {
-    const jsonString = JSON.stringify(newData);
-    setJsonData(jsonString);
-    form.setFieldsValue({ mockData: jsonString });
-    console.log('📝 富文本数据变化:', jsonString);
-  };
+  const handleRichTextChange = useCallback(
+    (newData: any) => {
+      const jsonString = JSON.stringify(newData);
+      setIsUserEditing(true); // 标记用户正在编辑
+      setJsonData(jsonString);
+      // 只在必要时更新表单，避免循环更新
+      const currentMockData = form.getFieldValue('mockData');
+      if (currentMockData !== jsonString) {
+        form.setFieldsValue({ mockData: jsonString });
+      }
+      console.log('📝 富文本数据变化:', jsonString);
+    },
+    [form],
+  );
 
-  // 获取富文本编辑器的值
-  const getRichTextValue = () => {
+  // 获取富文本编辑器的值（使用useMemo缓存）
+  const getRichTextValue = useMemo(() => {
     if (!jsonData) return undefined;
     try {
       return JSON.parse(jsonData);
@@ -390,7 +513,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
       console.error('解析富文本数据失败:', error);
       return undefined;
     }
-  };
+  }, [jsonData]);
 
   // 渲染模拟数据输入组件
   const renderMockDataInput = () => {
@@ -518,7 +641,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
           <div>
             <div style={{ marginBottom: 8, fontWeight: 500 }}>模拟数据</div>
             <RichTextEditor
-              value={getRichTextValue()}
+              value={getRichTextValue}
               onChange={handleRichTextChange}
               placeholder="请输入富文本内容..."
               height={200}
@@ -534,7 +657,18 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
 
   // 当弹窗打开时重置表单或回显编辑数据
   useEffect(() => {
-    if (visible) {
+    if (visible && !isUserEditing) {
+      // 只在用户未编辑时执行
+      console.log('🔍 弹窗打开，状态信息:', {
+        editingVariable,
+        defaultType,
+        availableTypes,
+        componentType,
+        currentSelectedType: selectedType,
+        isFirstOpen,
+        isUserEditing,
+      });
+
       if (editingVariable) {
         // 编辑模式：回显数据
         const formType = mapVariableTypeToFormType(editingVariable.type);
@@ -557,23 +691,81 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
           mockData: editingVariable.value,
         });
       } else {
-        // 新增模式：重置表单，使用传入的初始化数据
+        // 新增模式：智能选择类型
+        let typeToUse = defaultType;
+
+        // 对于富文本组件，如果用户之前选择了富文本类型，则保持选择
+        if (
+          componentType === 'rich_text' &&
+          !isFirstOpen &&
+          selectedType === 'richtext'
+        ) {
+          typeToUse = 'richtext';
+          console.log('✅ 富文本组件保持用户选择的富文本类型:', selectedType);
+        } else if (isFirstOpen) {
+          console.log('🔄 首次打开，使用默认类型:', defaultType);
+          setIsFirstOpen(false); // 标记不再是首次打开
+        } else {
+          // 保持用户已选择的类型（适用于其他情况）
+          typeToUse = selectedType;
+          console.log('✅ 保持用户已选择的类型:', selectedType);
+        }
+
         form.resetFields();
-        setSelectedType(initialType);
-        const defaultData = getDefaultMockData(initialType);
-        form.setFieldsValue({
-          type: initialType,
-          mockData: defaultData,
-        });
+        setSelectedType(typeToUse);
+        const defaultData = getDefaultMockData(typeToUse);
+
+        // 使用setTimeout确保状态更新后再设置表单值
+        setTimeout(() => {
+          form.setFieldsValue({
+            type: typeToUse,
+            mockData: defaultData,
+          });
+        }, 0);
+
         setJsonData(defaultData);
 
-        console.log('➕ 重置新增表单:', {
+        console.log('➕ 新增表单处理:', {
           initialType,
-          defaultData,
+          defaultType,
+          availableTypes,
+          isFirstOpen,
+          selectedType,
+          typeToUse,
         });
       }
     }
-  }, [visible, initialType, editingVariable, form]);
+  }, [
+    visible,
+    editingVariable,
+    form,
+    defaultType,
+    availableTypes,
+    componentType,
+    isFirstOpen,
+    selectedType,
+    isUserEditing, // 添加到依赖数组
+  ]);
+
+  // 弹窗关闭时重置首次打开标志和编辑状态
+  useEffect(() => {
+    if (!visible) {
+      // 弹窗关闭后，重置首次打开标志和编辑状态，为下次打开做准备
+      setIsFirstOpen(true);
+      setIsUserEditing(false);
+    }
+  }, [visible]);
+
+  // 监听selectedType变化，同步更新表单值
+  useEffect(() => {
+    if (visible && !editingVariable) {
+      // 只在新增模式下同步，编辑模式由上面的useEffect处理
+      form.setFieldsValue({
+        type: selectedType,
+        mockData: getDefaultMockData(selectedType),
+      });
+    }
+  }, [selectedType, visible, editingVariable, form]);
 
   return (
     <Modal
@@ -601,10 +793,9 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
       <Form
         form={form}
         layout="vertical"
-        initialValues={{
-          type: initialType,
-          mockData: getDefaultMockData(initialType),
-          description: '', // 添加描述字段的初始值
+        initialValues={formInitialValues}
+        onValuesChange={(changedValues, allValues) => {
+          console.log('🔍 Form值变化:', { changedValues, allValues });
         }}
       >
         {/* 类型选择 */}
@@ -612,17 +803,46 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
           name="type"
           label="类型"
           rules={[{ required: true, message: '请选择变量类型' }]}
+          help={`可用类型: ${availableTypes.join(', ')}`}
         >
           <Select
             onChange={handleTypeChange}
-            value={selectedType} // 确保显示当前选中的类型
+            onFocus={() => {
+              console.log('🔍 Select获得焦点，当前状态:', {
+                selectedType,
+                availableTypes,
+                formValue: form.getFieldValue('type'),
+              });
+            }}
           >
-            <Option value="text">文本</Option>
-            <Option value="number">整数</Option>
-            <Option value="image">图片</Option>
-            <Option value="imageArray">图片数组</Option>
-            <Option value="array">选项数组</Option>
-            <Option value="richtext">富文本</Option>
+            {availableTypes.map((type) => {
+              const displayName =
+                type === 'text'
+                  ? '文本'
+                  : type === 'number'
+                  ? '整数'
+                  : type === 'image'
+                  ? '图片'
+                  : type === 'imageArray'
+                  ? '图片数组'
+                  : type === 'array'
+                  ? '选项数组'
+                  : type === 'richtext'
+                  ? '富文本'
+                  : type;
+
+              console.log('🔧 渲染Select选项:', {
+                type,
+                displayName,
+                availableTypes,
+              });
+
+              return (
+                <Option key={type} value={type}>
+                  {displayName}
+                </Option>
+              );
+            })}
           </Select>
         </Form.Item>
 

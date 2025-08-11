@@ -318,7 +318,13 @@ export interface Variable {
   name: string;
   value: string;
   type: 'text' | 'number' | 'boolean' | 'object';
-  originalType?: 'text' | 'number' | 'image' | 'array'; // 新增：保存原始类型信息
+  originalType?:
+    | 'text'
+    | 'number'
+    | 'image'
+    | 'array'
+    | 'richtext'
+    | 'imageArray'; // 更新：添加richtext和imageArray类型支持
   description?: string; // 新增：变量描述
 }
 

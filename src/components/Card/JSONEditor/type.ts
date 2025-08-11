@@ -7,6 +7,7 @@ export interface JSONEditorProps {
   onSave?: (json: string) => void;
   readOnly?: boolean;
   isVariableModalOpen?: boolean; // 新增：变量弹窗是否打开
+  componentType?: string; // 新增：当前选中组件的类型，用于过滤变量类型
 }
 
 // 新增：JSONEditor对外暴露的方法接口

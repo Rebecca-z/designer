@@ -385,6 +385,7 @@ const JSONEditor = forwardRef<JSONEditorRef, JSONEditorProps>(
       onSave,
       readOnly = false,
       isVariableModalOpen = false,
+      // componentType, // 新增：当前选中组件的类型
     },
     ref,
   ) => {
