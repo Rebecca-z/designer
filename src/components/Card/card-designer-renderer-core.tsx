@@ -3231,113 +3231,103 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           img_url: comp.img_url,
           variable_name: comp.variable_name,
           variablesCount: variables.length,
-          variables: variables,
+          variables: variables.map((v, index) => ({
+            index,
+            variable: v,
+            keys: typeof v === 'object' && v !== null ? Object.keys(v) : [],
+            firstKey:
+              typeof v === 'object' && v !== null ? Object.keys(v)[0] : null,
+            firstValue:
+              typeof v === 'object' && v !== null && Object.keys(v).length > 0
+                ? v[Object.keys(v)[0]]
+                : null,
+          })),
         });
 
         let finalUrl;
+        let variableName;
 
-        // 处理变量占位符格式的img_url，如 ${variableName}
+        // 1. 优先从 img_url 中提取变量名（${variableName} 格式）
         if (comp.img_url && comp.img_url.includes('${')) {
-          // 提取变量名
           const variableMatch = comp.img_url.match(/\$\{([^}]+)\}/);
-          console.log('🔍 提取变量名:', {
-            img_url: comp.img_url,
-            variableMatch,
-            extractedName: variableMatch?.[1],
-          });
-
           if (variableMatch && variableMatch[1]) {
-            const variableName = variableMatch[1];
-
-            console.log('🔍 查找变量:', {
-              variableName,
-              variables: variables.map((v) => {
-                if (typeof v === 'object' && v !== null) {
-                  const keys = Object.keys(v as Record<string, any>);
-                  return { keys, firstKey: keys[0], value: v };
-                }
-                return v;
-              }),
-            });
-
-            // 从variables中查找对应的变量
-            const variable = variables.find((v) => {
-              if (typeof v === 'object' && v !== null) {
-                const keys = Object.keys(v as Record<string, any>);
-                return keys.length > 0 && keys[0] === variableName;
-              }
-              return false;
-            });
-
-            console.log('🔍 找到变量:', { variableName, variable });
-
-            if (variable) {
-              const variableValue = (variable as Record<string, any>)[
-                variableName
-              ];
-
-              console.log('🔍 变量值解析:', {
-                variableName,
-                variableValue,
-                valueType: typeof variableValue,
-                isObject: typeof variableValue === 'object',
-                isArray: Array.isArray(variableValue),
-                hasImgUrl: variableValue?.img_url,
-              });
-
-              // 解析变量值获取图片URL
-              if (typeof variableValue === 'object' && variableValue !== null) {
-                if (variableValue.img_url) {
-                  console.log('✅ 找到图片URL (单个):', variableValue.img_url);
-                  finalUrl = variableValue.img_url;
-                  console.log('🎯 即将返回URL:', finalUrl);
-                  return finalUrl;
-                } else if (
-                  Array.isArray(variableValue) &&
-                  variableValue.length > 0 &&
-                  variableValue[0].img_url
-                ) {
-                  console.log(
-                    '✅ 找到图片URL (数组):',
-                    variableValue[0].img_url,
-                  );
-                  return variableValue[0].img_url; // 取数组第一个图片
-                }
-              }
-
-              console.log('⚠️ 变量值中没有找到有效的img_url');
-            } else {
-              console.log('❌ 没有找到对应的变量:', variableName);
-            }
+            variableName = variableMatch[1];
+            console.log('🔍 从img_url提取变量名:', variableName);
           }
         }
 
-        // 兼容旧的variable_name方式（保留向后兼容）
-        if (comp.variable_name) {
+        // 2. 备用：从历史数据的 variable_name 属性获取（兼容性）
+        if (!variableName && comp.variable_name) {
+          variableName = comp.variable_name;
+          console.log('🔍 使用variable_name（兼容模式）:', variableName);
+        }
+
+        // 3. 如果找到变量名，查找对应的变量
+        if (variableName) {
           const variable = variables.find((v) => {
             if (typeof v === 'object' && v !== null) {
               const keys = Object.keys(v as Record<string, any>);
-              return keys.length > 0 && keys[0] === comp.variable_name;
+              return keys.length > 0 && keys[0] === variableName;
             }
             return false;
           });
 
+          console.log('🔍 找到变量:', { variableName, variable });
+
           if (variable) {
             const variableValue = (variable as Record<string, any>)[
-              comp.variable_name
+              variableName
             ];
-            if (
+
+            console.log('🔍 变量值解析:', {
+              variableName,
+              variableValue,
+              valueType: typeof variableValue,
+            });
+
+            // 解析变量值获取图片URL
+            if (typeof variableValue === 'string') {
+              // 新的字符串格式图片变量
+              console.log('✅ 找到图片URL (字符串):', variableValue);
+              finalUrl = variableValue;
+              console.log('🎯 即将返回URL:', finalUrl);
+              return finalUrl;
+            } else if (
               typeof variableValue === 'object' &&
-              variableValue !== null &&
-              variableValue.img_url
+              variableValue !== null
             ) {
-              return variableValue.img_url;
+              if (variableValue.img_url) {
+                console.log('✅ 找到图片URL (对象):', variableValue.img_url);
+                finalUrl = variableValue.img_url;
+                console.log('🎯 即将返回URL:', finalUrl);
+                return finalUrl;
+              } else if (
+                Array.isArray(variableValue) &&
+                variableValue.length > 0 &&
+                variableValue[0].img_url
+              ) {
+                console.log('✅ 找到图片URL (数组):', variableValue[0].img_url);
+                finalUrl = variableValue[0].img_url;
+                console.log('🎯 即将返回URL:', finalUrl);
+                return finalUrl;
+              }
             }
+
+            console.log('⚠️ 变量值中没有找到有效的img_url');
+          } else {
+            console.log('❌ 没有找到对应的变量:', variableName);
           }
         }
 
-        finalUrl = comp.img_url || '/demo.png';
-        console.log('🔙 返回默认图片URL:', finalUrl);
+        // 5. 默认返回备用图片URL
+        // 如果img_url是变量占位符格式，则返回默认图片
+        if (comp.img_url && comp.img_url.includes('${')) {
+          finalUrl = '/demo.png';
+          console.log('🔙 变量解析失败，返回默认图片URL:', finalUrl);
+        } else {
+          finalUrl = comp.img_url || '/demo.png';
+          console.log('🔙 返回原始图片URL:', finalUrl);
+        }
         return finalUrl;
       };
 
@@ -3404,8 +3394,43 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             })()}
             alt="图片"
             style={getCropStyle()}
+            onLoad={(e) => {
+              console.log('✅ 图片加载成功:', {
+                componentId: comp.id,
+                src: (e.target as HTMLImageElement).src,
+                naturalWidth: (e.target as HTMLImageElement).naturalWidth,
+                naturalHeight: (e.target as HTMLImageElement).naturalHeight,
+              });
+            }}
             onError={(e) => {
-              (e.target as HTMLImageElement).src = '/demo.png';
+              const img = e.target as HTMLImageElement;
+              console.log('❌ 图片加载失败:', {
+                componentId: comp.id,
+                originalSrc: img.src,
+                fallbackSrc: '/demo.png',
+                error: e,
+                // 检查是否是CORS问题
+                crossOrigin: img.crossOrigin,
+                // 检查网络状态
+                networkState: navigator.onLine ? 'online' : 'offline',
+              });
+
+              // 尝试添加时间戳重试一次（避免缓存问题）
+              const originalSrc = img.src;
+              if (
+                !originalSrc.includes('?retry=1') &&
+                !originalSrc.includes('/demo.png')
+              ) {
+                const retrySrc = originalSrc.includes('?')
+                  ? `${originalSrc}&retry=1&t=${Date.now()}`
+                  : `${originalSrc}?retry=1&t=${Date.now()}`;
+                console.log('🔄 尝试重新加载图片:', retrySrc);
+                img.src = retrySrc;
+              } else {
+                // 重试失败，使用备用图片
+                console.log('🔙 重试失败，使用备用图片');
+                img.src = '/demo.png';
+              }
             }}
           />
           {/* 显示图片信息（仅在编辑模式下） */}

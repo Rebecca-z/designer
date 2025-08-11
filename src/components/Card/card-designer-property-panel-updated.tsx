@@ -1097,6 +1097,18 @@ export const PropertyPanel: React.FC<{
   };
 
   const handleValueChange = (field: string, value: any) => {
+    console.log('🔄 handleValueChange 被调用:', {
+      field,
+      value,
+      currentComponent: currentComponent
+        ? {
+            id: currentComponent.id,
+            tag: currentComponent.tag,
+            img_url: (currentComponent as any).img_url,
+            variable_name: (currentComponent as any).variable_name,
+          }
+        : null,
+    });
     if (currentComponent) {
       // 检查是否是错误的表单组件选中（应该选中表单内的子组件）
       if (
@@ -1178,6 +1190,13 @@ export const PropertyPanel: React.FC<{
         }
         // 特殊处理variable_name字段，当绑定变量时更新图片URL和DSL结构
         else if (field === 'variable_name' && currentComponent.tag === 'img') {
+          console.log('🎯 检测到图片组件变量绑定操作:', {
+            field,
+            value,
+            componentId: currentComponent.id,
+            componentTag: currentComponent.tag,
+            currentImgUrl: currentComponent.img_url,
+          });
           if (value) {
             // 选择了变量，需要获取变量中的图片URL并更新组件
             const selectedVariable = variables.find((v) => {
@@ -1195,7 +1214,13 @@ export const PropertyPanel: React.FC<{
               let imageUrl = '';
 
               // 解析变量值获取图片URL
-              if (typeof variableValue === 'object' && variableValue !== null) {
+              if (typeof variableValue === 'string') {
+                // 新的字符串格式图片变量
+                imageUrl = variableValue;
+              } else if (
+                typeof variableValue === 'object' &&
+                variableValue !== null
+              ) {
                 if (variableValue.img_url) {
                   imageUrl = variableValue.img_url;
                 } else if (
@@ -1207,16 +1232,17 @@ export const PropertyPanel: React.FC<{
                 }
               }
 
-              // 更新组件：删除variable_name，设置img_url和i18n_img_url为变量占位符
+              // 更新组件：设置img_url为变量占位符，删除不需要的字段
               const updatedComponent = {
                 ...currentComponent,
-                img_url: `\${${value}}`, // 使用变量占位符格式
+                img_url: `\${${value}}`, // DSL数据中使用变量占位符格式
                 i18n_img_url: {
                   'en-US': `\${${value}}`,
                 },
               };
 
-              // 明确删除variable_name属性
+              // 明确删除不需要的字段
+              delete (updatedComponent as any).original_img_url;
               delete (updatedComponent as any).variable_name;
 
               console.log('📝 更新图片组件变量绑定:', {
@@ -1224,6 +1250,9 @@ export const PropertyPanel: React.FC<{
                 selectedVariable: value,
                 imageUrl,
                 variableValue,
+                originalImgUrl: currentComponent.img_url,
+                newImgUrl: (updatedComponent as any).img_url,
+                variableName: (updatedComponent as any).variable_name,
                 updatedComponent,
               });
 
@@ -1242,14 +1271,15 @@ export const PropertyPanel: React.FC<{
             // 清除变量绑定，恢复为普通图片组件
             const updatedComponent = {
               ...currentComponent,
-              img_url: '', // 清空URL，用户需要重新输入
+              img_url: '/demo.png', // 恢复默认图片
               i18n_img_url: {
-                'en-US': '',
+                'en-US': '/demo.png',
               },
             };
 
-            // 删除variable_name属性
+            // 删除变量相关属性
             delete (updatedComponent as any).variable_name;
+            delete (updatedComponent as any).original_img_url;
 
             console.log('📝 清除图片组件变量绑定:', {
               componentId: (updatedComponent as any).id,
@@ -1419,6 +1449,11 @@ export const PropertyPanel: React.FC<{
             }
             case 'img':
               // 图片组件显示图片相关类型的变量
+              // 支持字符串格式的图片URL和对象格式的图片数据
+              if (typeof variableValue === 'string') {
+                // 新的字符串格式图片变量
+                return true;
+              }
               if (typeof variableValue === 'object' && variableValue !== null) {
                 // 检查是否为单个图片对象 { img_url: "..." }
                 if (
@@ -4357,20 +4392,21 @@ export const PropertyPanel: React.FC<{
       const cropMode = imageComponent.style?.crop_mode || 'default';
 
       // 获取图片URL的显示值（用于属性面板输入框）
-      // 始终显示原始的img_url值，不解析变量
+      // 如果img_url是变量占位符格式，则显示占位符，否则显示实际URL
       const getDisplayImageUrl = () => {
         return imageComponent.img_url || '';
       };
 
       // 获取当前绑定的变量名（用于下拉选择器）
       const getBoundVariableName = () => {
+        // 从 img_url 中解析变量名
         if (imageComponent.img_url && imageComponent.img_url.includes('${')) {
           const variableMatch = imageComponent.img_url.match(/\$\{([^}]+)\}/);
           if (variableMatch && variableMatch[1]) {
             return variableMatch[1];
           }
         }
-        return imageComponent.variable_name || undefined;
+        return undefined;
       };
 
       return (

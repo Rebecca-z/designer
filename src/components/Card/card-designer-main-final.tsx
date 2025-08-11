@@ -78,10 +78,13 @@ const CardDesigner: React.FC = () => {
         index,
         id: el.id,
         tag: el.tag,
+        img_url: (el as any).img_url,
         content: (el as any).content,
         boundVariableName: (el as any).boundVariableName,
         hasBoundVariable: !!(el as any).boundVariableName,
-        fullElement: JSON.stringify(el, null, 2),
+        // 检查是否有不应该存在的字段
+        hasVariableName: !!(el as any).variable_name,
+        hasOriginalImgUrl: !!(el as any).original_img_url,
       })),
       timestamp: new Date().toISOString(),
     });

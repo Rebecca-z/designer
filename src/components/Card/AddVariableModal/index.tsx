@@ -116,14 +116,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
       case 'number':
         return '1';
       case 'image':
-        return JSON.stringify(
-          {
-            img_url:
-              'https://pics6.baidu.com/feed/42166d224f4a20a4e7fe60c6f2615629730ed08a.png@f_auto?token=d87ac9415a0bb7a98c878fe672b007fa',
-          },
-          null,
-          2,
-        );
+        return '';
       case 'array':
         return JSON.stringify(
           [
@@ -179,11 +172,11 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
           [
             {
               img_url:
-                'https://pics6.baidu.com/feed/42166d224f4a20a4e7fe60c6f2615629730ed08a.png@f_auto?token=d87ac9415a0bb7a98c878fe672b007fa',
+                'https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png',
             },
             {
               img_url:
-                'https://pics6.baidu.com/feed/42166d224f4a20a4e7fe60c6f2615629730ed08a.png@f_auto?token=d87ac9415a0bb7a98c878fe672b007fa',
+                'https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png',
             },
           ],
           null,
@@ -215,6 +208,10 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
 
     switch (variableType) {
       case 'text':
+        // 检查是否是新格式的图片变量（text类型但originalType是image）
+        if (editingVariable?.originalType === 'image') {
+          return 'image';
+        }
         return 'text';
       case 'number':
         return 'number';
@@ -332,12 +329,33 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         return;
       }
 
-      // 如果是数组、图片或图片数组类型，需要验证JSON编辑器
-      if (
-        selectedType === 'array' ||
-        selectedType === 'image' ||
-        selectedType === 'imageArray'
-      ) {
+      // 如果是图片类型，直接处理字符串输入
+      if (selectedType === 'image') {
+        // 构建Variable对象，保存为键值对格式
+        const variable: Variable = {
+          name: values.name,
+          type: 'text', // 图片URL作为文本类型
+          value: values.mockData, // 直接使用输入的URL字符串
+          originalType: selectedType,
+          description: values.description || '',
+        };
+
+        console.log('💾 提交图片变量数据:', {
+          isEditing: !!editingVariable,
+          variable,
+          imageUrl: values.mockData,
+        });
+
+        onOk(variable);
+        form.resetFields();
+        setJsonData('');
+        setJsonError('');
+        setIsUserEditing(false);
+        return;
+      }
+
+      // 如果是数组或图片数组类型，需要验证JSON编辑器
+      if (selectedType === 'array' || selectedType === 'imageArray') {
         if (jsonEditorRef.current) {
           const { formatJSON, validateJSON, getFormattedJSON } =
             jsonEditorRef.current;
@@ -420,9 +438,10 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
 
       // 对于非JSON类型，使用原有的逻辑
       let actualMockData = values.mockData;
-      if (['image', 'array', 'imageArray'].includes(selectedType)) {
+      if (['array', 'imageArray'].includes(selectedType)) {
         actualMockData = jsonData;
       }
+      // 图片类型使用表单输入的字符串值
 
       // 将自定义类型映射到Variable接口支持的类型
       const mapTypeToVariableType = (
@@ -434,6 +453,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
           case 'number':
             return 'number';
           case 'image':
+            return 'text'; // 新的图片类型使用text
           case 'array':
           case 'richtext':
           case 'imageArray':
@@ -509,14 +529,15 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
 
   // 获取富文本编辑器的值（使用useMemo缓存）
   const getRichTextValue = useMemo(() => {
-    if (!jsonData) return undefined;
+    // 只在富文本类型时才解析JSON
+    if (!jsonData || selectedType !== 'richtext') return undefined;
     try {
       return JSON.parse(jsonData);
     } catch (error) {
       console.error('解析富文本数据失败:', error);
       return undefined;
     }
-  }, [jsonData]);
+  }, [jsonData, selectedType]);
 
   // 渲染模拟数据输入组件
   const renderMockDataInput = () => {
@@ -551,32 +572,13 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
 
       case 'image':
         return (
-          <div>
-            <Form.Item
-              name="mockData"
-              label="模拟数据"
-              rules={[
-                { required: true, message: '请输入模拟数据' },
-                { validator: validateJSON },
-              ]}
-            >
-              <JSONEditor
-                ref={jsonEditorRef}
-                json={jsonData}
-                title="图片数据"
-                onJSONChange={handleJSONChange}
-                isVariableModalOpen={visible}
-                height={200}
-              />
-            </Form.Item>
-            {jsonError && (
-              <div
-                style={{ color: '#ff4d4f', fontSize: '12px', marginTop: '4px' }}
-              >
-                {jsonError}
-              </div>
-            )}
-          </div>
+          <Form.Item
+            name="mockData"
+            label="模拟数据"
+            rules={[{ required: true, message: '请输入模拟数据' }]}
+          >
+            <Input placeholder="请输入图片URL地址" maxLength={100} />
+          </Form.Item>
         );
 
       case 'array':
@@ -685,8 +687,10 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
           mockData: editingVariable.value,
         });
 
-        // 设置JSON编辑器数据
-        setJsonData(editingVariable.value);
+        // 设置JSON编辑器数据（仅对非图片类型）
+        if (formType !== 'image') {
+          setJsonData(editingVariable.value);
+        }
 
         console.log('🔄 回显编辑数据:', {
           editingVariable,
