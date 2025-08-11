@@ -2877,7 +2877,28 @@ export const PropertyPanel: React.FC<{
 
           // 如果用户还没有编辑过文本，将组件的原始内容保存为用户编辑内容
           if (currentUserEditedContent === undefined) {
-            const originalContent = (currentComponent as any).content || '';
+            let originalContent;
+            if (isRichText) {
+              // 富文本组件：保存完整的JSON结构
+              originalContent = (currentComponent as any).content || {
+                type: 'doc',
+                content: [
+                  {
+                    type: 'paragraph',
+                    content: [
+                      {
+                        type: 'text',
+                        text: '请输入富文本内容',
+                      },
+                    ],
+                  },
+                ],
+              };
+            } else {
+              // 普通文本组件：保存字符串内容
+              originalContent = (currentComponent as any).content || '';
+            }
+
             textComponentStateManager.setUserEditedContent(
               currentComponent.id,
               originalContent,
@@ -2885,6 +2906,8 @@ export const PropertyPanel: React.FC<{
             console.log('📝 保存组件原始内容为用户编辑内容:', {
               componentId: currentComponent.id,
               originalContent: originalContent,
+              isRichText: isRichText,
+              isPlainText: isPlainText,
             });
           } else {
             // 确保用户编辑的内容不被清除
@@ -2896,10 +2919,20 @@ export const PropertyPanel: React.FC<{
 
           // 更新全局数据中的content和i18n_content为变量占位符格式
           const variablePlaceholder = `\${${variableName}}`;
-          (updatedComponent as any).content = variablePlaceholder;
-          (updatedComponent as any).i18n_content = {
-            'en-US': variablePlaceholder,
-          };
+
+          if (isRichText) {
+            // 富文本组件：将变量占位符格式保存到DSL
+            (updatedComponent as any).content = variablePlaceholder;
+            (updatedComponent as any).i18n_content = {
+              'en-US': variablePlaceholder,
+            };
+          } else {
+            // 普通文本组件
+            (updatedComponent as any).content = variablePlaceholder;
+            (updatedComponent as any).i18n_content = {
+              'en-US': variablePlaceholder,
+            };
+          }
 
           console.log('✅ 文本组件变量绑定完成 (更新全局数据):', {
             componentId: updatedComponent?.id,
@@ -2923,6 +2956,11 @@ export const PropertyPanel: React.FC<{
             // 使用用户编辑的内容作为最终文本
             (updatedComponent as any).content = userEditedContent;
             if (isPlainText) {
+              (updatedComponent as any).i18n_content = {
+                'en-US': userEditedContent,
+              };
+            } else if (isRichText) {
+              // 富文本组件不需要i18n_content，因为富文本内容已经是完整的JSON格式
               (updatedComponent as any).i18n_content = {
                 'en-US': userEditedContent,
               };
@@ -2950,6 +2988,11 @@ export const PropertyPanel: React.FC<{
             if (isPlainText) {
               (updatedComponent as any).i18n_content = {
                 'en-US': 'Enter text content',
+              };
+            } else if (isRichText) {
+              // 富文本组件的默认i18n_content
+              (updatedComponent as any).i18n_content = {
+                'en-US': defaultContent,
               };
             }
           }

@@ -2941,6 +2941,139 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       const isCurrentSelected = isSamePath(selectedPath || null, path);
       const comp = component as any;
 
+      console.log('🔍 富文本组件变量替换检查:', {
+        componentId: comp.id,
+        originalContent: comp.content,
+        userEditedContent: textComponentStateManager.getUserEditedContent(
+          comp.id,
+        ),
+        boundVariableName: textComponentStateManager.getBoundVariableName(
+          comp.id,
+        ),
+        variablesCount: variables.length,
+        variables: variables,
+        hasVariables: variables.length > 0,
+        component: component,
+        comp: comp,
+      });
+
+      // 确定要显示的内容
+      let displayContent: any;
+
+      // 如果组件绑定了变量，优先使用变量值
+      const boundVariableName = textComponentStateManager.getBoundVariableName(
+        comp.id,
+      );
+      if (boundVariableName) {
+        // 从缓存中获取变量值
+        const variableValue =
+          variableCacheManager.getVariable(boundVariableName);
+
+        if (variableValue !== undefined) {
+          displayContent = variableValue;
+
+          console.log('✅ 富文本组件绑定变量显示 (从缓存):', {
+            componentId: comp.id,
+            boundVariableName: boundVariableName,
+            variableValue: variableValue,
+            displayContent: displayContent,
+          });
+        } else {
+          // 如果缓存中没有，尝试从传入的变量列表中查找
+          const boundVariable = variables.find((variable) => {
+            if (typeof variable === 'object' && variable !== null) {
+              const keys = Object.keys(variable as Record<string, any>);
+              return keys.includes(boundVariableName);
+            }
+            return false;
+          });
+
+          if (boundVariable) {
+            const variableValue = (boundVariable as Record<string, any>)[
+              boundVariableName
+            ];
+            displayContent = variableValue;
+
+            console.log('✅ 富文本组件绑定变量显示 (从变量列表):', {
+              componentId: comp.id,
+              boundVariableName: boundVariableName,
+              variableValue: variableValue,
+              displayContent: displayContent,
+            });
+          } else {
+            // 如果找不到变量值，显示占位符
+            displayContent = comp.content || {
+              type: 'doc',
+              content: [
+                {
+                  type: 'paragraph',
+                  content: [
+                    {
+                      type: 'text',
+                      text: '富文本内容',
+                    },
+                  ],
+                },
+              ],
+            };
+          }
+        }
+      } else {
+        // 如果没有绑定变量，优先显示用户编辑的内容
+        const userEditedContent =
+          textComponentStateManager.getUserEditedContent(comp.id);
+        if (userEditedContent !== undefined) {
+          displayContent = userEditedContent;
+        } else {
+          // 使用组件原始内容
+          displayContent = comp.content || {
+            type: 'doc',
+            content: [
+              {
+                type: 'paragraph',
+                content: [
+                  {
+                    type: 'text',
+                    text: '富文本内容',
+                  },
+                ],
+              },
+            ],
+          };
+        }
+
+        console.log('✅ 富文本组件显示用户编辑内容:', {
+          componentId: comp.id,
+          userEditedContent: userEditedContent,
+          displayContent: displayContent,
+          boundVariableName: boundVariableName,
+        });
+      }
+
+      console.log('✅ 富文本组件最终显示内容:', {
+        componentId: comp.id,
+        originalContent: comp.content,
+        userEditedContent: textComponentStateManager.getUserEditedContent(
+          comp.id,
+        ),
+        displayContent: displayContent,
+        boundVariableName: boundVariableName,
+      });
+
+      // 处理点击事件
+      const handleRichTextClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+
+        if (onSelect) {
+          onSelect(component, path);
+        }
+
+        if (onCanvasFocus) {
+          onCanvasFocus();
+        }
+      };
+
       const richTextContent = (
         <div
           style={{
@@ -2961,6 +3094,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                 : 'none',
             transition: 'all 0.2s ease',
           }}
+          onClick={handleRichTextClick}
+          data-component-wrapper="true"
+          data-component-id={comp.id}
         >
           <RichTextStyles
             style={{
@@ -2969,7 +3105,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           >
             <div
               dangerouslySetInnerHTML={{
-                __html: convertJSONToHTML(comp.content),
+                __html: convertJSONToHTML(displayContent),
               }}
             />
           </RichTextStyles>
