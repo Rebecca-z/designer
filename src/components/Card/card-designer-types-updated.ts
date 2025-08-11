@@ -144,12 +144,12 @@ export interface SelectComponent extends ComponentBase {
 export interface ImageComponent extends ComponentBase {
   tag: 'img';
   img_url: string;
-  img_source?: 'upload' | 'variable'; // 图片来源类型：文件上传 | 绑定变量
-  variable_name?: string; // 绑定的变量名（当img_source为variable时）
-  crop_mode?: 'default' | 'top' | 'center'; // 裁剪方式：完整展示 | 顶部裁剪 | 居中裁剪
-  width?: number;
-  height?: number;
+  variable_name?: string; // 绑定的变量名（当为变量绑定时）
   i18n_img_url?: { [key: string]: string };
+  style?: {
+    crop_mode?: 'default' | 'top' | 'center'; // 裁剪方式：完整展示 | 顶部裁剪 | 居中裁剪
+    [key: string]: any;
+  };
 }
 
 export interface FormComponent extends ComponentBase {

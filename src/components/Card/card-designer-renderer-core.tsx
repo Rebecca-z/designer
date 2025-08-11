@@ -3226,17 +3226,124 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
       // 获取图片URL，支持变量绑定
       const getImageUrl = () => {
-        if (comp.img_source === 'variable' && comp.variable_name) {
-          // 这里可以从全局变量中获取图片URL
-          // 暂时返回默认图片，实际应用中需要从变量系统获取
-          return comp.img_url || '/demo.png';
+        console.log('🖼️ 图片组件获取URL:', {
+          componentId: comp.id,
+          img_url: comp.img_url,
+          variable_name: comp.variable_name,
+          variablesCount: variables.length,
+          variables: variables,
+        });
+
+        let finalUrl;
+
+        // 处理变量占位符格式的img_url，如 ${variableName}
+        if (comp.img_url && comp.img_url.includes('${')) {
+          // 提取变量名
+          const variableMatch = comp.img_url.match(/\$\{([^}]+)\}/);
+          console.log('🔍 提取变量名:', {
+            img_url: comp.img_url,
+            variableMatch,
+            extractedName: variableMatch?.[1],
+          });
+
+          if (variableMatch && variableMatch[1]) {
+            const variableName = variableMatch[1];
+
+            console.log('🔍 查找变量:', {
+              variableName,
+              variables: variables.map((v) => {
+                if (typeof v === 'object' && v !== null) {
+                  const keys = Object.keys(v as Record<string, any>);
+                  return { keys, firstKey: keys[0], value: v };
+                }
+                return v;
+              }),
+            });
+
+            // 从variables中查找对应的变量
+            const variable = variables.find((v) => {
+              if (typeof v === 'object' && v !== null) {
+                const keys = Object.keys(v as Record<string, any>);
+                return keys.length > 0 && keys[0] === variableName;
+              }
+              return false;
+            });
+
+            console.log('🔍 找到变量:', { variableName, variable });
+
+            if (variable) {
+              const variableValue = (variable as Record<string, any>)[
+                variableName
+              ];
+
+              console.log('🔍 变量值解析:', {
+                variableName,
+                variableValue,
+                valueType: typeof variableValue,
+                isObject: typeof variableValue === 'object',
+                isArray: Array.isArray(variableValue),
+                hasImgUrl: variableValue?.img_url,
+              });
+
+              // 解析变量值获取图片URL
+              if (typeof variableValue === 'object' && variableValue !== null) {
+                if (variableValue.img_url) {
+                  console.log('✅ 找到图片URL (单个):', variableValue.img_url);
+                  finalUrl = variableValue.img_url;
+                  console.log('🎯 即将返回URL:', finalUrl);
+                  return finalUrl;
+                } else if (
+                  Array.isArray(variableValue) &&
+                  variableValue.length > 0 &&
+                  variableValue[0].img_url
+                ) {
+                  console.log(
+                    '✅ 找到图片URL (数组):',
+                    variableValue[0].img_url,
+                  );
+                  return variableValue[0].img_url; // 取数组第一个图片
+                }
+              }
+
+              console.log('⚠️ 变量值中没有找到有效的img_url');
+            } else {
+              console.log('❌ 没有找到对应的变量:', variableName);
+            }
+          }
         }
-        return comp.img_url || '/demo.png';
+
+        // 兼容旧的variable_name方式（保留向后兼容）
+        if (comp.variable_name) {
+          const variable = variables.find((v) => {
+            if (typeof v === 'object' && v !== null) {
+              const keys = Object.keys(v as Record<string, any>);
+              return keys.length > 0 && keys[0] === comp.variable_name;
+            }
+            return false;
+          });
+
+          if (variable) {
+            const variableValue = (variable as Record<string, any>)[
+              comp.variable_name
+            ];
+            if (
+              typeof variableValue === 'object' &&
+              variableValue !== null &&
+              variableValue.img_url
+            ) {
+              return variableValue.img_url;
+            }
+          }
+        }
+
+        finalUrl = comp.img_url || '/demo.png';
+        console.log('🔙 返回默认图片URL:', finalUrl);
+        return finalUrl;
       };
 
       // 获取裁剪方式对应的样式
       const getCropStyle = () => {
-        const cropMode = comp.crop_mode || 'default';
+        const cropMode = comp.style?.crop_mode || 'default';
         const baseStyle: React.CSSProperties = {
           borderRadius: '4px',
           border: 'none', // 移除图片本身的边框，避免双边框
@@ -3265,8 +3372,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               ...baseStyle,
               maxWidth: '100%',
               height: 'auto',
-              width: comp.width ? `${comp.width}px` : 'auto',
-              maxHeight: comp.height ? `${comp.height}px` : '200px',
               objectFit: 'contain' as const, // 完整展示图片
             };
         }
@@ -3292,7 +3397,11 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           }}
         >
           <img
-            src={getImageUrl()}
+            src={(() => {
+              const url = getImageUrl();
+              console.log('🖼️ 图片组件渲染时获取的URL:', url);
+              return url;
+            })()}
             alt="图片"
             style={getCropStyle()}
             onError={(e) => {

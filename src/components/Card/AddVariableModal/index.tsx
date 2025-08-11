@@ -118,7 +118,8 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
       case 'image':
         return JSON.stringify(
           {
-            img_url: 'img_v2_9dd98485-2900-4d65-ada9-e31d1408dcfg',
+            img_url:
+              'https://pics6.baidu.com/feed/42166d224f4a20a4e7fe60c6f2615629730ed08a.png@f_auto?token=d87ac9415a0bb7a98c878fe672b007fa',
           },
           null,
           2,
@@ -177,10 +178,12 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         return JSON.stringify(
           [
             {
-              img_url: 'img_v2_9dd98485-2900-4d65-ada9-e31d1408dcfg',
+              img_url:
+                'https://pics6.baidu.com/feed/42166d224f4a20a4e7fe60c6f2615629730ed08a.png@f_auto?token=d87ac9415a0bb7a98c878fe672b007fa',
             },
             {
-              img_url: 'img_v2_9dd98485-2900-4d65-ada9-e31d1408dcfg',
+              img_url:
+                'https://pics6.baidu.com/feed/42166d224f4a20a4e7fe60c6f2615629730ed08a.png@f_auto?token=d87ac9415a0bb7a98c878fe672b007fa',
             },
           ],
           null,

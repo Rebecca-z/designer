@@ -762,6 +762,14 @@ const CardDesigner: React.FC = () => {
     const path = selection.selectedPath;
     let newData = JSON.parse(JSON.stringify(safeCardData));
 
+    console.log('🔍 更新前原始数据检查:', {
+      componentId: updatedComponent.id,
+      oldImgUrl: safeCardData.dsl.body.elements.find(
+        (el) => el.id === updatedComponent.id,
+      )?.img_url,
+      newImgUrl: (updatedComponent as any).img_url,
+    });
+
     console.log('🔄 开始更新组件:', {
       componentId: updatedComponent.id,
       componentTag: updatedComponent.tag,
@@ -777,8 +785,17 @@ const CardDesigner: React.FC = () => {
     if (path.length === 4) {
       // 根级组件: ['dsl', 'body', 'elements', index]
       const index = path[3] as number;
-      // const oldComponent = newData.dsl.body.elements[index];
+      const oldComponent = newData.dsl.body.elements[index];
       newData.dsl.body.elements[index] = updatedComponent;
+
+      console.log('📝 根级组件更新详情:', {
+        index,
+        componentId: updatedComponent.id,
+        oldImgUrl: (oldComponent as any)?.img_url,
+        newImgUrl: (updatedComponent as any).img_url,
+        updateSuccess:
+          newData.dsl.body.elements[index].id === updatedComponent.id,
+      });
 
       // console.log('📝 更新根级组件:', {
       //   index,
@@ -908,7 +925,13 @@ const CardDesigner: React.FC = () => {
       selectedPath: selection.selectedPath,
       timestamp: new Date().toISOString(),
     });
+    console.log('🔄 即将重新选择组件:', {
+      updatedComponentId: updatedComponent.id,
+      updatedComponentImgUrl: (updatedComponent as any).img_url,
+      selectedPath: selection.selectedPath,
+    });
     selection.selectComponent(updatedComponent, selection.selectedPath);
+    console.log('✅ 组件重新选择完成');
   };
 
   // 处理卡片属性更新

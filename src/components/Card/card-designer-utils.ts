@@ -784,10 +784,11 @@ export const createDefaultComponent = (type: string): ComponentType => {
         id: generateId(),
         tag: 'img',
         img_url: '/demo.png', // 使用public目录下的demo.png文件
-        img_source: 'upload', // 默认使用文件上传
-        crop_mode: 'default', // 默认完整展示
         i18n_img_url: {
           'en-US': '/demo.png',
+        },
+        style: {
+          crop_mode: 'default', // 默认完整展示
         },
       } as ComponentType;
 

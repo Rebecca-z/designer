@@ -13,7 +13,6 @@ import {
 import {
   Button,
   Card,
-  Collapse,
   ColorPicker,
   Divider,
   Form,
@@ -27,7 +26,6 @@ import {
   Tree,
   Typography,
   Upload,
-  message,
 } from 'antd';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDrag } from 'react-dnd';
@@ -976,11 +974,7 @@ export const PropertyPanel: React.FC<{
     if (currentComponent && currentComponent.tag === 'img') {
       forceUpdate((prev) => prev + 1);
     }
-  }, [
-    currentComponent?.id,
-    (currentComponent as any)?.img_source,
-    (currentComponent as any)?.variable_name,
-  ]);
+  }, [currentComponent?.id, (currentComponent as any)?.variable_name]);
 
   // 监听AddVariableModal相关状态变化
   useEffect(() => {
@@ -1135,6 +1129,7 @@ export const PropertyPanel: React.FC<{
         'margin',
         'type',
         'size',
+        'crop_mode', // 图片裁剪方式放在style中
       ];
 
       // console.log('🔧 开始处理组件更新:', {
@@ -1180,6 +1175,89 @@ export const PropertyPanel: React.FC<{
             realPath,
           });
           onUpdateComponent(updatedComponent);
+        }
+        // 特殊处理variable_name字段，当绑定变量时更新图片URL和DSL结构
+        else if (field === 'variable_name' && currentComponent.tag === 'img') {
+          if (value) {
+            // 选择了变量，需要获取变量中的图片URL并更新组件
+            const selectedVariable = variables.find((v) => {
+              if (typeof v === 'object' && v !== null) {
+                const keys = Object.keys(v as Record<string, any>);
+                return keys.length > 0 && keys[0] === value;
+              }
+              return false;
+            });
+
+            if (selectedVariable) {
+              const variableValue = (selectedVariable as Record<string, any>)[
+                value
+              ];
+              let imageUrl = '';
+
+              // 解析变量值获取图片URL
+              if (typeof variableValue === 'object' && variableValue !== null) {
+                if (variableValue.img_url) {
+                  imageUrl = variableValue.img_url;
+                } else if (
+                  Array.isArray(variableValue) &&
+                  variableValue.length > 0 &&
+                  variableValue[0].img_url
+                ) {
+                  imageUrl = variableValue[0].img_url; // 取数组第一个图片
+                }
+              }
+
+              // 更新组件：删除variable_name，设置img_url和i18n_img_url为变量占位符
+              const updatedComponent = {
+                ...currentComponent,
+                img_url: `\${${value}}`, // 使用变量占位符格式
+                i18n_img_url: {
+                  'en-US': `\${${value}}`,
+                },
+              };
+
+              // 明确删除variable_name属性
+              delete (updatedComponent as any).variable_name;
+
+              console.log('📝 更新图片组件变量绑定:', {
+                componentId: (updatedComponent as any).id,
+                selectedVariable: value,
+                imageUrl,
+                variableValue,
+                updatedComponent,
+              });
+
+              console.log(
+                '🔄 调用onUpdateComponent，更新前组件:',
+                currentComponent,
+              );
+              console.log(
+                '🔄 调用onUpdateComponent，更新后组件:',
+                updatedComponent,
+              );
+              onUpdateComponent(updatedComponent);
+              console.log('✅ onUpdateComponent调用完成');
+            }
+          } else {
+            // 清除变量绑定，恢复为普通图片组件
+            const updatedComponent = {
+              ...currentComponent,
+              img_url: '', // 清空URL，用户需要重新输入
+              i18n_img_url: {
+                'en-US': '',
+              },
+            };
+
+            // 删除variable_name属性
+            delete (updatedComponent as any).variable_name;
+
+            console.log('📝 清除图片组件变量绑定:', {
+              componentId: (updatedComponent as any).id,
+              updatedComponent,
+            });
+
+            onUpdateComponent(updatedComponent);
+          }
         } else {
           const updatedComponent = {
             ...currentComponent,
@@ -1305,6 +1383,80 @@ export const PropertyPanel: React.FC<{
       if (typeof v === 'object' && v !== null) {
         const keys = Object.keys(v as VariableObject);
         return keys.length > 0 && keys[0] === variableName;
+      }
+      return false;
+    });
+  };
+
+  // 根据组件类型过滤变量 - 提取到组件级别供图片组件使用
+  const getFilteredVariables = (componentType: string) => {
+    return variables.filter((variable) => {
+      if (typeof variable === 'object' && variable !== null) {
+        const keys = Object.keys(variable as Record<string, any>);
+        if (keys.length > 0) {
+          const variableValue = (variable as Record<string, any>)[keys[0]];
+
+          // 根据组件类型过滤变量
+          switch (componentType) {
+            case 'plain_text':
+              // 普通文本组件只显示文本类型的变量
+              return typeof variableValue === 'string';
+            case 'rich_text': {
+              // 富文本组件显示文本类型和富文本类型的变量
+              const isStringType = typeof variableValue === 'string';
+              const isRichTextType =
+                typeof variableValue === 'object' &&
+                variableValue?.type === 'doc';
+              const shouldShow = isRichTextType;
+              console.log('🔍 富文本组件变量筛选:', {
+                variableName: keys[0],
+                variableValue,
+                isStringType,
+                isRichTextType,
+                shouldShow,
+              });
+              return shouldShow;
+            }
+            case 'img':
+              // 图片组件显示图片相关类型的变量
+              if (typeof variableValue === 'object' && variableValue !== null) {
+                // 检查是否为单个图片对象 { img_url: "..." }
+                if (
+                  variableValue.img_url &&
+                  typeof variableValue.img_url === 'string'
+                ) {
+                  return true;
+                }
+                // 检查是否为图片数组 [{ img_url: "..." }, ...]
+                if (Array.isArray(variableValue) && variableValue.length > 0) {
+                  return variableValue.every(
+                    (item) =>
+                      typeof item === 'object' &&
+                      item !== null &&
+                      item.img_url &&
+                      typeof item.img_url === 'string',
+                  );
+                }
+              }
+              return false;
+            case 'input':
+              // 输入框组件显示文本和数字类型的变量
+              return (
+                typeof variableValue === 'string' ||
+                typeof variableValue === 'number'
+              );
+            case 'select_static':
+            case 'multi_select_static':
+              // 选择器组件显示数组类型的变量
+              return Array.isArray(variableValue);
+            case 'button':
+              // 按钮组件显示文本类型的变量
+              return typeof variableValue === 'string';
+            default:
+              // 其他组件类型显示所有类型的变量
+              return true;
+          }
+        }
       }
       return false;
     });
@@ -3015,65 +3167,7 @@ export const PropertyPanel: React.FC<{
         }
       };
 
-      // 根据组件类型过滤变量
-      const getFilteredVariables = (componentType: string) => {
-        return variables.filter((variable) => {
-          if (typeof variable === 'object' && variable !== null) {
-            const keys = Object.keys(variable as Record<string, any>);
-            if (keys.length > 0) {
-              const variableValue = (variable as Record<string, any>)[keys[0]];
-
-              // 根据组件类型过滤变量
-              switch (componentType) {
-                case 'plain_text':
-                  // 普通文本组件只显示文本类型的变量
-                  return typeof variableValue === 'string';
-                case 'rich_text': {
-                  // 富文本组件显示文本类型和富文本类型的变量
-                  const isStringType = typeof variableValue === 'string';
-                  const isRichTextType =
-                    typeof variableValue === 'object' &&
-                    variableValue?.type === 'doc';
-                  const shouldShow = isRichTextType;
-                  console.log('🔍 富文本组件变量筛选:', {
-                    variableName: keys[0],
-                    variableValue,
-                    isStringType,
-                    isRichTextType,
-                    shouldShow,
-                  });
-                  return shouldShow;
-                }
-                case 'img':
-                  // 图片组件显示图片相关类型的变量
-                  return (
-                    typeof variableValue === 'object' &&
-                    (variableValue?.img_url ||
-                      variableValue?.url ||
-                      Array.isArray(variableValue))
-                  );
-                case 'input':
-                  // 输入框组件显示文本和数字类型的变量
-                  return (
-                    typeof variableValue === 'string' ||
-                    typeof variableValue === 'number'
-                  );
-                case 'select_static':
-                case 'multi_select_static':
-                  // 选择器组件显示数组类型的变量
-                  return Array.isArray(variableValue);
-                case 'button':
-                  // 按钮组件显示文本类型的变量
-                  return typeof variableValue === 'string';
-                default:
-                  // 其他组件类型显示所有类型的变量
-                  return true;
-              }
-            }
-          }
-          return false;
-        });
-      };
+      // 使用提取到组件级别的 getFilteredVariables 函数
 
       // 获取过滤后的变量
       const filteredVariables = getFilteredVariables(
@@ -4260,8 +4354,24 @@ export const PropertyPanel: React.FC<{
         );
       }
 
-      const imgSource = imageComponent.img_source || 'upload';
-      const cropMode = imageComponent.crop_mode || 'default';
+      const cropMode = imageComponent.style?.crop_mode || 'default';
+
+      // 获取图片URL的显示值（用于属性面板输入框）
+      // 始终显示原始的img_url值，不解析变量
+      const getDisplayImageUrl = () => {
+        return imageComponent.img_url || '';
+      };
+
+      // 获取当前绑定的变量名（用于下拉选择器）
+      const getBoundVariableName = () => {
+        if (imageComponent.img_url && imageComponent.img_url.includes('${')) {
+          const variableMatch = imageComponent.img_url.match(/\$\{([^}]+)\}/);
+          if (variableMatch && variableMatch[1]) {
+            return variableMatch[1];
+          }
+        }
+        return imageComponent.variable_name || undefined;
+      };
 
       return (
         <div>
@@ -4275,484 +4385,164 @@ export const PropertyPanel: React.FC<{
             }}
           >
             <Text style={{ fontSize: '12px', color: '#52c41a' }}>
-              🎯 当前选中：图片组件 (来源: {imgSource})
+              🎯 当前选中：图片组件
             </Text>
           </div>
-          <Collapse
-            defaultActiveKey={[]}
-            ghost
-            items={[
-              {
-                key: 'source',
-                label: '📁 图片来源',
-                children: (
-                  <Form form={form} layout="vertical">
-                    <Form.Item label="图片来源">
-                      <Switch
-                        checked={imgSource === 'variable'}
-                        onChange={(checked) => {
-                          const newSource = checked ? 'variable' : 'upload';
+          {/* 图片来源 */}
+          <div
+            style={{
+              marginBottom: '24px',
+              background: '#fff',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>
+              📁 图片设置
+            </div>
+            <div>
+              <Form form={form} layout="vertical">
+                <Form.Item label="图片URL">
+                  <Input
+                    value={getDisplayImageUrl()}
+                    onChange={(e) => {
+                      handleValueChange('img_url', e.target.value);
+                    }}
+                    placeholder="请输入图片URL"
+                    disabled={!!getBoundVariableName()} // 绑定变量时禁用输入
+                    addonAfter={
+                      getBoundVariableName() ? (
+                        <span style={{ color: '#1890ff', fontSize: '12px' }}>
+                          来自变量: {getBoundVariableName()}
+                        </span>
+                      ) : null
+                    }
+                  />
+                </Form.Item>
 
-                          // 创建更新后的组件
-                          const updatedComponent = {
-                            ...currentComponent,
-                            img_source: newSource,
-                            // 清除相关字段
-                            ...(checked ? {} : { variable_name: undefined }),
-                          } as any;
-
-                          onUpdateComponent(updatedComponent);
-
-                          // 强制UI更新
-                          setTimeout(() => {
-                            forceUpdate((prev) => prev + 1);
-                          }, 50);
-                        }}
-                        checkedChildren="绑定变量"
-                        unCheckedChildren="文件"
-                      />
-                      {/* 显示当前状态调试信息 */}
-                      <div
-                        style={{
-                          fontSize: '12px',
-                          color: '#666',
-                          marginTop: '4px',
-                        }}
-                      >
-                        当前模式:{' '}
-                        {imgSource === 'variable'
-                          ? '🔗 变量绑定'
-                          : '📁 文件上传'}
-                      </div>
-                    </Form.Item>
-
-                    {imgSource === 'upload' && (
-                      <>
-                        <Form.Item label="图片上传">
-                          <Upload
-                            accept="image/*"
-                            showUploadList={false}
-                            beforeUpload={(file) => {
-                              // 处理文件上传逻辑
-                              const reader = new FileReader();
-                              reader.onload = (e) => {
-                                const dataUrl = e.target?.result as string;
-
-                                // 批量更新图片属性
-                                const updatedComponent = {
-                                  ...currentComponent,
-                                  img_url: dataUrl,
-                                } as any;
-
-                                onUpdateComponent(updatedComponent);
-
-                                // 强制UI更新
-                                setTimeout(() => {
-                                  forceUpdate((prev) => prev + 1);
-                                }, 100);
-                              };
-
-                              reader.onerror = (error) => {
-                                console.error('❌ 图片读取失败:', error);
-                                message.error('图片读取失败，请重试');
-                              };
-
-                              reader.readAsDataURL(file);
-                              return false; // 阻止自动上传
-                            }}
-                          >
-                            <Button size="small" type="primary">
-                              上传
-                            </Button>
-                          </Upload>
-                        </Form.Item>
-                      </>
-                    )}
-
-                    {imgSource === 'variable' && (
-                      <Form.Item label="绑定变量">
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <Select
-                            style={{ flex: 1 }}
-                            value={imageComponent.variable_name}
-                            onChange={(value) => {
-                              handleValueChange('variable_name', value);
-                              // 从变量中获取图片URL
-                              const selectedVariable = variables.find((v) => {
-                                if (typeof v === 'object' && v !== null) {
-                                  return Object.keys(v as any).includes(value);
-                                }
-                                return (v as any).name === value;
-                              });
-                              if (selectedVariable) {
-                                let imgUrl = '';
-                                if (
-                                  typeof selectedVariable === 'object' &&
-                                  selectedVariable !== null
-                                ) {
-                                  imgUrl = (selectedVariable as any)[value];
-                                } else {
-                                  imgUrl = (selectedVariable as any).value;
-                                }
-                                if (imgUrl) {
-                                  handleValueChange('img_url', imgUrl);
-                                }
-                              }
-                            }}
-                            placeholder="请选择变量"
-                            allowClear
-                            dropdownRender={(menu) => (
-                              <div>
-                                {menu}
-                                <Divider style={{ margin: '8px 0' }} />
-                                <div
-                                  style={{
-                                    padding: '8px 12px',
-                                    cursor: 'pointer',
-                                    color: '#1890ff',
-                                    fontWeight: 500,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                  }}
-                                  onClick={() => {
-                                    // 打开添加变量弹窗（保持组件类型过滤）
-                                    handleAddVariableFromComponent();
-                                  }}
-                                >
-                                  <PlusOutlined />
-                                  新建变量
-                                </div>
-                              </div>
-                            )}
-                          >
-                            {(() => {
-                              // 根据组件类型过滤变量 - 图片组件只显示图片相关类型的变量
-                              const filteredImageVariables = variables.filter(
-                                (variable) => {
-                                  if (
-                                    typeof variable === 'object' &&
-                                    variable !== null
-                                  ) {
-                                    const keys = Object.keys(
-                                      variable as Record<string, any>,
-                                    );
-                                    if (keys.length > 0) {
-                                      const variableValue = (
-                                        variable as Record<string, any>
-                                      )[keys[0]];
-
-                                      // 图片组件显示图片相关类型的变量
-                                      return (
-                                        typeof variableValue === 'object' &&
-                                        (variableValue?.img_url ||
-                                          variableValue?.url ||
-                                          Array.isArray(variableValue))
-                                      );
-                                    }
-                                  }
-                                  return false;
-                                },
-                              );
-
-                              console.log('🖼️ 图片组件变量过滤:', {
-                                totalVariables: variables.length,
-                                filteredCount: filteredImageVariables.length,
-                                filteredVariables: filteredImageVariables,
-                                componentType: 'img',
-                                timestamp: new Date().toISOString(),
-                              });
-
-                              return filteredImageVariables.map(
-                                (variable: any, index: number) => {
-                                  let variableName = '';
-                                  let variableValue = '';
-                                  if (
-                                    typeof variable === 'object' &&
-                                    variable !== null
-                                  ) {
-                                    const keys = Object.keys(variable as any);
-                                    variableName =
-                                      keys.length > 0 ? keys[0] : '未命名变量';
-                                    variableValue = (variable as any)[
-                                      variableName
-                                    ];
-                                  } else {
-                                    variableName =
-                                      (variable as any).name || '未命名变量';
-                                    variableValue =
-                                      (variable as any).value || '';
-                                  }
-                                  return (
-                                    <Option
-                                      key={`${variableName}-${index}`}
-                                      value={variableName}
-                                    >
-                                      <div
-                                        style={{
-                                          display: 'flex',
-                                          justifyContent: 'space-between',
-                                          alignItems: 'center',
-                                        }}
-                                      >
-                                        <span>{variableName}</span>
-                                        <span
-                                          style={{
-                                            fontSize: '12px',
-                                            color: '#8c8c8c',
-                                          }}
-                                        >
-                                          {typeof variableValue === 'object'
-                                            ? '图片对象'
-                                            : Array.isArray(variableValue)
-                                            ? `数组 (${variableValue.length})`
-                                            : String(variableValue).substring(
-                                                0,
-                                                20,
-                                              ) +
-                                              (String(variableValue).length > 20
-                                                ? '...'
-                                                : '')}
-                                        </span>
-                                      </div>
-                                    </Option>
-                                  );
-                                },
-                              );
-                            })()}
-                          </Select>
-                          <Button
-                            size="small"
-                            type="primary"
-                            onClick={() => {
-                              // 打开添加变量弹窗（保持组件类型过滤）
-                              handleAddVariableFromComponent();
-                            }}
-                          >
-                            新建
-                          </Button>
-                        </div>
-                      </Form.Item>
-                    )}
-
-                    {/* 图片预览 */}
-                    {(imageComponent.img_url ||
-                      (imgSource === 'variable' &&
-                        imageComponent.variable_name)) && (
-                      <Form.Item label="图片预览">
+                <Form.Item label="绑定变量 (可选)">
+                  <Select
+                    value={getBoundVariableName()}
+                    onChange={(value) => {
+                      handleValueChange('variable_name', value);
+                    }}
+                    placeholder="请选择变量"
+                    allowClear
+                    dropdownRender={(menu) => (
+                      <div>
+                        {menu}
+                        <Divider style={{ margin: '8px 0' }} />
                         <div
                           style={{
-                            width: '100%',
-                            height: '150px',
-                            border: '1px dashed #d9d9d9',
-                            borderRadius: '6px',
+                            padding: '8px 12px',
+                            cursor: 'pointer',
+                            color: '#1890ff',
+                            fontWeight: 500,
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'center',
-                            overflow: 'hidden',
-                            backgroundColor: '#fafafa',
+                            gap: '8px',
+                          }}
+                          onClick={() => {
+                            // 打开添加变量弹窗（图片组件类型过滤）
+                            handleAddVariableFromComponent();
                           }}
                         >
-                          {(() => {
-                            let previewUrl = '';
-
-                            if (
-                              imgSource === 'variable' &&
-                              imageComponent.variable_name
-                            ) {
-                              // 从变量中获取图片URL
-                              const selectedVariable = variables.find((v) => {
-                                if (typeof v === 'object' && v !== null) {
-                                  return Object.keys(v as any).includes(
-                                    imageComponent.variable_name,
-                                  );
-                                }
-                                return false;
-                              });
-                              if (selectedVariable) {
-                                const variableValue = (selectedVariable as any)[
-                                  imageComponent.variable_name
-                                ];
-                                if (
-                                  typeof variableValue === 'object' &&
-                                  variableValue?.img_url
-                                ) {
-                                  previewUrl = variableValue.img_url;
-                                } else if (typeof variableValue === 'string') {
-                                  previewUrl = variableValue;
-                                }
-                              }
-                            } else {
-                              previewUrl = imageComponent.img_url;
-                            }
-
-                            if (previewUrl) {
-                              return (
-                                <img
-                                  src={previewUrl}
-                                  alt="图片预览"
-                                  style={{
-                                    maxWidth: '100%',
-                                    maxHeight: '100%',
-                                    objectFit: 'contain',
-                                  }}
-                                  onError={(e) => {
-                                    console.error(
-                                      '❌ 图片加载失败:',
-                                      previewUrl,
-                                    );
-                                    (
-                                      e.target as HTMLImageElement
-                                    ).style.display = 'none';
-                                  }}
-                                />
-                              );
-                            } else {
-                              return (
-                                <div
-                                  style={{ textAlign: 'center', color: '#999' }}
-                                >
-                                  <div
-                                    style={{
-                                      fontSize: '24px',
-                                      marginBottom: '8px',
-                                    }}
-                                  >
-                                    🖼️
-                                  </div>
-                                  <div style={{ fontSize: '12px' }}>
-                                    {imgSource === 'variable'
-                                      ? '请选择图片变量'
-                                      : '暂无图片'}
-                                  </div>
-                                </div>
-                              );
-                            }
-                          })()}
+                          <PlusOutlined />
+                          新建变量
                         </div>
-                      </Form.Item>
+                      </div>
                     )}
-                  </Form>
-                ),
-              },
-              {
-                key: 'display',
-                label: '🎨 显示设置',
-                children: (
-                  <Form form={form} layout="vertical">
-                    <Form.Item label="裁剪方式">
-                      <Select
-                        value={cropMode}
-                        onChange={(value) => {
-                          handleValueChange('crop_mode', value);
-                        }}
-                        style={{ width: '100%' }}
-                      >
-                        <Option value="default">
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                            }}
-                          >
-                            <span>📐</span>
-                            <div>
-                              <div>完整展示</div>
-                              <div style={{ fontSize: '12px', color: '#999' }}>
-                                根据图片比例完整展示内容
-                              </div>
-                            </div>
-                          </div>
+                  >
+                    {getFilteredVariables('img').map((variable, index) => {
+                      const keys = Object.keys(variable as Record<string, any>);
+                      const variableName = keys[0];
+                      return (
+                        <Option key={index} value={variableName}>
+                          {variableName}
                         </Option>
-                        <Option value="top">
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                            }}
-                          >
-                            <span>⬆️</span>
-                            <div>
-                              <div>顶部裁剪</div>
-                              <div style={{ fontSize: '12px', color: '#999' }}>
-                                4:3比例，显示图片顶部
-                              </div>
-                            </div>
-                          </div>
-                        </Option>
-                        <Option value="center">
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                            }}
-                          >
-                            <span>🎯</span>
-                            <div>
-                              <div>居中裁剪</div>
-                              <div style={{ fontSize: '12px', color: '#999' }}>
-                                4:3比例，显示图片中心
-                              </div>
-                            </div>
-                          </div>
-                        </Option>
-                      </Select>
-                    </Form.Item>
-
-                    <Form.Item label="尺寸设置">
+                      );
+                    })}
+                  </Select>
+                </Form.Item>
+              </Form>
+            </div>
+          </div>
+          {/* 显示设置 */}
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 6,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>
+              🎨 显示设置
+            </div>
+            <div>
+              <Form form={form} layout="vertical">
+                <Form.Item label="裁剪方式">
+                  <Select
+                    value={cropMode}
+                    onChange={(value) => {
+                      handleValueChange('crop_mode', value);
+                    }}
+                    style={{ width: '100%' }}
+                  >
+                    <Option value="default">
                       <div
                         style={{
                           display: 'flex',
-                          gap: '8px',
                           alignItems: 'center',
+                          gap: '8px',
                         }}
                       >
-                        <Input
-                          placeholder="宽度"
-                          value={imageComponent.width || ''}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            handleValueChange(
-                              'width',
-                              value ? parseInt(value) : undefined,
-                            );
-                          }}
-                          addonAfter="px"
-                          type="number"
-                        />
-                        <span>×</span>
-                        <Input
-                          placeholder="高度"
-                          value={imageComponent.height || ''}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            handleValueChange(
-                              'height',
-                              value ? parseInt(value) : undefined,
-                            );
-                          }}
-                          addonAfter="px"
-                          type="number"
-                        />
+                        <span>📐</span>
+                        <div>
+                          <div>完整展示</div>
+                          <div style={{ fontSize: '12px', color: '#999' }}>
+                            根据图片比例完整展示内容
+                          </div>
+                        </div>
                       </div>
+                    </Option>
+                    <Option value="top">
                       <div
                         style={{
-                          fontSize: '12px',
-                          color: '#999',
-                          marginTop: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
                         }}
                       >
-                        留空则使用默认尺寸
+                        <span>⬆️</span>
+                        <div>
+                          <div>顶部裁剪</div>
+                          <div style={{ fontSize: '12px', color: '#999' }}>
+                            4:3比例，显示图片顶部
+                          </div>
+                        </div>
                       </div>
-                    </Form.Item>
-                  </Form>
-                ),
-              },
-            ]}
-          />
+                    </Option>
+                    <Option value="center">
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                        }}
+                      >
+                        <span>🎯</span>
+                        <div>
+                          <div>居中裁剪</div>
+                          <div style={{ fontSize: '12px', color: '#999' }}>
+                            4:3比例，显示图片中心
+                          </div>
+                        </div>
+                      </div>
+                    </Option>
+                  </Select>
+                </Form.Item>
+              </Form>
+            </div>
+          </div>
         </div>
       );
     }
