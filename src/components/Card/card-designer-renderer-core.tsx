@@ -3393,43 +3393,109 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               return url;
             })()}
             alt="图片"
-            style={getCropStyle()}
+            style={{
+              ...getCropStyle(),
+              // 图片加载失败时显示图裂状态的基础样式
+              backgroundColor: '#f5f5f5',
+            }}
             onLoad={(e) => {
+              const img = e.target as HTMLImageElement;
               console.log('✅ 图片加载成功:', {
                 componentId: comp.id,
-                src: (e.target as HTMLImageElement).src,
-                naturalWidth: (e.target as HTMLImageElement).naturalWidth,
-                naturalHeight: (e.target as HTMLImageElement).naturalHeight,
+                src: img.src,
+                naturalWidth: img.naturalWidth,
+                naturalHeight: img.naturalHeight,
               });
+
+              // 加载成功时移除错误样式
+              img.style.backgroundColor = '';
+              img.style.border = '';
+              img.style.opacity = '1';
+
+              // 移除错误提示元素
+              const parent = img.parentElement;
+              if (parent) {
+                const errorElement = parent.querySelector(
+                  '.image-error-overlay',
+                );
+                if (errorElement) {
+                  errorElement.remove();
+                }
+              }
             }}
             onError={(e) => {
               const img = e.target as HTMLImageElement;
+              const isVariableBound =
+                comp.img_url && comp.img_url.includes('${');
+
               console.log('❌ 图片加载失败:', {
                 componentId: comp.id,
                 originalSrc: img.src,
-                fallbackSrc: '/demo.png',
+                isVariableBound,
                 error: e,
-                // 检查是否是CORS问题
                 crossOrigin: img.crossOrigin,
-                // 检查网络状态
                 networkState: navigator.onLine ? 'online' : 'offline',
               });
 
-              // 尝试添加时间戳重试一次（避免缓存问题）
-              const originalSrc = img.src;
-              if (
-                !originalSrc.includes('?retry=1') &&
-                !originalSrc.includes('/demo.png')
-              ) {
-                const retrySrc = originalSrc.includes('?')
-                  ? `${originalSrc}&retry=1&t=${Date.now()}`
-                  : `${originalSrc}?retry=1&t=${Date.now()}`;
-                console.log('🔄 尝试重新加载图片:', retrySrc);
-                img.src = retrySrc;
+              // 如果是变量绑定的图片，显示图裂状态，不再回退到demo.png
+              if (isVariableBound) {
+                console.log('🖼️ 变量绑定图片加载失败，显示图裂状态');
+
+                // 设置图裂样式
+                img.style.backgroundColor = '#fafafa';
+                img.style.border = '2px dashed #d9d9d9';
+                img.style.opacity = '0.6';
+
+                // 添加错误提示覆盖层
+                const parent = img.parentElement;
+                if (parent && !parent.querySelector('.image-error-overlay')) {
+                  const errorOverlay = document.createElement('div');
+                  errorOverlay.className = 'image-error-overlay';
+                  errorOverlay.style.cssText = `
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    color: #999;
+                    font-size: 12px;
+                    text-align: center;
+                    pointer-events: none;
+                    z-index: 1;
+                    background: rgba(255, 255, 255, 0.9);
+                    padding: 8px 12px;
+                    border-radius: 4px;
+                    white-space: nowrap;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                  `;
+                  errorOverlay.innerHTML = '🖼️<br/>图片加载失败';
+
+                  // 确保父容器有相对定位
+                  if (
+                    parent.style.position !== 'absolute' &&
+                    parent.style.position !== 'relative'
+                  ) {
+                    parent.style.position = 'relative';
+                  }
+
+                  parent.appendChild(errorOverlay);
+                }
               } else {
-                // 重试失败，使用备用图片
-                console.log('🔙 重试失败，使用备用图片');
-                img.src = '/demo.png';
+                // 非变量绑定的图片，使用原有的重试逻辑
+                const originalSrc = img.src;
+                if (
+                  !originalSrc.includes('?retry=1') &&
+                  !originalSrc.includes('/demo.png')
+                ) {
+                  const retrySrc = originalSrc.includes('?')
+                    ? `${originalSrc}&retry=1&t=${Date.now()}`
+                    : `${originalSrc}?retry=1&t=${Date.now()}`;
+                  console.log('🔄 尝试重新加载图片:', retrySrc);
+                  img.src = retrySrc;
+                } else {
+                  // 重试失败，使用备用图片
+                  console.log('🔙 重试失败，使用备用图片');
+                  img.src = '/demo.png';
+                }
               }
             }}
           />

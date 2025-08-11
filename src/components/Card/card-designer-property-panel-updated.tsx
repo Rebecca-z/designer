@@ -4438,21 +4438,66 @@ export const PropertyPanel: React.FC<{
             <div>
               <Form form={form} layout="vertical">
                 <Form.Item label="图片URL">
-                  <Input
-                    value={getDisplayImageUrl()}
-                    onChange={(e) => {
-                      handleValueChange('img_url', e.target.value);
-                    }}
-                    placeholder="请输入图片URL"
-                    disabled={!!getBoundVariableName()} // 绑定变量时禁用输入
-                    addonAfter={
-                      getBoundVariableName() ? (
-                        <span style={{ color: '#1890ff', fontSize: '12px' }}>
-                          来自变量: {getBoundVariableName()}
-                        </span>
-                      ) : null
-                    }
-                  />
+                  <Input.Group compact>
+                    <Input
+                      style={{ width: 'calc(100% - 40px)' }}
+                      value={getDisplayImageUrl()}
+                      onChange={(e) => {
+                        handleValueChange('img_url', e.target.value);
+                      }}
+                      placeholder="请输入图片URL"
+                      disabled={!!getBoundVariableName()} // 绑定变量时禁用输入
+                      addonAfter={
+                        getBoundVariableName() ? (
+                          <span style={{ color: '#1890ff', fontSize: '12px' }}>
+                            来自变量: {getBoundVariableName()}
+                          </span>
+                        ) : null
+                      }
+                    />
+                    <Upload
+                      accept="image/*"
+                      showUploadList={false}
+                      disabled={!!getBoundVariableName()} // 绑定变量时禁用上传
+                      beforeUpload={(file) => {
+                        console.log('📁 开始上传图片:', {
+                          fileName: file.name,
+                          fileSize: file.size,
+                          fileType: file.type,
+                          componentId: imageComponent.id,
+                        });
+
+                        // 创建本地URL用于预览
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                          const imageUrl = e.target?.result as string;
+                          console.log('📁 图片上传成功，更新组件:', {
+                            componentId: imageComponent.id,
+                            imageUrl: imageUrl.substring(0, 50) + '...',
+                            imageUrlLength: imageUrl.length,
+                          });
+
+                          // 直接更新图片URL
+                          handleValueChange('img_url', imageUrl);
+                        };
+                        reader.readAsDataURL(file);
+                        return false; // 阻止自动上传
+                      }}
+                    >
+                      <Button
+                        type="primary"
+                        icon={<UploadOutlined />}
+                        style={{
+                          width: '40px',
+                          height: '32px',
+                          padding: 0,
+                          borderRadius: '0 6px 6px 0',
+                        }}
+                        title="上传图片"
+                        disabled={!!getBoundVariableName()}
+                      />
+                    </Upload>
+                  </Input.Group>
                 </Form.Item>
 
                 <Form.Item label="绑定变量 (可选)">
