@@ -1389,15 +1389,26 @@ export const PropertyPanel: React.FC<{
   };
 
   // 处理从组件属性添加变量（保持组件类型过滤）
-  const handleAddVariableFromComponent = () => {
-    console.log('🔧 组件属性: 点击添加变量按钮');
+  const handleAddVariableFromComponent = (componentType?: string) => {
+    console.log('🔧 组件属性: 点击添加变量按钮', {
+      componentType,
+      currentComponentType: currentComponent?.tag,
+    });
     setEditingVariable(null); // 清空编辑状态
     setIsVariableModalFromVariablesTab(false); // 设置标识：来自组件属性
     setIsAddVariableModalVisible(true);
+
+    // 如果指定了组件类型，临时设置以影响AddVariableModal的类型过滤
+    if (componentType) {
+      // 可以通过state或其他方式传递组件类型给AddVariableModal
+      console.log('🎯 指定组件类型用于变量创建:', componentType);
+    }
+
     console.log('✅ 组件属性: 设置标志完成', {
       isVariableModalFromVariablesTab: false,
       isAddVariableModalVisible: true,
       currentComponentType: currentComponent?.tag,
+      specifiedComponentType: componentType,
     });
   };
 
@@ -1471,6 +1482,29 @@ export const PropertyPanel: React.FC<{
                       item.img_url &&
                       typeof item.img_url === 'string',
                   );
+                }
+              }
+              return false;
+            case 'img_combination':
+              // 多图混排组件只显示图片数组类型的变量
+              if (typeof variableValue === 'object' && variableValue !== null) {
+                // 检查是否为图片数组 [{ img_url: "..." }, ...]
+                if (Array.isArray(variableValue) && variableValue.length > 0) {
+                  const isValidImageArray = variableValue.every(
+                    (item) =>
+                      typeof item === 'object' &&
+                      item !== null &&
+                      item.img_url &&
+                      typeof item.img_url === 'string',
+                  );
+                  console.log('🔍 多图混排变量筛选:', {
+                    variableName: keys[0],
+                    variableValue,
+                    isArray: Array.isArray(variableValue),
+                    arrayLength: variableValue.length,
+                    isValidImageArray,
+                  });
+                  return isValidImageArray;
                 }
               }
               return false;
@@ -4142,70 +4176,249 @@ export const PropertyPanel: React.FC<{
             <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>
               🖼️ 图片设置
             </div>
-            <div>
-              {(imgCombComponent.img_list || []).map(
-                (img: any, index: number) => (
-                  <div key={index}>
-                    <Form.Item
-                      label={`图片${index + 1}`}
-                      style={{ marginBottom: '12px' }}
-                    >
-                      <Input
-                        style={{ width: '200px' }}
-                        value={img.img_url || ''}
-                        onChange={(e) => {
-                          const newImgList = [
-                            ...(imgCombComponent.img_list || []),
-                          ];
-                          newImgList[index] = {
-                            ...newImgList[index],
-                            img_url: e.target.value,
-                            i18n_img_url: {
-                              'en-US': e.target.value,
-                            },
-                          };
-                          const updatedComponent = {
-                            ...currentComponent,
-                            img_list: newImgList,
-                          };
-                          onUpdateComponent(updatedComponent);
-                        }}
-                        placeholder="请输入图片的路径"
-                      />
-                      <ImageUpload
-                        onUploadSuccess={(imageUrl) => {
-                          console.log('📁 多图混排上传成功，更新组件:', {
-                            componentId: imgCombComponent.id,
-                            imageIndex: index,
-                            imageUrlLength: imageUrl.length,
-                          });
 
-                          const newImgList = [
-                            ...(imgCombComponent.img_list || []),
-                          ];
-                          newImgList[index] = {
-                            ...newImgList[index],
-                            img_url: imageUrl,
-                            i18n_img_url: {
-                              'en-US': imageUrl,
-                            },
-                          };
-                          const updatedComponent = {
-                            ...currentComponent,
-                            img_list: newImgList,
-                          };
-                          onUpdateComponent(updatedComponent);
-                        }}
-                        buttonProps={{
-                          type: 'default',
-                          icon: <UploadOutlined />,
-                          title: '上传图片',
-                        }}
-                      />
-                    </Form.Item>
+            {/* 变量绑定选项 */}
+            <Form.Item label="绑定变量 (可选)">
+              <Select
+                value={(() => {
+                  // 检查img_list是否是变量占位符格式
+                  if (
+                    typeof imgCombComponent.img_list === 'string' &&
+                    imgCombComponent.img_list.includes('${')
+                  ) {
+                    const variableMatch =
+                      imgCombComponent.img_list.match(/\$\{([^}]+)\}/);
+                    return variableMatch?.[1];
+                  }
+                  return undefined;
+                })()}
+                onChange={(value) => {
+                  console.log('🎯 多图混排变量绑定操作:', {
+                    field: 'img_list_variable',
+                    value,
+                    componentId: imgCombComponent.id,
+                    componentTag: imgCombComponent.tag,
+                    currentImgList: imgCombComponent.img_list,
+                  });
+
+                  if (value) {
+                    // 绑定变量：将img_list设置为变量占位符
+                    const updatedComponent = {
+                      ...currentComponent,
+                      img_list: `\${${value}}`, // DSL数据中使用变量占位符格式
+                    };
+
+                    console.log('📝 更新多图混排变量绑定:', {
+                      componentId: imgCombComponent.id,
+                      selectedVariable: value,
+                      newImgList: updatedComponent.img_list,
+                    });
+
+                    onUpdateComponent(updatedComponent);
+                  } else {
+                    // 清除变量绑定：恢复为默认图片数组
+                    const getDefaultImageList = (combinationMode: string) => {
+                      // 根据混排模式确定默认图片数量
+                      const getRequiredImageCount = (mode: string) => {
+                        switch (mode) {
+                          case 'double':
+                            return 2;
+                          case 'triple':
+                            return 3;
+                          case 'bisect_2':
+                            return 2;
+                          case 'bisect_4':
+                            return 4;
+                          case 'bisect_6':
+                            return 6;
+                          case 'trisect_3':
+                            return 3;
+                          case 'trisect_6':
+                            return 6;
+                          case 'trisect_9':
+                            return 9;
+                          default:
+                            return 2;
+                        }
+                      };
+
+                      const requiredCount =
+                        getRequiredImageCount(combinationMode);
+                      const defaultImageList = [];
+
+                      // 创建默认图片数组
+                      for (let i = 0; i < requiredCount; i++) {
+                        defaultImageList.push({
+                          img_url: '/demo.png', // 使用默认图片
+                          i18n_img_url: {
+                            'en-US': '/demo.png',
+                          },
+                        });
+                      }
+
+                      return defaultImageList;
+                    };
+
+                    const updatedComponent = {
+                      ...currentComponent,
+                      img_list: getDefaultImageList(
+                        imgCombComponent.combination_mode,
+                      ),
+                    };
+
+                    console.log('📝 清除多图混排变量绑定:', {
+                      componentId: imgCombComponent.id,
+                      combinationMode: imgCombComponent.combination_mode,
+                      restoredImgList: updatedComponent.img_list,
+                    });
+
+                    onUpdateComponent(updatedComponent);
+                  }
+                }}
+                placeholder="请选择图片数组变量"
+                allowClear
+                dropdownRender={(menu) => (
+                  <div>
+                    {menu}
+                    <Divider style={{ margin: '8px 0' }} />
+                    <div
+                      style={{
+                        padding: '8px 12px',
+                        cursor: 'pointer',
+                        color: '#1890ff',
+                        fontWeight: 500,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                      }}
+                      onClick={() => {
+                        // 打开添加变量弹窗（图片数组类型）
+                        handleAddVariableFromComponent('img_combination');
+                      }}
+                    >
+                      <PlusOutlined />
+                      新建图片数组变量
+                    </div>
                   </div>
-                ),
-              )}
+                )}
+              >
+                {getFilteredVariables('img_combination').map(
+                  (variable, index) => {
+                    const keys = Object.keys(variable as Record<string, any>);
+                    const variableName = keys[0];
+                    return (
+                      <Option key={index} value={variableName}>
+                        {variableName}
+                      </Option>
+                    );
+                  },
+                )}
+              </Select>
+            </Form.Item>
+
+            <div>
+              {(() => {
+                // 如果绑定了变量，显示变量信息而不是单独的图片输入框
+                const isVariableBound =
+                  typeof imgCombComponent.img_list === 'string' &&
+                  imgCombComponent.img_list.includes('${');
+
+                if (isVariableBound) {
+                  const variableMatch =
+                    imgCombComponent.img_list.match(/\$\{([^}]+)\}/);
+                  const variableName = variableMatch?.[1];
+
+                  return (
+                    <div
+                      style={{
+                        padding: '12px',
+                        backgroundColor: '#f6ffed',
+                        border: '1px solid #b7eb8f',
+                        borderRadius: '6px',
+                        marginBottom: '16px',
+                      }}
+                    >
+                      <Text style={{ fontSize: '12px', color: '#52c41a' }}>
+                        🔗 已绑定图片数组变量: {variableName}
+                      </Text>
+                      <div
+                        style={{
+                          fontSize: '11px',
+                          color: '#999',
+                          marginTop: '4px',
+                        }}
+                      >
+                        图片将自动从变量数据中获取，无需手动设置
+                      </div>
+                    </div>
+                  );
+                }
+
+                // 未绑定变量时显示原有的图片输入框
+                return (imgCombComponent.img_list || []).map(
+                  (img: any, index: number) => (
+                    <div key={index}>
+                      <Form.Item
+                        label={`图片${index + 1}`}
+                        style={{ marginBottom: '12px' }}
+                      >
+                        <Input
+                          style={{ width: '200px' }}
+                          value={img.img_url || ''}
+                          onChange={(e) => {
+                            const newImgList = [
+                              ...(imgCombComponent.img_list || []),
+                            ];
+                            newImgList[index] = {
+                              ...newImgList[index],
+                              img_url: e.target.value,
+                              i18n_img_url: {
+                                'en-US': e.target.value,
+                              },
+                            };
+                            const updatedComponent = {
+                              ...currentComponent,
+                              img_list: newImgList,
+                            };
+                            onUpdateComponent(updatedComponent);
+                          }}
+                          placeholder="请输入图片的路径"
+                        />
+                        <ImageUpload
+                          onUploadSuccess={(imageUrl) => {
+                            console.log('📁 多图混排上传成功，更新组件:', {
+                              componentId: imgCombComponent.id,
+                              imageIndex: index,
+                              imageUrlLength: imageUrl.length,
+                            });
+
+                            const newImgList = [
+                              ...(imgCombComponent.img_list || []),
+                            ];
+                            newImgList[index] = {
+                              ...newImgList[index],
+                              img_url: imageUrl,
+                              i18n_img_url: {
+                                'en-US': imageUrl,
+                              },
+                            };
+                            const updatedComponent = {
+                              ...currentComponent,
+                              img_list: newImgList,
+                            };
+                            onUpdateComponent(updatedComponent);
+                          }}
+                          buttonProps={{
+                            type: 'default',
+                            icon: <UploadOutlined />,
+                            title: '上传图片',
+                          }}
+                        />
+                      </Form.Item>
+                    </div>
+                  ),
+                );
+              })()}
             </div>
           </div>
         </div>

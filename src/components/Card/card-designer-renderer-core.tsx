@@ -3821,6 +3821,77 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       // 检查当前组件是否被选中
       const isCurrentSelected = isSamePath(selectedPath || null, path);
 
+      // 解析多图混排的图片列表（支持变量绑定）
+      const getImageList = () => {
+        console.log('🖼️ 多图混排获取图片列表:', {
+          componentId: comp.id,
+          img_list: comp.img_list,
+          img_list_type: typeof comp.img_list,
+          isString: typeof comp.img_list === 'string',
+          includesVariable:
+            typeof comp.img_list === 'string' && comp.img_list.includes('${'),
+          variablesCount: variables.length,
+        });
+
+        // 如果img_list是变量占位符格式，解析变量
+        if (typeof comp.img_list === 'string' && comp.img_list.includes('${')) {
+          const variableMatch = comp.img_list.match(/\$\{([^}]+)\}/);
+          if (variableMatch && variableMatch[1]) {
+            const variableName = variableMatch[1];
+            console.log('🔍 从img_list提取变量名:', variableName);
+
+            // 查找对应的变量
+            const variable = variables.find((v) => {
+              if (typeof v === 'object' && v !== null) {
+                const keys = Object.keys(v as Record<string, any>);
+                return keys.length > 0 && keys[0] === variableName;
+              }
+              return false;
+            });
+
+            console.log('🔍 找到变量:', { variableName, variable });
+
+            if (variable) {
+              const variableValue = (variable as Record<string, any>)[
+                variableName
+              ];
+              console.log('🔍 变量值解析:', {
+                variableName,
+                variableValue,
+                valueType: typeof variableValue,
+                isArray: Array.isArray(variableValue),
+              });
+
+              // 解析变量值获取图片数组
+              if (Array.isArray(variableValue) && variableValue.length > 0) {
+                console.log('✅ 找到图片数组:', variableValue);
+                return variableValue;
+              } else {
+                console.log('❌ 变量值不是有效的图片数组');
+              }
+            } else {
+              console.log('❌ 没有找到对应的变量:', variableName);
+            }
+          }
+
+          // 变量解析失败，返回空数组或默认图片
+          console.log('🔙 变量解析失败，返回默认图片数组');
+          return [];
+        }
+
+        // 如果img_list是普通数组，直接返回
+        if (Array.isArray(comp.img_list)) {
+          console.log('🔙 返回原始图片数组:', comp.img_list);
+          return comp.img_list;
+        }
+
+        // 其他情况返回空数组
+        console.log('🔙 返回空数组');
+        return [];
+      };
+
+      const resolvedImageList = getImageList();
+
       const imgCombContent = (
         <div
           style={{
@@ -3868,7 +3939,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             {comp.combination_mode === 'double' && (
               <>
                 <ImgRenderer
-                  item={comp.img_list?.[0]}
+                  item={resolvedImageList?.[0]}
                   key="double-img-0"
                   style={{
                     width: '32.4%',
@@ -3878,7 +3949,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                   }}
                 />
                 <ImgRenderer
-                  item={comp.img_list?.[1]}
+                  item={resolvedImageList?.[1]}
                   key="double-img-1"
                   style={{
                     width: 'calc(100% - 32.4% - 4px)',
@@ -3894,7 +3965,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             {comp.combination_mode === 'triple' && (
               <>
                 <ImgRenderer
-                  item={comp.img_list?.[0]}
+                  item={resolvedImageList?.[0]}
                   key="triple-img-0"
                   style={{
                     width: '66.5%',
@@ -3917,7 +3988,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                   }}
                 >
                   <ImgRenderer
-                    item={comp.img_list?.[1]}
+                    item={resolvedImageList?.[1]}
                     key="triple-img-1"
                     style={{
                       aspectRatio: '1',
@@ -3927,7 +3998,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                     }}
                   />
                   <ImgRenderer
-                    item={comp.img_list?.[2]}
+                    item={resolvedImageList?.[2]}
                     key="triple-img-2"
                     style={{
                       aspectRatio: '1',
@@ -3942,39 +4013,45 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             {/* 两列模式 */}
             {comp.combination_mode.includes('bisect') && (
               <>
-                {(comp.img_list || []).map((item: any, imgIndex: number) => (
-                  <ImgRenderer
-                    item={item}
-                    key={`bisect-img-${imgIndex}-${item?.img_url || 'empty'}`}
-                    style={{
-                      width: 'calc(50% - 2px)',
-                      aspectRatio: 1,
-                      maxWidth: 'calc(50% - 2px)', // 限制最大宽度
-                      flexShrink: 0, // 防止收缩
-                    }}
-                  />
-                ))}
+                {(resolvedImageList || []).map(
+                  (item: any, imgIndex: number) => (
+                    <ImgRenderer
+                      item={item}
+                      key={`bisect-img-${imgIndex}-${item?.img_url || 'empty'}`}
+                      style={{
+                        width: 'calc(50% - 2px)',
+                        aspectRatio: 1,
+                        maxWidth: 'calc(50% - 2px)', // 限制最大宽度
+                        flexShrink: 0, // 防止收缩
+                      }}
+                    />
+                  ),
+                )}
               </>
             )}
             {/* 三列模式 */}
             {comp.combination_mode.includes('trisect') && (
               <>
-                {(comp.img_list || []).map((item: any, imgIndex: number) => (
-                  <ImgRenderer
-                    item={item}
-                    key={`trisect-img-${imgIndex}-${item?.img_url || 'empty'}`}
-                    style={{
-                      width: 'calc(33.33% - 2.67px)',
-                      aspectRatio: 1,
-                      maxWidth: 'calc(33.33% - 2.67px)', // 限制最大宽度
-                      flexShrink: 0, // 防止收缩
-                    }}
-                  />
-                ))}
+                {(resolvedImageList || []).map(
+                  (item: any, imgIndex: number) => (
+                    <ImgRenderer
+                      item={item}
+                      key={`trisect-img-${imgIndex}-${
+                        item?.img_url || 'empty'
+                      }`}
+                      style={{
+                        width: 'calc(33.33% - 2.67px)',
+                        aspectRatio: 1,
+                        maxWidth: 'calc(33.33% - 2.67px)', // 限制最大宽度
+                        flexShrink: 0, // 防止收缩
+                      }}
+                    />
+                  ),
+                )}
               </>
             )}
 
-            {comp.img_list.length === 0 && (
+            {resolvedImageList.length === 0 && (
               <div
                 style={{
                   gridColumn: `span ${
