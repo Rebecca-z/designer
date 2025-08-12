@@ -28,6 +28,9 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
 
   const [form] = Form.useForm<VariableFormData>();
   const [selectedType, setSelectedType] = useState<VariableType>(initialType);
+
+  // 使用Form.useWatch监听表单type字段的实时变化
+  const currentFormType = Form.useWatch('type', form) || selectedType;
   const [jsonData, setJsonData] = useState<string>(''); // 新增：JSON编辑器数据
   const [jsonError, setJsonError] = useState<string>(''); // 新增：JSON错误信息
   const [isFirstOpen, setIsFirstOpen] = useState<boolean>(true); // 新增：跟踪是否是首次打开
@@ -305,7 +308,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
       const values = await form.validateFields();
 
       // 如果是富文本类型，直接处理富文本编辑器数据
-      if (selectedType === 'richtext') {
+      if (values.type === 'richtext') {
         // 构建Variable对象
         const variable: Variable = {
           name: values.name,
@@ -330,20 +333,23 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
       }
 
       // 如果是图片类型，直接处理字符串输入
-      if (selectedType === 'image') {
+      if (values.type === 'image') {
         // 构建Variable对象，保存为键值对格式
         const variable: Variable = {
           name: values.name,
           type: 'text', // 图片URL作为文本类型
           value: values.mockData, // 直接使用输入的URL字符串
-          originalType: selectedType,
+          originalType: values.type, // 应该是 'image'
           description: values.description || '',
         };
 
-        console.log('💾 提交图片变量数据:', {
+        console.log('💾 [图片类型] 提交图片变量数据:', {
           isEditing: !!editingVariable,
+          selectedType,
+          formType: values.type,
           variable,
           imageUrl: values.mockData,
+          originalType: variable.originalType,
         });
 
         onOk(variable);
@@ -355,7 +361,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
       }
 
       // 如果是数组或图片数组类型，需要验证JSON编辑器
-      if (selectedType === 'array' || selectedType === 'imageArray') {
+      if (values.type === 'array' || values.type === 'imageArray') {
         if (jsonEditorRef.current) {
           const { formatJSON, validateJSON, getFormattedJSON } =
             jsonEditorRef.current;
@@ -472,10 +478,13 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         description: values.description || '',
       };
 
-      console.log('💾 提交变量数据:', {
+      console.log('💾 [通用类型] 提交变量数据:', {
         isEditing: !!editingVariable,
+        selectedType,
+        formType: values.type,
         variable,
         formValues: values,
+        originalType: variable.originalType,
         jsonData,
       });
 
@@ -541,7 +550,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
 
   // 渲染模拟数据输入组件
   const renderMockDataInput = () => {
-    switch (selectedType) {
+    switch (currentFormType) {
       case 'text':
         return (
           <Form.Item
@@ -803,6 +812,16 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         initialValues={formInitialValues}
         onValuesChange={(changedValues, allValues) => {
           console.log('🔍 Form值变化:', { changedValues, allValues });
+
+          // 如果类型字段发生变化，同步更新selectedType状态
+          if (changedValues.type && changedValues.type !== selectedType) {
+            console.log('🔄 同步更新selectedType:', {
+              oldType: selectedType,
+              newType: changedValues.type,
+            });
+            setSelectedType(changedValues.type);
+            setIsUserEditing(false); // 重置用户编辑状态
+          }
         }}
       >
         {/* 类型选择 */}

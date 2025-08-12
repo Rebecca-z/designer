@@ -117,19 +117,31 @@ const CardDesigner: React.FC = () => {
 
     newVariables.forEach((variable) => {
       if (typeof variable === 'object' && variable !== null) {
-        // 新的格式：{变量名: 模拟数据值}，不包含类型和描述信息
-        const keys = Object.keys(variable as { [key: string]: any });
-        if (keys.length > 0) {
-          const variableName = keys[0];
-          // 只保存变量名和模拟数据
-          cardVariables[variableName] = (variable as { [key: string]: any })[
-            variableName
-          ];
+        // 新的格式：{变量名: 模拟数据值, __变量名_originalType: 原始类型}
+        const variableRecord = variable as { [key: string]: any };
+        const keys = Object.keys(variableRecord);
+
+        // 分离实际变量名和内部属性
+        const actualVariableNames = keys.filter((key) => !key.startsWith('__'));
+        const internalKeys = keys.filter((key) => key.startsWith('__'));
+
+        // 只保存实际变量到全局数据，不保存内部属性
+        actualVariableNames.forEach((variableName) => {
+          cardVariables[variableName] = variableRecord[variableName];
+        });
+
+        // 内部属性（如 originalType）不保存到全局数据中
+        // 这些信息将通过内存缓存和组件状态维护
+        if (internalKeys.length > 0) {
+          console.log('🔧 内部属性不保存到全局数据:', {
+            internalKeys,
+            message: 'originalType信息通过内存缓存维护',
+            timestamp: new Date().toISOString(),
+          });
         }
       } else {
         // 兼容旧的Variable格式
         const varAsVariable = variable as Variable;
-        // 只保存变量名和模拟数据
         cardVariables[varAsVariable.name] = varAsVariable.value;
       }
     });
@@ -165,18 +177,49 @@ const CardDesigner: React.FC = () => {
       const cardVariables = safeCardData.variables;
       const variableItems: VariableItem[] = [];
 
-      // 只处理变量名和值，不包含type和description信息
-      Object.entries(cardVariables).forEach(([key, value]) => {
-        // 检查是否是变量名（不包含_type或_description后缀）
-        if (!key.endsWith('_type') && !key.endsWith('_description')) {
-          variableItems.push({
-            [key]: value,
+      // 处理变量名和值，同时保留内部属性（如originalType）
+      const actualVariableEntries = Object.entries(cardVariables).filter(
+        ([key]) =>
+          // 过滤出实际变量（排除旧格式后缀和内部属性）
+          !key.endsWith('_type') &&
+          !key.endsWith('_description') &&
+          !key.startsWith('__'),
+      );
+
+      actualVariableEntries.forEach(([variableName, variableValue]) => {
+        // 构建变量对象，只包含变量名和值
+        const variableItem: Record<string, any> = {
+          [variableName]: variableValue,
+        };
+
+        // 尝试从缓存中获取originalType信息
+        const originalTypeKey = `__${variableName}_originalType`;
+        const cachedOriginalType =
+          variableCacheManager.getVariable(originalTypeKey);
+
+        if (cachedOriginalType) {
+          variableItem[originalTypeKey] = cachedOriginalType;
+          console.log('🔄 重建变量时从缓存恢复originalType:', {
+            variableName,
+            originalTypeKey,
+            originalType: cachedOriginalType,
+            source: 'cache',
+          });
+        } else {
+          console.log('🔍 重建变量时未找到originalType缓存:', {
+            variableName,
+            originalTypeKey,
+            message: '将使用类型推断',
           });
         }
+
+        variableItems.push(variableItem);
       });
 
       console.log('🔄 从卡片数据结构初始化变量:', {
         cardVariables: cardVariables,
+        cardVariableKeys: Object.keys(cardVariables),
+        actualVariableEntries: actualVariableEntries,
         variableItems: variableItems,
         timestamp: new Date().toISOString(),
       });

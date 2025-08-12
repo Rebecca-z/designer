@@ -898,6 +898,16 @@ const getDisplayCombinationMode = (
 };
 
 // 右侧属性面板 - 修复数据更新逻辑
+// 辅助函数：获取变量对象的实际变量名（过滤掉内部属性）
+const getVariableKeys = (variable: any): string[] => {
+  if (typeof variable === 'object' && variable !== null) {
+    return Object.keys(variable as Record<string, any>).filter(
+      (key) => !(key.startsWith('__') && key.endsWith('_originalType')),
+    );
+  }
+  return [];
+};
+
 export const PropertyPanel: React.FC<{
   selectedComponent: ComponentType | null;
   selectedPath: (string | number)[] | null;
@@ -1201,7 +1211,7 @@ export const PropertyPanel: React.FC<{
             // 选择了变量，需要获取变量中的图片URL并更新组件
             const selectedVariable = variables.find((v) => {
               if (typeof v === 'object' && v !== null) {
-                const keys = Object.keys(v as Record<string, any>);
+                const keys = getVariableKeys(v);
                 return keys.length > 0 && keys[0] === value;
               }
               return false;
@@ -1422,7 +1432,7 @@ export const PropertyPanel: React.FC<{
   const findVariableIndexByName = (variableName: string): number => {
     return variables.findIndex((v) => {
       if (typeof v === 'object' && v !== null) {
-        const keys = Object.keys(v as VariableObject);
+        const keys = getVariableKeys(v);
         return keys.length > 0 && keys[0] === variableName;
       }
       return false;
@@ -1433,7 +1443,7 @@ export const PropertyPanel: React.FC<{
   const getFilteredVariables = (componentType: string) => {
     return variables.filter((variable) => {
       if (typeof variable === 'object' && variable !== null) {
-        const keys = Object.keys(variable as Record<string, any>);
+        const keys = getVariableKeys(variable);
         if (keys.length > 0) {
           const variableValue = (variable as Record<string, any>)[keys[0]];
 
@@ -1459,31 +1469,38 @@ export const PropertyPanel: React.FC<{
               return shouldShow;
             }
             case 'img':
-              // 图片组件显示图片相关类型的变量
-              // 支持字符串格式的图片URL和对象格式的图片数据
+              // 图片组件只显示单个图片类型的变量（不包括图片数组）
+              console.log('🔍 图片组件变量筛选:', {
+                variableName: keys[0],
+                variableValue,
+                valueType: typeof variableValue,
+                isString: typeof variableValue === 'string',
+                isObject: typeof variableValue === 'object',
+                isArray: Array.isArray(variableValue),
+              });
+
+              // 1. 字符串格式的图片URL变量（推荐格式）
               if (typeof variableValue === 'string') {
-                // 新的字符串格式图片变量
+                console.log('✅ 图片组件: 接受字符串格式图片变量');
                 return true;
               }
+
+              // 2. 单个图片对象格式 { img_url: "..." }（兼容旧格式）
               if (typeof variableValue === 'object' && variableValue !== null) {
-                // 检查是否为单个图片对象 { img_url: "..." }
+                // 只接受单个图片对象，排除图片数组
                 if (
+                  !Array.isArray(variableValue) &&
                   variableValue.img_url &&
                   typeof variableValue.img_url === 'string'
                 ) {
+                  console.log('✅ 图片组件: 接受单个图片对象格式');
                   return true;
                 }
-                // 检查是否为图片数组 [{ img_url: "..." }, ...]
-                if (Array.isArray(variableValue) && variableValue.length > 0) {
-                  return variableValue.every(
-                    (item) =>
-                      typeof item === 'object' &&
-                      item !== null &&
-                      item.img_url &&
-                      typeof item.img_url === 'string',
-                  );
-                }
               }
+
+              console.log(
+                '❌ 图片组件: 拒绝此变量（可能是图片数组或其他类型）',
+              );
               return false;
             case 'img_combination':
               // 多图混排组件只显示图片数组类型的变量
@@ -1539,7 +1556,14 @@ export const PropertyPanel: React.FC<{
 
   // 处理从弹窗添加/编辑变量
   const handleAddVariableFromModal = (variable: Variable) => {
-    console.warn('variable====', variable);
+    console.warn('🔍 接收到的变量数据:', {
+      variable,
+      name: variable.name,
+      type: variable.type,
+      originalType: variable.originalType,
+      value: variable.value,
+      valueType: typeof variable.value,
+    });
     // 解析模拟数据值
     let parsedValue: any;
     try {
@@ -1550,8 +1574,14 @@ export const PropertyPanel: React.FC<{
         variable.value.startsWith('[')
       ) {
         parsedValue = JSON.parse(variable.value);
+      } else if (variable.type === 'number') {
+        // 对于数字类型，转换为数字
+        parsedValue = Number(variable.value);
+        if (isNaN(parsedValue)) {
+          parsedValue = variable.value; // 如果转换失败，保持原值
+        }
       } else {
-        // 对于文本和数字类型，直接使用字符串值
+        // 对于文本和其他类型，直接使用字符串值
         parsedValue = variable.value;
       }
     } catch (error) {
@@ -1559,10 +1589,21 @@ export const PropertyPanel: React.FC<{
       parsedValue = variable.value;
     }
 
-    // 创建{变量名:模拟数据值}格式的对象，不包含type和description信息
+    // 创建{变量名:模拟数据值}格式的对象，同时保留originalType信息用于显示
     const variableObject = {
       [variable.name]: parsedValue,
+      // 如果有originalType，保存在特殊的属性中
+      ...(variable.originalType && {
+        [`__${variable.name}_originalType`]: variable.originalType,
+      }),
     };
+
+    console.log('💾 保存变量对象:', {
+      variableObject,
+      originalType: variable.originalType,
+      parsedValue,
+      parsedValueType: typeof parsedValue,
+    });
 
     if (editingVariable) {
       // 编辑模式：检查变量名称是否发生变化
@@ -1581,7 +1622,7 @@ export const PropertyPanel: React.FC<{
         // 变量名称发生变化，删除旧变量并添加新变量
         const newVariables = variables.filter((v) => {
           if (typeof v === 'object' && v !== null) {
-            const keys = Object.keys(v as VariableObject);
+            const keys = getVariableKeys(v);
             return keys.length > 0 && keys[0] !== oldVariableName;
           }
           return true;
@@ -3255,7 +3296,7 @@ export const PropertyPanel: React.FC<{
         });
 
         return filteredVariables.map((variable: any) => {
-          const keys = Object.keys(variable as Record<string, any>);
+          const keys = getVariableKeys(variable);
           const variableName = keys[0];
           const variableValue = (variable as Record<string, any>)[variableName];
           return {
@@ -4304,7 +4345,7 @@ export const PropertyPanel: React.FC<{
               >
                 {getFilteredVariables('img_combination').map(
                   (variable, index) => {
-                    const keys = Object.keys(variable as Record<string, any>);
+                    const keys = getVariableKeys(variable);
                     const variableName = keys[0];
                     return (
                       <Option key={index} value={variableName}>
@@ -4717,7 +4758,7 @@ export const PropertyPanel: React.FC<{
                           }}
                           onClick={() => {
                             // 打开添加变量弹窗（图片组件类型过滤）
-                            handleAddVariableFromComponent();
+                            handleAddVariableFromComponent('img');
                           }}
                         >
                           <PlusOutlined />
@@ -4727,7 +4768,7 @@ export const PropertyPanel: React.FC<{
                     )}
                   >
                     {getFilteredVariables('img').map((variable, index) => {
-                      const keys = Object.keys(variable as Record<string, any>);
+                      const keys = getVariableKeys(variable);
                       const variableName = keys[0];
                       return (
                         <Option key={index} value={variableName}>
@@ -4895,30 +4936,69 @@ export const PropertyPanel: React.FC<{
 
                 if (typeof variable === 'object' && variable !== null) {
                   // 新的格式：{变量名: 模拟数据值}
-                  const keys = Object.keys(variable as VariableObject);
+                  const keys = getVariableKeys(variable);
                   if (keys.length > 0) {
                     variableName = keys[0];
                     variableValue = (variable as VariableObject)[variableName];
 
                     // 根据值的类型推断变量类型
                     if (typeof variableValue === 'string') {
-                      variableType = 'text';
+                      // 检查是否有保存的originalType信息
+                      const originalTypeKey = `__${variableName}_originalType`;
+                      const originalType = (variable as any)[originalTypeKey];
+
+                      console.log('🔍 字符串类型变量类型推断1:', {
+                        variableName,
+                        variableValue,
+                        originalTypeKey,
+                        originalType,
+                        hasOriginalType: !!originalType,
+                      });
+
+                      if (originalType === 'image') {
+                        variableType = 'image';
+                      } else {
+                        variableType = 'text'; // 默认为文本类型
+                      }
                     } else if (typeof variableValue === 'number') {
-                      variableType = 'number';
+                      // 检查是否有保存的originalType信息
+                      const originalTypeKey = `__${variableName}_originalType`;
+                      const originalType = (variable as any)[originalTypeKey];
+
+                      console.log('🔍 数字类型变量类型推断:', {
+                        variableName,
+                        variableValue,
+                        originalTypeKey,
+                        originalType,
+                        hasOriginalType: !!originalType,
+                      });
+
+                      // 根据originalType来确定显示类型
+                      if (originalType === 'number') {
+                        variableType = 'number'; // 整数类型
+                      } else {
+                        variableType = 'number'; // 默认数字类型
+                      }
                     } else if (typeof variableValue === 'boolean') {
                       variableType = 'boolean';
                     } else if (Array.isArray(variableValue)) {
                       // 检查是否为图片数组
                       if (
                         variableValue.length > 0 &&
-                        variableValue[0].img_key
+                        variableValue.every(
+                          (item) =>
+                            typeof item === 'object' &&
+                            item !== null &&
+                            item.img_url &&
+                            typeof item.img_url === 'string',
+                        )
                       ) {
                         variableType = 'imageArray';
                       } else {
                         variableType = 'array';
                       }
                     } else if (typeof variableValue === 'object') {
-                      // 尝试判断是图片还是数组
+                      // 尝试判断是图片还是其他对象类型
                       if (variableValue.img_url) {
                         variableType = 'image';
                       } else if (variableValue.type === 'doc') {
@@ -4929,6 +5009,16 @@ export const PropertyPanel: React.FC<{
                     } else {
                       variableType = 'text';
                     }
+
+                    console.log('✅ 类型推断完成2222:', {
+                      variableName,
+                      variableValue,
+                      variableType,
+                      originalTypeKey: `__${variableName}_originalType`,
+                      originalType: (variable as any)[
+                        `__${variableName}_originalType`
+                      ],
+                    });
                   } else {
                     // 空对象，使用默认值
                     variableName = '未命名变量';
@@ -5017,6 +5107,32 @@ export const PropertyPanel: React.FC<{
                             'variableValue for edit:',
                             variableValue,
                           );
+                          // 查找并获取保存的原始类型
+                          const originalTypeKey = `__${variableName}_originalType`;
+                          const savedOriginalType = variables.find((v) => {
+                            if (typeof v === 'object' && v !== null) {
+                              return (
+                                (v as Record<string, any>)[originalTypeKey] !==
+                                undefined
+                              );
+                            }
+                            return false;
+                          });
+
+                          const actualOriginalType = savedOriginalType
+                            ? (savedOriginalType as Record<string, any>)[
+                                originalTypeKey
+                              ]
+                            : variableType; // 回退到推断类型
+
+                          console.log('🔍 编辑变量时获取原始类型:', {
+                            variableName,
+                            originalTypeKey,
+                            savedOriginalType,
+                            actualOriginalType,
+                            fallbackType: variableType,
+                          });
+
                           const editVariable: Variable = {
                             name: variableName,
                             value:
@@ -5028,7 +5144,7 @@ export const PropertyPanel: React.FC<{
                               | 'number'
                               | 'boolean'
                               | 'object',
-                            originalType: variableType as
+                            originalType: actualOriginalType as
                               | 'text'
                               | 'number'
                               | 'image'

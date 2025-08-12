@@ -53,12 +53,29 @@ class VariableCacheManager {
 
     variables.forEach((variable) => {
       if (typeof variable === 'object' && variable !== null) {
-        const keys = Object.keys(variable as Record<string, any>);
-        if (keys.length > 0) {
-          const variableName = keys[0];
-          const variableValue = (variable as Record<string, any>)[variableName];
+        const variableRecord = variable as Record<string, any>;
+        const keys = Object.keys(variableRecord);
+
+        // 分离实际变量名和内部属性
+        const actualVariableNames = keys.filter((key) => !key.startsWith('__'));
+        const internalKeys = keys.filter((key) => key.startsWith('__'));
+
+        // 保存实际变量
+        actualVariableNames.forEach((variableName) => {
+          const variableValue = variableRecord[variableName];
           this.setVariable(variableName, variableValue);
-        }
+        });
+
+        // 保存内部属性（如 originalType）
+        internalKeys.forEach((internalKey) => {
+          const internalValue = variableRecord[internalKey];
+          this.setVariable(internalKey, internalValue);
+          console.log('📦 设置内部属性到缓存:', {
+            internalKey,
+            internalValue,
+            timestamp: new Date().toISOString(),
+          });
+        });
       }
     });
   }
