@@ -23,6 +23,7 @@ import {
   Space,
   Switch,
   Tabs,
+  Tooltip,
   Tree,
   Typography,
 } from 'antd';
@@ -1153,17 +1154,6 @@ export const PropertyPanel: React.FC<{
         'size',
         'crop_mode', // 图片裁剪方式放在style中
       ];
-
-      // console.log('🔧 开始处理组件更新:', {
-      //   componentId: (currentComponent as any).id,
-      //   componentTag: currentComponent.tag,
-      //   field,
-      //   value,
-      //   isStyleField: styleFields.includes(field),
-      //   currentStyle: (currentComponent as any).style,
-      //   realPath,
-      // });
-
       if (styleFields.includes(field)) {
         const updatedComponent = {
           ...currentComponent,
@@ -1439,108 +1429,72 @@ export const PropertyPanel: React.FC<{
     });
   };
 
-  // 根据组件类型过滤变量 - 提取到组件级别供图片组件使用
+  // 获取变量的原始类型
+  const getVariableOriginalType = (
+    variable: any,
+    variableName: string,
+  ): string | null => {
+    const originalTypeKey = `__${variableName}_originalType`;
+    return (variable as any)[originalTypeKey] || null;
+  };
+
+  // 检查变量是否在DSL数据中被使用
+  const isVariableInUse = (variableName: string): boolean => {
+    if (!cardData?.dsl?.body?.elements) {
+      return false;
+    }
+
+    // 将DSL数据转换为JSON字符串进行搜索
+    const dslJson = JSON.stringify(cardData.dsl.body.elements);
+
+    // 检查变量占位符是否存在于DSL中
+    const variablePlaceholder = `\${${variableName}}`;
+
+    console.log('🔍 检查变量是否被使用:', {
+      variableName,
+      variablePlaceholder,
+      isInUse: dslJson.includes(variablePlaceholder),
+      dslElementsCount: cardData.dsl.body.elements.length,
+    });
+
+    return dslJson.includes(variablePlaceholder);
+  };
+
+  // 根据组件类型过滤变量 - 统一使用 originalType 匹配
   const getFilteredVariables = (componentType: string) => {
     return variables.filter((variable) => {
       if (typeof variable === 'object' && variable !== null) {
         const keys = getVariableKeys(variable);
         if (keys.length > 0) {
-          const variableValue = (variable as Record<string, any>)[keys[0]];
+          const variableName = keys[0];
+          const originalType = getVariableOriginalType(variable, variableName);
 
-          // 根据组件类型过滤变量
+          // 统一的类型匹配逻辑
           switch (componentType) {
             case 'plain_text':
-              // 普通文本组件只显示文本类型的变量
-              return typeof variableValue === 'string';
-            case 'rich_text': {
-              // 富文本组件显示文本类型和富文本类型的变量
-              const isStringType = typeof variableValue === 'string';
-              const isRichTextType =
-                typeof variableValue === 'object' &&
-                variableValue?.type === 'doc';
-              const shouldShow = isRichTextType;
-              console.log('🔍 富文本组件变量筛选:', {
-                variableName: keys[0],
-                variableValue,
-                isStringType,
-                isRichTextType,
-                shouldShow,
-              });
-              return shouldShow;
-            }
+              return originalType === 'text';
+
+            case 'rich_text':
+              return originalType === 'richtext';
+
             case 'img':
-              // 图片组件只显示单个图片类型的变量（不包括图片数组）
-              console.log('🔍 图片组件变量筛选:', {
-                variableName: keys[0],
-                variableValue,
-                valueType: typeof variableValue,
-                isString: typeof variableValue === 'string',
-                isObject: typeof variableValue === 'object',
-                isArray: Array.isArray(variableValue),
-              });
+              return originalType === 'image';
 
-              // 1. 字符串格式的图片URL变量（推荐格式）
-              if (typeof variableValue === 'string') {
-                console.log('✅ 图片组件: 接受字符串格式图片变量');
-                return true;
-              }
-
-              // 2. 单个图片对象格式 { img_url: "..." }（兼容旧格式）
-              if (typeof variableValue === 'object' && variableValue !== null) {
-                // 只接受单个图片对象，排除图片数组
-                if (
-                  !Array.isArray(variableValue) &&
-                  variableValue.img_url &&
-                  typeof variableValue.img_url === 'string'
-                ) {
-                  console.log('✅ 图片组件: 接受单个图片对象格式');
-                  return true;
-                }
-              }
-
-              console.log(
-                '❌ 图片组件: 拒绝此变量（可能是图片数组或其他类型）',
-              );
-              return false;
             case 'img_combination':
-              // 多图混排组件只显示图片数组类型的变量
-              if (typeof variableValue === 'object' && variableValue !== null) {
-                // 检查是否为图片数组 [{ img_url: "..." }, ...]
-                if (Array.isArray(variableValue) && variableValue.length > 0) {
-                  const isValidImageArray = variableValue.every(
-                    (item) =>
-                      typeof item === 'object' &&
-                      item !== null &&
-                      item.img_url &&
-                      typeof item.img_url === 'string',
-                  );
-                  console.log('🔍 多图混排变量筛选:', {
-                    variableName: keys[0],
-                    variableValue,
-                    isArray: Array.isArray(variableValue),
-                    arrayLength: variableValue.length,
-                    isValidImageArray,
-                  });
-                  return isValidImageArray;
-                }
-              }
-              return false;
+              return originalType === 'imageArray';
+
             case 'input':
-              // 输入框组件显示文本和数字类型的变量
-              return (
-                typeof variableValue === 'string' ||
-                typeof variableValue === 'number'
-              );
+              return originalType === 'text' || originalType === 'number';
+
             case 'select_static':
             case 'multi_select_static':
-              // 选择器组件显示数组类型的变量
-              return Array.isArray(variableValue);
+              return originalType === 'array';
+
             case 'button':
-              // 按钮组件显示文本类型的变量
-              return typeof variableValue === 'string';
+              return originalType === 'text';
+
             default:
-              // 其他组件类型显示所有类型的变量
-              return true;
+              return false; // 严格模式：未定义的组件类型不显示任何变量
           }
         }
       }
@@ -3405,7 +3359,7 @@ export const PropertyPanel: React.FC<{
                     placeholder="请选择要绑定的变量"
                     style={{ width: '100%' }}
                     allowClear
-                    dropdownRender={(menu) => (
+                    popupRender={(menu) => (
                       <div>
                         {menu}
                         <Divider style={{ margin: '8px 0' }} />
@@ -4318,7 +4272,7 @@ export const PropertyPanel: React.FC<{
                 }}
                 placeholder="请选择图片数组变量"
                 allowClear
-                dropdownRender={(menu) => (
+                popupRender={(menu) => (
                   <div>
                     {menu}
                     <Divider style={{ margin: '8px 0' }} />
@@ -4692,7 +4646,7 @@ export const PropertyPanel: React.FC<{
             <div>
               <Form form={form} layout="vertical">
                 <Form.Item label="图片URL">
-                  <Input.Group compact>
+                  <Space.Compact style={{ width: '100%' }}>
                     <Input
                       style={{ width: 'calc(100% - 40px)' }}
                       value={getDisplayImageUrl()}
@@ -4731,7 +4685,7 @@ export const PropertyPanel: React.FC<{
                         title: '上传图片',
                       }}
                     />
-                  </Input.Group>
+                  </Space.Compact>
                 </Form.Item>
 
                 <Form.Item label="绑定变量 (可选)">
@@ -4742,7 +4696,7 @@ export const PropertyPanel: React.FC<{
                     }}
                     placeholder="请选择变量"
                     allowClear
-                    dropdownRender={(menu) => (
+                    popupRender={(menu) => (
                       <div>
                         {menu}
                         <Divider style={{ margin: '8px 0' }} />
@@ -4941,73 +4895,45 @@ export const PropertyPanel: React.FC<{
                     variableName = keys[0];
                     variableValue = (variable as VariableObject)[variableName];
 
-                    // 根据值的类型推断变量类型
-                    if (typeof variableValue === 'string') {
-                      // 检查是否有保存的originalType信息
-                      const originalTypeKey = `__${variableName}_originalType`;
-                      const originalType = (variable as any)[originalTypeKey];
+                    // 优化的类型推断：优先使用 originalType，回退到数据类型推断
+                    const originalType = getVariableOriginalType(
+                      variable,
+                      variableName,
+                    );
 
-                      console.log('🔍 字符串类型变量类型推断1:', {
-                        variableName,
-                        variableValue,
-                        originalTypeKey,
-                        originalType,
-                        hasOriginalType: !!originalType,
-                      });
-
-                      if (originalType === 'image') {
-                        variableType = 'image';
-                      } else {
-                        variableType = 'text'; // 默认为文本类型
-                      }
-                    } else if (typeof variableValue === 'number') {
-                      // 检查是否有保存的originalType信息
-                      const originalTypeKey = `__${variableName}_originalType`;
-                      const originalType = (variable as any)[originalTypeKey];
-
-                      console.log('🔍 数字类型变量类型推断:', {
-                        variableName,
-                        variableValue,
-                        originalTypeKey,
-                        originalType,
-                        hasOriginalType: !!originalType,
-                      });
-
-                      // 根据originalType来确定显示类型
-                      if (originalType === 'number') {
-                        variableType = 'number'; // 整数类型
-                      } else {
-                        variableType = 'number'; // 默认数字类型
-                      }
-                    } else if (typeof variableValue === 'boolean') {
-                      variableType = 'boolean';
-                    } else if (Array.isArray(variableValue)) {
-                      // 检查是否为图片数组
-                      if (
-                        variableValue.length > 0 &&
-                        variableValue.every(
-                          (item) =>
-                            typeof item === 'object' &&
-                            item !== null &&
-                            item.img_url &&
-                            typeof item.img_url === 'string',
-                        )
-                      ) {
-                        variableType = 'imageArray';
-                      } else {
-                        variableType = 'array';
-                      }
-                    } else if (typeof variableValue === 'object') {
-                      // 尝试判断是图片还是其他对象类型
-                      if (variableValue.img_url) {
-                        variableType = 'image';
-                      } else if (variableValue.type === 'doc') {
-                        variableType = 'richtext';
-                      } else {
-                        variableType = 'object';
-                      }
+                    if (originalType) {
+                      // 直接使用保存的原始类型
+                      variableType = originalType;
                     } else {
-                      variableType = 'text';
+                      // 回退到基于数据的类型推断
+                      if (typeof variableValue === 'string') {
+                        variableType = 'text';
+                      } else if (typeof variableValue === 'number') {
+                        variableType = 'number';
+                      } else if (Array.isArray(variableValue)) {
+                        // 检查是否为图片数组
+                        const isImageArray =
+                          variableValue.length > 0 &&
+                          variableValue.every(
+                            (item) =>
+                              typeof item === 'object' &&
+                              item !== null &&
+                              item.img_url &&
+                              typeof item.img_url === 'string',
+                          );
+                        variableType = isImageArray ? 'imageArray' : 'array';
+                      } else if (
+                        typeof variableValue === 'object' &&
+                        variableValue !== null
+                      ) {
+                        if (variableValue.type === 'doc') {
+                          variableType = 'richtext';
+                        } else {
+                          variableType = 'object';
+                        }
+                      } else {
+                        variableType = 'text';
+                      }
                     }
 
                     console.log('✅ 类型推断完成2222:', {
@@ -5096,83 +5022,100 @@ export const PropertyPanel: React.FC<{
                       }}
                       className="variable-actions"
                     >
-                      <Button
-                        type="text"
-                        size="small"
-                        icon={<EditOutlined />}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // 创建兼容的Variable对象用于编辑
-                          console.warn(
-                            'variableValue for edit:',
-                            variableValue,
-                          );
-                          // 查找并获取保存的原始类型
-                          const originalTypeKey = `__${variableName}_originalType`;
-                          const savedOriginalType = variables.find((v) => {
-                            if (typeof v === 'object' && v !== null) {
-                              return (
-                                (v as Record<string, any>)[originalTypeKey] !==
-                                undefined
-                              );
-                            }
-                            return false;
-                          });
+                      <Tooltip title="编辑">
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<EditOutlined />}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // 创建兼容的Variable对象用于编辑
+                            console.warn(
+                              'variableValue for edit:',
+                              variableValue,
+                            );
+                            // 查找并获取保存的原始类型
+                            const originalTypeKey = `__${variableName}_originalType`;
+                            const savedOriginalType = variables.find((v) => {
+                              if (typeof v === 'object' && v !== null) {
+                                return (
+                                  (v as Record<string, any>)[
+                                    originalTypeKey
+                                  ] !== undefined
+                                );
+                              }
+                              return false;
+                            });
 
-                          const actualOriginalType = savedOriginalType
-                            ? (savedOriginalType as Record<string, any>)[
-                                originalTypeKey
-                              ]
-                            : variableType; // 回退到推断类型
+                            const actualOriginalType = savedOriginalType
+                              ? (savedOriginalType as Record<string, any>)[
+                                  originalTypeKey
+                                ]
+                              : variableType; // 回退到推断类型
 
-                          console.log('🔍 编辑变量时获取原始类型:', {
-                            variableName,
-                            originalTypeKey,
-                            savedOriginalType,
-                            actualOriginalType,
-                            fallbackType: variableType,
-                          });
+                            console.log('🔍 编辑变量时获取原始类型:', {
+                              variableName,
+                              originalTypeKey,
+                              savedOriginalType,
+                              actualOriginalType,
+                              fallbackType: variableType,
+                            });
 
-                          const editVariable: Variable = {
-                            name: variableName,
-                            value:
-                              typeof variableValue === 'object'
-                                ? JSON.stringify(variableValue)
-                                : String(variableValue),
-                            type: variableType as
-                              | 'text'
-                              | 'number'
-                              | 'boolean'
-                              | 'object',
-                            originalType: actualOriginalType as
-                              | 'text'
-                              | 'number'
-                              | 'image'
-                              | 'array',
-                          };
-                          handleEditVariable(editVariable);
-                        }}
-                        style={{
-                          padding: '4px 8px',
-                          height: '24px',
-                          minWidth: '24px',
-                        }}
-                      />
-                      <Button
-                        type="text"
-                        size="small"
-                        danger
-                        icon={<DeleteOutlined />}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteVariable(index);
-                        }}
-                        style={{
-                          padding: '4px 8px',
-                          height: '24px',
-                          minWidth: '24px',
-                        }}
-                      />
+                            const editVariable: Variable = {
+                              name: variableName,
+                              value:
+                                typeof variableValue === 'object'
+                                  ? JSON.stringify(variableValue)
+                                  : String(variableValue),
+                              type: variableType as
+                                | 'text'
+                                | 'number'
+                                | 'boolean'
+                                | 'object',
+                              originalType: actualOriginalType as
+                                | 'text'
+                                | 'number'
+                                | 'image'
+                                | 'array',
+                            };
+                            handleEditVariable(editVariable);
+                          }}
+                          style={{
+                            padding: '4px 8px',
+                            height: '24px',
+                            minWidth: '24px',
+                          }}
+                        />
+                      </Tooltip>
+                      {(() => {
+                        const isInUse = isVariableInUse(variableName);
+                        const tooltipTitle = isInUse
+                          ? '该变量已被绑定，请解绑后再尝试删除'
+                          : '删除';
+
+                        return (
+                          <Tooltip title={tooltipTitle}>
+                            <Button
+                              type="text"
+                              size="small"
+                              danger={!isInUse} // 当变量被使用时，取消危险样式
+                              disabled={isInUse} // 当变量被使用时，禁用按钮
+                              icon={<DeleteOutlined />}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!isInUse) {
+                                  handleDeleteVariable(index);
+                                }
+                              }}
+                              style={{
+                                padding: '4px 8px',
+                                height: '24px',
+                                minWidth: '24px',
+                              }}
+                            />
+                          </Tooltip>
+                        );
+                      })()}
                     </div>
                   </div>
                 );

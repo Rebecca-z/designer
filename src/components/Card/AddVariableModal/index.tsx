@@ -55,7 +55,11 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
       case 'rich_text':
         return ['richtext'];
       case 'img':
-        return ['image', 'imageArray'];
+        console.log('✅ 图片组件，只返回图片类型');
+        return ['image']; // 图片组件只支持图片类型，不支持图片数组
+      case 'img_combination':
+        console.log('✅ 多图混排组件，返回图片数组类型');
+        return ['imageArray']; // 多图混排只支持图片数组类型
       case 'input':
         return ['text', 'number'];
       case 'select_static':
@@ -84,6 +88,9 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         return 'richtext';
       case 'img':
         return 'image';
+      case 'img_combination':
+        console.log('✅ 多图混排组件，默认选择图片数组类型');
+        return 'imageArray'; // 多图混排默认为图片数组类型
       case 'input':
         return 'text';
       case 'select_static':
@@ -202,45 +209,34 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
     [selectedType],
   );
 
-  // 将Variable类型映射到表单类型
+  // 简化的类型映射：直接使用 originalType
   const mapVariableTypeToFormType = (
     variableType: string,
   ): 'text' | 'number' | 'image' | 'array' | 'richtext' | 'imageArray' => {
-    // 优先使用原始类型信息
+    // 直接使用原始类型信息（新格式下总是可用）
     if (editingVariable?.originalType) {
       return editingVariable.originalType;
     }
 
+    // 回退处理（理论上不应该执行到这里）
+    console.warn('⚠️ 没有找到 originalType，使用回退逻辑');
     switch (variableType) {
       case 'text':
-        // 检查是否是新格式的图片变量（text类型但originalType是image）
-        if (editingVariable?.originalType === 'image') {
-          return 'image';
-        }
         return 'text';
       case 'number':
         return 'number';
-      case 'boolean':
-        return 'text'; // 布尔值用文本表示
       case 'object':
-        // 尝试判断是图片还是数组
         try {
           const parsed = JSON.parse(editingVariable?.value || '{}');
-          if (parsed.img_url) {
-            return 'image';
-          } else if (Array.isArray(parsed)) {
-            // 检查是否为图片数组
-            if (parsed.length > 0 && parsed[0].img_key) {
-              return 'imageArray';
-            }
-            return 'array';
-          } else if (parsed.type === 'doc') {
+          if (parsed.type === 'doc') {
             return 'richtext';
+          } else if (Array.isArray(parsed)) {
+            return 'array';
           }
         } catch (e) {
-          // 解析失败，默认为图片
+          console.warn('解析变量值失败:', e);
         }
-        return 'image';
+        return 'text';
       default:
         return 'text';
     }
@@ -303,199 +299,77 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
     }
   };
 
-  // 处理提交
+  // 简化的提交处理
   const handleSubmit = async () => {
     try {
-      // 先获取表单数据
       const values = await form.validateFields();
 
-      // 如果是富文本类型，直接处理富文本编辑器数据
-      if (values.type === 'richtext') {
-        // 构建Variable对象
-        const variable: Variable = {
-          name: values.name,
-          type: 'object',
-          value: jsonData,
-          originalType: selectedType,
-          description: values.description || '',
-        };
+      // 统一的变量创建逻辑
+      let actualMockData: any;
+      let internalType: string;
 
-        console.log('💾 提交富文本变量数据:', {
-          isEditing: !!editingVariable,
-          variable,
-          richTextData: jsonData,
-        });
+      // 根据变量类型处理模拟数据
+      switch (values.type) {
+        case 'text':
+        case 'image':
+          actualMockData = values.mockData;
+          internalType = 'text';
+          break;
 
-        onOk(variable);
-        form.resetFields();
-        setJsonData('');
-        setJsonError(''); // 清除错误信息
-        setIsUserEditing(false); // 重置用户编辑状态
-        return;
+        case 'number':
+          actualMockData = Number(values.mockData);
+          internalType = 'number';
+          break;
+
+        case 'richtext':
+          actualMockData = jsonData;
+          internalType = 'object';
+          break;
+
+        case 'array':
+        case 'imageArray':
+          actualMockData = JSON.parse(jsonData);
+          internalType = 'object';
+          break;
+
+        default:
+          actualMockData = values.mockData;
+          internalType = 'text';
       }
 
-      // 如果是图片类型，直接处理字符串输入
-      if (values.type === 'image') {
-        // 构建Variable对象，保存为键值对格式
-        const variable: Variable = {
-          name: values.name,
-          type: 'text', // 图片URL作为文本类型
-          value: values.mockData, // 直接使用输入的URL字符串
-          originalType: values.type, // 应该是 'image'
-          description: values.description || '',
-        };
-
-        console.log('💾 [图片类型] 提交图片变量数据:', {
-          isEditing: !!editingVariable,
-          selectedType,
-          formType: values.type,
-          variable,
-          imageUrl: values.mockData,
-          originalType: variable.originalType,
-        });
-
-        onOk(variable);
-        form.resetFields();
-        setJsonData('');
-        setJsonError('');
-        setIsUserEditing(false);
-        return;
-      }
-
-      // 如果是数组或图片数组类型，需要验证JSON编辑器
-      if (values.type === 'array' || values.type === 'imageArray') {
-        if (jsonEditorRef.current) {
-          const { formatJSON, validateJSON, getFormattedJSON } =
-            jsonEditorRef.current;
-
-          console.log('开始验证JSON编辑器...');
-
-          // 先验证原始内容，不进行格式化
-          const { isValid: originalValid, errors: originalErrors } =
-            validateJSON();
-          console.warn('原始JSON验证结果:', {
-            isValid: originalValid,
-            errors: originalErrors,
-          });
-
-          if (!originalValid) {
-            console.error('JSON格式错误，请检查输入:', originalErrors);
-            const errorMessage =
-              originalErrors[0]?.message ||
-              'SyntaxError: Unexpected end of JSON input';
-            setJsonError(errorMessage);
-            return;
-          }
-
-          // 原始内容有效，进行格式化
-          await formatJSON();
-          const { isValid, errors } = validateJSON();
-          console.warn('格式化后JSON验证结果:', { isValid, errors });
-
-          if (isValid) {
-            const result = getFormattedJSON();
-            console.warn('result=====', result);
-            if (result?.success && result.data) {
-              console.warn('格式化后的JSON:', JSON.parse(result.data));
-
-              // 构建Variable对象
-              const variable: Variable = {
-                name: values.name,
-                type: 'object',
-                value: result.data,
-                originalType: selectedType,
-                description: values.description || '',
-              };
-
-              console.log('💾 提交变量数据:', {
-                isEditing: !!editingVariable,
-                variable,
-                formattedJsonData: result.data,
-              });
-
-              onOk(variable);
-              form.resetFields();
-              setJsonData('');
-              setJsonError(''); // 清除错误信息
-              setIsUserEditing(false); // 重置用户编辑状态
-              return;
-            } else {
-              console.error(
-                '获取格式化JSON失败:',
-                result?.success ? '未知错误' : result?.error,
-              );
-              const errorMessage =
-                (result?.success ? '未知错误' : result?.error) ||
-                'SyntaxError: Unexpected end of JSON input';
-              setJsonError(errorMessage);
-              return;
-            }
-          } else {
-            console.error('格式化后JSON验证失败:', errors);
-            const errorMessage =
-              errors[0]?.message || 'SyntaxError: Unexpected end of JSON input';
-            setJsonError(errorMessage);
-            return;
-          }
-        } else {
-          console.error('JSON编辑器引用不存在');
-          setJsonError('JSON编辑器初始化失败');
-          return;
-        }
-      }
-
-      // 对于非JSON类型，使用原有的逻辑
-      let actualMockData = values.mockData;
-      if (['array', 'imageArray'].includes(selectedType)) {
-        actualMockData = jsonData;
-      }
-      // 图片类型使用表单输入的字符串值
-
-      // 将自定义类型映射到Variable接口支持的类型
-      const mapTypeToVariableType = (
-        type: VariableType,
-      ): 'text' | 'number' | 'boolean' | 'object' => {
-        switch (type) {
-          case 'text':
-            return 'text';
-          case 'number':
-            return 'number';
-          case 'image':
-            return 'text'; // 新的图片类型使用text
-          case 'array':
-          case 'richtext':
-          case 'imageArray':
-            return 'object';
-          default:
-            return 'text';
-        }
-      };
-
-      // 构建Variable对象
+      // 构建统一的Variable对象
       const variable: Variable = {
         name: values.name,
-        type: mapTypeToVariableType(values.type),
+        type: internalType as 'text' | 'number' | 'boolean' | 'object',
         value: actualMockData,
-        originalType: values.type,
+        originalType: values.type, // 保存真实的变量类型
         description: values.description || '',
       };
 
-      console.log('💾 [通用类型] 提交变量数据:', {
+      console.log('💾 提交变量数据:', {
         isEditing: !!editingVariable,
-        selectedType,
-        formType: values.type,
+        variableType: values.type,
         variable,
-        formValues: values,
-        originalType: variable.originalType,
-        jsonData,
       });
 
       onOk(variable);
       form.resetFields();
       setJsonData('');
-      setIsUserEditing(false); // 重置用户编辑状态
+      setJsonError('');
+      setIsUserEditing(false);
+
+      // 对于 array 和 imageArray 类型，验证 JSON 格式
+      if (values.type === 'array' || values.type === 'imageArray') {
+        try {
+          JSON.parse(jsonData);
+        } catch (error) {
+          setJsonError('JSON格式错误，请检查输入');
+          return;
+        }
+      }
     } catch (error) {
-      console.error('表单验证失败:', error);
+      console.error('提交变量失败:', error);
+      setJsonError('提交失败，请检查输入');
     }
   };
 

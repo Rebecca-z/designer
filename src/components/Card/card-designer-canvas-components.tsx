@@ -48,7 +48,7 @@ export const CanvasHeader: React.FC<{
     <div
       style={{
         position: 'absolute',
-        top: '-35px',
+        top: '0',
         left: '0',
         right: '0',
         display: 'flex',
