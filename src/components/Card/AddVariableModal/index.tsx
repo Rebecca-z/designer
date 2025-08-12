@@ -109,6 +109,8 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
     defaultType,
     selectedType,
     initialType,
+    isEditing: !!editingVariable,
+    editingVariableName: editingVariable?.name,
   });
 
   // 获取默认模拟数据
@@ -829,15 +831,22 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
           name="type"
           label="类型"
           rules={[{ required: true, message: '请选择变量类型' }]}
-          help={`可用类型: ${availableTypes.join(', ')}`}
+          help={
+            editingVariable
+              ? '编辑模式：变量类型不可修改'
+              : `可用类型: ${availableTypes.join(', ')}`
+          }
         >
           <Select
+            disabled={!!editingVariable} // 编辑模式时禁用类型选择
             onChange={handleTypeChange}
             onFocus={() => {
               console.log('🔍 Select获得焦点，当前状态:', {
                 selectedType,
                 availableTypes,
                 formValue: form.getFieldValue('type'),
+                isEditing: !!editingVariable,
+                disabled: !!editingVariable,
               });
             }}
           >
