@@ -43,7 +43,7 @@ import {
   Variable,
   VariableItem,
 } from './card-designer-types-updated';
-import { variableCacheManager } from './Variable/variable-cache-manager';
+import { variableCacheManager } from './Variable/utils/index';
 
 const CardDesigner: React.FC = () => {
   // 基础状态

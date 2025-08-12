@@ -1,3 +1,4 @@
+// 属性面板中的图片上传
 import { UploadOutlined } from '@ant-design/icons';
 import { Button, Modal, Upload } from 'antd';
 import React from 'react';

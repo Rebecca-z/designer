@@ -12,8 +12,10 @@ import {
 import { replaceVariables } from './card-designer-utils';
 import RichTextStyles from './RichTextEditor/RichTextStyles';
 import { convertJSONToHTML } from './RichTextEditor/RichTextUtils';
-import { textComponentStateManager } from './Variable/text-component-state-manager';
-import { variableCacheManager } from './Variable/variable-cache-manager';
+import {
+  textComponentStateManager,
+  variableCacheManager,
+} from './Variable/utils/index';
 
 const { Option } = Select;
 // const { Text } = Typography;

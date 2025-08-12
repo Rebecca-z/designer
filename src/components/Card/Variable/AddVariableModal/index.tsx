@@ -1,3 +1,4 @@
+// 添加变量弹窗
 import { Button, Form, Input, InputNumber, Modal, Select } from 'antd';
 import React, {
   useCallback,
@@ -6,9 +7,9 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Variable } from '../card-designer-types-updated';
-import JSONEditor, { JSONEditorRef } from '../JSONEditor';
-import RichTextEditor from '../RichTextEditor/RichTextEditor';
+import { Variable } from '../../card-designer-types-updated';
+import JSONEditor, { JSONEditorRef } from '../../JSONEditor';
+import RichTextEditor from '../../RichTextEditor/RichTextEditor';
 import type {
   AddVariableModalProps,
   VariableFormData,
@@ -40,11 +41,8 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
   const getAvailableVariableTypes = (
     componentType?: string,
   ): VariableType[] => {
-    console.log('🔍 获取可用变量类型:', { componentType });
-
     if (!componentType) {
       // 如果没有组件类型信息，返回所有类型
-      console.log('✅ 无组件类型，返回所有变量类型');
       return ['text', 'number', 'image', 'imageArray', 'array', 'richtext'];
     }
 
@@ -89,8 +87,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
       case 'img':
         return 'image';
       case 'img_combination':
-        console.log('✅ 多图混排组件，默认选择图片数组类型');
-        return 'imageArray'; // 多图混排默认为图片数组类型
+        return 'imageArray';
       case 'input':
         return 'text';
       case 'select_static':
@@ -218,8 +215,6 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
       return editingVariable.originalType;
     }
 
-    // 回退处理（理论上不应该执行到这里）
-    console.warn('⚠️ 没有找到 originalType，使用回退逻辑');
     switch (variableType) {
       case 'text':
         return 'text';
@@ -244,8 +239,6 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
 
   // 处理类型变化
   const handleTypeChange = (value: VariableType) => {
-    console.log('🔄 类型变更:', { oldType: selectedType, newType: value });
-
     setSelectedType(value);
     setIsUserEditing(false); // 重置用户编辑状态
     const defaultData = getDefaultMockData(value);
@@ -258,12 +251,6 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
 
     setJsonData(defaultData);
     setJsonError(''); // 切换类型时清除错误信息
-
-    console.log('✅ 类型变更完成:', {
-      selectedType: value,
-      mockData: defaultData,
-      formType: form.getFieldValue('type'),
-    });
   };
 
   // 验证变量名称
@@ -345,12 +332,6 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         originalType: values.type, // 保存真实的变量类型
         description: values.description || '',
       };
-
-      console.log('💾 提交变量数据:', {
-        isEditing: !!editingVariable,
-        variableType: values.type,
-        variable,
-      });
 
       onOk(variable);
       form.resetFields();
@@ -686,15 +667,8 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         form={form}
         layout="vertical"
         initialValues={formInitialValues}
-        onValuesChange={(changedValues, allValues) => {
-          console.log('🔍 Form值变化:', { changedValues, allValues });
-
-          // 如果类型字段发生变化，同步更新selectedType状态
+        onValuesChange={(changedValues) => {
           if (changedValues.type && changedValues.type !== selectedType) {
-            console.log('🔄 同步更新selectedType:', {
-              oldType: selectedType,
-              newType: changedValues.type,
-            });
             setSelectedType(changedValues.type);
             setIsUserEditing(false); // 重置用户编辑状态
           }
@@ -705,24 +679,10 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
           name="type"
           label="类型"
           rules={[{ required: true, message: '请选择变量类型' }]}
-          help={
-            editingVariable
-              ? '编辑模式：变量类型不可修改'
-              : `可用类型: ${availableTypes.join(', ')}`
-          }
         >
           <Select
             disabled={!!editingVariable} // 编辑模式时禁用类型选择
             onChange={handleTypeChange}
-            onFocus={() => {
-              console.log('🔍 Select获得焦点，当前状态:', {
-                selectedType,
-                availableTypes,
-                formValue: form.getFieldValue('type'),
-                isEditing: !!editingVariable,
-                disabled: !!editingVariable,
-              });
-            }}
           >
             {availableTypes.map((type) => {
               const displayName =
@@ -739,12 +699,6 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
                   : type === 'richtext'
                   ? '富文本'
                   : type;
-
-              console.log('🔧 渲染Select选项:', {
-                type,
-                displayName,
-                availableTypes,
-              });
 
               return (
                 <Option key={type} value={type}>

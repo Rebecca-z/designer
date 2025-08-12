@@ -1,6 +1,4 @@
-// text-component-state-manager.ts - 文本组件状态管理器
-
-// 文本组件状态接口
+// 组件状态管理 UI状态跟踪 跟随组件
 interface TextComponentState {
   userEditedContent?: string | any;
   boundVariableName?: string;

@@ -14,7 +14,6 @@ import {
   Button,
   Card,
   ColorPicker,
-  Divider,
   Form,
   Input,
   InputNumber,
@@ -29,7 +28,6 @@ import {
 } from 'antd';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDrag } from 'react-dnd';
-import AddVariableModal from './AddVariableModal';
 import {
   COMPONENT_CATEGORIES,
   COMPONENT_TYPES,
@@ -45,7 +43,9 @@ import {
 } from './card-designer-types-updated';
 import ImageUpload from './ImageUpload';
 import RichTextEditor from './RichTextEditor/RichTextEditor';
-import { textComponentStateManager } from './Variable/text-component-state-manager';
+import AddVariableModal from './Variable/AddVariableModal';
+import { textComponentStateManager } from './Variable/utils/index';
+import VariableBinding from './Variable/VariableBinding';
 
 const { Option } = Select;
 const { Text } = Typography;
@@ -1458,6 +1458,18 @@ export const PropertyPanel: React.FC<{
     });
 
     return dslJson.includes(variablePlaceholder);
+  };
+
+  // 获取变量显示名称
+  const getVariableDisplayName = (variable: VariableItem): string => {
+    if (typeof variable === 'object' && variable !== null) {
+      const keys = getVariableKeys(variable);
+      if (keys.length > 0) {
+        const variableName = keys[0];
+        return variableName;
+      }
+    }
+    return '未知变量';
   };
 
   // 根据组件类型过滤变量 - 统一使用 originalType 匹配
@@ -3233,65 +3245,6 @@ export const PropertyPanel: React.FC<{
 
       // 使用提取到组件级别的 getFilteredVariables 函数
 
-      // 获取过滤后的变量
-      const filteredVariables = getFilteredVariables(
-        currentComponent?.tag || '',
-      );
-
-      // 构建变量选项
-      const variableOptions = (() => {
-        console.log('🔍 变量选择器选项构建:', {
-          variablesCount: variables.length,
-          variables: variables,
-          filteredVariablesCount: filteredVariables.length,
-          filteredVariables: filteredVariables,
-          componentType: currentComponent?.tag,
-          timestamp: new Date().toISOString(),
-        });
-
-        return filteredVariables.map((variable: any) => {
-          const keys = getVariableKeys(variable);
-          const variableName = keys[0];
-          const variableValue = (variable as Record<string, any>)[variableName];
-          return {
-            label: (
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <span>{variableName}</span>
-                <span style={{ fontSize: '12px', color: '#8c8c8c' }}>
-                  {(() => {
-                    if (
-                      typeof variableValue === 'object' &&
-                      variableValue !== null
-                    ) {
-                      if (Array.isArray(variableValue)) {
-                        return `数组 (${variableValue.length})`;
-                      } else if ((variableValue as any).type === 'doc') {
-                        return '富文本内容';
-                      } else {
-                        return '对象';
-                      }
-                    } else {
-                      const strValue = String(variableValue);
-                      return (
-                        strValue.substring(0, 20) +
-                        (strValue.length > 20 ? '...' : '')
-                      );
-                    }
-                  })()}
-                </span>
-              </div>
-            ),
-            value: variableName,
-          };
-        });
-      })();
-
       return (
         <div>
           <div
@@ -3348,48 +3301,27 @@ export const PropertyPanel: React.FC<{
 
                 {/* 变量绑定选择 */}
                 <div style={{ marginTop: 12 }}>
-                  <div
-                    style={{ fontSize: '14px', color: '#666', marginBottom: 8 }}
-                  >
-                    绑定变量
-                  </div>
-                  <Select
+                  <VariableBinding
                     value={getBoundVariableName()}
-                    onChange={updateBoundVariableName}
+                    onChange={(value: string | undefined) =>
+                      updateBoundVariableName(value || '')
+                    }
+                    componentType={isRichText ? 'rich_text' : 'plain_text'}
+                    variables={variables}
+                    getFilteredVariables={getFilteredVariables}
+                    getVariableDisplayName={getVariableDisplayName}
+                    getVariableKeys={getVariableKeys}
+                    onAddVariable={() =>
+                      handleAddVariableFromComponent(
+                        isRichText ? 'rich_text' : 'plain_text',
+                      )
+                    }
                     placeholder="请选择要绑定的变量"
-                    style={{ width: '100%' }}
-                    allowClear
-                    popupRender={(menu) => (
-                      <div>
-                        {menu}
-                        <Divider style={{ margin: '8px 0' }} />
-                        <div
-                          style={{
-                            padding: '8px 12px',
-                            cursor: 'pointer',
-                            color: '#1890ff',
-                            fontWeight: 500,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                          }}
-                          onClick={() => {
-                            // 打开添加变量弹窗（保持组件类型过滤）
-                            handleAddVariableFromComponent();
-                          }}
-                        >
-                          <PlusOutlined />
-                          新建变量
-                        </div>
-                      </div>
-                    )}
-                  >
-                    {variableOptions.map((option) => (
-                      <Select.Option key={option.value} value={option.value}>
-                        {option.label}
-                      </Select.Option>
-                    ))}
-                  </Select>
+                    label="绑定变量"
+                    addVariableText={
+                      isRichText ? '+新建富文本变量' : '+新建变量'
+                    }
+                  />
                 </div>
               </Form.Item>
             </Form>
@@ -4173,143 +4105,112 @@ export const PropertyPanel: React.FC<{
             </div>
 
             {/* 变量绑定选项 */}
-            <Form.Item label="绑定变量 (可选)">
-              <Select
-                value={(() => {
-                  // 检查img_list是否是变量占位符格式
-                  if (
-                    typeof imgCombComponent.img_list === 'string' &&
-                    imgCombComponent.img_list.includes('${')
-                  ) {
-                    const variableMatch =
-                      imgCombComponent.img_list.match(/\$\{([^}]+)\}/);
-                    return variableMatch?.[1];
-                  }
-                  return undefined;
-                })()}
-                onChange={(value) => {
-                  console.log('🎯 多图混排变量绑定操作:', {
-                    field: 'img_list_variable',
-                    value,
+            <VariableBinding
+              value={(() => {
+                // 检查img_list是否是变量占位符格式
+                if (
+                  typeof imgCombComponent.img_list === 'string' &&
+                  imgCombComponent.img_list.includes('${')
+                ) {
+                  const variableMatch =
+                    imgCombComponent.img_list.match(/\$\{([^}]+)\}/);
+                  return variableMatch?.[1];
+                }
+                return undefined;
+              })()}
+              onChange={(value) => {
+                console.log('🎯 多图混排变量绑定操作:', {
+                  field: 'img_list_variable',
+                  value,
+                  componentId: imgCombComponent.id,
+                  componentTag: imgCombComponent.tag,
+                  currentImgList: imgCombComponent.img_list,
+                });
+
+                if (value) {
+                  // 绑定变量：将img_list设置为变量占位符
+                  const updatedComponent = {
+                    ...currentComponent,
+                    img_list: `\${${value}}`, // DSL数据中使用变量占位符格式
+                  };
+
+                  console.log('📝 更新多图混排变量绑定:', {
                     componentId: imgCombComponent.id,
-                    componentTag: imgCombComponent.tag,
-                    currentImgList: imgCombComponent.img_list,
+                    selectedVariable: value,
+                    newImgList: updatedComponent.img_list,
                   });
 
-                  if (value) {
-                    // 绑定变量：将img_list设置为变量占位符
-                    const updatedComponent = {
-                      ...currentComponent,
-                      img_list: `\${${value}}`, // DSL数据中使用变量占位符格式
-                    };
-
-                    console.log('📝 更新多图混排变量绑定:', {
-                      componentId: imgCombComponent.id,
-                      selectedVariable: value,
-                      newImgList: updatedComponent.img_list,
-                    });
-
-                    onUpdateComponent(updatedComponent);
-                  } else {
-                    // 清除变量绑定：恢复为默认图片数组
-                    const getDefaultImageList = (combinationMode: string) => {
-                      // 根据混排模式确定默认图片数量
-                      const getRequiredImageCount = (mode: string) => {
-                        switch (mode) {
-                          case 'double':
-                            return 2;
-                          case 'triple':
-                            return 3;
-                          case 'bisect_2':
-                            return 2;
-                          case 'bisect_4':
-                            return 4;
-                          case 'bisect_6':
-                            return 6;
-                          case 'trisect_3':
-                            return 3;
-                          case 'trisect_6':
-                            return 6;
-                          case 'trisect_9':
-                            return 9;
-                          default:
-                            return 2;
-                        }
-                      };
-
-                      const requiredCount =
-                        getRequiredImageCount(combinationMode);
-                      const defaultImageList = [];
-
-                      // 创建默认图片数组
-                      for (let i = 0; i < requiredCount; i++) {
-                        defaultImageList.push({
-                          img_url: '/demo.png', // 使用默认图片
-                          i18n_img_url: {
-                            'en-US': '/demo.png',
-                          },
-                        });
+                  onUpdateComponent(updatedComponent);
+                } else {
+                  // 清除变量绑定：恢复为默认图片数组
+                  const getDefaultImageList = (combinationMode: string) => {
+                    // 根据混排模式确定默认图片数量
+                    const getRequiredImageCount = (mode: string) => {
+                      switch (mode) {
+                        case 'double':
+                          return 2;
+                        case 'triple':
+                          return 3;
+                        case 'bisect_2':
+                          return 2;
+                        case 'bisect_4':
+                          return 4;
+                        case 'bisect_6':
+                          return 6;
+                        case 'trisect_3':
+                          return 3;
+                        case 'trisect_6':
+                          return 6;
+                        case 'trisect_9':
+                          return 9;
+                        default:
+                          return 2;
                       }
-
-                      return defaultImageList;
                     };
 
-                    const updatedComponent = {
-                      ...currentComponent,
-                      img_list: getDefaultImageList(
-                        imgCombComponent.combination_mode,
-                      ),
-                    };
+                    const requiredCount =
+                      getRequiredImageCount(combinationMode);
+                    const defaultImageList = [];
 
-                    console.log('📝 清除多图混排变量绑定:', {
-                      componentId: imgCombComponent.id,
-                      combinationMode: imgCombComponent.combination_mode,
-                      restoredImgList: updatedComponent.img_list,
-                    });
+                    // 创建默认图片数组
+                    for (let i = 0; i < requiredCount; i++) {
+                      defaultImageList.push({
+                        img_url: '/demo.png', // 使用默认图片
+                        i18n_img_url: {
+                          'en-US': '/demo.png',
+                        },
+                      });
+                    }
 
-                    onUpdateComponent(updatedComponent);
-                  }
-                }}
-                placeholder="请选择图片数组变量"
-                allowClear
-                popupRender={(menu) => (
-                  <div>
-                    {menu}
-                    <Divider style={{ margin: '8px 0' }} />
-                    <div
-                      style={{
-                        padding: '8px 12px',
-                        cursor: 'pointer',
-                        color: '#1890ff',
-                        fontWeight: 500,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                      }}
-                      onClick={() => {
-                        // 打开添加变量弹窗（图片数组类型）
-                        handleAddVariableFromComponent('img_combination');
-                      }}
-                    >
-                      <PlusOutlined />
-                      新建图片数组变量
-                    </div>
-                  </div>
-                )}
-              >
-                {getFilteredVariables('img_combination').map(
-                  (variable, index) => {
-                    const keys = getVariableKeys(variable);
-                    const variableName = keys[0];
-                    return (
-                      <Option key={index} value={variableName}>
-                        {variableName}
-                      </Option>
-                    );
-                  },
-                )}
-              </Select>
-            </Form.Item>
+                    return defaultImageList;
+                  };
+
+                  const updatedComponent = {
+                    ...currentComponent,
+                    img_list: getDefaultImageList(
+                      imgCombComponent.combination_mode,
+                    ),
+                  };
+
+                  console.log('📝 清除多图混排变量绑定:', {
+                    componentId: imgCombComponent.id,
+                    combinationMode: imgCombComponent.combination_mode,
+                    restoredImgList: updatedComponent.img_list,
+                  });
+
+                  onUpdateComponent(updatedComponent);
+                }
+              }}
+              componentType="img_combination"
+              variables={variables}
+              getFilteredVariables={getFilteredVariables}
+              getVariableDisplayName={getVariableDisplayName}
+              getVariableKeys={getVariableKeys}
+              onAddVariable={() =>
+                handleAddVariableFromComponent('img_combination')
+              }
+              placeholder="请选择图片数组变量"
+            />
 
             <div>
               {(() => {
@@ -4688,50 +4589,19 @@ export const PropertyPanel: React.FC<{
                   </Space.Compact>
                 </Form.Item>
 
-                <Form.Item label="绑定变量 (可选)">
-                  <Select
-                    value={getBoundVariableName()}
-                    onChange={(value) => {
-                      handleValueChange('variable_name', value);
-                    }}
-                    placeholder="请选择变量"
-                    allowClear
-                    popupRender={(menu) => (
-                      <div>
-                        {menu}
-                        <Divider style={{ margin: '8px 0' }} />
-                        <div
-                          style={{
-                            padding: '8px 12px',
-                            cursor: 'pointer',
-                            color: '#1890ff',
-                            fontWeight: 500,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                          }}
-                          onClick={() => {
-                            // 打开添加变量弹窗（图片组件类型过滤）
-                            handleAddVariableFromComponent('img');
-                          }}
-                        >
-                          <PlusOutlined />
-                          新建变量
-                        </div>
-                      </div>
-                    )}
-                  >
-                    {getFilteredVariables('img').map((variable, index) => {
-                      const keys = getVariableKeys(variable);
-                      const variableName = keys[0];
-                      return (
-                        <Option key={index} value={variableName}>
-                          {variableName}
-                        </Option>
-                      );
-                    })}
-                  </Select>
-                </Form.Item>
+                <VariableBinding
+                  value={getBoundVariableName()}
+                  onChange={(value) => {
+                    handleValueChange('variable_name', value);
+                  }}
+                  componentType="img"
+                  variables={variables}
+                  getFilteredVariables={getFilteredVariables}
+                  getVariableDisplayName={getVariableDisplayName}
+                  getVariableKeys={getVariableKeys}
+                  onAddVariable={() => handleAddVariableFromComponent('img')}
+                  placeholder="请选择变量"
+                />
               </Form>
             </div>
           </div>
