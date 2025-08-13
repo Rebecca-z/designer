@@ -47,6 +47,7 @@ import RichTextEditor from './RichTextEditor/RichTextEditor';
 import AddVariableModal from './Variable/AddVariableModal';
 import {
   imageComponentStateManager,
+  inputComponentStateManager,
   multiImageComponentStateManager,
   textComponentStateManager,
 } from './Variable/utils/index';
@@ -962,6 +963,16 @@ export const PropertyPanel: React.FC<{
     'specify' | 'variable'
   >('specify');
 
+  // 输入框占位文本模式状态管理
+  const [inputPlaceholderMode, setInputPlaceholderMode] = useState<
+    'specify' | 'variable'
+  >('specify');
+
+  // 输入框默认值模式状态管理
+  const [inputDefaultValueMode, setInputDefaultValueMode] = useState<
+    'specify' | 'variable'
+  >('specify');
+
   // 记住每个组件上次绑定的变量
   const [lastBoundVariables, setLastBoundVariables] = useState<
     Record<string, string>
@@ -980,6 +991,11 @@ export const PropertyPanel: React.FC<{
   // 跟踪已初始化的多图混排组件，避免重复设置模式
   const [initializedMultiImageComponents, setInitializedMultiImageComponents] =
     useState<Set<string>>(new Set());
+
+  // 跟踪已初始化的输入框组件，避免重复设置模式
+  const [initializedInputComponents, setInitializedInputComponents] = useState<
+    Set<string>
+  >(new Set());
 
   // 变量管理相关状态
   const [isAddVariableModalVisible, setIsAddVariableModalVisible] =
@@ -1174,6 +1190,128 @@ export const PropertyPanel: React.FC<{
           );
 
           console.log('💾 记住现有多图混排变量绑定:', {
+            componentId: realComponent.id,
+            variableName,
+          });
+        }
+      }
+    }
+  }, [realComponent]);
+
+  // 输入框组件模式同步 - 根据组件状态初始化模式
+  useEffect(() => {
+    if (realComponent && realComponent.tag === 'input') {
+      // 检查占位文本是否有变量绑定
+      const hasPlaceholderVariableBinding =
+        realComponent.placeholder?.content &&
+        typeof realComponent.placeholder.content === 'string' &&
+        realComponent.placeholder.content.includes('${');
+
+      // 检查默认值是否有变量绑定
+      const hasDefaultValueVariableBinding =
+        realComponent.default_value?.content &&
+        typeof realComponent.default_value.content === 'string' &&
+        realComponent.default_value.content.includes('${');
+
+      // 只在组件首次选中时设置模式，不要在变量绑定变化时重新设置
+      if (!initializedInputComponents.has(realComponent.id)) {
+        // 如果当前占位文本不是变量占位符，保存为用户编辑的占位文本
+        if (
+          realComponent.placeholder?.content &&
+          !hasPlaceholderVariableBinding
+        ) {
+          inputComponentStateManager.setUserEditedPlaceholder(
+            realComponent.id,
+            realComponent.placeholder.content,
+          );
+        }
+
+        // 如果当前默认值不是变量占位符，保存为用户编辑的默认值
+        if (
+          realComponent.default_value?.content &&
+          !hasDefaultValueVariableBinding
+        ) {
+          inputComponentStateManager.setUserEditedDefaultValue(
+            realComponent.id,
+            realComponent.default_value.content,
+          );
+        }
+
+        // 默认显示"指定"模式，除非当前组件有绑定变量
+        const expectedPlaceholderMode = hasPlaceholderVariableBinding
+          ? 'variable'
+          : 'specify';
+        const expectedDefaultValueMode = hasDefaultValueVariableBinding
+          ? 'variable'
+          : 'specify';
+
+        setInputPlaceholderMode(expectedPlaceholderMode);
+        setInputDefaultValueMode(expectedDefaultValueMode);
+
+        // 标记该组件已初始化，避免后续重复设置
+        setInitializedInputComponents((prev) =>
+          new Set(prev).add(realComponent.id),
+        );
+
+        console.log('🔄 初始化输入框内容模式 (首次选中组件):', {
+          componentId: realComponent.id,
+          componentTag: realComponent.tag,
+          hasPlaceholderVariableBinding,
+          hasDefaultValueVariableBinding,
+          placeholderContent: realComponent.placeholder?.content,
+          defaultValueContent: realComponent.default_value?.content,
+          expectedPlaceholderMode,
+          expectedDefaultValueMode,
+        });
+      }
+
+      // 如果当前组件有绑定变量，记住它们（但不覆盖已有的记忆）
+      if (
+        hasPlaceholderVariableBinding &&
+        !lastBoundVariables[`${realComponent.id}_placeholder`]
+      ) {
+        const variableMatch =
+          realComponent.placeholder?.content?.match(/\$\{([^}]+)\}/);
+        if (variableMatch && variableMatch[1]) {
+          const variableName = variableMatch[1];
+          setLastBoundVariables((prev) => ({
+            ...prev,
+            [`${realComponent.id}_placeholder`]: variableName,
+          }));
+
+          // 同时设置到输入框状态管理器中
+          inputComponentStateManager.setBoundPlaceholderVariableName(
+            realComponent.id,
+            variableName,
+          );
+
+          console.log('💾 记住现有输入框占位文本变量绑定:', {
+            componentId: realComponent.id,
+            variableName,
+          });
+        }
+      }
+
+      if (
+        hasDefaultValueVariableBinding &&
+        !lastBoundVariables[`${realComponent.id}_defaultValue`]
+      ) {
+        const variableMatch =
+          realComponent.default_value?.content?.match(/\$\{([^}]+)\}/);
+        if (variableMatch && variableMatch[1]) {
+          const variableName = variableMatch[1];
+          setLastBoundVariables((prev) => ({
+            ...prev,
+            [`${realComponent.id}_defaultValue`]: variableName,
+          }));
+
+          // 同时设置到输入框状态管理器中
+          inputComponentStateManager.setBoundDefaultValueVariableName(
+            realComponent.id,
+            variableName,
+          );
+
+          console.log('💾 记住现有输入框默认值变量绑定:', {
             componentId: realComponent.id,
             variableName,
           });
@@ -3136,191 +3274,607 @@ export const PropertyPanel: React.FC<{
             </div>
             <Form form={form} layout="vertical">
               <Form.Item label="占位文本">
-                <Input
-                  value={(currentComponent as any).placeholder?.content || ''}
-                  onChange={(e) => {
-                    const newPlaceholder = {
-                      content: e.target.value,
-                      i18n_content: {
-                        'en-US': 'English placeholder',
-                      },
-                    };
-                    handleValueChange('placeholder', newPlaceholder);
-                  }}
-                  placeholder="请输入占位文本"
-                  maxLength={100}
-                />
-                {/* 占位文本变量绑定 */}
-                <div style={{ marginTop: 8 }}>
-                  <VariableBinding
-                    value={(() => {
-                      // 从占位文本中解析变量名
-                      const placeholderContent = (currentComponent as any)
-                        .placeholder?.content;
-                      if (
-                        placeholderContent &&
-                        placeholderContent.includes('${')
-                      ) {
-                        const variableMatch =
-                          placeholderContent.match(/\$\{([^}]+)\}/);
-                        return variableMatch?.[1];
-                      }
-                      return undefined;
-                    })()}
-                    onChange={(variableName: string | undefined) => {
-                      if (variableName) {
-                        // 绑定变量
+                {/* 内容模式切换 */}
+                <Segmented
+                  value={inputPlaceholderMode}
+                  style={{ marginBottom: 16 }}
+                  onChange={(value) => {
+                    const newMode = value as 'specify' | 'variable';
+                    setInputPlaceholderMode(newMode);
+
+                    // 切换模式时，立即更新DSL数据以反映到画布
+                    if (currentComponent) {
+                      const inputComponent = currentComponent as any;
+
+                      if (newMode === 'specify') {
+                        // 切换到指定模式：清除变量绑定，恢复用户编辑的占位文本
+                        const userEditedPlaceholder =
+                          inputComponentStateManager.getUserEditedPlaceholder(
+                            inputComponent.id,
+                          );
+
                         const newPlaceholder = {
-                          content: `\${${variableName}}`,
-                          i18n_content: {
-                            'en-US': `\${${variableName}}`,
-                          },
-                        };
-                        handleValueChange('placeholder', newPlaceholder);
-                        console.log('✅ 输入框占位文本绑定变量:', {
-                          componentId: currentComponent?.id,
-                          variableName,
-                          newPlaceholder,
-                        });
-                      } else {
-                        // 清除变量绑定
-                        const newPlaceholder = {
-                          content: '',
+                          content: userEditedPlaceholder || '',
                           i18n_content: {
                             'en-US': 'English placeholder',
                           },
                         };
+
+                        // 清除变量绑定状态
+                        inputComponentStateManager.setBoundPlaceholderVariableName(
+                          inputComponent.id,
+                          '',
+                        );
+
                         handleValueChange('placeholder', newPlaceholder);
-                        console.log('✅ 输入框占位文本清除变量绑定:', {
-                          componentId: currentComponent?.id,
-                        });
+
+                        console.log(
+                          '🔄 切换到指定模式，恢复用户编辑的占位文本并清除变量绑定:',
+                          {
+                            componentId: inputComponent.id,
+                            userEditedPlaceholder,
+                            newPlaceholder,
+                            action: '恢复用户占位文本并清除变量绑定',
+                          },
+                        );
+                      } else if (newMode === 'variable') {
+                        // 切换到绑定变量模式：使用记住的变量或当前绑定的变量
+                        const rememberedVariable =
+                          lastBoundVariables[
+                            `${inputComponent.id}_placeholder`
+                          ];
+                        const currentBoundVariable = (() => {
+                          const placeholderContent =
+                            inputComponent.placeholder?.content;
+                          if (
+                            placeholderContent &&
+                            placeholderContent.includes('${')
+                          ) {
+                            const variableMatch =
+                              placeholderContent.match(/\$\{([^}]+)\}/);
+                            return variableMatch?.[1];
+                          }
+                          return undefined;
+                        })();
+                        const variableName =
+                          rememberedVariable || currentBoundVariable;
+
+                        if (variableName) {
+                          const newPlaceholder = {
+                            content: `\${${variableName}}`,
+                            i18n_content: {
+                              'en-US': `\${${variableName}}`,
+                            },
+                          };
+
+                          // 设置变量绑定状态
+                          inputComponentStateManager.setBoundPlaceholderVariableName(
+                            inputComponent.id,
+                            variableName,
+                          );
+
+                          handleValueChange('placeholder', newPlaceholder);
+
+                          console.log(
+                            '🔄 切换到绑定变量模式，设置占位文本变量占位符并设置绑定状态:',
+                            {
+                              componentId: inputComponent.id,
+                              variableName,
+                              newPlaceholder,
+                              action: '设置变量绑定状态',
+                            },
+                          );
+                        }
                       }
+                    }
+
+                    console.log('🔄 输入框占位文本模式切换完成:', {
+                      componentId: currentComponent?.id,
+                      newMode: newMode,
+                      previousMode: inputPlaceholderMode,
+                      note: '已更新DSL数据和画布',
+                    });
+                  }}
+                  options={[
+                    { label: '指定', value: 'specify' },
+                    { label: '绑定变量', value: 'variable' },
+                  ]}
+                />
+
+                {/* 占位文本输入区域 - 仅在指定模式下显示 */}
+                {inputPlaceholderMode === 'specify' && (
+                  <Input
+                    value={(() => {
+                      // 在指定模式下，优先显示用户编辑的占位文本
+                      const userEditedPlaceholder =
+                        inputComponentStateManager.getUserEditedPlaceholder(
+                          (currentComponent as any)?.id,
+                        );
+                      if (userEditedPlaceholder !== undefined) {
+                        return userEditedPlaceholder;
+                      }
+                      // 如果没有用户编辑的占位文本，使用组件原始占位文本（但排除变量占位符）
+                      const placeholderContent = (currentComponent as any)
+                        ?.placeholder?.content;
+                      if (
+                        placeholderContent &&
+                        !placeholderContent.includes('${')
+                      ) {
+                        return placeholderContent;
+                      }
+                      return '';
+                    })()}
+                    onChange={(e) => {
+                      const newValue = e.target.value;
+
+                      // 保存用户编辑的占位文本到状态管理器
+                      inputComponentStateManager.setUserEditedPlaceholder(
+                        (currentComponent as any).id,
+                        newValue,
+                      );
+
+                      // 同时更新DSL
+                      const newPlaceholder = {
+                        content: newValue,
+                        i18n_content: {
+                          'en-US': 'English placeholder',
+                        },
+                      };
+                      handleValueChange('placeholder', newPlaceholder);
                     }}
-                    componentType="input"
-                    variables={variables}
-                    getFilteredVariables={() => {
-                      // 输入框占位文本支持文本和整数类型变量
-                      return variables.filter((variable: any) => {
-                        if (typeof variable === 'object' && variable !== null) {
-                          const keys = getVariableKeys(variable);
-                          if (keys.length > 0) {
-                            const variableName = keys[0];
-                            const originalType = getVariableOriginalType(
-                              variable,
+                    placeholder="请输入占位文本"
+                    maxLength={100}
+                  />
+                )}
+
+                {/* 绑定变量模式：显示变量选择器 */}
+                {inputPlaceholderMode === 'variable' && (
+                  <div>
+                    <VariableBinding
+                      value={(() => {
+                        // 在绑定变量模式下，优先显示记住的变量
+                        const rememberedVariable = (currentComponent as any)
+                          ? lastBoundVariables[
+                              `${(currentComponent as any).id}_placeholder`
+                            ]
+                          : undefined;
+                        const currentBoundVariable = (() => {
+                          const placeholderContent = (currentComponent as any)
+                            ?.placeholder?.content;
+                          if (
+                            placeholderContent &&
+                            placeholderContent.includes('${')
+                          ) {
+                            const variableMatch =
+                              placeholderContent.match(/\$\{([^}]+)\}/);
+                            return variableMatch?.[1];
+                          }
+                          return undefined;
+                        })();
+
+                        // 如果有记住的变量，使用记住的变量；否则使用当前绑定的变量
+                        const displayValue =
+                          rememberedVariable || currentBoundVariable;
+
+                        console.log('🔍 输入框占位文本VariableBinding显示值:', {
+                          componentId: (currentComponent as any)?.id,
+                          rememberedVariable,
+                          currentBoundVariable,
+                          displayValue,
+                        });
+
+                        return displayValue;
+                      })()}
+                      onChange={(variableName: string | undefined) => {
+                        // 立即更新DSL中的变量绑定
+                        if (currentComponent) {
+                          const inputComponent = currentComponent as any;
+                          if (variableName) {
+                            setLastBoundVariables((prev) => ({
+                              ...prev,
+                              [`${inputComponent.id}_placeholder`]:
+                                variableName,
+                            }));
+
+                            // 立即更新DSL数据为变量占位符，确保画布实时更新
+                            const newPlaceholder = {
+                              content: `\${${variableName}}`,
+                              i18n_content: {
+                                'en-US': `\${${variableName}}`,
+                              },
+                            };
+
+                            // 设置变量绑定状态
+                            inputComponentStateManager.setBoundPlaceholderVariableName(
+                              inputComponent.id,
                               variableName,
                             );
 
-                            return (
-                              originalType === 'text' ||
-                              originalType === 'number'
+                            handleValueChange('placeholder', newPlaceholder);
+
+                            console.log(
+                              '💾 选择输入框占位文本变量并立即更新DSL和绑定状态:',
+                              {
+                                componentId: inputComponent.id,
+                                selectedVariable: variableName,
+                                newPlaceholder,
+                                action: '立即生效并记住，设置绑定状态',
+                              },
+                            );
+                          } else {
+                            // 清除变量时，也清除记忆，并恢复用户编辑的占位文本
+                            setLastBoundVariables((prev) => {
+                              const newState = { ...prev };
+                              delete newState[
+                                `${inputComponent.id}_placeholder`
+                              ];
+                              return newState;
+                            });
+
+                            // 清除变量绑定状态
+                            inputComponentStateManager.setBoundPlaceholderVariableName(
+                              inputComponent.id,
+                              '',
+                            );
+
+                            // 恢复用户编辑的占位文本到DSL
+                            const userEditedPlaceholder =
+                              inputComponentStateManager.getUserEditedPlaceholder(
+                                inputComponent.id,
+                              );
+                            const newPlaceholder = {
+                              content: userEditedPlaceholder || '',
+                              i18n_content: {
+                                'en-US': 'English placeholder',
+                              },
+                            };
+                            handleValueChange('placeholder', newPlaceholder);
+
+                            console.log(
+                              '🗑️ 清除输入框占位文本变量绑定状态并恢复用户占位文本:',
+                              {
+                                componentId: inputComponent.id,
+                                userEditedPlaceholder,
+                                action: '清除绑定状态并恢复用户占位文本',
+                              },
                             );
                           }
                         }
-                        return false;
-                      });
-                    }}
-                    getVariableDisplayName={getVariableDisplayName}
-                    getVariableKeys={getVariableKeys}
-                    onAddVariable={() =>
-                      handleAddVariableFromComponent('input')
-                    }
-                    placeholder="选择占位文本变量"
-                    label="绑定变量 (可选)"
-                    addVariableText="+新建变量"
-                  />
-                </div>
+                      }}
+                      componentType="input"
+                      variables={variables}
+                      getFilteredVariables={() => {
+                        // 输入框占位文本支持文本和整数类型变量
+                        return variables.filter((variable: any) => {
+                          if (
+                            typeof variable === 'object' &&
+                            variable !== null
+                          ) {
+                            const keys = getVariableKeys(variable);
+                            if (keys.length > 0) {
+                              const variableName = keys[0];
+                              const originalType = getVariableOriginalType(
+                                variable,
+                                variableName,
+                              );
+
+                              return (
+                                originalType === 'text' ||
+                                originalType === 'number'
+                              );
+                            }
+                          }
+                          return false;
+                        });
+                      }}
+                      getVariableDisplayName={getVariableDisplayName}
+                      getVariableKeys={getVariableKeys}
+                      onAddVariable={() =>
+                        handleAddVariableFromComponent('input')
+                      }
+                      placeholder="请选择要绑定的变量"
+                      label="绑定变量"
+                      addVariableText="+新建变量"
+                    />
+                  </div>
+                )}
               </Form.Item>
               <Form.Item label="默认文本">
-                <Input
-                  value={(currentComponent as any).default_value?.content || ''}
-                  onChange={(e) => {
-                    const newDefaultValue = {
-                      content: e.target.value,
-                      i18n_content: {
-                        'en-US': 'English default value',
-                      },
-                    };
-                    handleValueChange('default_value', newDefaultValue);
-                  }}
-                  placeholder="请输入默认文本"
-                  maxLength={100}
-                />
-                {/* 默认文本变量绑定 */}
-                <div style={{ marginTop: 8 }}>
-                  <VariableBinding
-                    value={(() => {
-                      // 从默认文本中解析变量名
-                      const defaultContent = (currentComponent as any)
-                        .default_value?.content;
-                      if (defaultContent && defaultContent.includes('${')) {
-                        const variableMatch =
-                          defaultContent.match(/\$\{([^}]+)\}/);
-                        return variableMatch?.[1];
-                      }
-                      return undefined;
-                    })()}
-                    onChange={(variableName: string | undefined) => {
-                      if (variableName) {
-                        // 绑定变量
+                {/* 内容模式切换 */}
+                <Segmented
+                  value={inputDefaultValueMode}
+                  style={{ marginBottom: 16 }}
+                  onChange={(value) => {
+                    const newMode = value as 'specify' | 'variable';
+                    setInputDefaultValueMode(newMode);
+
+                    // 切换模式时，立即更新DSL数据以反映到画布
+                    if (currentComponent) {
+                      const inputComponent = currentComponent as any;
+
+                      if (newMode === 'specify') {
+                        // 切换到指定模式：清除变量绑定，恢复用户编辑的默认值
+                        const userEditedDefaultValue =
+                          inputComponentStateManager.getUserEditedDefaultValue(
+                            inputComponent.id,
+                          );
+
                         const newDefaultValue = {
-                          content: `\${${variableName}}`,
-                          i18n_content: {
-                            'en-US': `\${${variableName}}`,
-                          },
-                        };
-                        handleValueChange('default_value', newDefaultValue);
-                        console.log('✅ 输入框默认文本绑定变量:', {
-                          componentId: currentComponent?.id,
-                          variableName,
-                          newDefaultValue,
-                        });
-                      } else {
-                        // 清除变量绑定
-                        const newDefaultValue = {
-                          content: '',
+                          content: userEditedDefaultValue || '',
                           i18n_content: {
                             'en-US': 'English default value',
                           },
                         };
+
+                        // 清除变量绑定状态
+                        inputComponentStateManager.setBoundDefaultValueVariableName(
+                          inputComponent.id,
+                          '',
+                        );
+
                         handleValueChange('default_value', newDefaultValue);
-                        console.log('✅ 输入框默认文本清除变量绑定:', {
-                          componentId: currentComponent?.id,
-                        });
+
+                        console.log(
+                          '🔄 切换到指定模式，恢复用户编辑的默认值并清除变量绑定:',
+                          {
+                            componentId: inputComponent.id,
+                            userEditedDefaultValue,
+                            newDefaultValue,
+                            action: '恢复用户默认值并清除变量绑定',
+                          },
+                        );
+                      } else if (newMode === 'variable') {
+                        // 切换到绑定变量模式：使用记住的变量或当前绑定的变量
+                        const rememberedVariable =
+                          lastBoundVariables[
+                            `${inputComponent.id}_defaultValue`
+                          ];
+                        const currentBoundVariable = (() => {
+                          const defaultContent =
+                            inputComponent.default_value?.content;
+                          if (defaultContent && defaultContent.includes('${')) {
+                            const variableMatch =
+                              defaultContent.match(/\$\{([^}]+)\}/);
+                            return variableMatch?.[1];
+                          }
+                          return undefined;
+                        })();
+                        const variableName =
+                          rememberedVariable || currentBoundVariable;
+
+                        if (variableName) {
+                          const newDefaultValue = {
+                            content: `\${${variableName}}`,
+                            i18n_content: {
+                              'en-US': `\${${variableName}}`,
+                            },
+                          };
+
+                          // 设置变量绑定状态
+                          inputComponentStateManager.setBoundDefaultValueVariableName(
+                            inputComponent.id,
+                            variableName,
+                          );
+
+                          handleValueChange('default_value', newDefaultValue);
+
+                          console.log(
+                            '🔄 切换到绑定变量模式，设置默认值变量占位符并设置绑定状态:',
+                            {
+                              componentId: inputComponent.id,
+                              variableName,
+                              newDefaultValue,
+                              action: '设置变量绑定状态',
+                            },
+                          );
+                        }
                       }
+                    }
+
+                    console.log('🔄 输入框默认值模式切换完成:', {
+                      componentId: currentComponent?.id,
+                      newMode: newMode,
+                      previousMode: inputDefaultValueMode,
+                      note: '已更新DSL数据和画布',
+                    });
+                  }}
+                  options={[
+                    { label: '指定', value: 'specify' },
+                    { label: '绑定变量', value: 'variable' },
+                  ]}
+                />
+
+                {/* 默认值输入区域 - 仅在指定模式下显示 */}
+                {inputDefaultValueMode === 'specify' && (
+                  <Input
+                    value={(() => {
+                      // 在指定模式下，优先显示用户编辑的默认值
+                      const userEditedDefaultValue =
+                        inputComponentStateManager.getUserEditedDefaultValue(
+                          (currentComponent as any)?.id,
+                        );
+                      if (userEditedDefaultValue !== undefined) {
+                        return userEditedDefaultValue;
+                      }
+                      // 如果没有用户编辑的默认值，使用组件原始默认值（但排除变量占位符）
+                      const defaultContent = (currentComponent as any)
+                        ?.default_value?.content;
+                      if (defaultContent && !defaultContent.includes('${')) {
+                        return defaultContent;
+                      }
+                      return '';
+                    })()}
+                    onChange={(e) => {
+                      const newValue = e.target.value;
+
+                      // 保存用户编辑的默认值到状态管理器
+                      inputComponentStateManager.setUserEditedDefaultValue(
+                        (currentComponent as any).id,
+                        newValue,
+                      );
+
+                      // 同时更新DSL
+                      const newDefaultValue = {
+                        content: newValue,
+                        i18n_content: {
+                          'en-US': 'English default value',
+                        },
+                      };
+                      handleValueChange('default_value', newDefaultValue);
                     }}
-                    componentType="input"
-                    variables={variables}
-                    getFilteredVariables={() => {
-                      // 输入框默认文本支持文本和整数类型变量
-                      return variables.filter((variable: any) => {
-                        if (typeof variable === 'object' && variable !== null) {
-                          const keys = getVariableKeys(variable);
-                          if (keys.length > 0) {
-                            const variableName = keys[0];
-                            const originalType = getVariableOriginalType(
-                              variable,
+                    placeholder="请输入默认文本"
+                    maxLength={100}
+                  />
+                )}
+
+                {/* 绑定变量模式：显示变量选择器 */}
+                {inputDefaultValueMode === 'variable' && (
+                  <div>
+                    <VariableBinding
+                      value={(() => {
+                        // 在绑定变量模式下，优先显示记住的变量
+                        const rememberedVariable = (currentComponent as any)
+                          ? lastBoundVariables[
+                              `${(currentComponent as any).id}_defaultValue`
+                            ]
+                          : undefined;
+                        const currentBoundVariable = (() => {
+                          const defaultContent = (currentComponent as any)
+                            ?.default_value?.content;
+                          if (defaultContent && defaultContent.includes('${')) {
+                            const variableMatch =
+                              defaultContent.match(/\$\{([^}]+)\}/);
+                            return variableMatch?.[1];
+                          }
+                          return undefined;
+                        })();
+
+                        // 如果有记住的变量，使用记住的变量；否则使用当前绑定的变量
+                        const displayValue =
+                          rememberedVariable || currentBoundVariable;
+
+                        console.log('🔍 输入框默认值VariableBinding显示值:', {
+                          componentId: (currentComponent as any)?.id,
+                          rememberedVariable,
+                          currentBoundVariable,
+                          displayValue,
+                        });
+
+                        return displayValue;
+                      })()}
+                      onChange={(variableName: string | undefined) => {
+                        // 立即更新DSL中的变量绑定
+                        if (currentComponent) {
+                          const inputComponent = currentComponent as any;
+                          if (variableName) {
+                            setLastBoundVariables((prev) => ({
+                              ...prev,
+                              [`${inputComponent.id}_defaultValue`]:
+                                variableName,
+                            }));
+
+                            // 立即更新DSL数据为变量占位符，确保画布实时更新
+                            const newDefaultValue = {
+                              content: `\${${variableName}}`,
+                              i18n_content: {
+                                'en-US': `\${${variableName}}`,
+                              },
+                            };
+
+                            // 设置变量绑定状态
+                            inputComponentStateManager.setBoundDefaultValueVariableName(
+                              inputComponent.id,
                               variableName,
                             );
 
-                            return (
-                              originalType === 'text' ||
-                              originalType === 'number'
+                            handleValueChange('default_value', newDefaultValue);
+
+                            console.log(
+                              '💾 选择输入框默认值变量并立即更新DSL和绑定状态:',
+                              {
+                                componentId: inputComponent.id,
+                                selectedVariable: variableName,
+                                newDefaultValue,
+                                action: '立即生效并记住，设置绑定状态',
+                              },
+                            );
+                          } else {
+                            // 清除变量时，也清除记忆，并恢复用户编辑的默认值
+                            setLastBoundVariables((prev) => {
+                              const newState = { ...prev };
+                              delete newState[
+                                `${inputComponent.id}_defaultValue`
+                              ];
+                              return newState;
+                            });
+
+                            // 清除变量绑定状态
+                            inputComponentStateManager.setBoundDefaultValueVariableName(
+                              inputComponent.id,
+                              '',
+                            );
+
+                            // 恢复用户编辑的默认值到DSL
+                            const userEditedDefaultValue =
+                              inputComponentStateManager.getUserEditedDefaultValue(
+                                inputComponent.id,
+                              );
+                            const newDefaultValue = {
+                              content: userEditedDefaultValue || '',
+                              i18n_content: {
+                                'en-US': 'English default value',
+                              },
+                            };
+                            handleValueChange('default_value', newDefaultValue);
+
+                            console.log(
+                              '🗑️ 清除输入框默认值变量绑定状态并恢复用户默认值:',
+                              {
+                                componentId: inputComponent.id,
+                                userEditedDefaultValue,
+                                action: '清除绑定状态并恢复用户默认值',
+                              },
                             );
                           }
                         }
-                        return false;
-                      });
-                    }}
-                    getVariableDisplayName={getVariableDisplayName}
-                    getVariableKeys={getVariableKeys}
-                    onAddVariable={() =>
-                      handleAddVariableFromComponent('input')
-                    }
-                    placeholder="选择默认文本变量"
-                    label="绑定变量 (可选)"
-                    addVariableText="+新建变量"
-                  />
-                </div>
+                      }}
+                      componentType="input"
+                      variables={variables}
+                      getFilteredVariables={() => {
+                        // 输入框默认值支持文本和整数类型变量
+                        return variables.filter((variable: any) => {
+                          if (
+                            typeof variable === 'object' &&
+                            variable !== null
+                          ) {
+                            const keys = getVariableKeys(variable);
+                            if (keys.length > 0) {
+                              const variableName = keys[0];
+                              const originalType = getVariableOriginalType(
+                                variable,
+                                variableName,
+                              );
+
+                              return (
+                                originalType === 'text' ||
+                                originalType === 'number'
+                              );
+                            }
+                          }
+                          return false;
+                        });
+                      }}
+                      getVariableDisplayName={getVariableDisplayName}
+                      getVariableKeys={getVariableKeys}
+                      onAddVariable={() =>
+                        handleAddVariableFromComponent('input')
+                      }
+                      placeholder="请选择要绑定的变量"
+                      label="绑定变量"
+                      addVariableText="+新建变量"
+                    />
+                  </div>
+                )}
               </Form.Item>
             </Form>
           </div>

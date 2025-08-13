@@ -383,3 +383,200 @@ export const multiImageComponentStateManager =
 
 // 导出多图混排组件状态类型
 export type { MultiImageComponentState };
+
+// 输入框组件状态接口
+interface InputComponentState {
+  userEditedPlaceholder?: string;
+  boundPlaceholderVariableName?: string;
+  userEditedDefaultValue?: string;
+  boundDefaultValueVariableName?: string;
+}
+
+// 输入框组件状态管理器类
+class InputComponentStateManager {
+  private static instance: InputComponentStateManager;
+  private stateMap: Map<string, InputComponentState> = new Map();
+
+  private constructor() {}
+
+  // 单例模式获取实例
+  public static getInstance(): InputComponentStateManager {
+    if (!InputComponentStateManager.instance) {
+      InputComponentStateManager.instance = new InputComponentStateManager();
+    }
+    return InputComponentStateManager.instance;
+  }
+
+  // 获取组件状态
+  public getComponentState(componentId: string): InputComponentState {
+    return this.stateMap.get(componentId) || {};
+  }
+
+  // 设置用户编辑的占位文本
+  public setUserEditedPlaceholder(
+    componentId: string,
+    placeholder: string,
+  ): void {
+    const currentState = this.getComponentState(componentId);
+    this.stateMap.set(componentId, {
+      ...currentState,
+      userEditedPlaceholder: placeholder,
+    });
+
+    console.log('📝 设置用户编辑占位文本:', {
+      componentId,
+      placeholder,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取用户编辑的占位文本
+  public getUserEditedPlaceholder(componentId: string): string | undefined {
+    const state = this.getComponentState(componentId);
+    return state.userEditedPlaceholder;
+  }
+
+  // 设置绑定的占位文本变量名
+  public setBoundPlaceholderVariableName(
+    componentId: string,
+    variableName: string | undefined,
+  ): void {
+    const currentState = this.getComponentState(componentId);
+    const newState = { ...currentState };
+
+    if (variableName) {
+      newState.boundPlaceholderVariableName = variableName;
+    } else {
+      delete newState.boundPlaceholderVariableName;
+    }
+
+    this.stateMap.set(componentId, newState);
+
+    console.log('🔗 设置输入框占位文本绑定变量名:', {
+      componentId,
+      variableName,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取绑定的占位文本变量名
+  public getBoundPlaceholderVariableName(
+    componentId: string,
+  ): string | undefined {
+    const state = this.getComponentState(componentId);
+    return state.boundPlaceholderVariableName;
+  }
+
+  // 设置用户编辑的默认值
+  public setUserEditedDefaultValue(
+    componentId: string,
+    defaultValue: string,
+  ): void {
+    const currentState = this.getComponentState(componentId);
+    this.stateMap.set(componentId, {
+      ...currentState,
+      userEditedDefaultValue: defaultValue,
+    });
+
+    console.log('📝 设置用户编辑默认值:', {
+      componentId,
+      defaultValue,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取用户编辑的默认值
+  public getUserEditedDefaultValue(componentId: string): string | undefined {
+    const state = this.getComponentState(componentId);
+    return state.userEditedDefaultValue;
+  }
+
+  // 设置绑定的默认值变量名
+  public setBoundDefaultValueVariableName(
+    componentId: string,
+    variableName: string | undefined,
+  ): void {
+    const currentState = this.getComponentState(componentId);
+    const newState = { ...currentState };
+
+    if (variableName) {
+      newState.boundDefaultValueVariableName = variableName;
+    } else {
+      delete newState.boundDefaultValueVariableName;
+    }
+
+    this.stateMap.set(componentId, newState);
+
+    console.log('🔗 设置输入框默认值绑定变量名:', {
+      componentId,
+      variableName,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取绑定的默认值变量名
+  public getBoundDefaultValueVariableName(
+    componentId: string,
+  ): string | undefined {
+    const state = this.getComponentState(componentId);
+    return state.boundDefaultValueVariableName;
+  }
+
+  // 清除组件状态
+  public clearComponentState(componentId: string): void {
+    this.stateMap.delete(componentId);
+    console.log('🗑️ 清除输入框组件状态:', {
+      componentId,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取所有状态
+  public getAllStates(): Map<string, InputComponentState> {
+    return new Map(this.stateMap);
+  }
+
+  // 获取状态统计信息
+  public getStateStats(): {
+    totalComponents: number;
+    componentsWithUserPlaceholder: number;
+    componentsWithBoundPlaceholder: number;
+    componentsWithUserDefaultValue: number;
+    componentsWithBoundDefaultValue: number;
+  } {
+    let componentsWithUserPlaceholder = 0;
+    let componentsWithBoundPlaceholder = 0;
+    let componentsWithUserDefaultValue = 0;
+    let componentsWithBoundDefaultValue = 0;
+
+    this.stateMap.forEach((state) => {
+      if (state.userEditedPlaceholder !== undefined) {
+        componentsWithUserPlaceholder++;
+      }
+      if (state.boundPlaceholderVariableName) {
+        componentsWithBoundPlaceholder++;
+      }
+      if (state.userEditedDefaultValue !== undefined) {
+        componentsWithUserDefaultValue++;
+      }
+      if (state.boundDefaultValueVariableName) {
+        componentsWithBoundDefaultValue++;
+      }
+    });
+
+    return {
+      totalComponents: this.stateMap.size,
+      componentsWithUserPlaceholder,
+      componentsWithBoundPlaceholder,
+      componentsWithUserDefaultValue,
+      componentsWithBoundDefaultValue,
+    };
+  }
+}
+
+// 导出输入框组件状态管理器单例实例
+export const inputComponentStateManager =
+  InputComponentStateManager.getInstance();
+
+// 导出输入框组件状态类型
+export type { InputComponentState };
