@@ -18,6 +18,7 @@ import {
   Input,
   InputNumber,
   Modal,
+  Segmented,
   Select,
   Space,
   Switch,
@@ -942,6 +943,21 @@ export const PropertyPanel: React.FC<{
   const [activeTab, setActiveTab] = useState<string>('properties');
   const [topLevelTab, setTopLevelTab] = useState<string>('component'); // 新增顶层Tab状态
 
+  // 文本内容模式状态管理
+  const [textContentMode, setTextContentMode] = useState<
+    'specify' | 'variable'
+  >('specify');
+
+  // 记住每个组件上次绑定的变量
+  const [lastBoundVariables, setLastBoundVariables] = useState<
+    Record<string, string>
+  >({});
+
+  // 跟踪已初始化的组件，避免重复设置模式
+  const [initializedComponents, setInitializedComponents] = useState<
+    Set<string>
+  >(new Set());
+
   // 变量管理相关状态
   const [isAddVariableModalVisible, setIsAddVariableModalVisible] =
     useState(false);
@@ -969,6 +985,52 @@ export const PropertyPanel: React.FC<{
     cardData || DEFAULT_CARD_DATA,
     selectedPath,
   );
+
+  // 监听选中组件变化，同步文本内容模式
+  useEffect(() => {
+    if (
+      realComponent &&
+      (realComponent.tag === 'plain_text' || realComponent.tag === 'rich_text')
+    ) {
+      const boundVariableName = textComponentStateManager.getBoundVariableName(
+        realComponent.id,
+      );
+
+      // 只在组件首次选中时设置模式，不要在变量绑定变化时重新设置
+      if (!initializedComponents.has(realComponent.id)) {
+        // 默认显示"指定"模式，除非当前组件有绑定变量且没有用户编辑的内容
+        const userEditedContent =
+          textComponentStateManager.getUserEditedContent(realComponent.id);
+        const expectedMode =
+          boundVariableName && !userEditedContent ? 'variable' : 'specify';
+        setTextContentMode(expectedMode);
+
+        // 标记该组件已初始化，避免后续重复设置
+        setInitializedComponents((prev) => new Set(prev).add(realComponent.id));
+
+        console.log('🔄 初始化文本内容模式 (首次选中组件):', {
+          componentId: realComponent.id,
+          componentTag: realComponent.tag,
+          boundVariableName,
+          userEditedContent: !!userEditedContent,
+          expectedMode,
+        });
+      }
+
+      // 如果当前组件有绑定变量，记住它（但不覆盖已有的记忆）
+      if (boundVariableName && !lastBoundVariables[realComponent.id]) {
+        setLastBoundVariables((prev) => ({
+          ...prev,
+          [realComponent.id]: boundVariableName,
+        }));
+
+        console.log('💾 记住现有变量绑定:', {
+          componentId: realComponent.id,
+          boundVariableName,
+        });
+      }
+    }
+  }, [realComponent]);
 
   // 检查是否选中了卡片本身
   const isCardSelected =
@@ -3121,49 +3183,121 @@ export const PropertyPanel: React.FC<{
       const isPlainText = currentComponent.tag === 'plain_text';
       const isRichText = currentComponent.tag === 'rich_text';
 
-      // 获取文本内容 - 始终显示用户编辑的内容，不跟随变量绑定
+      // 获取绑定的变量名
+      const getBoundVariableName = () => {
+        const boundVariableName =
+          textComponentStateManager.getBoundVariableName(currentComponent.id) ||
+          '';
+        return boundVariableName;
+      };
+
+      // 获取文本内容 - 根据当前模式显示不同内容
       const getTextContent = () => {
         if (!currentComponent) return '';
 
-        // 从状态管理器获取用户编辑的内容
-        const userEditedContent =
-          textComponentStateManager.getUserEditedContent(currentComponent.id);
+        if (textContentMode === 'specify') {
+          // 指定模式：显示用户编辑的内容
+          const userEditedContent =
+            textComponentStateManager.getUserEditedContent(currentComponent.id);
 
-        console.log('🔍 getTextContent 调用:', {
-          componentId: currentComponent.id,
-          userEditedContent: userEditedContent,
-          hasUserContent: userEditedContent !== undefined,
-          boundVariableName: textComponentStateManager.getBoundVariableName(
-            currentComponent.id,
-          ),
-          componentContent: (currentComponent as any).content,
-        });
+          if (userEditedContent !== undefined) {
+            return userEditedContent;
+          }
 
-        if (userEditedContent !== undefined) {
-          return userEditedContent;
+          // 如果没有用户编辑的内容，使用组件原始内容
+          if (isPlainText) {
+            return (currentComponent as any).content || '';
+          } else if (isRichText) {
+            const content = (currentComponent as any).content;
+            const defaultContent = {
+              type: 'doc',
+              content: [
+                {
+                  type: 'paragraph',
+                  content: [
+                    {
+                      type: 'text',
+                      text: '请输入富文本内容',
+                    },
+                  ],
+                },
+              ],
+            };
+            return content || defaultContent;
+          }
+        } else if (textContentMode === 'variable') {
+          // 绑定变量模式：显示变量的实际值
+          const boundVariableName = getBoundVariableName();
+          const rememberedVariable = lastBoundVariables[currentComponent.id];
+          const variableName = rememberedVariable || boundVariableName;
+
+          if (variableName) {
+            // 查找变量并获取其值
+            const variable = variables.find((v: any) => {
+              if (typeof v === 'object' && v !== null) {
+                const keys = getVariableKeys(v);
+                return keys.length > 0 && keys[0] === variableName;
+              }
+              return false;
+            });
+
+            if (variable) {
+              const variableValue = (variable as any)[variableName];
+              console.log('🔍 获取变量内容用于显示:', {
+                componentId: currentComponent.id,
+                variableName,
+                variableValue,
+                mode: textContentMode,
+              });
+
+              if (isRichText) {
+                // 富文本：如果变量值是字符串，转换为富文本格式
+                if (typeof variableValue === 'string') {
+                  return {
+                    type: 'doc',
+                    content: [
+                      {
+                        type: 'paragraph',
+                        content: [
+                          {
+                            type: 'text',
+                            text: variableValue,
+                          },
+                        ],
+                      },
+                    ],
+                  };
+                } else if (typeof variableValue === 'object') {
+                  return variableValue;
+                }
+              } else {
+                // 普通文本：直接返回字符串值
+                return String(variableValue);
+              }
+            }
+          }
+
+          // 如果没有找到变量，显示提示信息
+          if (isRichText) {
+            return {
+              type: 'doc',
+              content: [
+                {
+                  type: 'paragraph',
+                  content: [
+                    {
+                      type: 'text',
+                      text: '请选择要绑定的变量',
+                    },
+                  ],
+                },
+              ],
+            };
+          } else {
+            return '请选择要绑定的变量';
+          }
         }
 
-        // 如果没有用户编辑的内容，使用组件原始内容
-        if (isPlainText) {
-          return (currentComponent as any).content || '';
-        } else if (isRichText) {
-          const content = (currentComponent as any).content;
-          const defaultContent = {
-            type: 'doc',
-            content: [
-              {
-                type: 'paragraph',
-                content: [
-                  {
-                    type: 'text',
-                    text: '请输入富文本内容',
-                  },
-                ],
-              },
-            ],
-          };
-          return content || defaultContent;
-        }
         return '';
       };
 
@@ -3172,6 +3306,7 @@ export const PropertyPanel: React.FC<{
         console.log('📝 用户编辑文本内容:', {
           componentId: currentComponent?.id,
           value: value,
+          textContentMode,
           timestamp: new Date().toISOString(),
         });
 
@@ -3184,10 +3319,8 @@ export const PropertyPanel: React.FC<{
         // 创建更新的组件对象
         const updatedComponent = { ...currentComponent };
 
-        // 如果当前没有绑定变量，也更新content字段
-        const boundVariableName =
-          textComponentStateManager.getBoundVariableName(currentComponent.id);
-        if (!boundVariableName) {
+        // 在"指定"模式下，立即更新DSL数据以反映到画布
+        if (textContentMode === 'specify') {
           if (isPlainText) {
             (updatedComponent as any).content = value;
             (updatedComponent as any).i18n_content = {
@@ -3196,42 +3329,18 @@ export const PropertyPanel: React.FC<{
           } else if (isRichText) {
             (updatedComponent as any).content = value;
           }
-        } else {
-          // 如果有绑定变量，不更新全局数据，只保存用户编辑内容到状态管理器
-          console.log('📝 有绑定变量时，只保存用户编辑内容到状态管理器:', {
-            componentId: currentComponent?.id,
-            value: value,
-            boundVariableName: boundVariableName,
-          });
-        }
 
-        console.log('✅ 文本内容更新完成:', {
-          componentId: updatedComponent?.id,
-          userEditedContent: value,
-          boundVariableName: boundVariableName,
-          updatedComponent: updatedComponent,
-        });
+          console.log('📝 指定模式：立即更新DSL数据到画布:', {
+            componentId: currentComponent.id,
+            updatedContent: value,
+          });
+        } else {
+          // 在"绑定变量"模式下，不更新DSL，只保存用户编辑内容到状态管理器
+          console.log('📝 绑定变量模式：仅保存用户编辑内容到状态管理器');
+        }
 
         // 更新组件
         onUpdateComponent(updatedComponent);
-      };
-
-      // 获取绑定的变量名
-      const getBoundVariableName = () => {
-        const boundVariableName =
-          textComponentStateManager.getBoundVariableName(currentComponent.id) ||
-          '';
-        console.log('🔍 获取绑定变量名:', {
-          componentId: currentComponent?.id,
-          boundVariableName: boundVariableName,
-          currentComponent: currentComponent,
-          componentContent: (currentComponent as any).content,
-          userEditedContent: textComponentStateManager.getUserEditedContent(
-            currentComponent.id,
-          ),
-          componentFull: JSON.stringify(currentComponent, null, 2),
-        });
-        return boundVariableName;
       };
 
       // 更新绑定的变量名
@@ -3239,14 +3348,6 @@ export const PropertyPanel: React.FC<{
         // 在更新前保存当前的用户编辑内容
         const currentUserEditedContent =
           textComponentStateManager.getUserEditedContent(currentComponent.id);
-
-        console.log('🔗 更新文本组件绑定变量:', {
-          componentId: currentComponent?.id,
-          variableName: variableName,
-          currentComponent: currentComponent,
-          currentUserEditedContent: currentUserEditedContent,
-          timestamp: new Date().toISOString(),
-        });
 
         // 创建完整的更新组件对象
         const updatedComponent = { ...currentComponent };
@@ -3430,54 +3531,247 @@ export const PropertyPanel: React.FC<{
             </div>
             <Form form={form} layout="vertical">
               <Form.Item label="文本内容">
-                {/* 显示文本输入 */}
-                {isRichText ? (
-                  <RichTextEditor
-                    key={`rich-text-${
-                      currentComponent?.id
-                    }-${selectedPath?.join('-')}`}
-                    value={getTextContent()}
-                    onChange={updateTextContent}
-                    placeholder="请输入富文本内容..."
-                    height={300}
-                    showToolbar={true}
-                  />
-                ) : (
-                  <TextArea
-                    value={getTextContent()}
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                      updateTextContent(e.target.value)
+                {/* 内容模式切换 */}
+                <Segmented
+                  value={textContentMode}
+                  style={{ marginBottom: 16 }}
+                  onChange={(value) => {
+                    const newMode = value as 'specify' | 'variable';
+                    setTextContentMode(newMode);
+
+                    // 切换模式时，立即更新DSL数据以反映到画布
+                    if (currentComponent) {
+                      const updatedComponent = { ...currentComponent };
+
+                      if (newMode === 'specify') {
+                        // 切换到指定模式：使用用户编辑的内容，并清除变量绑定
+                        const userEditedContent =
+                          textComponentStateManager.getUserEditedContent(
+                            currentComponent.id,
+                          );
+
+                        if (userEditedContent !== undefined) {
+                          (updatedComponent as any).content = userEditedContent;
+                          if (isPlainText) {
+                            (updatedComponent as any).i18n_content = {
+                              'en-US': userEditedContent,
+                            };
+                          }
+                        }
+
+                        // 清除变量绑定状态，确保画布不再显示变量内容
+                        textComponentStateManager.setBoundVariableName(
+                          currentComponent.id,
+                          '',
+                        );
+
+                        console.log(
+                          '🔄 切换到指定模式，更新DSL为用户内容并清除变量绑定:',
+                          {
+                            componentId: currentComponent.id,
+                            userEditedContent,
+                            updatedContent: (updatedComponent as any).content,
+                            action: '清除变量绑定状态',
+                          },
+                        );
+                      } else if (newMode === 'variable') {
+                        // 切换到绑定变量模式：使用变量占位符
+                        const boundVariableName = getBoundVariableName();
+                        const rememberedVariable =
+                          lastBoundVariables[currentComponent.id];
+                        const variableName =
+                          rememberedVariable || boundVariableName;
+
+                        if (variableName) {
+                          const variablePlaceholder = `\${${variableName}}`;
+                          (updatedComponent as any).content =
+                            variablePlaceholder;
+                          (updatedComponent as any).i18n_content = {
+                            'en-US': variablePlaceholder,
+                          };
+
+                          // 设置变量绑定状态，确保画布显示变量内容
+                          textComponentStateManager.setBoundVariableName(
+                            currentComponent.id,
+                            variableName,
+                          );
+
+                          console.log(
+                            '🔄 切换到绑定变量模式，更新DSL为变量占位符并设置绑定状态:',
+                            {
+                              componentId: currentComponent.id,
+                              variableName,
+                              variablePlaceholder,
+                              updatedContent: (updatedComponent as any).content,
+                              action: '设置变量绑定状态',
+                            },
+                          );
+                        }
+                      }
+
+                      // 立即更新组件，触发画布重新渲染
+                      onUpdateComponent(updatedComponent);
                     }
-                    placeholder="请输入文本内容"
-                    rows={4}
-                    style={{ width: '100%' }}
-                  />
+
+                    console.log('🔄 文本内容模式切换完成:', {
+                      componentId: currentComponent?.id,
+                      newMode: newMode,
+                      previousMode: textContentMode,
+                      note: '已更新DSL数据和画布',
+                    });
+                  }}
+                  options={[
+                    { label: '指定', value: 'specify' },
+                    { label: '绑定变量', value: 'variable' },
+                  ]}
+                />
+
+                {/* 文本内容显示区域 - 仅在指定模式下显示 */}
+                {textContentMode === 'specify' && (
+                  <div style={{ marginBottom: 16 }}>
+                    {isRichText ? (
+                      <RichTextEditor
+                        key={`rich-text-${
+                          currentComponent?.id
+                        }-${selectedPath?.join('-')}-${textContentMode}`}
+                        value={getTextContent()}
+                        onChange={updateTextContent}
+                        placeholder="请输入富文本内容..."
+                        height={300}
+                        showToolbar={true}
+                      />
+                    ) : (
+                      <TextArea
+                        value={getTextContent()}
+                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                          updateTextContent(e.target.value)
+                        }
+                        placeholder="请输入文本内容"
+                        rows={4}
+                        style={{
+                          width: '100%',
+                        }}
+                      />
+                    )}
+                  </div>
                 )}
 
-                {/* 变量绑定选择 */}
-                <div style={{ marginTop: 12 }}>
-                  <VariableBinding
-                    value={getBoundVariableName()}
-                    onChange={(value: string | undefined) =>
-                      updateBoundVariableName(value || '')
-                    }
-                    componentType={isRichText ? 'rich_text' : 'plain_text'}
-                    variables={variables}
-                    getFilteredVariables={getFilteredVariables}
-                    getVariableDisplayName={getVariableDisplayName}
-                    getVariableKeys={getVariableKeys}
-                    onAddVariable={() =>
-                      handleAddVariableFromComponent(
-                        isRichText ? 'rich_text' : 'plain_text',
-                      )
-                    }
-                    placeholder="请选择要绑定的变量"
-                    label="绑定变量"
-                    addVariableText={
-                      isRichText ? '+新建富文本变量' : '+新建变量'
-                    }
-                  />
-                </div>
+                {/* 绑定变量模式：显示变量选择器 */}
+                {textContentMode === 'variable' && (
+                  <div>
+                    <VariableBinding
+                      value={(() => {
+                        // 在绑定变量模式下，优先显示记住的变量
+                        const rememberedVariable = currentComponent
+                          ? lastBoundVariables[currentComponent.id]
+                          : undefined;
+                        const currentBoundVariable = getBoundVariableName();
+
+                        // 如果有记住的变量，使用记住的变量；否则使用当前绑定的变量
+                        const displayValue =
+                          rememberedVariable || currentBoundVariable;
+
+                        console.log('🔍 VariableBinding显示值:', {
+                          componentId: currentComponent?.id,
+                          rememberedVariable,
+                          currentBoundVariable,
+                          displayValue,
+                        });
+
+                        return displayValue;
+                      })()}
+                      onChange={(value: string | undefined) => {
+                        // 立即更新DSL中的变量绑定
+                        updateBoundVariableName(value || '');
+
+                        // 同时记住这个选择，用于UI显示
+                        if (currentComponent) {
+                          if (value) {
+                            setLastBoundVariables((prev) => ({
+                              ...prev,
+                              [currentComponent.id]: value,
+                            }));
+
+                            // 立即更新DSL数据为变量占位符，确保画布实时更新
+                            const updatedComponent = { ...currentComponent };
+                            const variablePlaceholder = `\${${value}}`;
+                            (updatedComponent as any).content =
+                              variablePlaceholder;
+                            (updatedComponent as any).i18n_content = {
+                              'en-US': variablePlaceholder,
+                            };
+
+                            // 设置变量绑定状态，确保画布显示变量内容
+                            textComponentStateManager.setBoundVariableName(
+                              currentComponent.id,
+                              value,
+                            );
+
+                            onUpdateComponent(updatedComponent);
+
+                            console.log('💾 选择变量并立即更新DSL和绑定状态:', {
+                              componentId: currentComponent.id,
+                              selectedVariable: value,
+                              variablePlaceholder,
+                              action: '立即生效并记住，设置绑定状态',
+                            });
+                          } else {
+                            // 清除变量时，也清除记忆，并恢复用户编辑的内容
+                            setLastBoundVariables((prev) => {
+                              const newState = { ...prev };
+                              delete newState[currentComponent.id];
+                              return newState;
+                            });
+
+                            // 清除变量绑定状态
+                            textComponentStateManager.setBoundVariableName(
+                              currentComponent.id,
+                              '',
+                            );
+
+                            // 恢复用户编辑的内容到DSL
+                            const userEditedContent =
+                              textComponentStateManager.getUserEditedContent(
+                                currentComponent.id,
+                              );
+                            if (userEditedContent !== undefined) {
+                              const updatedComponent = { ...currentComponent };
+                              (updatedComponent as any).content =
+                                userEditedContent;
+                              if (isPlainText) {
+                                (updatedComponent as any).i18n_content = {
+                                  'en-US': userEditedContent,
+                                };
+                              }
+                              onUpdateComponent(updatedComponent);
+                            }
+
+                            console.log('🗑️ 清除变量绑定状态并恢复用户内容:', {
+                              componentId: currentComponent.id,
+                              userEditedContent,
+                              action: '清除绑定状态',
+                            });
+                          }
+                        }
+                      }}
+                      componentType={isRichText ? 'rich_text' : 'plain_text'}
+                      variables={variables}
+                      getFilteredVariables={getFilteredVariables}
+                      getVariableDisplayName={getVariableDisplayName}
+                      getVariableKeys={getVariableKeys}
+                      onAddVariable={() =>
+                        handleAddVariableFromComponent(
+                          isRichText ? 'rich_text' : 'plain_text',
+                        )
+                      }
+                      placeholder="请选择要绑定的变量"
+                      label="绑定变量"
+                      addVariableText={
+                        isRichText ? '+新建富文本变量' : '+新建变量'
+                      }
+                    />
+                  </div>
+                )}
               </Form.Item>
             </Form>
           </div>
