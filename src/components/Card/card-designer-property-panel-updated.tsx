@@ -45,7 +45,7 @@ import ImageUpload from './ImageUpload';
 import RichTextEditor from './RichTextEditor/RichTextEditor';
 import AddVariableModal from './Variable/AddVariableModal';
 import { textComponentStateManager } from './Variable/utils/index';
-import VariableBinding from './Variable/VariableBinding';
+import VariableBinding from './Variable/VariableList';
 
 const { Option } = Select;
 const { Text } = Typography;
@@ -2938,6 +2938,85 @@ export const PropertyPanel: React.FC<{
                   placeholder="请输入占位文本"
                   maxLength={100}
                 />
+                {/* 占位文本变量绑定 */}
+                <div style={{ marginTop: 8 }}>
+                  <VariableBinding
+                    value={(() => {
+                      // 从占位文本中解析变量名
+                      const placeholderContent = (currentComponent as any)
+                        .placeholder?.content;
+                      if (
+                        placeholderContent &&
+                        placeholderContent.includes('${')
+                      ) {
+                        const variableMatch =
+                          placeholderContent.match(/\$\{([^}]+)\}/);
+                        return variableMatch?.[1];
+                      }
+                      return undefined;
+                    })()}
+                    onChange={(variableName: string | undefined) => {
+                      if (variableName) {
+                        // 绑定变量
+                        const newPlaceholder = {
+                          content: `\${${variableName}}`,
+                          i18n_content: {
+                            'en-US': `\${${variableName}}`,
+                          },
+                        };
+                        handleValueChange('placeholder', newPlaceholder);
+                        console.log('✅ 输入框占位文本绑定变量:', {
+                          componentId: currentComponent?.id,
+                          variableName,
+                          newPlaceholder,
+                        });
+                      } else {
+                        // 清除变量绑定
+                        const newPlaceholder = {
+                          content: '',
+                          i18n_content: {
+                            'en-US': 'English placeholder',
+                          },
+                        };
+                        handleValueChange('placeholder', newPlaceholder);
+                        console.log('✅ 输入框占位文本清除变量绑定:', {
+                          componentId: currentComponent?.id,
+                        });
+                      }
+                    }}
+                    componentType="input"
+                    variables={variables}
+                    getFilteredVariables={() => {
+                      // 输入框占位文本支持文本和整数类型变量
+                      return variables.filter((variable: any) => {
+                        if (typeof variable === 'object' && variable !== null) {
+                          const keys = getVariableKeys(variable);
+                          if (keys.length > 0) {
+                            const variableName = keys[0];
+                            const originalType = getVariableOriginalType(
+                              variable,
+                              variableName,
+                            );
+
+                            return (
+                              originalType === 'text' ||
+                              originalType === 'number'
+                            );
+                          }
+                        }
+                        return false;
+                      });
+                    }}
+                    getVariableDisplayName={getVariableDisplayName}
+                    getVariableKeys={getVariableKeys}
+                    onAddVariable={() =>
+                      handleAddVariableFromComponent('input')
+                    }
+                    placeholder="选择占位文本变量"
+                    label="绑定变量 (可选)"
+                    addVariableText="+新建变量"
+                  />
+                </div>
               </Form.Item>
               <Form.Item label="默认文本">
                 <Input
@@ -2954,6 +3033,82 @@ export const PropertyPanel: React.FC<{
                   placeholder="请输入默认文本"
                   maxLength={100}
                 />
+                {/* 默认文本变量绑定 */}
+                <div style={{ marginTop: 8 }}>
+                  <VariableBinding
+                    value={(() => {
+                      // 从默认文本中解析变量名
+                      const defaultContent = (currentComponent as any)
+                        .default_value?.content;
+                      if (defaultContent && defaultContent.includes('${')) {
+                        const variableMatch =
+                          defaultContent.match(/\$\{([^}]+)\}/);
+                        return variableMatch?.[1];
+                      }
+                      return undefined;
+                    })()}
+                    onChange={(variableName: string | undefined) => {
+                      if (variableName) {
+                        // 绑定变量
+                        const newDefaultValue = {
+                          content: `\${${variableName}}`,
+                          i18n_content: {
+                            'en-US': `\${${variableName}}`,
+                          },
+                        };
+                        handleValueChange('default_value', newDefaultValue);
+                        console.log('✅ 输入框默认文本绑定变量:', {
+                          componentId: currentComponent?.id,
+                          variableName,
+                          newDefaultValue,
+                        });
+                      } else {
+                        // 清除变量绑定
+                        const newDefaultValue = {
+                          content: '',
+                          i18n_content: {
+                            'en-US': 'English default value',
+                          },
+                        };
+                        handleValueChange('default_value', newDefaultValue);
+                        console.log('✅ 输入框默认文本清除变量绑定:', {
+                          componentId: currentComponent?.id,
+                        });
+                      }
+                    }}
+                    componentType="input"
+                    variables={variables}
+                    getFilteredVariables={() => {
+                      // 输入框默认文本支持文本和整数类型变量
+                      return variables.filter((variable: any) => {
+                        if (typeof variable === 'object' && variable !== null) {
+                          const keys = getVariableKeys(variable);
+                          if (keys.length > 0) {
+                            const variableName = keys[0];
+                            const originalType = getVariableOriginalType(
+                              variable,
+                              variableName,
+                            );
+
+                            return (
+                              originalType === 'text' ||
+                              originalType === 'number'
+                            );
+                          }
+                        }
+                        return false;
+                      });
+                    }}
+                    getVariableDisplayName={getVariableDisplayName}
+                    getVariableKeys={getVariableKeys}
+                    onAddVariable={() =>
+                      handleAddVariableFromComponent('input')
+                    }
+                    placeholder="选择默认文本变量"
+                    label="绑定变量 (可选)"
+                    addVariableText="+新建变量"
+                  />
+                </div>
               </Form.Item>
             </Form>
           </div>

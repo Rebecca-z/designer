@@ -769,10 +769,8 @@ const CardDesigner: React.FC = () => {
       return;
     }
 
-    // 如果删除的是标题组件，移除header
     if (isDeletingTitle) {
       delete newData.dsl.header;
-      // console.log('🗑️ 删除标题组件，移除header');
     }
 
     history.updateData(newData as any);
@@ -808,26 +806,6 @@ const CardDesigner: React.FC = () => {
     const path = selection.selectedPath;
     let newData = JSON.parse(JSON.stringify(safeCardData));
 
-    console.log('🔍 更新前原始数据检查:', {
-      componentId: updatedComponent.id,
-      oldImgUrl: safeCardData.dsl.body.elements.find(
-        (el) => el.id === updatedComponent.id,
-      )?.img_url,
-      newImgUrl: (updatedComponent as any).img_url,
-    });
-
-    console.log('🔄 开始更新组件:', {
-      componentId: updatedComponent.id,
-      componentTag: updatedComponent.tag,
-      path,
-      pathLength: path.length,
-      hasStyle: !!(updatedComponent as any).style,
-      styleFields: (updatedComponent as any).style
-        ? Object.keys((updatedComponent as any).style)
-        : [],
-      updatedComponent: updatedComponent,
-    });
-
     if (path.length === 4) {
       // 根级组件: ['dsl', 'body', 'elements', index]
       const index = path[3] as number;
@@ -842,16 +820,6 @@ const CardDesigner: React.FC = () => {
         updateSuccess:
           newData.dsl.body.elements[index].id === updatedComponent.id,
       });
-
-      // console.log('📝 更新根级组件:', {
-      //   index,
-      //   componentTag: updatedComponent.tag,
-      //   oldStyle: (oldComponent as any).style,
-      //   newStyle: (updatedComponent as any).style,
-      //   styleChanged:
-      //     JSON.stringify((oldComponent as any).style) !==
-      //     JSON.stringify((updatedComponent as any).style),
-      // });
     } else if (path.length === 6 && path[4] === 'elements') {
       // 表单内组件（包括分栏容器）: ['dsl', 'body', 'elements', formIndex, 'elements', componentIndex]
       const formIndex = path[3] as number;
@@ -876,14 +844,6 @@ const CardDesigner: React.FC = () => {
         }
 
         formComponent.elements[componentIndex] = updatedComponent;
-        // console.log('📋 更新表单内组件:', {
-        //   formIndex,
-        //   componentIndex,
-        //   componentTag: updatedComponent.tag,
-        //   oldStyle: (oldComponent as any).style,
-        //   newStyle: (updatedComponent as any).style,
-        //   isColumnSet: updatedComponent.tag === 'column_set',
-        // });
       }
     } else if (
       path.length === 8 &&
@@ -905,16 +865,7 @@ const CardDesigner: React.FC = () => {
           if (!column.elements) {
             column.elements = [];
           }
-          // const oldComponent = column.elements[componentIndex];
           column.elements[componentIndex] = updatedComponent;
-          // console.log('📐 更新分栏内组件:', {
-          //   columnSetIndex,
-          //   columnIndex,
-          //   componentIndex,
-          //   componentTag: updatedComponent.tag,
-          //   oldStyle: (oldComponent as any).style,
-          //   newStyle: (updatedComponent as any).style,
-          // });
         }
       }
     } else if (
@@ -960,24 +911,8 @@ const CardDesigner: React.FC = () => {
       return;
     }
 
-    console.log('💾 保存更新后的数据到历史记录');
     history.updateData(newData as any);
-    // 重新设置选择状态，确保属性面板和画布获取到最新的组件数据
-    console.log('🔄 重新设置选择状态:', {
-      componentId: updatedComponent.id,
-      componentTag: updatedComponent.tag,
-      content: (updatedComponent as any).content,
-      boundVariableName: (updatedComponent as any).boundVariableName,
-      selectedPath: selection.selectedPath,
-      timestamp: new Date().toISOString(),
-    });
-    console.log('🔄 即将重新选择组件:', {
-      updatedComponentId: updatedComponent.id,
-      updatedComponentImgUrl: (updatedComponent as any).img_url,
-      selectedPath: selection.selectedPath,
-    });
     selection.selectComponent(updatedComponent, selection.selectedPath);
-    console.log('✅ 组件重新选择完成');
   };
 
   // 处理卡片属性更新
@@ -991,10 +926,6 @@ const CardDesigner: React.FC = () => {
     // 如果提供了完整的卡片数据更新
     if (updates.cardData) {
       newData = updates.cardData;
-      // console.log('🔄 完整卡片数据更新:', {
-      //   oldHeader: safeCardData.dsl.header,
-      //   newHeader: newData.dsl.header,
-      // });
     } else {
       // 原有的body更新逻辑
       newData = {
@@ -1070,13 +1001,6 @@ const CardDesigner: React.FC = () => {
     component: ComponentType | null,
     path: (string | number)[],
   ) => {
-    // console.log('🌳 大纲树选择处理:', {
-    //   componentId: component?.id,
-    //   componentTag: component?.tag,
-    //   path,
-    //   pathLength: path.length,
-    //   isCard: path.length === 2 && path[0] === 'dsl' && path[1] === 'body',
-    // });
     selection.selectComponent(component, path);
     focus.handleCanvasFocus();
   };

@@ -95,7 +95,7 @@ const VariableBinding: React.FC<VariableBindingProps> = ({
       case 'img_combination':
         return '图片数组';
       case 'input':
-        return '整数'; // 输入框组件主要用于整数类型
+        return '文本/整数'; // 输入框组件支持文本和整数类型
       case 'select_static':
       case 'multi_select_static':
         return '选项数组';

@@ -3568,8 +3568,66 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           }}
         >
           <Input
-            placeholder={comp.placeholder?.content || '请输入'}
-            value={comp.default_value?.content || ''}
+            placeholder={(() => {
+              // 解析占位文本变量
+              const placeholderContent = comp.placeholder?.content || '请输入';
+              if (placeholderContent.includes('${')) {
+                const variableMatch = placeholderContent.match(/\$\{([^}]+)\}/);
+                if (variableMatch && variableMatch[1]) {
+                  const variableName = variableMatch[1];
+                  const variable = variables.find((v: any) => {
+                    if (typeof v === 'object' && v !== null) {
+                      return Object.keys(v).some(
+                        (key) => !key.startsWith('__') && key === variableName,
+                      );
+                    }
+                    return false;
+                  });
+
+                  if (variable) {
+                    const variableValue = (variable as any)[variableName];
+                    console.log('🔍 输入框占位文本解析变量:', {
+                      componentId: comp.id,
+                      variableName,
+                      variableValue,
+                      placeholderContent,
+                    });
+                    return String(variableValue);
+                  }
+                }
+              }
+              return placeholderContent;
+            })()}
+            value={(() => {
+              // 解析默认文本变量
+              const defaultContent = comp.default_value?.content || '';
+              if (defaultContent.includes('${')) {
+                const variableMatch = defaultContent.match(/\$\{([^}]+)\}/);
+                if (variableMatch && variableMatch[1]) {
+                  const variableName = variableMatch[1];
+                  const variable = variables.find((v: any) => {
+                    if (typeof v === 'object' && v !== null) {
+                      return Object.keys(v).some(
+                        (key) => !key.startsWith('__') && key === variableName,
+                      );
+                    }
+                    return false;
+                  });
+
+                  if (variable) {
+                    const variableValue = (variable as any)[variableName];
+                    console.log('🔍 输入框默认文本解析变量:', {
+                      componentId: comp.id,
+                      variableName,
+                      variableValue,
+                      defaultContent,
+                    });
+                    return String(variableValue);
+                  }
+                }
+              }
+              return defaultContent;
+            })()}
             type="text"
             style={{
               width: '250px',

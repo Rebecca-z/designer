@@ -36,8 +36,6 @@ export { default as RichTextEditor } from './RichTextEditor/RichTextEditor';
 //   CanvasHeader,
 //   CanvasToolbar,
 //   DeviceIndicator,
-//   DragOverlay,
-//   EmptyState,
 // } from './card-designer-canvas-components';
 
 // ==================== 渲染组件 ====================

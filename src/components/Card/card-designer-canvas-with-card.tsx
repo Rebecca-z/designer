@@ -2,13 +2,16 @@
 
 import React, { useRef } from 'react';
 import {
-  CanvasGrid,
   CanvasHeader,
   DeviceIndicator,
 } from './card-designer-canvas-components';
 import ChatInterface from './card-designer-chat-interface';
 import { DEVICE_SIZES } from './card-designer-constants';
-import { CardDesignData, ComponentType } from './card-designer-types-updated';
+import {
+  CardDesignData,
+  ComponentType,
+  VariableItem,
+} from './card-designer-types-updated';
 
 interface CanvasProps {
   data: CardDesignData;
@@ -35,7 +38,7 @@ interface CanvasProps {
 
 const Canvas: React.FC<CanvasProps> = ({
   data,
-  onDataChange,
+  // onDataChange,
   selectedPath,
   hoveredPath,
   onSelectComponent,
@@ -52,19 +55,6 @@ const Canvas: React.FC<CanvasProps> = ({
   const handleElementsChange = (elements: ComponentType[]) => {
     if (onElementsChange) {
       onElementsChange(elements);
-    } else {
-      // 兼容旧的方式
-      const newData = {
-        ...data,
-        dsl: {
-          ...data.dsl,
-          body: {
-            ...data.dsl.body,
-            elements,
-          },
-        },
-      };
-      onDataChange(newData);
     }
   };
 
@@ -105,9 +95,6 @@ const Canvas: React.FC<CanvasProps> = ({
 
   // 处理卡片选中
   const handleCardSelect = () => {
-    // console.log(
-    //   '🎯 处理卡片选中，调用 onSelectComponent(null, ["dsl", "body"])',
-    // );
     onSelectComponent(null, ['dsl', 'body']);
   };
 
@@ -151,41 +138,6 @@ const Canvas: React.FC<CanvasProps> = ({
         {/* 画布标题 */}
         <CanvasHeader elementsCount={data.dsl.body.elements.length} />
 
-        {/* 拖拽提示 - 全局拖拽都会添加到卡片内 */}
-        {/* isOver && canDrop && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(24, 144, 255, 0.1)',
-              border: '2px dashed #1890ff',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 10,
-              pointerEvents: 'none',
-            }}
-          >
-            <div
-              style={{
-                textAlign: 'center',
-                color: '#1890ff',
-                fontSize: '16px',
-                fontWeight: 'bold',
-              }}
-            >
-              <div>释放以添加组件到卡片</div>
-              <div style={{ fontSize: '12px', marginTop: '4px' }}>
-                所有组件都会自动添加到卡片容器内
-              </div>
-            </div>
-          </div>
-        ) */}
-
         {/* 会话界面 */}
         <div
           style={{
@@ -197,19 +149,6 @@ const Canvas: React.FC<CanvasProps> = ({
         >
           <ChatInterface
             elements={(() => {
-              console.log('🎨 Canvas elements 数据:', {
-                elementsCount: data.dsl.body.elements.length,
-                elements: data.dsl.body.elements.map((el, index) => ({
-                  index,
-                  id: el.id,
-                  tag: el.tag,
-                  content: el.content,
-                  boundVariableName: (el as any).boundVariableName,
-                  fullElement: JSON.stringify(el, null, 2),
-                  hasBoundVariable: !!(el as any).boundVariableName,
-                })),
-                timestamp: new Date().toISOString(),
-              });
               return data.dsl.body.elements;
             })()}
             verticalSpacing={data.dsl.body.vertical_spacing}
@@ -260,24 +199,13 @@ const Canvas: React.FC<CanvasProps> = ({
                     });
                   }
                 });
-
-                console.log('🎨 Canvas 变量转换:', {
-                  originalVariables: data.variables,
-                  convertedVariables: variableItems,
-                  variablesCount: variableItems.length,
-                });
-
                 return variableItems;
               }
 
-              console.log('🎨 Canvas 无变量数据');
               return [];
             })()}
           />
         </div>
-
-        {/* 画布网格背景 */}
-        <CanvasGrid />
       </div>
     </div>
   );
