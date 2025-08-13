@@ -45,7 +45,10 @@ import {
 import ImageUpload from './ImageUpload';
 import RichTextEditor from './RichTextEditor/RichTextEditor';
 import AddVariableModal from './Variable/AddVariableModal';
-import { textComponentStateManager } from './Variable/utils/index';
+import {
+  imageComponentStateManager,
+  textComponentStateManager,
+} from './Variable/utils/index';
 import VariableBinding from './Variable/VariableList';
 
 const { Option } = Select;
@@ -948,6 +951,11 @@ export const PropertyPanel: React.FC<{
     'specify' | 'variable'
   >('specify');
 
+  // 图片内容模式状态管理
+  const [imageContentMode, setImageContentMode] = useState<
+    'specify' | 'variable'
+  >('specify');
+
   // 记住每个组件上次绑定的变量
   const [lastBoundVariables, setLastBoundVariables] = useState<
     Record<string, string>
@@ -955,6 +963,11 @@ export const PropertyPanel: React.FC<{
 
   // 跟踪已初始化的组件，避免重复设置模式
   const [initializedComponents, setInitializedComponents] = useState<
+    Set<string>
+  >(new Set());
+
+  // 跟踪已初始化的图片组件，避免重复设置模式
+  const [initializedImageComponents, setInitializedImageComponents] = useState<
     Set<string>
   >(new Set());
 
@@ -1028,6 +1041,67 @@ export const PropertyPanel: React.FC<{
           componentId: realComponent.id,
           boundVariableName,
         });
+      }
+    }
+  }, [realComponent]);
+
+  // 图片组件模式同步 - 根据组件状态初始化模式
+  useEffect(() => {
+    if (realComponent && realComponent.tag === 'img') {
+      // 检查是否有变量绑定
+      const hasVariableBinding =
+        realComponent.img_url && realComponent.img_url.includes('${');
+
+      // 只在组件首次选中时设置模式，不要在变量绑定变化时重新设置
+      if (!initializedImageComponents.has(realComponent.id)) {
+        // 如果当前URL不是变量占位符，保存为用户编辑的URL
+        if (realComponent.img_url && !hasVariableBinding) {
+          imageComponentStateManager.setUserEditedUrl(
+            realComponent.id,
+            realComponent.img_url,
+          );
+        }
+
+        // 默认显示"指定"模式，除非当前组件有绑定变量
+        const expectedMode = hasVariableBinding ? 'variable' : 'specify';
+        setImageContentMode(expectedMode);
+
+        // 标记该组件已初始化，避免后续重复设置
+        setInitializedImageComponents((prev) =>
+          new Set(prev).add(realComponent.id),
+        );
+
+        console.log('🔄 初始化图片内容模式 (首次选中组件):', {
+          componentId: realComponent.id,
+          componentTag: realComponent.tag,
+          hasVariableBinding,
+          imgUrl: realComponent.img_url,
+          expectedMode,
+          savedUserUrl: !hasVariableBinding ? realComponent.img_url : undefined,
+        });
+      }
+
+      // 如果当前组件有绑定变量，记住它（但不覆盖已有的记忆）
+      if (hasVariableBinding && !lastBoundVariables[realComponent.id]) {
+        const variableMatch = realComponent.img_url.match(/\$\{([^}]+)\}/);
+        if (variableMatch && variableMatch[1]) {
+          const variableName = variableMatch[1];
+          setLastBoundVariables((prev) => ({
+            ...prev,
+            [realComponent.id]: variableName,
+          }));
+
+          // 同时设置到图片状态管理器中
+          imageComponentStateManager.setBoundVariableName(
+            realComponent.id,
+            variableName,
+          );
+
+          console.log('💾 记住现有图片变量绑定:', {
+            componentId: realComponent.id,
+            variableName,
+          });
+        }
       }
     }
   }, [realComponent]);
@@ -4950,9 +5024,27 @@ export const PropertyPanel: React.FC<{
       const cropMode = imageComponent.style?.crop_mode || 'default';
 
       // 获取图片URL的显示值（用于属性面板输入框）
-      // 如果img_url是变量占位符格式，则显示占位符，否则显示实际URL
       const getDisplayImageUrl = () => {
-        return imageComponent.img_url || '';
+        if (imageContentMode === 'specify') {
+          // 指定模式：显示用户编辑的URL
+          const userEditedUrl = imageComponentStateManager.getUserEditedUrl(
+            imageComponent.id,
+          );
+          if (userEditedUrl !== undefined) {
+            return userEditedUrl;
+          }
+          // 如果没有用户编辑的URL，使用组件原始URL（但排除变量占位符）
+          if (
+            imageComponent.img_url &&
+            !imageComponent.img_url.includes('${')
+          ) {
+            return imageComponent.img_url;
+          }
+          return '';
+        } else {
+          // 绑定变量模式：显示变量占位符（如果有的话）
+          return imageComponent.img_url || '';
+        }
       };
 
       // 获取当前绑定的变量名（用于下拉选择器）
@@ -4995,62 +5087,257 @@ export const PropertyPanel: React.FC<{
             </div>
             <div>
               <Form form={form} layout="vertical">
-                <Form.Item label="图片URL">
-                  <Space.Compact style={{ width: '100%' }}>
-                    <Input
-                      style={{ width: 'calc(100% - 40px)' }}
-                      value={getDisplayImageUrl()}
-                      onChange={(e) => {
-                        handleValueChange('img_url', e.target.value);
-                      }}
-                      placeholder="请输入图片URL"
-                      disabled={!!getBoundVariableName()} // 绑定变量时禁用输入
-                      addonAfter={
-                        getBoundVariableName() ? (
-                          <span style={{ color: '#1890ff', fontSize: '12px' }}>
-                            来自变量: {getBoundVariableName()}
-                          </span>
-                        ) : null
-                      }
-                    />
-                    <ImageUpload
-                      disabled={!!getBoundVariableName()} // 绑定变量时禁用上传
-                      onUploadSuccess={(imageUrl) => {
-                        console.log('📁 图片组件上传成功，更新组件:', {
-                          componentId: imageComponent.id,
-                          imageUrlLength: imageUrl.length,
-                        });
-                        // 直接更新图片URL
-                        handleValueChange('img_url', imageUrl);
-                      }}
-                      style={{
-                        width: '40px',
-                        height: '32px',
-                        padding: 0,
-                        borderRadius: '0 6px 6px 0',
-                      }}
-                      buttonProps={{
-                        type: 'primary',
-                        icon: <UploadOutlined />,
-                        title: '上传图片',
-                      }}
-                    />
-                  </Space.Compact>
-                </Form.Item>
+                <Form.Item label="图片设置">
+                  {/* 内容模式切换 */}
+                  <Segmented
+                    value={imageContentMode}
+                    style={{ marginBottom: 16 }}
+                    onChange={(value) => {
+                      const newMode = value as 'specify' | 'variable';
+                      setImageContentMode(newMode);
 
-                <VariableBinding
-                  value={getBoundVariableName()}
-                  onChange={(value) => {
-                    handleValueChange('variable_name', value);
-                  }}
-                  componentType="img"
-                  variables={variables}
-                  getFilteredVariables={getFilteredVariables}
-                  getVariableDisplayName={getVariableDisplayName}
-                  getVariableKeys={getVariableKeys}
-                  onAddVariable={() => handleAddVariableFromComponent('img')}
-                  placeholder="请选择变量"
-                />
+                      // 切换模式时，立即更新DSL数据以反映到画布
+                      if (imageComponent) {
+                        const updatedComponent = { ...imageComponent };
+
+                        if (newMode === 'specify') {
+                          // 切换到指定模式：清除变量绑定，恢复用户编辑的URL
+                          const userEditedUrl =
+                            imageComponentStateManager.getUserEditedUrl(
+                              imageComponent.id,
+                            );
+
+                          if (userEditedUrl !== undefined) {
+                            (updatedComponent as any).img_url = userEditedUrl;
+                          } else {
+                            // 如果没有用户编辑的URL，清空
+                            (updatedComponent as any).img_url = '';
+                          }
+
+                          // 清除变量绑定状态
+                          imageComponentStateManager.setBoundVariableName(
+                            imageComponent.id,
+                            '',
+                          );
+
+                          console.log(
+                            '🔄 切换到指定模式，恢复用户编辑的URL并清除变量绑定:',
+                            {
+                              componentId: imageComponent.id,
+                              userEditedUrl,
+                              updatedUrl: (updatedComponent as any).img_url,
+                              action: '恢复用户URL并清除变量绑定',
+                            },
+                          );
+                        } else if (newMode === 'variable') {
+                          // 切换到绑定变量模式：使用记住的变量或当前绑定的变量
+                          const rememberedVariable =
+                            lastBoundVariables[imageComponent.id];
+                          const currentBoundVariable = getBoundVariableName();
+                          const variableName =
+                            rememberedVariable || currentBoundVariable;
+
+                          if (variableName) {
+                            const variablePlaceholder = `\${${variableName}}`;
+                            (updatedComponent as any).img_url =
+                              variablePlaceholder;
+                            (updatedComponent as any).i18n_img_url = {
+                              'en-US': variablePlaceholder,
+                            };
+
+                            // 设置变量绑定状态
+                            imageComponentStateManager.setBoundVariableName(
+                              imageComponent.id,
+                              variableName,
+                            );
+
+                            console.log(
+                              '🔄 切换到绑定变量模式，设置图片变量占位符并设置绑定状态:',
+                              {
+                                componentId: imageComponent.id,
+                                variableName,
+                                variablePlaceholder,
+                                action: '设置变量绑定状态',
+                              },
+                            );
+                          }
+                        }
+
+                        // 立即更新组件，触发画布重新渲染
+                        onUpdateComponent(updatedComponent);
+                      }
+
+                      console.log('🔄 图片内容模式切换完成:', {
+                        componentId: imageComponent?.id,
+                        newMode: newMode,
+                        previousMode: imageContentMode,
+                        note: '已更新DSL数据和画布',
+                      });
+                    }}
+                    options={[
+                      { label: '指定', value: 'specify' },
+                      { label: '绑定变量', value: 'variable' },
+                    ]}
+                  />
+
+                  {/* 图片URL输入区域 - 仅在指定模式下显示 */}
+                  {imageContentMode === 'specify' && (
+                    <div style={{ marginBottom: 16 }}>
+                      <Space.Compact style={{ width: '100%' }}>
+                        <Input
+                          style={{ width: 'calc(100% - 40px)' }}
+                          value={getDisplayImageUrl()}
+                          onChange={(e) => {
+                            const newUrl = e.target.value;
+                            // 保存用户编辑的URL到状态管理器
+                            imageComponentStateManager.setUserEditedUrl(
+                              imageComponent.id,
+                              newUrl,
+                            );
+                            // 同时更新DSL
+                            handleValueChange('img_url', newUrl);
+                          }}
+                          placeholder="请输入图片URL"
+                        />
+                        <ImageUpload
+                          onUploadSuccess={(imageUrl) => {
+                            console.log('📁 图片组件上传成功，更新组件:', {
+                              componentId: imageComponent.id,
+                              imageUrlLength: imageUrl.length,
+                            });
+                            // 保存用户上传的URL到状态管理器
+                            imageComponentStateManager.setUserEditedUrl(
+                              imageComponent.id,
+                              imageUrl,
+                            );
+                            // 直接更新图片URL
+                            handleValueChange('img_url', imageUrl);
+                          }}
+                          style={{
+                            width: '40px',
+                            height: '32px',
+                            padding: 0,
+                            borderRadius: '0 6px 6px 0',
+                          }}
+                          buttonProps={{
+                            type: 'primary',
+                            icon: <UploadOutlined />,
+                            title: '上传图片',
+                          }}
+                        />
+                      </Space.Compact>
+                    </div>
+                  )}
+
+                  {/* 绑定变量模式：显示变量选择器 */}
+                  {imageContentMode === 'variable' && (
+                    <div>
+                      <VariableBinding
+                        value={(() => {
+                          // 在绑定变量模式下，优先显示记住的变量
+                          const rememberedVariable = imageComponent
+                            ? lastBoundVariables[imageComponent.id]
+                            : undefined;
+                          const currentBoundVariable = getBoundVariableName();
+
+                          // 如果有记住的变量，使用记住的变量；否则使用当前绑定的变量
+                          const displayValue =
+                            rememberedVariable || currentBoundVariable;
+
+                          console.log('🔍 图片VariableBinding显示值:', {
+                            componentId: imageComponent?.id,
+                            rememberedVariable,
+                            currentBoundVariable,
+                            displayValue,
+                          });
+
+                          return displayValue;
+                        })()}
+                        onChange={(value: string | undefined) => {
+                          // 立即更新DSL中的变量绑定
+                          if (imageComponent) {
+                            if (value) {
+                              setLastBoundVariables((prev) => ({
+                                ...prev,
+                                [imageComponent.id]: value,
+                              }));
+
+                              // 立即更新DSL数据为变量占位符，确保画布实时更新
+                              const updatedComponent = { ...imageComponent };
+                              const variablePlaceholder = `\${${value}}`;
+                              (updatedComponent as any).img_url =
+                                variablePlaceholder;
+                              (updatedComponent as any).i18n_img_url = {
+                                'en-US': variablePlaceholder,
+                              };
+
+                              // 设置变量绑定状态
+                              imageComponentStateManager.setBoundVariableName(
+                                imageComponent.id,
+                                value,
+                              );
+
+                              onUpdateComponent(updatedComponent);
+
+                              console.log(
+                                '💾 选择图片变量并立即更新DSL和绑定状态:',
+                                {
+                                  componentId: imageComponent.id,
+                                  selectedVariable: value,
+                                  variablePlaceholder,
+                                  action: '立即生效并记住，设置绑定状态',
+                                },
+                              );
+                            } else {
+                              // 清除变量时，也清除记忆，并恢复用户编辑的URL
+                              setLastBoundVariables((prev) => {
+                                const newState = { ...prev };
+                                delete newState[imageComponent.id];
+                                return newState;
+                              });
+
+                              // 清除变量绑定状态
+                              imageComponentStateManager.setBoundVariableName(
+                                imageComponent.id,
+                                '',
+                              );
+
+                              // 恢复用户编辑的URL到DSL
+                              const userEditedUrl =
+                                imageComponentStateManager.getUserEditedUrl(
+                                  imageComponent.id,
+                                );
+                              const updatedComponent = { ...imageComponent };
+                              (updatedComponent as any).img_url =
+                                userEditedUrl || '';
+                              onUpdateComponent(updatedComponent);
+
+                              console.log(
+                                '🗑️ 清除图片变量绑定状态并恢复用户URL:',
+                                {
+                                  componentId: imageComponent.id,
+                                  userEditedUrl,
+                                  action: '清除绑定状态并恢复用户URL',
+                                },
+                              );
+                            }
+                          }
+                        }}
+                        componentType="img"
+                        variables={variables}
+                        getFilteredVariables={getFilteredVariables}
+                        getVariableDisplayName={getVariableDisplayName}
+                        getVariableKeys={getVariableKeys}
+                        onAddVariable={() =>
+                          handleAddVariableFromComponent('img')
+                        }
+                        placeholder="请选择要绑定的变量"
+                        label="绑定变量"
+                        addVariableText="+新建变量"
+                      />
+                    </div>
+                  )}
+                </Form.Item>
               </Form>
             </div>
           </div>

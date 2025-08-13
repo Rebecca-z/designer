@@ -123,3 +123,126 @@ export const textComponentStateManager =
 
 // 导出类型
 export type { TextComponentState };
+
+// 图片组件状态接口
+interface ImageComponentState {
+  userEditedUrl?: string;
+  boundVariableName?: string;
+}
+
+// 图片组件状态管理器类
+class ImageComponentStateManager {
+  private static instance: ImageComponentStateManager;
+  private stateMap: Map<string, ImageComponentState> = new Map();
+
+  private constructor() {}
+
+  // 单例模式获取实例
+  public static getInstance(): ImageComponentStateManager {
+    if (!ImageComponentStateManager.instance) {
+      ImageComponentStateManager.instance = new ImageComponentStateManager();
+    }
+    return ImageComponentStateManager.instance;
+  }
+
+  // 获取组件状态
+  public getComponentState(componentId: string): ImageComponentState {
+    return this.stateMap.get(componentId) || {};
+  }
+
+  // 设置用户编辑的URL
+  public setUserEditedUrl(componentId: string, url: string): void {
+    const currentState = this.getComponentState(componentId);
+    this.stateMap.set(componentId, {
+      ...currentState,
+      userEditedUrl: url,
+    });
+
+    console.log('📝 设置用户编辑图片URL:', {
+      componentId,
+      url,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取用户编辑的URL
+  public getUserEditedUrl(componentId: string): string | undefined {
+    const state = this.getComponentState(componentId);
+    return state.userEditedUrl;
+  }
+
+  // 设置绑定的变量名
+  public setBoundVariableName(
+    componentId: string,
+    variableName: string | undefined,
+  ): void {
+    const currentState = this.getComponentState(componentId);
+    const newState = { ...currentState };
+
+    if (variableName) {
+      newState.boundVariableName = variableName;
+    } else {
+      delete newState.boundVariableName;
+    }
+
+    this.stateMap.set(componentId, newState);
+
+    console.log('🔗 设置图片绑定变量名:', {
+      componentId,
+      variableName,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取绑定的变量名
+  public getBoundVariableName(componentId: string): string | undefined {
+    const state = this.getComponentState(componentId);
+    return state.boundVariableName;
+  }
+
+  // 清除组件状态
+  public clearComponentState(componentId: string): void {
+    this.stateMap.delete(componentId);
+    console.log('🗑️ 清除图片组件状态:', {
+      componentId,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取所有状态
+  public getAllStates(): Map<string, ImageComponentState> {
+    return new Map(this.stateMap);
+  }
+
+  // 获取状态统计信息
+  public getStateStats(): {
+    totalComponents: number;
+    componentsWithUserUrl: number;
+    componentsWithBoundVariables: number;
+  } {
+    let componentsWithUserUrl = 0;
+    let componentsWithBoundVariables = 0;
+
+    this.stateMap.forEach((state) => {
+      if (state.userEditedUrl !== undefined) {
+        componentsWithUserUrl++;
+      }
+      if (state.boundVariableName) {
+        componentsWithBoundVariables++;
+      }
+    });
+
+    return {
+      totalComponents: this.stateMap.size,
+      componentsWithUserUrl,
+      componentsWithBoundVariables,
+    };
+  }
+}
+
+// 导出图片组件状态管理器单例实例
+export const imageComponentStateManager =
+  ImageComponentStateManager.getInstance();
+
+// 导出图片组件状态类型
+export type { ImageComponentState };
