@@ -47,6 +47,7 @@ import RichTextEditor from './RichTextEditor/RichTextEditor';
 import AddVariableModal from './Variable/AddVariableModal';
 import {
   imageComponentStateManager,
+  multiImageComponentStateManager,
   textComponentStateManager,
 } from './Variable/utils/index';
 import VariableBinding from './Variable/VariableList';
@@ -956,6 +957,11 @@ export const PropertyPanel: React.FC<{
     'specify' | 'variable'
   >('specify');
 
+  // 多图混排内容模式状态管理
+  const [multiImageContentMode, setMultiImageContentMode] = useState<
+    'specify' | 'variable'
+  >('specify');
+
   // 记住每个组件上次绑定的变量
   const [lastBoundVariables, setLastBoundVariables] = useState<
     Record<string, string>
@@ -970,6 +976,10 @@ export const PropertyPanel: React.FC<{
   const [initializedImageComponents, setInitializedImageComponents] = useState<
     Set<string>
   >(new Set());
+
+  // 跟踪已初始化的多图混排组件，避免重复设置模式
+  const [initializedMultiImageComponents, setInitializedMultiImageComponents] =
+    useState<Set<string>>(new Set());
 
   // 变量管理相关状态
   const [isAddVariableModalVisible, setIsAddVariableModalVisible] =
@@ -1098,6 +1108,72 @@ export const PropertyPanel: React.FC<{
           );
 
           console.log('💾 记住现有图片变量绑定:', {
+            componentId: realComponent.id,
+            variableName,
+          });
+        }
+      }
+    }
+  }, [realComponent]);
+
+  // 多图混排组件模式同步 - 根据组件状态初始化模式
+  useEffect(() => {
+    if (realComponent && realComponent.tag === 'img_combination') {
+      // 检查是否有变量绑定
+      const hasVariableBinding =
+        typeof realComponent.img_list === 'string' &&
+        realComponent.img_list.includes('${');
+
+      // 只在组件首次选中时设置模式，不要在变量绑定变化时重新设置
+      if (!initializedMultiImageComponents.has(realComponent.id)) {
+        // 如果当前img_list不是变量占位符，保存为用户编辑的图片列表
+        if (Array.isArray(realComponent.img_list) && !hasVariableBinding) {
+          multiImageComponentStateManager.setUserEditedImageList(
+            realComponent.id,
+            realComponent.img_list,
+          );
+        }
+
+        // 默认显示"指定"模式，除非当前组件有绑定变量
+        const expectedMode = hasVariableBinding ? 'variable' : 'specify';
+        setMultiImageContentMode(expectedMode);
+
+        // 标记该组件已初始化，避免后续重复设置
+        setInitializedMultiImageComponents((prev) =>
+          new Set(prev).add(realComponent.id),
+        );
+
+        console.log('🔄 初始化多图混排内容模式 (首次选中组件):', {
+          componentId: realComponent.id,
+          componentTag: realComponent.tag,
+          hasVariableBinding,
+          imgListType: typeof realComponent.img_list,
+          imgListLength: Array.isArray(realComponent.img_list)
+            ? realComponent.img_list.length
+            : 0,
+          expectedMode,
+        });
+      }
+
+      // 如果当前组件有绑定变量，记住它（但不覆盖已有的记忆）
+      if (hasVariableBinding && !lastBoundVariables[realComponent.id]) {
+        const variableMatch = (realComponent.img_list as string).match(
+          /\$\{([^}]+)\}/,
+        );
+        if (variableMatch && variableMatch[1]) {
+          const variableName = variableMatch[1];
+          setLastBoundVariables((prev) => ({
+            ...prev,
+            [realComponent.id]: variableName,
+          }));
+
+          // 同时设置到多图混排状态管理器中
+          multiImageComponentStateManager.setBoundVariableName(
+            realComponent.id,
+            variableName,
+          );
+
+          console.log('💾 记住现有多图混排变量绑定:', {
             componentId: realComponent.id,
             variableName,
           });
@@ -4627,218 +4703,359 @@ export const PropertyPanel: React.FC<{
               🖼️ 图片设置
             </div>
 
-            {/* 变量绑定选项 */}
-            <VariableBinding
-              value={(() => {
-                // 检查img_list是否是变量占位符格式
-                if (
-                  typeof imgCombComponent.img_list === 'string' &&
-                  imgCombComponent.img_list.includes('${')
-                ) {
-                  const variableMatch =
-                    imgCombComponent.img_list.match(/\$\{([^}]+)\}/);
-                  return variableMatch?.[1];
-                }
-                return undefined;
-              })()}
+            {/* 内容模式切换 */}
+            <Segmented
+              value={multiImageContentMode}
+              style={{ marginBottom: 16 }}
               onChange={(value) => {
-                console.log('🎯 多图混排变量绑定操作:', {
-                  field: 'img_list_variable',
-                  value,
-                  componentId: imgCombComponent.id,
-                  componentTag: imgCombComponent.tag,
-                  currentImgList: imgCombComponent.img_list,
-                });
+                const newMode = value as 'specify' | 'variable';
+                setMultiImageContentMode(newMode);
 
-                if (value) {
-                  // 绑定变量：将img_list设置为变量占位符
-                  const updatedComponent = {
-                    ...currentComponent,
-                    img_list: `\${${value}}`, // DSL数据中使用变量占位符格式
-                  };
+                // 切换模式时，立即更新DSL数据以反映到画布
+                if (imgCombComponent) {
+                  const updatedComponent = { ...imgCombComponent };
 
-                  console.log('📝 更新多图混排变量绑定:', {
-                    componentId: imgCombComponent.id,
-                    selectedVariable: value,
-                    newImgList: updatedComponent.img_list,
-                  });
+                  if (newMode === 'specify') {
+                    // 切换到指定模式：清除变量绑定，恢复用户编辑的图片列表
+                    const userEditedImageList =
+                      multiImageComponentStateManager.getUserEditedImageList(
+                        imgCombComponent.id,
+                      );
 
-                  onUpdateComponent(updatedComponent);
-                } else {
-                  // 清除变量绑定：恢复为默认图片数组
-                  const getDefaultImageList = (combinationMode: string) => {
-                    // 根据混排模式确定默认图片数量
-                    const getRequiredImageCount = (mode: string) => {
-                      switch (mode) {
-                        case 'double':
-                          return 2;
-                        case 'triple':
-                          return 3;
-                        case 'bisect_2':
-                          return 2;
-                        case 'bisect_4':
-                          return 4;
-                        case 'bisect_6':
-                          return 6;
-                        case 'trisect_3':
-                          return 3;
-                        case 'trisect_6':
-                          return 6;
-                        case 'trisect_9':
-                          return 9;
-                        default:
-                          return 2;
-                      }
-                    };
+                    if (userEditedImageList !== undefined) {
+                      (updatedComponent as any).img_list = userEditedImageList;
+                    } else {
+                      // 如果没有用户编辑的图片列表，使用默认图片列表
+                      const getDefaultImageList = (combinationMode: string) => {
+                        const getRequiredImageCount = (mode: string) => {
+                          switch (mode) {
+                            case 'double':
+                              return 2;
+                            case 'triple':
+                              return 3;
+                            case 'bisect_2':
+                              return 2;
+                            case 'bisect_4':
+                              return 4;
+                            case 'bisect_6':
+                              return 6;
+                            case 'trisect_3':
+                              return 3;
+                            case 'trisect_6':
+                              return 6;
+                            case 'trisect_9':
+                              return 9;
+                            default:
+                              return 2;
+                          }
+                        };
 
-                    const requiredCount =
-                      getRequiredImageCount(combinationMode);
-                    const defaultImageList = [];
+                        const requiredCount =
+                          getRequiredImageCount(combinationMode);
+                        const defaultImageList = [];
 
-                    // 创建默认图片数组
-                    for (let i = 0; i < requiredCount; i++) {
-                      defaultImageList.push({
-                        img_url: '/demo.png', // 使用默认图片
-                        i18n_img_url: {
-                          'en-US': '/demo.png',
-                        },
-                      });
+                        for (let i = 0; i < requiredCount; i++) {
+                          defaultImageList.push({
+                            img_url: '/demo.png',
+                            i18n_img_url: { 'en-US': '/demo.png' },
+                          });
+                        }
+
+                        return defaultImageList;
+                      };
+
+                      (updatedComponent as any).img_list = getDefaultImageList(
+                        imgCombComponent.combination_mode,
+                      );
                     }
 
-                    return defaultImageList;
-                  };
+                    // 清除变量绑定状态
+                    multiImageComponentStateManager.setBoundVariableName(
+                      imgCombComponent.id,
+                      '',
+                    );
 
-                  const updatedComponent = {
-                    ...currentComponent,
-                    img_list: getDefaultImageList(
-                      imgCombComponent.combination_mode,
-                    ),
-                  };
+                    console.log(
+                      '🔄 切换到指定模式，恢复用户编辑的图片列表并清除变量绑定:',
+                      {
+                        componentId: imgCombComponent.id,
+                        userEditedImageList,
+                        updatedImgList: (updatedComponent as any).img_list,
+                        action: '恢复用户图片列表并清除变量绑定',
+                      },
+                    );
+                  } else if (newMode === 'variable') {
+                    // 切换到绑定变量模式：使用记住的变量或当前绑定的变量
+                    const rememberedVariable =
+                      lastBoundVariables[imgCombComponent.id];
+                    const currentBoundVariable = (() => {
+                      if (
+                        typeof imgCombComponent.img_list === 'string' &&
+                        imgCombComponent.img_list.includes('${')
+                      ) {
+                        const variableMatch =
+                          imgCombComponent.img_list.match(/\$\{([^}]+)\}/);
+                        return variableMatch?.[1];
+                      }
+                      return undefined;
+                    })();
+                    const variableName =
+                      rememberedVariable || currentBoundVariable;
 
-                  console.log('📝 清除多图混排变量绑定:', {
-                    componentId: imgCombComponent.id,
-                    combinationMode: imgCombComponent.combination_mode,
-                    restoredImgList: updatedComponent.img_list,
-                  });
+                    if (variableName) {
+                      const variablePlaceholder = `\${${variableName}}`;
+                      (updatedComponent as any).img_list = variablePlaceholder;
 
+                      // 设置变量绑定状态
+                      multiImageComponentStateManager.setBoundVariableName(
+                        imgCombComponent.id,
+                        variableName,
+                      );
+
+                      console.log(
+                        '🔄 切换到绑定变量模式，设置多图混排变量占位符并设置绑定状态:',
+                        {
+                          componentId: imgCombComponent.id,
+                          variableName,
+                          variablePlaceholder,
+                          action: '设置变量绑定状态',
+                        },
+                      );
+                    }
+                  }
+
+                  // 立即更新组件，触发画布重新渲染
                   onUpdateComponent(updatedComponent);
                 }
+
+                console.log('🔄 多图混排内容模式切换完成:', {
+                  componentId: imgCombComponent?.id,
+                  newMode: newMode,
+                  previousMode: multiImageContentMode,
+                  note: '已更新DSL数据和画布',
+                });
               }}
-              componentType="img_combination"
-              variables={variables}
-              getFilteredVariables={getFilteredVariables}
-              getVariableDisplayName={getVariableDisplayName}
-              getVariableKeys={getVariableKeys}
-              onAddVariable={() =>
-                handleAddVariableFromComponent('img_combination')
-              }
-              placeholder="请选择图片数组变量"
+              options={[
+                { label: '指定', value: 'specify' },
+                { label: '绑定变量', value: 'variable' },
+              ]}
             />
 
-            <div>
-              {(() => {
-                // 如果绑定了变量，显示变量信息而不是单独的图片输入框
-                const isVariableBound =
-                  typeof imgCombComponent.img_list === 'string' &&
-                  imgCombComponent.img_list.includes('${');
+            {/* 图片输入区域 - 仅在指定模式下显示 */}
+            {multiImageContentMode === 'specify' && (
+              <div>
+                {(() => {
+                  // 获取用户编辑的图片列表或当前图片列表
+                  const userEditedImageList =
+                    multiImageComponentStateManager.getUserEditedImageList(
+                      imgCombComponent.id,
+                    );
+                  const currentImageList =
+                    userEditedImageList ||
+                    (Array.isArray(imgCombComponent.img_list)
+                      ? imgCombComponent.img_list
+                      : []);
 
-                if (isVariableBound) {
-                  const variableMatch =
-                    imgCombComponent.img_list.match(/\$\{([^}]+)\}/);
-                  const variableName = variableMatch?.[1];
-
-                  return (
-                    <div
-                      style={{
-                        padding: '12px',
-                        backgroundColor: '#f6ffed',
-                        border: '1px solid #b7eb8f',
-                        borderRadius: '6px',
-                        marginBottom: '16px',
-                      }}
-                    >
-                      <Text style={{ fontSize: '12px', color: '#52c41a' }}>
-                        🔗 已绑定图片数组变量: {variableName}
-                      </Text>
-                      <div
-                        style={{
-                          fontSize: '11px',
-                          color: '#999',
-                          marginTop: '4px',
-                        }}
-                      >
-                        图片将自动从变量数据中获取，无需手动设置
-                      </div>
-                    </div>
-                  );
-                }
-
-                // 未绑定变量时显示原有的图片输入框
-                return (imgCombComponent.img_list || []).map(
-                  (img: any, index: number) => (
+                  return currentImageList.map((img: any, index: number) => (
                     <div key={index}>
                       <Form.Item
                         label={`图片${index + 1}`}
                         style={{ marginBottom: '12px' }}
                       >
-                        <Input
-                          style={{ width: '200px' }}
-                          value={img.img_url || ''}
-                          onChange={(e) => {
-                            const newImgList = [
-                              ...(imgCombComponent.img_list || []),
-                            ];
-                            newImgList[index] = {
-                              ...newImgList[index],
-                              img_url: e.target.value,
-                              i18n_img_url: {
-                                'en-US': e.target.value,
-                              },
-                            };
-                            const updatedComponent = {
-                              ...currentComponent,
-                              img_list: newImgList,
-                            };
-                            onUpdateComponent(updatedComponent);
-                          }}
-                          placeholder="请输入图片的路径"
-                        />
-                        <ImageUpload
-                          onUploadSuccess={(imageUrl) => {
-                            console.log('📁 多图混排上传成功，更新组件:', {
-                              componentId: imgCombComponent.id,
-                              imageIndex: index,
-                              imageUrlLength: imageUrl.length,
-                            });
+                        <Space.Compact style={{ width: '100%' }}>
+                          <Input
+                            style={{ width: 'calc(100% - 40px)' }}
+                            value={img.img_url || ''}
+                            onChange={(e) => {
+                              const newImgList = [...currentImageList];
+                              newImgList[index] = {
+                                ...newImgList[index],
+                                img_url: e.target.value,
+                                i18n_img_url: {
+                                  'en-US': e.target.value,
+                                },
+                              };
 
-                            const newImgList = [
-                              ...(imgCombComponent.img_list || []),
-                            ];
-                            newImgList[index] = {
-                              ...newImgList[index],
-                              img_url: imageUrl,
-                              i18n_img_url: {
-                                'en-US': imageUrl,
-                              },
-                            };
-                            const updatedComponent = {
-                              ...currentComponent,
-                              img_list: newImgList,
-                            };
-                            onUpdateComponent(updatedComponent);
-                          }}
-                          buttonProps={{
-                            type: 'default',
-                            icon: <UploadOutlined />,
-                            title: '上传图片',
-                          }}
-                        />
+                              // 保存用户编辑的图片列表到状态管理器
+                              multiImageComponentStateManager.setUserEditedImageList(
+                                imgCombComponent.id,
+                                newImgList,
+                              );
+
+                              // 同时更新DSL
+                              const updatedComponent = {
+                                ...currentComponent,
+                                img_list: newImgList,
+                              };
+                              onUpdateComponent(updatedComponent);
+                            }}
+                            placeholder="请输入图片URL"
+                          />
+                          <ImageUpload
+                            onUploadSuccess={(imageUrl) => {
+                              console.log('📁 多图混排上传成功，更新组件:', {
+                                componentId: imgCombComponent.id,
+                                imageIndex: index,
+                                imageUrlLength: imageUrl.length,
+                              });
+
+                              const newImgList = [...currentImageList];
+                              newImgList[index] = {
+                                ...newImgList[index],
+                                img_url: imageUrl,
+                                i18n_img_url: {
+                                  'en-US': imageUrl,
+                                },
+                              };
+
+                              // 保存用户上传的图片列表到状态管理器
+                              multiImageComponentStateManager.setUserEditedImageList(
+                                imgCombComponent.id,
+                                newImgList,
+                              );
+
+                              // 同时更新DSL
+                              const updatedComponent = {
+                                ...currentComponent,
+                                img_list: newImgList,
+                              };
+                              onUpdateComponent(updatedComponent);
+                            }}
+                            style={{
+                              width: '40px',
+                              height: '32px',
+                              padding: 0,
+                              borderRadius: '0 6px 6px 0',
+                            }}
+                            buttonProps={{
+                              type: 'primary',
+                              icon: <UploadOutlined />,
+                              title: '上传图片',
+                            }}
+                          />
+                        </Space.Compact>
                       </Form.Item>
                     </div>
-                  ),
-                );
-              })()}
-            </div>
+                  ));
+                })()}
+              </div>
+            )}
+
+            {/* 绑定变量模式：显示变量选择器 */}
+            {multiImageContentMode === 'variable' && (
+              <div>
+                <VariableBinding
+                  value={(() => {
+                    // 在绑定变量模式下，优先显示记住的变量
+                    const rememberedVariable = imgCombComponent
+                      ? lastBoundVariables[imgCombComponent.id]
+                      : undefined;
+                    const currentBoundVariable = (() => {
+                      if (
+                        typeof imgCombComponent.img_list === 'string' &&
+                        imgCombComponent.img_list.includes('${')
+                      ) {
+                        const variableMatch =
+                          imgCombComponent.img_list.match(/\$\{([^}]+)\}/);
+                        return variableMatch?.[1];
+                      }
+                      return undefined;
+                    })();
+
+                    // 如果有记住的变量，使用记住的变量；否则使用当前绑定的变量
+                    const displayValue =
+                      rememberedVariable || currentBoundVariable;
+
+                    console.log('🔍 多图混排VariableBinding显示值:', {
+                      componentId: imgCombComponent?.id,
+                      rememberedVariable,
+                      currentBoundVariable,
+                      displayValue,
+                    });
+
+                    return displayValue;
+                  })()}
+                  onChange={(value: string | undefined) => {
+                    // 立即更新DSL中的变量绑定
+                    if (imgCombComponent) {
+                      if (value) {
+                        setLastBoundVariables((prev) => ({
+                          ...prev,
+                          [imgCombComponent.id]: value,
+                        }));
+
+                        // 立即更新DSL数据为变量占位符，确保画布实时更新
+                        const updatedComponent = { ...imgCombComponent };
+                        const variablePlaceholder = `\${${value}}`;
+                        (updatedComponent as any).img_list =
+                          variablePlaceholder;
+
+                        // 设置变量绑定状态
+                        multiImageComponentStateManager.setBoundVariableName(
+                          imgCombComponent.id,
+                          value,
+                        );
+
+                        onUpdateComponent(updatedComponent);
+
+                        console.log(
+                          '💾 选择多图混排变量并立即更新DSL和绑定状态:',
+                          {
+                            componentId: imgCombComponent.id,
+                            selectedVariable: value,
+                            variablePlaceholder,
+                            action: '立即生效并记住，设置绑定状态',
+                          },
+                        );
+                      } else {
+                        // 清除变量时，也清除记忆，并恢复用户编辑的图片列表
+                        setLastBoundVariables((prev) => {
+                          const newState = { ...prev };
+                          delete newState[imgCombComponent.id];
+                          return newState;
+                        });
+
+                        // 清除变量绑定状态
+                        multiImageComponentStateManager.setBoundVariableName(
+                          imgCombComponent.id,
+                          '',
+                        );
+
+                        // 恢复用户编辑的图片列表到DSL
+                        const userEditedImageList =
+                          multiImageComponentStateManager.getUserEditedImageList(
+                            imgCombComponent.id,
+                          );
+                        const updatedComponent = { ...imgCombComponent };
+                        (updatedComponent as any).img_list =
+                          userEditedImageList || [];
+                        onUpdateComponent(updatedComponent);
+
+                        console.log(
+                          '🗑️ 清除多图混排变量绑定状态并恢复用户图片列表:',
+                          {
+                            componentId: imgCombComponent.id,
+                            userEditedImageList,
+                            action: '清除绑定状态并恢复用户图片列表',
+                          },
+                        );
+                      }
+                    }
+                  }}
+                  componentType="img_combination"
+                  variables={variables}
+                  getFilteredVariables={getFilteredVariables}
+                  getVariableDisplayName={getVariableDisplayName}
+                  getVariableKeys={getVariableKeys}
+                  onAddVariable={() =>
+                    handleAddVariableFromComponent('img_combination')
+                  }
+                  placeholder="请选择要绑定的变量"
+                  label="绑定变量"
+                  addVariableText="+新建图片数组变量"
+                />
+              </div>
+            )}
           </div>
         </div>
       );

@@ -246,3 +246,140 @@ export const imageComponentStateManager =
 
 // 导出图片组件状态类型
 export type { ImageComponentState };
+
+// 多图混排组件状态接口
+interface MultiImageComponentState {
+  userEditedImageList?: Array<{
+    img_url: string;
+    i18n_img_url?: { [key: string]: string };
+  }>;
+  boundVariableName?: string;
+}
+
+// 多图混排组件状态管理器类
+class MultiImageComponentStateManager {
+  private static instance: MultiImageComponentStateManager;
+  private stateMap: Map<string, MultiImageComponentState> = new Map();
+
+  private constructor() {}
+
+  // 单例模式获取实例
+  public static getInstance(): MultiImageComponentStateManager {
+    if (!MultiImageComponentStateManager.instance) {
+      MultiImageComponentStateManager.instance =
+        new MultiImageComponentStateManager();
+    }
+    return MultiImageComponentStateManager.instance;
+  }
+
+  // 获取组件状态
+  public getComponentState(componentId: string): MultiImageComponentState {
+    return this.stateMap.get(componentId) || {};
+  }
+
+  // 设置用户编辑的图片列表
+  public setUserEditedImageList(
+    componentId: string,
+    imageList: Array<{
+      img_url: string;
+      i18n_img_url?: { [key: string]: string };
+    }>,
+  ): void {
+    const currentState = this.getComponentState(componentId);
+    this.stateMap.set(componentId, {
+      ...currentState,
+      userEditedImageList: imageList,
+    });
+
+    console.log('📝 设置用户编辑多图列表:', {
+      componentId,
+      imageListLength: imageList.length,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取用户编辑的图片列表
+  public getUserEditedImageList(
+    componentId: string,
+  ):
+    | Array<{ img_url: string; i18n_img_url?: { [key: string]: string } }>
+    | undefined {
+    const state = this.getComponentState(componentId);
+    return state.userEditedImageList;
+  }
+
+  // 设置绑定的变量名
+  public setBoundVariableName(
+    componentId: string,
+    variableName: string | undefined,
+  ): void {
+    const currentState = this.getComponentState(componentId);
+    const newState = { ...currentState };
+
+    if (variableName) {
+      newState.boundVariableName = variableName;
+    } else {
+      delete newState.boundVariableName;
+    }
+
+    this.stateMap.set(componentId, newState);
+
+    console.log('🔗 设置多图混排绑定变量名:', {
+      componentId,
+      variableName,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取绑定的变量名
+  public getBoundVariableName(componentId: string): string | undefined {
+    const state = this.getComponentState(componentId);
+    return state.boundVariableName;
+  }
+
+  // 清除组件状态
+  public clearComponentState(componentId: string): void {
+    this.stateMap.delete(componentId);
+    console.log('🗑️ 清除多图混排组件状态:', {
+      componentId,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取所有状态
+  public getAllStates(): Map<string, MultiImageComponentState> {
+    return new Map(this.stateMap);
+  }
+
+  // 获取状态统计信息
+  public getStateStats(): {
+    totalComponents: number;
+    componentsWithUserImageList: number;
+    componentsWithBoundVariables: number;
+  } {
+    let componentsWithUserImageList = 0;
+    let componentsWithBoundVariables = 0;
+
+    this.stateMap.forEach((state) => {
+      if (state.userEditedImageList !== undefined) {
+        componentsWithUserImageList++;
+      }
+      if (state.boundVariableName) {
+        componentsWithBoundVariables++;
+      }
+    });
+
+    return {
+      totalComponents: this.stateMap.size,
+      componentsWithUserImageList,
+      componentsWithBoundVariables,
+    };
+  }
+}
+
+// 导出多图混排组件状态管理器单例实例
+export const multiImageComponentStateManager =
+  MultiImageComponentStateManager.getInstance();
+
+// 导出多图混排组件状态类型
+export type { MultiImageComponentState };
