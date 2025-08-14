@@ -98,7 +98,7 @@ const VariableBinding: React.FC<VariableBindingProps> = ({
         return '文本/整数'; // 输入框组件支持文本和整数类型
       case 'select_static':
       case 'multi_select_static':
-        return '选项数组';
+        return '文本/整数'; // 下拉单选组件的选项文本和回传参数支持文本和整数类型
       case 'button':
         return '文本'; // 按钮组件使用文本类型
       default:

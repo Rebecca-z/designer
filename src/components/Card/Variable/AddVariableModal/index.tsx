@@ -63,7 +63,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
 
       case 'select_static':
       case 'multi_select_static':
-        return ['array'];
+        return ['text', 'number']; // 下拉单选组件的选项文本和回传参数支持文本和整数类型
       case 'button':
         return ['text'];
       default:
@@ -94,7 +94,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
 
       case 'select_static':
       case 'multi_select_static':
-        return 'array';
+        return 'text'; // 下拉单选组件默认选择文本类型
       case 'button':
         return 'text';
       default:
@@ -293,6 +293,16 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
     try {
       const values = await form.validateFields();
 
+      // 对于 array 和 imageArray 类型，先验证 JSON 格式
+      if (values.type === 'array' || values.type === 'imageArray') {
+        try {
+          JSON.parse(jsonData);
+        } catch (error) {
+          setJsonError('JSON格式错误，请检查输入');
+          return;
+        }
+      }
+
       // 统一的变量创建逻辑
       let actualMockData: any;
       let internalType: string;
@@ -340,28 +350,15 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
       setJsonData('');
       setJsonError('');
       setIsUserEditing(false);
-
-      // 对于 array 和 imageArray 类型，验证 JSON 格式
-      if (values.type === 'array' || values.type === 'imageArray') {
-        try {
-          JSON.parse(jsonData);
-        } catch (error) {
-          setJsonError('JSON格式错误，请检查输入');
-          return;
-        }
-      }
     } catch (error) {
-      console.error('提交变量失败:', error);
-      setJsonError('提交失败，请检查输入');
+      // 表单验证失败时，不需要额外处理，Ant Design会自动显示错误信息
+      console.log('表单验证失败:', error);
+      // 不设置jsonError，让表单自己处理验证错误显示
     }
   };
 
   // 处理取消
   const handleCancel = () => {
-    // 如果有JSON错误，阻止弹窗关闭
-    if (jsonError) {
-      return;
-    }
     form.resetFields();
     setJsonData('');
     setJsonError(''); // 清除错误信息

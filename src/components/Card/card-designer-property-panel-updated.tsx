@@ -3,6 +3,7 @@
 import {
   BarsOutlined,
   BgColorsOutlined,
+  CloseOutlined,
   DeleteOutlined,
   EditOutlined,
   PlusOutlined,
@@ -18,6 +19,7 @@ import {
   Input,
   InputNumber,
   Modal,
+  Popover,
   Segmented,
   Select,
   Space,
@@ -978,6 +980,21 @@ export const PropertyPanel: React.FC<{
   const [selectOptionsMode, setSelectOptionsMode] = useState<
     'specify' | 'variable'
   >('specify');
+
+  // 选项设置弹窗状态管理
+  const [optionPopoverVisible, setOptionPopoverVisible] = useState(false);
+  const [editingOptionIndex, setEditingOptionIndex] = useState<number>(-1);
+  const [optionTextMode, setOptionTextMode] = useState<'specify' | 'variable'>(
+    'specify',
+  );
+  const [optionValueMode, setOptionValueMode] = useState<
+    'specify' | 'variable'
+  >('specify');
+
+  // 存储每个选项的指定模式下的值，用于变量模式下的回退
+  const [optionSpecifyValues, setOptionSpecifyValues] = useState<
+    Record<string, { text: string; value: string }>
+  >({});
 
   // 记住每个组件上次绑定的变量
   const [lastBoundVariables, setLastBoundVariables] = useState<
@@ -3020,7 +3037,7 @@ export const PropertyPanel: React.FC<{
 
                 {/* 根据模式显示不同的内容 */}
                 {selectOptionsMode === 'specify' ? (
-                  // 指定模式：显示选项编辑界面
+                  // 指定模式：显示选项按钮界面
                   <>
                     {Array.isArray(options) &&
                       options.map((opt: any, idx: number) => (
@@ -3028,23 +3045,562 @@ export const PropertyPanel: React.FC<{
                           key={idx}
                           style={{ display: 'flex', gap: 8, marginBottom: 8 }}
                         >
-                          <Input
-                            value={opt.label}
-                            onChange={(e) => {
-                              const newOptions = [...options];
-                              newOptions[idx].label = e.target.value;
-                              // 同时更新value字段
-                              newOptions[idx].value = e.target.value;
-                              handleValueChange('options', newOptions);
-                              // 保存到状态管理器
-                              selectComponentStateManager.setUserEditedOptions(
-                                currentComponent.id,
-                                newOptions,
+                          <Popover
+                            title={
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                }}
+                              >
+                                <span>选项设置</span>
+                                <Button
+                                  type="text"
+                                  icon={<CloseOutlined />}
+                                  size="small"
+                                  onClick={() => {
+                                    setOptionPopoverVisible(false);
+                                    setEditingOptionIndex(-1);
+                                  }}
+                                />
+                              </div>
+                            }
+                            content={(() => {
+                              if (editingOptionIndex !== idx) return null;
+
+                              return (
+                                <div style={{ width: 320, padding: '8px 0' }}>
+                                  {/* 选项文本设置 */}
+                                  <div style={{ marginBottom: 24 }}>
+                                    <div
+                                      style={{
+                                        marginBottom: 8,
+                                        fontWeight: 'bold',
+                                      }}
+                                    >
+                                      选项文本
+                                    </div>
+                                    <Segmented
+                                      value={optionTextMode}
+                                      onChange={(value) => {
+                                        setOptionTextMode(
+                                          value as 'specify' | 'variable',
+                                        );
+                                        const currentOption = options[idx];
+                                        const newOptions = [...options];
+                                        const optionKey = `${currentComponent.id}_${idx}`;
+
+                                        if (value === 'specify') {
+                                          // 切换到指定模式，使用保存的值或默认值
+                                          const specifyValue =
+                                            optionSpecifyValues[optionKey];
+                                          const defaultText =
+                                            specifyValue?.text ||
+                                            `选项${idx + 1}`;
+                                          newOptions[idx] = {
+                                            ...currentOption,
+                                            text: {
+                                              content: defaultText,
+                                              i18n_content: {
+                                                'en-US': defaultText,
+                                              },
+                                            },
+                                          };
+                                          // 删除label字段
+                                          delete newOptions[idx].label;
+                                        } else {
+                                          // 切换到变量模式，先保存当前指定值
+                                          const currentText =
+                                            currentOption?.text?.content ||
+                                            currentOption?.label ||
+                                            `选项${idx + 1}`;
+                                          setOptionSpecifyValues((prev) => ({
+                                            ...prev,
+                                            [optionKey]: {
+                                              ...prev[optionKey],
+                                              text: currentText,
+                                            },
+                                          }));
+
+                                          // 设置为指定值（不显示${placeholder}）
+                                          newOptions[idx] = {
+                                            ...currentOption,
+                                            text: {
+                                              content: currentText,
+                                              i18n_content: {
+                                                'en-US': currentText,
+                                              },
+                                            },
+                                          };
+                                          // 删除label字段
+                                          delete newOptions[idx].label;
+                                        }
+
+                                        handleValueChange(
+                                          'options',
+                                          newOptions,
+                                        );
+                                        selectComponentStateManager.setUserEditedOptions(
+                                          currentComponent.id,
+                                          newOptions,
+                                        );
+                                      }}
+                                      options={[
+                                        { label: '指定', value: 'specify' },
+                                        {
+                                          label: '绑定变量',
+                                          value: 'variable',
+                                        },
+                                      ]}
+                                      style={{ marginBottom: 12 }}
+                                    />
+
+                                    {optionTextMode === 'specify' ? (
+                                      <Input
+                                        value={(() => {
+                                          const currentOption = options[idx];
+                                          return (
+                                            currentOption?.text?.content ||
+                                            currentOption?.label ||
+                                            ''
+                                          );
+                                        })()}
+                                        onChange={(e) => {
+                                          const newValue = e.target.value;
+                                          const optionKey = `${currentComponent.id}_${idx}`;
+
+                                          // 保存指定模式下的值
+                                          setOptionSpecifyValues((prev) => ({
+                                            ...prev,
+                                            [optionKey]: {
+                                              ...prev[optionKey],
+                                              text: newValue,
+                                            },
+                                          }));
+
+                                          const newOptions = [...options];
+                                          newOptions[idx] = {
+                                            ...options[idx],
+                                            text: {
+                                              content: newValue,
+                                              i18n_content: {
+                                                'en-US': newValue,
+                                              },
+                                            },
+                                          };
+                                          // 删除label字段
+                                          delete newOptions[idx].label;
+                                          handleValueChange(
+                                            'options',
+                                            newOptions,
+                                          );
+                                          selectComponentStateManager.setUserEditedOptions(
+                                            currentComponent.id,
+                                            newOptions,
+                                          );
+                                        }}
+                                        placeholder="请输入选项文本"
+                                      />
+                                    ) : (
+                                      <VariableBinding
+                                        value={(() => {
+                                          const currentOption = options[idx];
+                                          const textContent =
+                                            currentOption?.text?.content ||
+                                            currentOption?.label ||
+                                            '';
+                                          if (textContent.includes('${')) {
+                                            const match =
+                                              textContent.match(
+                                                /\$\{([^}]+)\}/,
+                                              );
+                                            return match &&
+                                              match[1] !== 'placeholder'
+                                              ? match[1]
+                                              : '';
+                                          }
+                                          return '';
+                                        })()}
+                                        onChange={(variableName) => {
+                                          const newOptions = [...options];
+                                          const optionKey = `${currentComponent.id}_${idx}`;
+
+                                          let finalContent: string;
+                                          if (variableName) {
+                                            // 有变量选择，使用变量格式
+                                            finalContent = `\${${variableName}}`;
+                                          } else {
+                                            // 没有变量选择，使用指定模式下的值
+                                            const specifyValue =
+                                              optionSpecifyValues[optionKey];
+                                            finalContent =
+                                              specifyValue?.text ||
+                                              `选项${idx + 1}`;
+                                          }
+
+                                          newOptions[idx] = {
+                                            ...options[idx],
+                                            text: {
+                                              content: finalContent,
+                                              i18n_content: {
+                                                'en-US': finalContent,
+                                              },
+                                            },
+                                          };
+                                          // 删除label字段
+                                          delete newOptions[idx].label;
+                                          handleValueChange(
+                                            'options',
+                                            newOptions,
+                                          );
+                                          selectComponentStateManager.setUserEditedOptions(
+                                            currentComponent.id,
+                                            newOptions,
+                                          );
+                                        }}
+                                        componentType="select_static"
+                                        variables={variables}
+                                        getFilteredVariables={() => {
+                                          return variables.filter(
+                                            (variable) => {
+                                              if (
+                                                typeof variable === 'object' &&
+                                                variable !== null
+                                              ) {
+                                                const keys =
+                                                  getVariableKeys(variable);
+                                                if (keys.length > 0) {
+                                                  const variableName = keys[0];
+                                                  const originalType =
+                                                    getVariableOriginalType(
+                                                      variable,
+                                                      variableName,
+                                                    );
+                                                  return (
+                                                    originalType === 'text' ||
+                                                    originalType === 'number'
+                                                  );
+                                                }
+                                              }
+                                              return false;
+                                            },
+                                          );
+                                        }}
+                                        getVariableDisplayName={
+                                          getVariableDisplayName
+                                        }
+                                        getVariableKeys={getVariableKeys}
+                                        onAddVariable={() => {
+                                          handleAddVariableFromComponent(
+                                            'select_static',
+                                          );
+                                        }}
+                                        label=""
+                                        placeholder="选择变量"
+                                        addVariableText="新建变量"
+                                      />
+                                    )}
+                                  </div>
+
+                                  {/* 回传参数设置 */}
+                                  <div style={{ marginBottom: 24 }}>
+                                    <div
+                                      style={{
+                                        marginBottom: 8,
+                                        fontWeight: 'bold',
+                                      }}
+                                    >
+                                      回传参数
+                                    </div>
+                                    <Segmented
+                                      value={optionValueMode}
+                                      onChange={(value) => {
+                                        setOptionValueMode(
+                                          value as 'specify' | 'variable',
+                                        );
+                                        const currentOption = options[idx];
+                                        const newOptions = [...options];
+                                        const optionKey = `${currentComponent.id}_${idx}`;
+
+                                        if (value === 'specify') {
+                                          // 切换到指定模式，使用保存的值或默认值
+                                          const specifyValue =
+                                            optionSpecifyValues[optionKey];
+                                          const defaultValue =
+                                            specifyValue?.value ||
+                                            `option${idx + 1}`;
+                                          newOptions[idx] = {
+                                            ...currentOption,
+                                            value: defaultValue,
+                                          };
+                                        } else {
+                                          // 切换到变量模式，先保存当前指定值
+                                          const currentValue =
+                                            currentOption?.value ||
+                                            `option${idx + 1}`;
+                                          setOptionSpecifyValues((prev) => ({
+                                            ...prev,
+                                            [optionKey]: {
+                                              ...prev[optionKey],
+                                              value: currentValue,
+                                            },
+                                          }));
+
+                                          // 设置为指定值（不显示${placeholder}）
+                                          newOptions[idx] = {
+                                            ...currentOption,
+                                            value: currentValue,
+                                          };
+                                        }
+
+                                        handleValueChange(
+                                          'options',
+                                          newOptions,
+                                        );
+                                        selectComponentStateManager.setUserEditedOptions(
+                                          currentComponent.id,
+                                          newOptions,
+                                        );
+                                      }}
+                                      options={[
+                                        { label: '指定', value: 'specify' },
+                                        {
+                                          label: '绑定变量',
+                                          value: 'variable',
+                                        },
+                                      ]}
+                                      style={{ marginBottom: 12 }}
+                                    />
+
+                                    {optionValueMode === 'specify' ? (
+                                      <Input
+                                        value={(() => {
+                                          const currentOption = options[idx];
+                                          return currentOption?.value || '';
+                                        })()}
+                                        onChange={(e) => {
+                                          const newValue = e.target.value;
+                                          const optionKey = `${currentComponent.id}_${idx}`;
+
+                                          // 保存指定模式下的值
+                                          setOptionSpecifyValues((prev) => ({
+                                            ...prev,
+                                            [optionKey]: {
+                                              ...prev[optionKey],
+                                              value: newValue,
+                                            },
+                                          }));
+
+                                          const newOptions = [...options];
+                                          newOptions[idx] = {
+                                            ...options[idx],
+                                            value: newValue,
+                                          };
+                                          handleValueChange(
+                                            'options',
+                                            newOptions,
+                                          );
+                                          selectComponentStateManager.setUserEditedOptions(
+                                            currentComponent.id,
+                                            newOptions,
+                                          );
+                                        }}
+                                        placeholder="请输入回传参数"
+                                      />
+                                    ) : (
+                                      <VariableBinding
+                                        value={(() => {
+                                          const currentOption = options[idx];
+                                          const valueContent =
+                                            currentOption?.value || '';
+                                          if (valueContent.includes('${')) {
+                                            const match =
+                                              valueContent.match(
+                                                /\$\{([^}]+)\}/,
+                                              );
+                                            return match &&
+                                              match[1] !== 'placeholder'
+                                              ? match[1]
+                                              : '';
+                                          }
+                                          return '';
+                                        })()}
+                                        onChange={(variableName) => {
+                                          const newOptions = [...options];
+                                          const optionKey = `${currentComponent.id}_${idx}`;
+
+                                          let finalValue: string;
+                                          if (variableName) {
+                                            // 有变量选择，使用变量格式
+                                            finalValue = `\${${variableName}}`;
+                                          } else {
+                                            // 没有变量选择，使用指定模式下的值
+                                            const specifyValue =
+                                              optionSpecifyValues[optionKey];
+                                            finalValue =
+                                              specifyValue?.value ||
+                                              `option${idx + 1}`;
+                                          }
+
+                                          newOptions[idx] = {
+                                            ...options[idx],
+                                            value: finalValue,
+                                          };
+                                          handleValueChange(
+                                            'options',
+                                            newOptions,
+                                          );
+                                          selectComponentStateManager.setUserEditedOptions(
+                                            currentComponent.id,
+                                            newOptions,
+                                          );
+                                        }}
+                                        componentType="select_static"
+                                        variables={variables}
+                                        getFilteredVariables={() => {
+                                          return variables.filter(
+                                            (variable) => {
+                                              if (
+                                                typeof variable === 'object' &&
+                                                variable !== null
+                                              ) {
+                                                const keys =
+                                                  getVariableKeys(variable);
+                                                if (keys.length > 0) {
+                                                  const variableName = keys[0];
+                                                  const originalType =
+                                                    getVariableOriginalType(
+                                                      variable,
+                                                      variableName,
+                                                    );
+                                                  return (
+                                                    originalType === 'text' ||
+                                                    originalType === 'number'
+                                                  );
+                                                }
+                                              }
+                                              return false;
+                                            },
+                                          );
+                                        }}
+                                        getVariableDisplayName={
+                                          getVariableDisplayName
+                                        }
+                                        getVariableKeys={getVariableKeys}
+                                        onAddVariable={() => {
+                                          handleAddVariableFromComponent(
+                                            'select_static',
+                                          );
+                                        }}
+                                        label=""
+                                        placeholder="选择变量"
+                                        addVariableText="新建变量"
+                                      />
+                                    )}
+                                  </div>
+                                </div>
                               );
+                            })()}
+                            trigger="click"
+                            open={
+                              optionPopoverVisible && editingOptionIndex === idx
+                            }
+                            onOpenChange={(visible) => {
+                              if (visible) {
+                                setEditingOptionIndex(idx);
+                                setOptionPopoverVisible(true);
+
+                                const optionKey = `${currentComponent.id}_${idx}`;
+                                const textContent =
+                                  opt.text?.content || opt.label || '';
+                                const valueContent = opt.value || '';
+
+                                // 初始化指定模式下的值
+                                if (!optionSpecifyValues[optionKey]) {
+                                  const defaultText = textContent.includes('${')
+                                    ? `选项${idx + 1}`
+                                    : textContent;
+                                  const defaultValue = valueContent.includes(
+                                    '${',
+                                  )
+                                    ? `option${idx + 1}`
+                                    : valueContent;
+
+                                  setOptionSpecifyValues((prev) => ({
+                                    ...prev,
+                                    [optionKey]: {
+                                      text: defaultText,
+                                      value: defaultValue,
+                                    },
+                                  }));
+                                }
+
+                                // 根据当前选项的数据结构判断模式
+                                setOptionTextMode(
+                                  textContent.includes('${')
+                                    ? 'variable'
+                                    : 'specify',
+                                );
+                                setOptionValueMode(
+                                  valueContent.includes('${')
+                                    ? 'variable'
+                                    : 'specify',
+                                );
+                              } else {
+                                setOptionPopoverVisible(false);
+                                setEditingOptionIndex(-1);
+                              }
                             }}
-                            placeholder="选项名称"
-                            style={{ flex: 1 }}
-                          />
+                            placement="rightTop"
+                          >
+                            <Button style={{ flex: 1, textAlign: 'left' }}>
+                              {(() => {
+                                // 显示选项的最终值
+                                const textContent =
+                                  opt.text?.content ||
+                                  opt.label ||
+                                  `选项${idx + 1}`;
+
+                                // 如果是${placeholder}，不显示，而是显示指定模式下的值
+                                if (textContent === '${placeholder}') {
+                                  const optionKey = `${currentComponent.id}_${idx}`;
+                                  const specifyValue =
+                                    optionSpecifyValues[optionKey];
+                                  return specifyValue?.text || `选项${idx + 1}`;
+                                }
+
+                                if (textContent.includes('${')) {
+                                  // 如果是变量，尝试获取变量的实际值
+                                  const match =
+                                    textContent.match(/\$\{([^}]+)\}/);
+                                  if (match && match[1]) {
+                                    const variableName = match[1];
+                                    const variable = variables.find((v) => {
+                                      const keys = getVariableKeys(v);
+                                      return keys.includes(variableName);
+                                    });
+                                    if (variable) {
+                                      const variableValue =
+                                        variable[variableName];
+                                      if (
+                                        typeof variableValue === 'string' ||
+                                        typeof variableValue === 'number'
+                                      ) {
+                                        return String(variableValue);
+                                      }
+                                    }
+                                  }
+                                  // 如果找不到变量值，显示指定模式下的值
+                                  const optionKey = `${currentComponent.id}_${idx}`;
+                                  const specifyValue =
+                                    optionSpecifyValues[optionKey];
+                                  return specifyValue?.text || `选项${idx + 1}`;
+                                }
+                                return textContent;
+                              })()}
+                            </Button>
+                          </Popover>
                           <Button
                             danger
                             size="small"
@@ -3071,7 +3627,12 @@ export const PropertyPanel: React.FC<{
                         const newOptions = [
                           ...options,
                           {
-                            label: `选项${options.length + 1}`,
+                            text: {
+                              content: `选项${options.length + 1}`,
+                              i18n_content: {
+                                'en-US': `选项${options.length + 1}`,
+                              },
+                            },
                             value: `option${options.length + 1}`,
                           },
                         ];
@@ -3151,6 +3712,7 @@ export const PropertyPanel: React.FC<{
                       }
                     }}
                     componentType="select_static"
+                    variables={variables}
                     getFilteredVariables={() => {
                       // 只显示"选项数组"类型的变量
                       return variables.filter((variable) => {
@@ -3161,6 +3723,8 @@ export const PropertyPanel: React.FC<{
                         return originalType === 'array';
                       });
                     }}
+                    getVariableDisplayName={getVariableDisplayName}
+                    getVariableKeys={getVariableKeys}
                     onAddVariable={() => {
                       handleAddVariableFromComponent('select_static');
                     }}

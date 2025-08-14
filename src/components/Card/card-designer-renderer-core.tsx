@@ -3846,6 +3846,89 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       // 检查当前组件是否被选中
       const isCurrentSelected = isSamePath(selectedPath || null, path);
 
+      // 处理选项数据：支持变量绑定和静态选项
+      const getSelectOptions = () => {
+        // 如果options是字符串且包含变量占位符，解析变量值
+        if (typeof comp.options === 'string' && comp.options.includes('${')) {
+          const variableMatch = comp.options.match(/\$\{([^}]+)\}/);
+          if (variableMatch && variableMatch[1]) {
+            const variableName = variableMatch[1];
+            console.log('🔍 下拉单选组件解析变量:', {
+              componentId: comp.id,
+              variableName,
+              variablesCount: variables?.length || 0,
+            });
+
+            // 查找变量
+            const variable = variables?.find((v: any) => {
+              if (typeof v === 'object' && v !== null) {
+                // 支持两种格式：{name, value} 和 {variableName: value}
+                if (v.name && v.name === variableName) {
+                  return true;
+                }
+                return Object.keys(v).some(
+                  (key) => !key.startsWith('__') && key === variableName,
+                );
+              }
+              return false;
+            });
+
+            if (variable) {
+              let variableValue;
+              if (variable.name && variable.value !== undefined) {
+                // Variable格式：{name, value, type}
+                variableValue = variable.value;
+              } else {
+                // VariableItem格式：{variableName: value}
+                variableValue = variable[variableName];
+              }
+
+              console.log('✅ 找到下拉单选变量值:', {
+                variableName,
+                variableValue,
+                valueType: typeof variableValue,
+              });
+
+              // 如果变量值是数组，直接使用
+              if (Array.isArray(variableValue)) {
+                return variableValue.map((item: any, index: number) => ({
+                  value:
+                    typeof item === 'object'
+                      ? item.value || `option_${index}`
+                      : item,
+                  text: {
+                    content:
+                      typeof item === 'object'
+                        ? item.label || item.text || item
+                        : item,
+                  },
+                }));
+              }
+            }
+
+            console.log('⚠️ 下拉单选变量未找到或格式不正确，使用默认选项');
+            // 变量未找到或格式不正确，返回默认选项
+            return [
+              { value: 'option1', text: { content: '选项1' } },
+              { value: 'option2', text: { content: '选项2' } },
+            ];
+          }
+        }
+
+        // 静态选项：确保是数组格式
+        if (Array.isArray(comp.options)) {
+          return comp.options;
+        }
+
+        // 默认选项
+        return [
+          { value: 'option1', text: { content: '选项1' } },
+          { value: 'option2', text: { content: '选项2' } },
+        ];
+      };
+
+      const selectOptions = getSelectOptions();
+
       const selectContent = (
         <div
           style={{
@@ -3878,14 +3961,87 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               // 空的onChange处理，允许UI操作但不保存状态
             }}
           >
-            {(comp.options || []).map((option: any, optionIndex: number) => (
-              <Option
-                key={option.value || optionIndex}
-                value={option.value || ''}
-              >
-                {option.text?.content || `选项${optionIndex + 1}`}
-              </Option>
-            ))}
+            {selectOptions.map((option: any, optionIndex: number) => {
+              // 安全地提取选项显示文本
+              let displayText = `选项${optionIndex + 1}`;
+              if (option.text) {
+                if (typeof option.text === 'string') {
+                  displayText = option.text;
+                } else if (
+                  typeof option.text === 'object' &&
+                  option.text.content
+                ) {
+                  const textContent = option.text.content;
+
+                  console.log('🔍 画布选项显示调试:', {
+                    textContent,
+                    variablesCount: variables.length,
+                    variables: variables.map((v: any) => ({
+                      name: v.name,
+                      keys: Object.keys(v),
+                      data: v,
+                    })),
+                  });
+
+                  // 智能显示逻辑：根据模式显示不同的值
+                  if (textContent.includes('${')) {
+                    // 变量模式
+                    const match = textContent.match(/\$\{([^}]+)\}/);
+                    if (match && match[1] && match[1] !== 'placeholder') {
+                      // 有绑定变量，显示变量值
+                      const variableName = match[1];
+
+                      // 查找变量的实际值
+                      const variable = variables.find((v: any) => {
+                        const nameMatch = v.name && v.name === variableName;
+                        const keyMatch = Object.prototype.hasOwnProperty.call(
+                          v,
+                          variableName,
+                        );
+                        return nameMatch || keyMatch;
+                      });
+
+                      if (variable) {
+                        let variableValue;
+                        if (variable.name && variable.value !== undefined) {
+                          variableValue = variable.value;
+                        } else {
+                          variableValue = variable[variableName];
+                        }
+
+                        if (
+                          typeof variableValue === 'string' ||
+                          typeof variableValue === 'number'
+                        ) {
+                          displayText = String(variableValue);
+                        } else {
+                          displayText = textContent; // 变量值不是简单类型，显示原始内容
+                        }
+                      } else {
+                        displayText = textContent; // 变量未找到，显示原始内容
+                      }
+                    } else {
+                      // 没有绑定变量或是placeholder，显示原始内容（应该是指定模式的内容）
+                      displayText = textContent;
+                    }
+                  } else {
+                    // 指定模式，显示指定文本
+                    displayText = textContent;
+                  }
+                }
+              } else if (option.label) {
+                displayText = option.label;
+              }
+
+              return (
+                <Option
+                  key={option.value || optionIndex}
+                  value={option.value || ''}
+                >
+                  {displayText}
+                </Option>
+              );
+            })}
           </Select>
         </div>
       );
@@ -3912,6 +4068,89 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
     case 'multi_select_static': {
       // 检查当前组件是否被选中
       const isCurrentSelected = isSamePath(selectedPath || null, path);
+
+      // 处理选项数据：支持变量绑定和静态选项
+      const getMultiSelectOptions = () => {
+        // 如果options是字符串且包含变量占位符，解析变量值
+        if (typeof comp.options === 'string' && comp.options.includes('${')) {
+          const variableMatch = comp.options.match(/\$\{([^}]+)\}/);
+          if (variableMatch && variableMatch[1]) {
+            const variableName = variableMatch[1];
+            console.log('🔍 下拉多选组件解析变量:', {
+              componentId: comp.id,
+              variableName,
+              variablesCount: variables?.length || 0,
+            });
+
+            // 查找变量
+            const variable = variables?.find((v: any) => {
+              if (typeof v === 'object' && v !== null) {
+                // 支持两种格式：{name, value} 和 {variableName: value}
+                if (v.name && v.name === variableName) {
+                  return true;
+                }
+                return Object.keys(v).some(
+                  (key) => !key.startsWith('__') && key === variableName,
+                );
+              }
+              return false;
+            });
+
+            if (variable) {
+              let variableValue;
+              if (variable.name && variable.value !== undefined) {
+                // Variable格式：{name, value, type}
+                variableValue = variable.value;
+              } else {
+                // VariableItem格式：{variableName: value}
+                variableValue = variable[variableName];
+              }
+
+              console.log('✅ 找到下拉多选变量值:', {
+                variableName,
+                variableValue,
+                valueType: typeof variableValue,
+              });
+
+              // 如果变量值是数组，直接使用
+              if (Array.isArray(variableValue)) {
+                return variableValue.map((item: any, index: number) => ({
+                  value:
+                    typeof item === 'object'
+                      ? item.value || `option_${index}`
+                      : item,
+                  text: {
+                    content:
+                      typeof item === 'object'
+                        ? item.label || item.text || item
+                        : item,
+                  },
+                }));
+              }
+            }
+
+            console.log('⚠️ 下拉多选变量未找到或格式不正确，使用默认选项');
+            // 变量未找到或格式不正确，返回默认选项
+            return [
+              { value: 'option1', text: { content: '选项1' } },
+              { value: 'option2', text: { content: '选项2' } },
+            ];
+          }
+        }
+
+        // 静态选项：确保是数组格式
+        if (Array.isArray(comp.options)) {
+          return comp.options;
+        }
+
+        // 默认选项
+        return [
+          { value: 'option1', text: { content: '选项1' } },
+          { value: 'option2', text: { content: '选项2' } },
+        ];
+      };
+
+      const multiSelectOptions = getMultiSelectOptions();
 
       const multiSelectContent = (
         <div
@@ -3946,14 +4185,31 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               // 空的onChange处理，允许UI操作但不保存状态
             }}
           >
-            {(comp.options || []).map((option: any, optionIndex: number) => (
-              <Option
-                key={option.value || optionIndex}
-                value={option.value || ''}
-              >
-                {option.text?.content || `选项${optionIndex + 1}`}
-              </Option>
-            ))}
+            {multiSelectOptions.map((option: any, optionIndex: number) => {
+              // 安全地提取选项显示文本
+              let displayText = `选项${optionIndex + 1}`;
+              if (option.text) {
+                if (typeof option.text === 'string') {
+                  displayText = option.text;
+                } else if (
+                  typeof option.text === 'object' &&
+                  option.text.content
+                ) {
+                  displayText = option.text.content;
+                }
+              } else if (option.label) {
+                displayText = option.label;
+              }
+
+              return (
+                <Option
+                  key={option.value || optionIndex}
+                  value={option.value || ''}
+                >
+                  {displayText}
+                </Option>
+              );
+            })}
           </Select>
         </div>
       );
