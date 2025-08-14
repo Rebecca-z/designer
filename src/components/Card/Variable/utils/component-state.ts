@@ -580,3 +580,124 @@ export const inputComponentStateManager =
 
 // 导出输入框组件状态类型
 export type { InputComponentState };
+
+// ==================== 下拉单选组件状态管理 ====================
+
+// 下拉单选组件状态接口
+export interface SelectComponentState {
+  userEditedOptions?: Array<{ label: string; value: string }>; // 用户编辑的选项列表
+  boundVariableName?: string; // 绑定的变量名
+}
+
+// 下拉单选组件状态管理器
+export class SelectComponentStateManager {
+  private static instance: SelectComponentStateManager;
+  private stateMap: Map<string, SelectComponentState> = new Map();
+
+  private constructor() {}
+
+  // 单例模式获取实例
+  public static getInstance(): SelectComponentStateManager {
+    if (!SelectComponentStateManager.instance) {
+      SelectComponentStateManager.instance = new SelectComponentStateManager();
+    }
+    return SelectComponentStateManager.instance;
+  }
+
+  // 获取组件状态
+  public getComponentState(componentId: string): SelectComponentState {
+    return this.stateMap.get(componentId) || {};
+  }
+
+  // 设置用户编辑的选项列表
+  public setUserEditedOptions(
+    componentId: string,
+    options: Array<{ label: string; value: string }>,
+  ): void {
+    const currentState = this.getComponentState(componentId);
+    this.stateMap.set(componentId, {
+      ...currentState,
+      userEditedOptions: options,
+    });
+
+    console.log('📝 设置用户编辑选项列表:', {
+      componentId,
+      options,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取用户编辑的选项列表
+  public getUserEditedOptions(
+    componentId: string,
+  ): Array<{ label: string; value: string }> | undefined {
+    const state = this.getComponentState(componentId);
+    return state.userEditedOptions;
+  }
+
+  // 设置绑定的变量名
+  public setBoundVariableName(
+    componentId: string,
+    variableName: string | undefined,
+  ): void {
+    const currentState = this.getComponentState(componentId);
+    const newState = { ...currentState };
+
+    if (variableName) {
+      newState.boundVariableName = variableName;
+    } else {
+      delete newState.boundVariableName;
+    }
+
+    this.stateMap.set(componentId, newState);
+
+    console.log('🔗 设置下拉单选组件绑定变量名:', {
+      componentId,
+      variableName,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取绑定的变量名
+  public getBoundVariableName(componentId: string): string | undefined {
+    const state = this.getComponentState(componentId);
+    return state.boundVariableName;
+  }
+
+  // 清除组件状态
+  public clearComponentState(componentId: string): void {
+    this.stateMap.delete(componentId);
+    console.log('🗑️ 清除下拉单选组件状态:', {
+      componentId,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取所有状态（调试用）
+  public getAllStates(): Map<string, SelectComponentState> {
+    return new Map(this.stateMap);
+  }
+
+  // 获取状态统计信息（调试用）
+  public getStateStats(): {
+    totalComponents: number;
+    componentsWithUserOptions: number;
+    componentsWithBoundVariables: number;
+  } {
+    const states = Array.from(this.stateMap.values());
+    return {
+      totalComponents: states.length,
+      componentsWithUserOptions: states.filter((s) => s.userEditedOptions)
+        .length,
+      componentsWithBoundVariables: states.filter((s) => s.boundVariableName)
+        .length,
+    };
+  }
+}
+
+// 导出下拉单选组件状态管理器实例
+export const selectComponentStateManager =
+  SelectComponentStateManager.getInstance();
+
+// 导出下拉单选组件状态类型
+export type { SelectComponentState };

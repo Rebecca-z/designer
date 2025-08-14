@@ -60,6 +60,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         return ['imageArray']; // 多图混排只支持图片数组类型
       case 'input':
         return ['text', 'number'];
+
       case 'select_static':
       case 'multi_select_static':
         return ['array'];
@@ -90,6 +91,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         return 'imageArray';
       case 'input':
         return 'text';
+
       case 'select_static':
       case 'multi_select_static':
         return 'array';

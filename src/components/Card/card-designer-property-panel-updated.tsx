@@ -49,6 +49,7 @@ import {
   imageComponentStateManager,
   inputComponentStateManager,
   multiImageComponentStateManager,
+  selectComponentStateManager,
   textComponentStateManager,
 } from './Variable/utils/index';
 import VariableBinding from './Variable/VariableList';
@@ -973,6 +974,11 @@ export const PropertyPanel: React.FC<{
     'specify' | 'variable'
   >('specify');
 
+  // 下拉单选组件选项模式状态管理
+  const [selectOptionsMode, setSelectOptionsMode] = useState<
+    'specify' | 'variable'
+  >('specify');
+
   // 记住每个组件上次绑定的变量
   const [lastBoundVariables, setLastBoundVariables] = useState<
     Record<string, string>
@@ -996,6 +1002,10 @@ export const PropertyPanel: React.FC<{
   const [initializedInputComponents, setInitializedInputComponents] = useState<
     Set<string>
   >(new Set());
+
+  // 跟踪已初始化的下拉单选组件，避免重复设置模式
+  const [initializedSelectComponents, setInitializedSelectComponents] =
+    useState<Set<string>>(new Set());
 
   // 变量管理相关状态
   const [isAddVariableModalVisible, setIsAddVariableModalVisible] =
@@ -1312,6 +1322,77 @@ export const PropertyPanel: React.FC<{
           );
 
           console.log('💾 记住现有输入框默认值变量绑定:', {
+            componentId: realComponent.id,
+            variableName,
+          });
+        }
+      }
+    }
+  }, [realComponent]);
+
+  // 下拉单选组件模式同步 - 根据组件状态初始化模式
+  useEffect(() => {
+    if (realComponent && realComponent.tag === 'select_static') {
+      // 检查选项是否有变量绑定
+      const hasOptionsVariableBinding =
+        realComponent.options &&
+        typeof realComponent.options === 'string' &&
+        realComponent.options.includes('${');
+
+      // 只在组件首次选中时设置模式，不要在变量绑定变化时重新设置
+      if (!initializedSelectComponents.has(realComponent.id)) {
+        // 如果当前选项不是变量占位符，保存为用户编辑的选项
+        if (realComponent.options && !hasOptionsVariableBinding) {
+          selectComponentStateManager.setUserEditedOptions(
+            realComponent.id,
+            realComponent.options,
+          );
+        }
+
+        // 设置选项模式
+        if (hasOptionsVariableBinding) {
+          setSelectOptionsMode('variable');
+          console.log('🔄 初始化下拉单选组件选项模式 (检测到变量绑定):', {
+            componentId: realComponent.id,
+            componentTag: realComponent.tag,
+            hasOptionsVariableBinding,
+            optionsContent: realComponent.options,
+            mode: 'variable',
+          });
+        } else {
+          setSelectOptionsMode('specify');
+          console.log('🔄 初始化下拉单选组件选项模式 (首次选中组件):', {
+            componentId: realComponent.id,
+            componentTag: realComponent.tag,
+            hasOptionsVariableBinding,
+            optionsContent: realComponent.options,
+            mode: 'specify',
+          });
+        }
+
+        // 标记为已初始化
+        setInitializedSelectComponents(
+          (prev) => new Set([...prev, realComponent.id]),
+        );
+      }
+
+      // 记住现有的变量绑定（如果有的话）
+      if (hasOptionsVariableBinding && !lastBoundVariables[realComponent.id]) {
+        const variableMatch = realComponent.options?.match(/\$\{([^}]+)\}/);
+        if (variableMatch && variableMatch[1]) {
+          const variableName = variableMatch[1];
+          setLastBoundVariables((prev) => ({
+            ...prev,
+            [realComponent.id]: variableName,
+          }));
+
+          // 同时设置到下拉单选状态管理器中
+          selectComponentStateManager.setBoundVariableName(
+            realComponent.id,
+            variableName,
+          );
+
+          console.log('💾 记住现有下拉单选组件变量绑定:', {
             componentId: realComponent.id,
             variableName,
           });
@@ -2843,7 +2924,7 @@ export const PropertyPanel: React.FC<{
 
     // 新增：如果选中了下拉单选组件，显示下拉单选属性面板
     const isSelectSingleComponent =
-      currentComponent && (currentComponent as any).tag === 'select-single';
+      currentComponent && (currentComponent as any).tag === 'select_static';
     if (isSelectSingleComponent) {
       const options = (currentComponent as any).options || [];
       return (
@@ -2870,48 +2951,224 @@ export const PropertyPanel: React.FC<{
             }}
           >
             <Form form={form} layout="vertical">
-              <Form.Item label="选项">
-                {options.map((opt: any, idx: number) => (
-                  <div
-                    key={idx}
-                    style={{ display: 'flex', gap: 8, marginBottom: 8 }}
-                  >
-                    <Input
-                      value={opt.label}
-                      onChange={(e) => {
-                        const newOptions = [...options];
-                        newOptions[idx].label = e.target.value;
-                        handleValueChange('options', newOptions);
-                      }}
-                      placeholder="选项名称"
-                      style={{ flex: 1 }}
-                    />
-                    <Button
-                      danger
-                      size="small"
-                      onClick={() => {
-                        const newOptions = options.filter(
-                          (_: any, i: number) => i !== idx,
+              {/* 选项设置 */}
+              <Form.Item label="选项设置">
+                <Segmented
+                  value={selectOptionsMode}
+                  onChange={(value) => {
+                    const newMode = value as 'specify' | 'variable';
+                    setSelectOptionsMode(newMode);
+
+                    if (newMode === 'specify') {
+                      // 切换到"指定"模式：恢复用户编辑的选项
+                      const userEditedOptions =
+                        selectComponentStateManager.getUserEditedOptions(
+                          currentComponent.id,
                         );
+                      if (userEditedOptions) {
+                        handleValueChange('options', userEditedOptions);
+                      } else {
+                        // 如果没有用户编辑的选项，使用默认选项
+                        handleValueChange('options', [
+                          { label: '选项1', value: 'option1' },
+                          { label: '选项2', value: 'option2' },
+                          { label: '选项3', value: 'option3' },
+                        ]);
+                      }
+                      // 清除变量绑定
+                      selectComponentStateManager.setBoundVariableName(
+                        currentComponent.id,
+                        '',
+                      );
+                    } else {
+                      // 切换到"绑定变量"模式：保存当前选项并设置变量占位符
+                      if (Array.isArray(options)) {
+                        selectComponentStateManager.setUserEditedOptions(
+                          currentComponent.id,
+                          options,
+                        );
+                      }
+
+                      // 恢复之前绑定的变量（如果有的话）
+                      const rememberedVariable =
+                        lastBoundVariables[currentComponent.id];
+                      if (rememberedVariable) {
+                        handleValueChange(
+                          'options',
+                          `\${${rememberedVariable}}`,
+                        );
+                        selectComponentStateManager.setBoundVariableName(
+                          currentComponent.id,
+                          rememberedVariable,
+                        );
+                      }
+                    }
+
+                    console.log('🔄 下拉单选组件选项模式切换完成:', {
+                      componentId: currentComponent.id,
+                      newMode,
+                      previousMode: selectOptionsMode,
+                      note: '已更新DSL数据和画布',
+                    });
+                  }}
+                  options={[
+                    { label: '指定', value: 'specify' },
+                    { label: '绑定变量', value: 'variable' },
+                  ]}
+                  style={{ marginBottom: 16 }}
+                />
+
+                {/* 根据模式显示不同的内容 */}
+                {selectOptionsMode === 'specify' ? (
+                  // 指定模式：显示选项编辑界面
+                  <>
+                    {Array.isArray(options) &&
+                      options.map((opt: any, idx: number) => (
+                        <div
+                          key={idx}
+                          style={{ display: 'flex', gap: 8, marginBottom: 8 }}
+                        >
+                          <Input
+                            value={opt.label}
+                            onChange={(e) => {
+                              const newOptions = [...options];
+                              newOptions[idx].label = e.target.value;
+                              // 同时更新value字段
+                              newOptions[idx].value = e.target.value;
+                              handleValueChange('options', newOptions);
+                              // 保存到状态管理器
+                              selectComponentStateManager.setUserEditedOptions(
+                                currentComponent.id,
+                                newOptions,
+                              );
+                            }}
+                            placeholder="选项名称"
+                            style={{ flex: 1 }}
+                          />
+                          <Button
+                            danger
+                            size="small"
+                            onClick={() => {
+                              const newOptions = options.filter(
+                                (_: any, i: number) => i !== idx,
+                              );
+                              handleValueChange('options', newOptions);
+                              // 保存到状态管理器
+                              selectComponentStateManager.setUserEditedOptions(
+                                currentComponent.id,
+                                newOptions,
+                              );
+                            }}
+                          >
+                            删除
+                          </Button>
+                        </div>
+                      ))}
+                    <Button
+                      type="dashed"
+                      block
+                      onClick={() => {
+                        const newOptions = [
+                          ...options,
+                          {
+                            label: `选项${options.length + 1}`,
+                            value: `option${options.length + 1}`,
+                          },
+                        ];
                         handleValueChange('options', newOptions);
+                        // 保存到状态管理器
+                        selectComponentStateManager.setUserEditedOptions(
+                          currentComponent.id,
+                          newOptions,
+                        );
                       }}
                     >
-                      删除
+                      添加选项
                     </Button>
-                  </div>
-                ))}
-                <Button
-                  type="dashed"
-                  block
-                  onClick={() => {
-                    handleValueChange('options', [
-                      ...options,
-                      { label: '', value: '' },
-                    ]);
-                  }}
-                >
-                  添加选项
-                </Button>
+                  </>
+                ) : (
+                  // 绑定变量模式：显示变量绑定组件
+                  <VariableBinding
+                    value={(() => {
+                      const rememberedVariable =
+                        lastBoundVariables[currentComponent.id];
+                      const currentBoundVariable =
+                        selectComponentStateManager.getBoundVariableName(
+                          currentComponent.id,
+                        );
+                      const displayValue =
+                        currentBoundVariable || rememberedVariable;
+
+                      console.log('🔍 下拉单选组件选项VariableBinding显示值:', {
+                        componentId: currentComponent.id,
+                        rememberedVariable,
+                        currentBoundVariable,
+                        displayValue,
+                      });
+
+                      return displayValue;
+                    })()}
+                    onChange={(variableName) => {
+                      if (variableName) {
+                        // 选择了变量：更新DSL和绑定状态
+                        handleValueChange('options', `\${${variableName}}`);
+                        setLastBoundVariables((prev) => ({
+                          ...prev,
+                          [currentComponent.id]: variableName,
+                        }));
+                        selectComponentStateManager.setBoundVariableName(
+                          currentComponent.id,
+                          variableName,
+                        );
+
+                        console.log(
+                          '💾 选择下拉单选组件选项变量并立即更新DSL和绑定状态:',
+                          {
+                            componentId: currentComponent.id,
+                            selectedVariable: variableName,
+                            newOptions: `\${${variableName}}`,
+                            action: '立即生效并记住，设置绑定状态',
+                          },
+                        );
+                      } else {
+                        // 清除变量：恢复用户编辑的选项
+                        const userEditedOptions =
+                          selectComponentStateManager.getUserEditedOptions(
+                            currentComponent.id,
+                          );
+                        if (userEditedOptions) {
+                          handleValueChange('options', userEditedOptions);
+                        }
+                        selectComponentStateManager.setBoundVariableName(
+                          currentComponent.id,
+                          '',
+                        );
+                        setLastBoundVariables((prev) => {
+                          const newState = { ...prev };
+                          delete newState[currentComponent.id];
+                          return newState;
+                        });
+                      }
+                    }}
+                    componentType="select_static"
+                    getFilteredVariables={() => {
+                      // 只显示"选项数组"类型的变量
+                      return variables.filter((variable) => {
+                        const originalType = getVariableOriginalType(
+                          variable,
+                          getVariableKeys(variable)[0],
+                        );
+                        return originalType === 'array';
+                      });
+                    }}
+                    onAddVariable={() => {
+                      handleAddVariableFromComponent('select_static');
+                    }}
+                    label=""
+                    placeholder="选择变量"
+                    addVariableText="新建选项数组变量"
+                  />
+                )}
               </Form.Item>
               <Form.Item label="默认值">
                 <Select
@@ -5615,12 +5872,8 @@ export const PropertyPanel: React.FC<{
       );
     }
 
-    // 检查是否选中了选择器组件 - 使用currentComponent而不是selectedComponent
-    if (
-      currentComponent &&
-      (currentComponent.tag === 'select_static' ||
-        currentComponent.tag === 'multi_select_static')
-    ) {
+    // 检查是否选中了多选组件 - 使用currentComponent而不是selectedComponent
+    if (currentComponent && currentComponent.tag === 'multi_select_static') {
       const selectComponent = currentComponent as any;
       const options = selectComponent.options || [];
 
@@ -5689,10 +5942,7 @@ export const PropertyPanel: React.FC<{
             }}
           >
             <Text style={{ fontSize: '12px', color: '#0369a1' }}>
-              🎯 当前选中：
-              {currentComponent.tag === 'multi_select_static'
-                ? '下拉多选组件'
-                : '下拉单选组件'}
+              🎯 当前选中：下拉多选组件
             </Text>
           </div>
           {/* 基础设置 */}
