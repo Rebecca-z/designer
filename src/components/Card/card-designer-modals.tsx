@@ -81,7 +81,30 @@ const Modals: React.FC<ModalsProps> = ({
   // 导出HTML预览
   const exportHTMLPreview = () => {
     try {
-      const html = generatePreviewHTML(data);
+      // 将变量数据合并到data中
+      const dataWithVariables = {
+        ...data,
+        variables: variables.reduce((acc: any, variable: any) => {
+          if (typeof variable === 'object' && variable !== null) {
+            const keys = Object.keys(variable);
+            keys.forEach((key) => {
+              if (!key.startsWith('__')) {
+                acc[key] = variable[key];
+              }
+            });
+          }
+          return acc;
+        }, {}),
+      };
+
+      console.log('🔍 导出HTML预览 - 数据结构:', {
+        originalData: data,
+        variables: variables,
+        mergedData: dataWithVariables,
+        variablesObject: dataWithVariables.variables,
+      });
+
+      const html = generatePreviewHTML(dataWithVariables);
       const blob = new Blob([html], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -394,6 +417,24 @@ const Modals: React.FC<ModalsProps> = ({
             }}
           >
             {(() => {
+              console.log('🔍 预览模态框 - 变量数据检查:', {
+                variablesCount: variables.length,
+                variables: variables,
+                variablesType: typeof variables,
+                isArray: Array.isArray(variables),
+                variableNames: variables.map((v: any) => {
+                  if (typeof v === 'object' && v !== null) {
+                    return Object.keys(v).filter(
+                      (key) => !key.startsWith('__'),
+                    );
+                  }
+                  return v?.name || 'unknown';
+                }),
+                timestamp: new Date().toISOString(),
+              });
+              return null;
+            })()}
+            {(() => {
               // 检查数据格式并获取正确的elements
               const isNewFormat =
                 data.dsl && data.dsl.body && data.dsl.body.elements;
@@ -480,6 +521,7 @@ const Modals: React.FC<ModalsProps> = ({
                             isHovered={false}
                             headerData={headerData}
                             verticalSpacing={verticalSpacing}
+                            variables={variables}
                           />
                         </div>
                       </ErrorBoundary>

@@ -3166,24 +3166,11 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             // 立即阻止事件冒泡，防止触发父级选中
             e.stopPropagation();
             e.preventDefault();
-
-            // console.log('📏 分割线组件被点击:', {
-            //   componentId: comp.id,
-            //   componentTag: comp.tag,
-            //   path,
-            // });
-
             // 处理组件选中
             if (onSelect) {
-              // console.log('📏 调用 onSelect 回调:', {
-              //   component,
-              //   path,
-              // });
               onSelect(component, path);
             }
-
             if (onCanvasFocus) {
-              // console.log('📏 调用 onCanvasFocus 回调');
               onCanvasFocus();
             }
           }}
@@ -3194,7 +3181,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             style={{
               margin: '0',
               borderColor: isCurrentSelected ? '#1890ff' : '#d9d9d9',
-              // borderWidth: isCurrentSelected ? '2px' : '2px',
               borderWidth: '1px',
               borderStyle: borderStyle, // 应用动态边框样式
               transition: 'all 0.2s ease',
@@ -3549,13 +3535,11 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       const inputContent = (
         <div
           style={{
-            // marginBottom: '12px',
             border:
               isCurrentSelected && !isPreview
                 ? '2px solid #1890ff'
                 : '2px solid transparent',
             borderRadius: '6px',
-            padding: '8px',
             backgroundColor:
               isCurrentSelected && !isPreview
                 ? 'rgba(24, 144, 255, 0.05)'
@@ -3571,12 +3555,52 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             placeholder={(() => {
               // 解析占位文本变量
               const placeholderContent = comp.placeholder?.content || '请输入';
+
+              console.log('🔍 ComponentRendererCore - 输入框占位文本解析:', {
+                componentId: comp.id,
+                isPreview,
+                placeholderContent,
+                hasVariables: variables.length > 0,
+                variablesCount: variables.length,
+                variables: variables,
+                containsVariable: placeholderContent.includes('${'),
+              });
+
               if (placeholderContent.includes('${')) {
                 const variableMatch = placeholderContent.match(/\$\{([^}]+)\}/);
                 if (variableMatch && variableMatch[1]) {
                   const variableName = variableMatch[1];
+
+                  console.log('🔍 ComponentRendererCore - 查找变量:', {
+                    variableName,
+                    variables: variables,
+                    variablesType: Array.isArray(variables)
+                      ? 'array'
+                      : typeof variables,
+                    variablesDetailed: variables.map(
+                      (v: any, index: number) => ({
+                        index,
+                        type: typeof v,
+                        isObject: typeof v === 'object' && v !== null,
+                        keys:
+                          typeof v === 'object' && v !== null
+                            ? Object.keys(v)
+                            : [],
+                        value: v,
+                      }),
+                    ),
+                  });
+
+                  // 支持两种变量格式：
+                  // 1. VariableItem格式：{变量名: 值}
+                  // 2. Variable格式：{name: 变量名, value: 值, type: 类型}
                   const variable = variables.find((v: any) => {
                     if (typeof v === 'object' && v !== null) {
+                      // Variable格式：{name, value, type}
+                      if (v.name && v.name === variableName) {
+                        return true;
+                      }
+                      // VariableItem格式：{变量名: 值}
                       return Object.keys(v).some(
                         (key) => !key.startsWith('__') && key === variableName,
                       );
@@ -3584,18 +3608,66 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                     return false;
                   });
 
+                  console.log('🔍 ComponentRendererCore - 变量查找结果:', {
+                    variableName,
+                    foundVariable: variable,
+                    variableKeys: variable ? Object.keys(variable) : [],
+                  });
+
                   if (variable) {
-                    const variableValue = (variable as any)[variableName];
-                    console.log('🔍 输入框占位文本解析变量:', {
-                      componentId: comp.id,
-                      variableName,
-                      variableValue,
-                      placeholderContent,
-                    });
+                    // 根据变量格式获取变量值
+                    let variableValue;
+                    if (
+                      (variable as any).name &&
+                      (variable as any).value !== undefined
+                    ) {
+                      // Variable格式：{name, value, type}
+                      variableValue = (variable as any).value;
+                    } else {
+                      // VariableItem格式：{变量名: 值}
+                      variableValue = (variable as any)[variableName];
+                    }
+
+                    console.log(
+                      '✅ ComponentRendererCore - 输入框占位文本解析变量成功:',
+                      {
+                        componentId: comp.id,
+                        isPreview,
+                        variableName,
+                        variableValue,
+                        placeholderContent,
+                        resolvedValue: String(variableValue),
+                        variableFormat: (variable as any).name
+                          ? 'Variable'
+                          : 'VariableItem',
+                      },
+                    );
                     return String(variableValue);
+                  } else {
+                    console.log('❌ ComponentRendererCore - 变量未找到:', {
+                      componentId: comp.id,
+                      isPreview,
+                      variableName,
+                      placeholderContent,
+                      availableVariables: variables.map((v: any) => {
+                        if (typeof v === 'object' && v !== null) {
+                          return Object.keys(v).filter(
+                            (key) => !key.startsWith('__'),
+                          );
+                        }
+                        return 'unknown';
+                      }),
+                    });
                   }
                 }
               }
+
+              console.log('🔍 ComponentRendererCore - 返回原始占位文本:', {
+                componentId: comp.id,
+                isPreview,
+                placeholderContent,
+              });
+
               return placeholderContent;
             })()}
             value={(() => {
@@ -3605,8 +3677,16 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                 const variableMatch = defaultContent.match(/\$\{([^}]+)\}/);
                 if (variableMatch && variableMatch[1]) {
                   const variableName = variableMatch[1];
+                  // 支持两种变量格式：
+                  // 1. VariableItem格式：{变量名: 值}
+                  // 2. Variable格式：{name: 变量名, value: 值, type: 类型}
                   const variable = variables.find((v: any) => {
                     if (typeof v === 'object' && v !== null) {
+                      // Variable格式：{name, value, type}
+                      if (v.name && v.name === variableName) {
+                        return true;
+                      }
+                      // VariableItem格式：{变量名: 值}
                       return Object.keys(v).some(
                         (key) => !key.startsWith('__') && key === variableName,
                       );
@@ -3615,13 +3695,33 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                   });
 
                   if (variable) {
-                    const variableValue = (variable as any)[variableName];
-                    console.log('🔍 输入框默认文本解析变量:', {
-                      componentId: comp.id,
-                      variableName,
-                      variableValue,
-                      defaultContent,
-                    });
+                    // 根据变量格式获取变量值
+                    let variableValue;
+                    if (
+                      (variable as any).name &&
+                      (variable as any).value !== undefined
+                    ) {
+                      // Variable格式：{name, value, type}
+                      variableValue = (variable as any).value;
+                    } else {
+                      // VariableItem格式：{变量名: 值}
+                      variableValue = (variable as any)[variableName];
+                    }
+
+                    console.log(
+                      '✅ ComponentRendererCore - 输入框默认文本解析变量成功:',
+                      {
+                        componentId: comp.id,
+                        isPreview,
+                        variableName,
+                        variableValue,
+                        defaultContent,
+                        resolvedValue: String(variableValue),
+                        variableFormat: (variable as any).name
+                          ? 'Variable'
+                          : 'VariableItem',
+                      },
+                    );
                     return String(variableValue);
                   }
                 }

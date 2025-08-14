@@ -101,9 +101,17 @@ const buttonHtml = (comp: any) => {
 const renderColumnContent = (
   col: any,
   index: number,
-  renderFn: (component: ComponentType) => string,
+  renderFn: (
+    component: ComponentType,
+    verticalSpacing?: number,
+    variables?: any[],
+  ) => string,
+  verticalSpacing: number = 8,
+  variables: any[] = [],
 ) => {
-  const colElements = (col.elements || []).map(renderFn).join('');
+  const colElements = (col.elements || [])
+    .map((element: any) => renderFn(element, verticalSpacing, variables))
+    .join('');
 
   return `
     <div style="
@@ -137,11 +145,18 @@ const renderColumnContent = (
 // 渲染分栏布局
 const columnsHtml = (
   comp: any,
-  renderFn: (component: ComponentType) => string,
+  renderFn: (
+    component: ComponentType,
+    verticalSpacing?: number,
+    variables?: any[],
+  ) => string,
   verticalSpacing: number = 8,
+  variables: any[] = [],
 ) => {
   const columnsContent = (comp.columns || [])
-    .map((col: any, index: number) => renderColumnContent(col, index, renderFn))
+    .map((col: any, index: number) =>
+      renderColumnContent(col, index, renderFn, verticalSpacing, variables),
+    )
     .join('');
 
   return `
@@ -336,6 +351,7 @@ const getTitleThemeStyle = (theme: string) => {
 export const renderComponentToHTML = (
   component: ComponentType,
   verticalSpacing: number = 8,
+  variables: any[] = [],
 ): string => {
   const comp = component as any;
 
@@ -395,14 +411,23 @@ export const renderComponentToHTML = (
             📋 ${comp.name || '表单'}
           </div>
           ${
-            (comp.elements || []).map(renderComponentToHTML).join('') ||
+            (comp.elements || [])
+              .map((element: any) =>
+                renderComponentToHTML(element, verticalSpacing, variables),
+              )
+              .join('') ||
             '<p style="color: #999; text-align: center; padding: 20px;">空表单</p>'
           }
         </form>
       `;
 
     case 'column_set':
-      return columnsHtml(comp, renderComponentToHTML, verticalSpacing);
+      return columnsHtml(
+        comp,
+        renderComponentToHTML,
+        verticalSpacing,
+        variables,
+      );
 
     case 'plain_text':
       return `
@@ -508,7 +533,154 @@ export const renderComponentToHTML = (
     case 'img_combination':
       return imagesHtml(comp, verticalSpacing);
 
-    case 'input':
+    case 'input': {
+      // 解析占位文本变量
+      const resolvePlaceholder = (placeholderContent: string) => {
+        console.log('🔍 开始解析占位文本变量:', {
+          placeholderContent,
+          hasVariables: variables.length > 0,
+          variablesCount: variables.length,
+          variables: variables,
+        });
+
+        if (!placeholderContent || !placeholderContent.includes('${')) {
+          console.log('⏭️ 占位文本不包含变量，直接返回:', placeholderContent);
+          return placeholderContent;
+        }
+
+        const variableMatch = placeholderContent.match(/\$\{([^}]+)\}/);
+        if (variableMatch && variableMatch[1]) {
+          const variableName = variableMatch[1];
+          console.log('🔍 找到变量名:', variableName);
+
+          // 尝试多种方式查找变量
+          let variableValue = null;
+
+          // 方式1: 在variables数组中查找对象格式的变量
+          const variable = variables.find((v: any) => {
+            if (typeof v === 'object' && v !== null) {
+              return Object.keys(v).some(
+                (key) => !key.startsWith('__') && key === variableName,
+              );
+            }
+            return false;
+          });
+
+          if (variable) {
+            variableValue = (variable as any)[variableName];
+          }
+
+          // 方式2: 如果variables是对象格式，直接查找
+          if (
+            !variableValue &&
+            typeof variables === 'object' &&
+            variables !== null &&
+            !Array.isArray(variables)
+          ) {
+            variableValue = (variables as any)[variableName];
+          }
+
+          console.log('🔍 变量查找结果:', {
+            variableName,
+            foundVariable: variable,
+            variableValue,
+            variablesType: Array.isArray(variables)
+              ? 'array'
+              : typeof variables,
+            allVariables: variables,
+          });
+
+          if (variableValue !== null && variableValue !== undefined) {
+            console.log('✅ 在线预览输入框占位文本解析变量成功:', {
+              variableName,
+              variableValue,
+              placeholderContent,
+              resolvedValue: String(variableValue),
+            });
+            return String(variableValue);
+          } else {
+            console.log('❌ 未找到对应变量，返回原始内容:', {
+              variableName,
+              placeholderContent,
+              variablesType: Array.isArray(variables)
+                ? 'array'
+                : typeof variables,
+              availableVariables: Array.isArray(variables)
+                ? variables.map((v: any) =>
+                    typeof v === 'object' ? Object.keys(v) : v,
+                  )
+                : Object.keys(variables || {}),
+            });
+          }
+        }
+        return placeholderContent;
+      };
+
+      // 解析默认值变量
+      const resolveDefaultValue = (defaultContent: string) => {
+        if (!defaultContent || !defaultContent.includes('${')) {
+          return defaultContent;
+        }
+
+        const variableMatch = defaultContent.match(/\$\{([^}]+)\}/);
+        if (variableMatch && variableMatch[1]) {
+          const variableName = variableMatch[1];
+
+          // 尝试多种方式查找变量
+          let variableValue = null;
+
+          // 方式1: 在variables数组中查找对象格式的变量
+          const variable = variables.find((v: any) => {
+            if (typeof v === 'object' && v !== null) {
+              return Object.keys(v).some(
+                (key) => !key.startsWith('__') && key === variableName,
+              );
+            }
+            return false;
+          });
+
+          if (variable) {
+            variableValue = (variable as any)[variableName];
+          }
+
+          // 方式2: 如果variables是对象格式，直接查找
+          if (
+            !variableValue &&
+            typeof variables === 'object' &&
+            variables !== null &&
+            !Array.isArray(variables)
+          ) {
+            variableValue = (variables as any)[variableName];
+          }
+
+          if (variableValue !== null && variableValue !== undefined) {
+            console.log('✅ 在线预览输入框默认值解析变量成功:', {
+              variableName,
+              variableValue,
+              defaultContent,
+              resolvedValue: String(variableValue),
+            });
+            return String(variableValue);
+          } else {
+            console.log('❌ 默认值变量未找到:', {
+              variableName,
+              defaultContent,
+              variablesType: Array.isArray(variables)
+                ? 'array'
+                : typeof variables,
+            });
+          }
+        }
+        return defaultContent;
+      };
+
+      const resolvedPlaceholder = resolvePlaceholder(
+        comp.placeholder?.content || '请输入',
+      );
+      const resolvedDefaultValue = resolveDefaultValue(
+        comp.default_value?.content || '',
+      );
+
       return `
         <div style="margin: ${verticalSpacing}px 0;">
           <label style="
@@ -524,8 +696,8 @@ export const renderComponentToHTML = (
           </label>
           <input 
             type="text" 
-            placeholder="${comp.placeholder?.content || '请输入'}"
-            value="${comp.default_value?.content || ''}"
+            placeholder="${resolvedPlaceholder}"
+            value="${resolvedDefaultValue}"
             style="
               width: 100%;
               padding: 8px 12px;
@@ -541,6 +713,7 @@ export const renderComponentToHTML = (
           />
         </div>
       `;
+    }
 
     case 'button':
       return buttonHtml(comp);
@@ -1951,7 +2124,9 @@ export const loadHTMLTemplate = async (): Promise<string> => {
 export const generatePreviewHTMLAsync = async (
   data: DesignData,
 ): Promise<string> => {
-  const bodyContent = data.elements.map(renderComponentToHTML).join('');
+  const bodyContent = data.elements
+    .map((element: any) => renderComponentToHTML(element, 8, []))
+    .join('');
 
   // 统计信息
   const stats = {
@@ -1992,12 +2167,33 @@ export const generatePreviewHTML = (data: any): string => {
   let direction = 'vertical';
   let headerInfo = null;
 
+  // 获取变量数据
+  const variables = data.variables || {};
+  console.log('🔍 在线预览获取变量数据:', {
+    dataStructure: {
+      hasVariables: !!data.variables,
+      hasDsl: !!data.dsl,
+      dataKeys: Object.keys(data),
+    },
+    variables,
+    variableKeys: Object.keys(variables),
+    variableCount: Object.keys(variables).length,
+    fullData: data,
+  });
+
+  // 转换变量格式为VariableItem[]格式
+  const variableItems: any[] = Object.keys(variables).map((variableName) => ({
+    [variableName]: variables[variableName],
+  }));
+
   if (isNewFormat) {
     // 新格式卡片数据处理
     const elements = data.dsl.body.elements || [];
     const verticalSpacing = data.dsl.body.vertical_spacing || 8;
     bodyContent = elements
-      .map((element: any) => renderComponentToHTML(element, verticalSpacing))
+      .map((element: any) =>
+        renderComponentToHTML(element, verticalSpacing, variableItems),
+      )
       .join('');
 
     // 从header获取主题信息
@@ -2015,7 +2211,9 @@ export const generatePreviewHTML = (data: any): string => {
     const elements = data.elements || [];
     const verticalSpacing = data.vertical_spacing || 8;
     bodyContent = elements
-      .map((element: any) => renderComponentToHTML(element, verticalSpacing))
+      .map((element: any) =>
+        renderComponentToHTML(element, verticalSpacing, variableItems),
+      )
       .join('');
 
     stats = {
