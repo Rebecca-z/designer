@@ -22,6 +22,7 @@ export interface VariableBindingProps {
     | 'select_static_array'
     | 'multi_select_static'
     | 'multi_select_static_array'
+    | 'multi_select_static_text'
     | 'button';
   /** 可用的变量列表 */
   variables: VariableItem[];
@@ -82,6 +83,8 @@ const VariableBinding: React.FC<VariableBindingProps> = ({
       case 'multi_select_static':
       case 'multi_select_static_array':
         return '新建选项数组变量';
+      case 'multi_select_static_text':
+        return '新建变量';
       case 'button':
         return '新建变量';
       default:
@@ -109,6 +112,8 @@ const VariableBinding: React.FC<VariableBindingProps> = ({
         return '文本/整数'; // 下拉多选组件的选项文本和回传参数支持文本和整数类型
       case 'multi_select_static_array':
         return '选项数组'; // 下拉多选组件的绑定变量模式支持选项数组类型
+      case 'multi_select_static_text':
+        return '文本/整数'; // 下拉多选组件的选项文本和回传参数支持文本和整数类型
       case 'button':
         return '文本'; // 按钮组件使用文本类型
       default:

@@ -61,97 +61,7 @@ const { Option } = Select;
 const { Text } = Typography;
 const { TextArea } = Input;
 
-// 下拉多选选项编辑器组件
-interface MultiSelectOptionsEditorProps {
-  options: Array<any>;
-  onUpdateOptions: (options: Array<any>) => void;
-}
-
-const MultiSelectOptionsEditor: React.FC<MultiSelectOptionsEditorProps> = ({
-  options,
-  onUpdateOptions,
-}) => {
-  // 添加选项
-  const handleAddOption = () => {
-    const newOption = {
-      text: {
-        content: `选项${options.length + 1}`,
-        i18n_content: {
-          'en-US': `Option${options.length + 1}`,
-        },
-      },
-      value: `option_${options.length + 1}`,
-    };
-    const newOptions = [...options, newOption];
-    onUpdateOptions(newOptions);
-  };
-
-  // 更新选项
-  const handleUpdateOption = (index: number, field: string, value: any) => {
-    const newOptions = [...options];
-    if (field === 'content') {
-      newOptions[index] = {
-        ...newOptions[index],
-        text: {
-          ...newOptions[index].text,
-          content: value,
-          i18n_content: {
-            'en-US': value,
-          },
-        },
-      };
-      // 删除label字段
-      delete newOptions[index].label;
-    } else if (field === 'value') {
-      newOptions[index] = {
-        ...newOptions[index],
-        value: value,
-      };
-    }
-    onUpdateOptions(newOptions);
-  };
-
-  // 删除选项
-  const handleDeleteOption = (index: number) => {
-    const newOptions = options.filter((_: any, i: number) => i !== index);
-    onUpdateOptions(newOptions);
-  };
-
-  return (
-    <div>
-      {options.map((opt: any, idx: number) => (
-        <div
-          key={idx}
-          style={{
-            display: 'flex',
-            gap: 8,
-            marginBottom: 8,
-            alignItems: 'center',
-          }}
-        >
-          <Input
-            value={opt.text?.content || opt.label || ''}
-            onChange={(e) => handleUpdateOption(idx, 'content', e.target.value)}
-            placeholder={`选项${idx + 1}名称`}
-            style={{ flex: 2 }}
-          />
-          <Input
-            value={opt.value || ''}
-            onChange={(e) => handleUpdateOption(idx, 'value', e.target.value)}
-            placeholder={`选项${idx + 1}值`}
-            style={{ flex: 2 }}
-          />
-          <Button danger size="small" onClick={() => handleDeleteOption(idx)}>
-            删除
-          </Button>
-        </div>
-      ))}
-      <Button type="dashed" block onClick={handleAddOption}>
-        添加选项
-      </Button>
-    </div>
-  );
-};
+// 下拉多选选项编辑器组件已移除，现在使用与下拉单选相同的popover界面
 
 // 可拖拽的组件项
 const DraggableComponent: React.FC<{
@@ -1581,7 +1491,11 @@ export const PropertyPanel: React.FC<{
         const variableMatch = (realComponent.options as string).match(
           /\$\{([^}]+)\}/,
         );
-        if (variableMatch && variableMatch[1]) {
+        if (
+          variableMatch &&
+          variableMatch[1] &&
+          variableMatch[1] !== 'placeholder'
+        ) {
           const variableName = variableMatch[1];
           setLastBoundVariables((prev) => ({
             ...prev,
@@ -1597,6 +1511,15 @@ export const PropertyPanel: React.FC<{
           console.log('💾 记住现有下拉多选组件变量绑定:', {
             componentId: realComponent.id,
             variableName,
+          });
+        } else if (variableMatch && variableMatch[1] === 'placeholder') {
+          // 如果是 placeholder，不保存绑定状态
+          multiSelectComponentStateManager.setBoundVariableName(
+            realComponent.id,
+            '',
+          );
+          console.log('🚫 检测到placeholder，不保存绑定状态:', {
+            componentId: realComponent.id,
           });
         }
       }
@@ -6723,8 +6646,61 @@ export const PropertyPanel: React.FC<{
                           rememberedVariable,
                         );
                       } else {
-                        // 如果没有记住的变量，设置占位符
-                        handleValueChange('options', '${placeholder}');
+                        // 如果没有记住的变量，使用指定模式下的选项作为实际值
+                        const userEditedOptions =
+                          multiSelectComponentStateManager.getUserEditedOptions(
+                            currentComponent.id,
+                          );
+                        if (
+                          userEditedOptions &&
+                          Array.isArray(userEditedOptions)
+                        ) {
+                          // 转换为正确的数据格式
+                          const formattedOptions = userEditedOptions.map(
+                            (opt: any) => ({
+                              text: {
+                                content:
+                                  opt.label ||
+                                  `选项${userEditedOptions.indexOf(opt) + 1}`,
+                                i18n_content: {
+                                  'en-US':
+                                    opt.label ||
+                                    `Option${
+                                      userEditedOptions.indexOf(opt) + 1
+                                    }`,
+                                },
+                              },
+                              value:
+                                opt.value ||
+                                `option_${userEditedOptions.indexOf(opt) + 1}`,
+                            }),
+                          );
+                          handleValueChange('options', formattedOptions);
+                        } else {
+                          // 如果没有保存的选项，使用默认选项
+                          const defaultOptions = [
+                            {
+                              text: {
+                                content: '选项1',
+                                i18n_content: { 'en-US': 'Option1' },
+                              },
+                              value: 'option1',
+                            },
+                            {
+                              text: {
+                                content: '选项2',
+                                i18n_content: { 'en-US': 'Option2' },
+                              },
+                              value: 'option2',
+                            },
+                          ];
+                          handleValueChange('options', defaultOptions);
+                        }
+                        // 不要将 'placeholder' 保存为绑定变量名
+                        multiSelectComponentStateManager.setBoundVariableName(
+                          currentComponent.id,
+                          '',
+                        );
                       }
                     }
 
@@ -6744,21 +6720,645 @@ export const PropertyPanel: React.FC<{
 
                 {/* 根据模式显示不同的内容 */}
                 {multiSelectOptionsMode === 'specify' ? (
-                  // 指定模式：显示选项编辑界面
-                  <MultiSelectOptionsEditor
-                    options={options}
-                    onUpdateOptions={(newOptions) => {
-                      handleValueChange('options', newOptions);
-                      // 同时保存到状态管理器
-                      multiSelectComponentStateManager.setUserEditedOptions(
-                        currentComponent.id,
-                        newOptions.map((opt: any) => ({
-                          label: opt.text?.content || opt.label || '',
-                          value: opt.value || '',
-                        })),
-                      );
-                    }}
-                  />
+                  // 指定模式：显示选项按钮界面（与下拉单选保持一致）
+                  <>
+                    {Array.isArray(options) &&
+                      options.map((opt: any, idx: number) => (
+                        <div
+                          key={idx}
+                          style={{ display: 'flex', gap: 8, marginBottom: 8 }}
+                        >
+                          <Popover
+                            title={
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                }}
+                              >
+                                <span>选项设置</span>
+                                <Button
+                                  type="text"
+                                  icon={<CloseOutlined />}
+                                  size="small"
+                                  onClick={() => {
+                                    setOptionPopoverVisible(false);
+                                    setEditingOptionIndex(-1);
+                                  }}
+                                />
+                              </div>
+                            }
+                            content={(() => {
+                              if (editingOptionIndex !== idx) return null;
+
+                              return (
+                                <div style={{ width: 320, padding: '8px 0' }}>
+                                  {/* 选项文本设置 */}
+                                  <div style={{ marginBottom: 24 }}>
+                                    <div
+                                      style={{
+                                        marginBottom: 8,
+                                        fontWeight: 'bold',
+                                      }}
+                                    >
+                                      选项文本
+                                    </div>
+                                    <Segmented
+                                      value={optionTextMode}
+                                      onChange={(value) => {
+                                        setOptionTextMode(
+                                          value as 'specify' | 'variable',
+                                        );
+                                        const currentOption = options[idx];
+                                        const newOptions = [...options];
+                                        const optionKey = `${currentComponent.id}_${idx}`;
+
+                                        if (value === 'specify') {
+                                          // 切换到指定模式，使用保存的值或默认值
+                                          const specifyValue =
+                                            optionSpecifyValues[optionKey];
+                                          const defaultText =
+                                            specifyValue?.text ||
+                                            `选项${idx + 1}`;
+                                          newOptions[idx] = {
+                                            ...currentOption,
+                                            text: {
+                                              content: defaultText,
+                                              i18n_content: {
+                                                'en-US': defaultText,
+                                              },
+                                            },
+                                          };
+                                          // 删除label字段
+                                          delete newOptions[idx].label;
+                                        } else {
+                                          // 切换到变量模式，先保存当前指定值
+                                          const currentText =
+                                            currentOption?.text?.content ||
+                                            currentOption?.label ||
+                                            `选项${idx + 1}`;
+                                          setOptionSpecifyValues((prev) => ({
+                                            ...prev,
+                                            [optionKey]: {
+                                              ...prev[optionKey],
+                                              text: currentText,
+                                            },
+                                          }));
+
+                                          // 设置为指定值（不显示${placeholder}）
+                                          newOptions[idx] = {
+                                            ...currentOption,
+                                            text: {
+                                              content: currentText,
+                                              i18n_content: {
+                                                'en-US': currentText,
+                                              },
+                                            },
+                                          };
+                                          // 删除label字段
+                                          delete newOptions[idx].label;
+                                        }
+
+                                        handleValueChange(
+                                          'options',
+                                          newOptions,
+                                        );
+                                        multiSelectComponentStateManager.setUserEditedOptions(
+                                          currentComponent.id,
+                                          newOptions.map((opt: any) => ({
+                                            label:
+                                              opt.text?.content ||
+                                              opt.label ||
+                                              '',
+                                            value: opt.value || '',
+                                          })),
+                                        );
+                                      }}
+                                      options={[
+                                        { label: '指定', value: 'specify' },
+                                        {
+                                          label: '绑定变量',
+                                          value: 'variable',
+                                        },
+                                      ]}
+                                      style={{ marginBottom: 12 }}
+                                    />
+
+                                    {optionTextMode === 'specify' ? (
+                                      <Input
+                                        value={(() => {
+                                          const currentOption = options[idx];
+                                          return (
+                                            currentOption?.text?.content ||
+                                            currentOption?.label ||
+                                            ''
+                                          );
+                                        })()}
+                                        onChange={(e) => {
+                                          const newValue = e.target.value;
+                                          const optionKey = `${currentComponent.id}_${idx}`;
+
+                                          // 保存指定模式下的值
+                                          setOptionSpecifyValues((prev) => ({
+                                            ...prev,
+                                            [optionKey]: {
+                                              ...prev[optionKey],
+                                              text: newValue,
+                                            },
+                                          }));
+
+                                          const newOptions = [...options];
+                                          newOptions[idx] = {
+                                            ...options[idx],
+                                            text: {
+                                              content: newValue,
+                                              i18n_content: {
+                                                'en-US': newValue,
+                                              },
+                                            },
+                                          };
+                                          // 删除label字段
+                                          delete newOptions[idx].label;
+                                          handleValueChange(
+                                            'options',
+                                            newOptions,
+                                          );
+                                          multiSelectComponentStateManager.setUserEditedOptions(
+                                            currentComponent.id,
+                                            newOptions.map((opt: any) => ({
+                                              label:
+                                                opt.text?.content ||
+                                                opt.label ||
+                                                '',
+                                              value: opt.value || '',
+                                            })),
+                                          );
+                                        }}
+                                        placeholder="请输入选项文本"
+                                      />
+                                    ) : (
+                                      <VariableBinding
+                                        value={(() => {
+                                          const currentOption = options[idx];
+                                          const textContent =
+                                            currentOption?.text?.content ||
+                                            currentOption?.label ||
+                                            '';
+                                          if (textContent.includes('${')) {
+                                            const match =
+                                              textContent.match(
+                                                /\$\{([^}]+)\}/,
+                                              );
+                                            return match &&
+                                              match[1] !== 'placeholder'
+                                              ? match[1]
+                                              : '';
+                                          }
+                                          return '';
+                                        })()}
+                                        onChange={(variableName) => {
+                                          const newOptions = [...options];
+                                          const optionKey = `${currentComponent.id}_${idx}`;
+
+                                          let finalContent: string;
+                                          if (variableName) {
+                                            // 有变量选择，使用变量格式
+                                            finalContent = `\${${variableName}}`;
+                                          } else {
+                                            // 没有变量选择，使用指定模式下的值
+                                            const specifyValue =
+                                              optionSpecifyValues[optionKey];
+                                            finalContent =
+                                              specifyValue?.text ||
+                                              `选项${idx + 1}`;
+                                          }
+
+                                          newOptions[idx] = {
+                                            ...options[idx],
+                                            text: {
+                                              content: finalContent,
+                                              i18n_content: {
+                                                'en-US': finalContent,
+                                              },
+                                            },
+                                          };
+                                          // 删除label字段
+                                          delete newOptions[idx].label;
+                                          handleValueChange(
+                                            'options',
+                                            newOptions,
+                                          );
+                                          multiSelectComponentStateManager.setUserEditedOptions(
+                                            currentComponent.id,
+                                            newOptions.map((opt: any) => ({
+                                              label:
+                                                opt.text?.content ||
+                                                opt.label ||
+                                                '',
+                                              value: opt.value || '',
+                                            })),
+                                          );
+                                        }}
+                                        componentType="multi_select_static_text"
+                                        variables={variables}
+                                        getFilteredVariables={() => {
+                                          return variables.filter(
+                                            (variable) => {
+                                              if (
+                                                typeof variable === 'object' &&
+                                                variable !== null
+                                              ) {
+                                                const keys =
+                                                  getVariableKeys(variable);
+                                                if (keys.length > 0) {
+                                                  const variableName = keys[0];
+                                                  const originalType =
+                                                    getVariableOriginalType(
+                                                      variable,
+                                                      variableName,
+                                                    );
+                                                  return (
+                                                    originalType === 'text' ||
+                                                    originalType === 'number'
+                                                  );
+                                                }
+                                              }
+                                              return false;
+                                            },
+                                          );
+                                        }}
+                                        getVariableDisplayName={
+                                          getVariableDisplayName
+                                        }
+                                        getVariableKeys={getVariableKeys}
+                                        onAddVariable={() => {
+                                          handleAddVariableFromComponent(
+                                            'multi_select_static',
+                                          );
+                                        }}
+                                        label=""
+                                        placeholder="选择变量"
+                                        addVariableText="新建变量"
+                                      />
+                                    )}
+                                  </div>
+
+                                  {/* 回传参数设置 */}
+                                  <div style={{ marginBottom: 24 }}>
+                                    <div
+                                      style={{
+                                        marginBottom: 8,
+                                        fontWeight: 'bold',
+                                      }}
+                                    >
+                                      回传参数
+                                    </div>
+                                    <Segmented
+                                      value={optionValueMode}
+                                      onChange={(value) => {
+                                        setOptionValueMode(
+                                          value as 'specify' | 'variable',
+                                        );
+                                        const currentOption = options[idx];
+                                        const newOptions = [...options];
+                                        const optionKey = `${currentComponent.id}_${idx}`;
+
+                                        if (value === 'specify') {
+                                          // 切换到指定模式，使用保存的值或默认值
+                                          const specifyValue =
+                                            optionSpecifyValues[optionKey];
+                                          const defaultValue =
+                                            specifyValue?.value ||
+                                            `option${idx + 1}`;
+                                          newOptions[idx] = {
+                                            ...currentOption,
+                                            value: defaultValue,
+                                          };
+                                        } else {
+                                          // 切换到变量模式，先保存当前指定值
+                                          const currentValue =
+                                            currentOption?.value ||
+                                            `option${idx + 1}`;
+                                          setOptionSpecifyValues((prev) => ({
+                                            ...prev,
+                                            [optionKey]: {
+                                              ...prev[optionKey],
+                                              value: currentValue,
+                                            },
+                                          }));
+
+                                          // 设置为指定值（不显示${placeholder}）
+                                          newOptions[idx] = {
+                                            ...currentOption,
+                                            value: currentValue,
+                                          };
+                                        }
+
+                                        handleValueChange(
+                                          'options',
+                                          newOptions,
+                                        );
+                                        multiSelectComponentStateManager.setUserEditedOptions(
+                                          currentComponent.id,
+                                          newOptions.map((opt: any) => ({
+                                            label:
+                                              opt.text?.content ||
+                                              opt.label ||
+                                              '',
+                                            value: opt.value || '',
+                                          })),
+                                        );
+                                      }}
+                                      options={[
+                                        { label: '指定', value: 'specify' },
+                                        {
+                                          label: '绑定变量',
+                                          value: 'variable',
+                                        },
+                                      ]}
+                                      style={{ marginBottom: 12 }}
+                                    />
+
+                                    {optionValueMode === 'specify' ? (
+                                      <Input
+                                        value={options[idx]?.value || ''}
+                                        onChange={(e) => {
+                                          const newValue = e.target.value;
+                                          const optionKey = `${currentComponent.id}_${idx}`;
+
+                                          // 保存指定模式下的值
+                                          setOptionSpecifyValues((prev) => ({
+                                            ...prev,
+                                            [optionKey]: {
+                                              ...prev[optionKey],
+                                              value: newValue,
+                                            },
+                                          }));
+
+                                          const newOptions = [...options];
+                                          newOptions[idx] = {
+                                            ...options[idx],
+                                            value: newValue,
+                                          };
+                                          handleValueChange(
+                                            'options',
+                                            newOptions,
+                                          );
+                                          multiSelectComponentStateManager.setUserEditedOptions(
+                                            currentComponent.id,
+                                            newOptions.map((opt: any) => ({
+                                              label:
+                                                opt.text?.content ||
+                                                opt.label ||
+                                                '',
+                                              value: opt.value || '',
+                                            })),
+                                          );
+                                        }}
+                                        placeholder="请输入回传参数"
+                                      />
+                                    ) : (
+                                      <VariableBinding
+                                        value={(() => {
+                                          const currentOption = options[idx];
+                                          const valueContent =
+                                            currentOption?.value || '';
+                                          if (valueContent.includes('${')) {
+                                            const match =
+                                              valueContent.match(
+                                                /\$\{([^}]+)\}/,
+                                              );
+                                            return match &&
+                                              match[1] !== 'placeholder'
+                                              ? match[1]
+                                              : '';
+                                          }
+                                          return '';
+                                        })()}
+                                        onChange={(variableName) => {
+                                          const newOptions = [...options];
+                                          const optionKey = `${currentComponent.id}_${idx}`;
+
+                                          let finalValue: string;
+                                          if (variableName) {
+                                            // 有变量选择，使用变量格式
+                                            finalValue = `\${${variableName}}`;
+                                          } else {
+                                            // 没有变量选择，使用指定模式下的值
+                                            const specifyValue =
+                                              optionSpecifyValues[optionKey];
+                                            finalValue =
+                                              specifyValue?.value ||
+                                              `option${idx + 1}`;
+                                          }
+
+                                          newOptions[idx] = {
+                                            ...options[idx],
+                                            value: finalValue,
+                                          };
+                                          handleValueChange(
+                                            'options',
+                                            newOptions,
+                                          );
+                                          multiSelectComponentStateManager.setUserEditedOptions(
+                                            currentComponent.id,
+                                            newOptions.map((opt: any) => ({
+                                              label:
+                                                opt.text?.content ||
+                                                opt.label ||
+                                                '',
+                                              value: opt.value || '',
+                                            })),
+                                          );
+                                        }}
+                                        componentType="multi_select_static_text"
+                                        variables={variables}
+                                        getFilteredVariables={() => {
+                                          return variables.filter(
+                                            (variable) => {
+                                              if (
+                                                typeof variable === 'object' &&
+                                                variable !== null
+                                              ) {
+                                                const keys =
+                                                  getVariableKeys(variable);
+                                                if (keys.length > 0) {
+                                                  const variableName = keys[0];
+                                                  const originalType =
+                                                    getVariableOriginalType(
+                                                      variable,
+                                                      variableName,
+                                                    );
+                                                  return (
+                                                    originalType === 'text' ||
+                                                    originalType === 'number'
+                                                  );
+                                                }
+                                              }
+                                              return false;
+                                            },
+                                          );
+                                        }}
+                                        getVariableDisplayName={
+                                          getVariableDisplayName
+                                        }
+                                        getVariableKeys={getVariableKeys}
+                                        onAddVariable={() => {
+                                          handleAddVariableFromComponent(
+                                            'multi_select_static',
+                                          );
+                                        }}
+                                        label=""
+                                        placeholder="选择变量"
+                                        addVariableText="新建变量"
+                                      />
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                            trigger="click"
+                            open={
+                              optionPopoverVisible && editingOptionIndex === idx
+                            }
+                            onOpenChange={(visible) => {
+                              if (visible) {
+                                setOptionPopoverVisible(true);
+                                setEditingOptionIndex(idx);
+
+                                // 根据当前选项的数据结构判断模式
+                                const currentOption = options[idx];
+                                const textContent =
+                                  currentOption?.text?.content ||
+                                  currentOption?.label ||
+                                  '';
+                                const valueContent = currentOption?.value || '';
+
+                                // 根据当前选项的数据结构判断模式
+                                setOptionTextMode(
+                                  textContent.includes('${')
+                                    ? 'variable'
+                                    : 'specify',
+                                );
+                                setOptionValueMode(
+                                  valueContent.includes('${')
+                                    ? 'variable'
+                                    : 'specify',
+                                );
+                              } else {
+                                setOptionPopoverVisible(false);
+                                setEditingOptionIndex(-1);
+                              }
+                            }}
+                            placement="rightTop"
+                          >
+                            <Button style={{ flex: 1, textAlign: 'left' }}>
+                              {(() => {
+                                // 显示选项的最终值
+                                const textContent =
+                                  opt.text?.content ||
+                                  opt.label ||
+                                  `选项${idx + 1}`;
+
+                                // 如果是${placeholder}，不显示，而是显示指定模式下的值
+                                if (textContent === '${placeholder}') {
+                                  const optionKey = `${currentComponent.id}_${idx}`;
+                                  const specifyValue =
+                                    optionSpecifyValues[optionKey];
+                                  return specifyValue?.text || `选项${idx + 1}`;
+                                }
+
+                                if (textContent.includes('${')) {
+                                  // 如果是变量，尝试获取变量的实际值
+                                  const match =
+                                    textContent.match(/\$\{([^}]+)\}/);
+                                  if (
+                                    match &&
+                                    match[1] &&
+                                    match[1] !== 'placeholder'
+                                  ) {
+                                    const variableName = match[1];
+                                    // 查找变量的实际值
+                                    const variable = variables.find((v) => {
+                                      if (typeof v === 'object' && v !== null) {
+                                        const keys = getVariableKeys(v);
+                                        return keys.includes(variableName);
+                                      }
+                                      return false;
+                                    });
+
+                                    if (
+                                      variable &&
+                                      typeof variable === 'object'
+                                    ) {
+                                      const variableValue = (variable as any)[
+                                        variableName
+                                      ];
+                                      if (
+                                        variableValue !== undefined &&
+                                        variableValue !== null
+                                      ) {
+                                        return String(variableValue);
+                                      }
+                                    }
+
+                                    // 如果找不到变量值，显示变量名（不带${}）
+                                    return variableName;
+                                  }
+                                }
+
+                                return textContent;
+                              })()}
+                            </Button>
+                          </Popover>
+                          <Button
+                            danger
+                            onClick={() => {
+                              const newOptions = options.filter(
+                                (_: any, i: number) => i !== idx,
+                              );
+                              handleValueChange('options', newOptions);
+                              multiSelectComponentStateManager.setUserEditedOptions(
+                                currentComponent.id,
+                                newOptions.map((opt: any) => ({
+                                  label: opt.text?.content || opt.label || '',
+                                  value: opt.value || '',
+                                })),
+                              );
+                            }}
+                          >
+                            删除
+                          </Button>
+                        </div>
+                      ))}
+                    <Button
+                      type="dashed"
+                      block
+                      onClick={() => {
+                        const newOption = {
+                          text: {
+                            content: `选项${options.length + 1}`,
+                            i18n_content: {
+                              'en-US': `Option${options.length + 1}`,
+                            },
+                          },
+                          value: `option_${options.length + 1}`,
+                        };
+                        const newOptions = [...options, newOption];
+                        handleValueChange('options', newOptions);
+                        multiSelectComponentStateManager.setUserEditedOptions(
+                          currentComponent.id,
+                          newOptions.map((opt: any) => ({
+                            label: opt.text?.content || opt.label || '',
+                            value: opt.value || '',
+                          })),
+                        );
+                      }}
+                    >
+                      添加选项
+                    </Button>
+                  </>
                 ) : (
                   // 绑定变量模式：显示变量绑定组件
                   <VariableBinding
@@ -6779,7 +7379,10 @@ export const PropertyPanel: React.FC<{
                         displayValue,
                       });
 
-                      return displayValue;
+                      // 如果 displayValue 是 'placeholder'，返回空字符串
+                      return displayValue && displayValue !== 'placeholder'
+                        ? displayValue
+                        : '';
                     })()}
                     onChange={(variableName) => {
                       if (variableName) {
@@ -6804,22 +7407,38 @@ export const PropertyPanel: React.FC<{
                           },
                         );
                       } else {
-                        // 清除变量选择：恢复用户编辑的选项
+                        // 清除变量选择：恢复指定模式下的选项值
                         const userEditedOptions =
                           multiSelectComponentStateManager.getUserEditedOptions(
                             currentComponent.id,
                           );
                         if (userEditedOptions) {
+                          // 使用指定模式下保存的值，而不是简单的userEditedOptions
                           const formattedOptions = userEditedOptions.map(
-                            (opt) => ({
-                              text: {
-                                content: opt.label,
-                                i18n_content: {
-                                  'en-US': opt.label,
+                            (opt, optIdx) => {
+                              const optionKey = `${currentComponent.id}_${optIdx}`;
+                              const specifyValue =
+                                optionSpecifyValues[optionKey];
+
+                              return {
+                                text: {
+                                  content:
+                                    specifyValue?.text ||
+                                    opt.label ||
+                                    `选项${optIdx + 1}`,
+                                  i18n_content: {
+                                    'en-US':
+                                      specifyValue?.text ||
+                                      opt.label ||
+                                      `Option${optIdx + 1}`,
+                                  },
                                 },
-                              },
-                              value: opt.value,
-                            }),
+                                value:
+                                  specifyValue?.value ||
+                                  opt.value ||
+                                  `option_${optIdx + 1}`,
+                              };
+                            },
                           );
                           handleValueChange('options', formattedOptions);
                         }
@@ -6832,6 +7451,15 @@ export const PropertyPanel: React.FC<{
                           delete newState[currentComponent.id];
                           return newState;
                         });
+
+                        console.log(
+                          '🔄 清除下拉多选组件选项变量，恢复指定模式下的值:',
+                          {
+                            componentId: currentComponent.id,
+                            action: '使用指定模式下保存的值',
+                            optionSpecifyValues: optionSpecifyValues,
+                          },
+                        );
                       }
                     }}
                     componentType="multi_select_static_array"
@@ -6854,7 +7482,7 @@ export const PropertyPanel: React.FC<{
                       );
                     }}
                     label=""
-                    placeholder="选择变量"
+                    placeholder=""
                     addVariableText="新建选项数组变量"
                   />
                 )}

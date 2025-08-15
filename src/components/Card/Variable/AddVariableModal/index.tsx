@@ -63,6 +63,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
 
       case 'select_static':
       case 'multi_select_static':
+      case 'multi_select_static_text':
         return ['text', 'number']; // 下拉单选/多选组件的选项文本和回传参数支持文本和整数类型
       case 'select_static_array':
       case 'multi_select_static_array':
@@ -97,6 +98,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
 
       case 'select_static':
       case 'multi_select_static':
+      case 'multi_select_static_text':
         return 'text'; // 下拉单选/多选组件默认选择文本类型
       case 'select_static_array':
       case 'multi_select_static_array':

@@ -3956,9 +3956,14 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               width: '250px',
               fontSize: '14px',
             }}
-            // 移除disabled状态，允许操作但不保存值
+            // 画布中只允许下拉查看，不允许选中
+            value={undefined} // 始终保持空值，不显示任何选中状态
             onChange={() => {
-              // 空的onChange处理，允许UI操作但不保存状态
+              // 空的onChange处理，不允许选中任何选项
+            }}
+            onSelect={() => {
+              // 阻止选中操作
+              return false;
             }}
           >
             {selectOptions.map((option: any, optionIndex: number) => {
@@ -4090,7 +4095,11 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         // 如果options是字符串且包含变量占位符，解析变量值
         if (typeof comp.options === 'string' && comp.options.includes('${')) {
           const variableMatch = comp.options.match(/\$\{([^}]+)\}/);
-          if (variableMatch && variableMatch[1]) {
+          if (
+            variableMatch &&
+            variableMatch[1] &&
+            variableMatch[1] !== 'placeholder'
+          ) {
             const variableName = variableMatch[1];
             console.log('🔍 下拉多选组件解析变量:', {
               componentId: comp.id,
@@ -4196,9 +4205,18 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               width: '250px',
               fontSize: '14px',
             }}
-            // 移除disabled状态，允许操作但不保存值
+            // 画布中只允许下拉查看，不允许选中
+            value={[]} // 始终保持空值，不显示任何选中状态
             onChange={() => {
-              // 空的onChange处理，允许UI操作但不保存状态
+              // 空的onChange处理，不允许选中任何选项
+            }}
+            onSelect={() => {
+              // 阻止选中操作
+              return false;
+            }}
+            onDeselect={() => {
+              // 阻止取消选中操作
+              return false;
             }}
           >
             {multiSelectOptions.map((option: any, optionIndex: number) => {
