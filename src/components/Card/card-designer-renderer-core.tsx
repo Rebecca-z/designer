@@ -3975,6 +3975,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
                   console.log('🔍 画布选项显示调试:', {
                     textContent,
+                    textContentType: typeof textContent,
                     variablesCount: variables.length,
                     variables: variables.map((v: any) => ({
                       name: v.name,
@@ -3984,7 +3985,10 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                   });
 
                   // 智能显示逻辑：根据模式显示不同的值
-                  if (textContent.includes('${')) {
+                  if (
+                    typeof textContent === 'string' &&
+                    textContent.includes('${')
+                  ) {
                     // 变量模式
                     const match = textContent.match(/\$\{([^}]+)\}/);
                     if (match && match[1] && match[1] !== 'placeholder') {
@@ -4015,18 +4019,30 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                         ) {
                           displayText = String(variableValue);
                         } else {
-                          displayText = textContent; // 变量值不是简单类型，显示原始内容
+                          displayText =
+                            typeof textContent === 'string'
+                              ? textContent
+                              : `选项${optionIndex + 1}`; // 变量值不是简单类型，显示原始内容或默认文本
                         }
                       } else {
-                        displayText = textContent; // 变量未找到，显示原始内容
+                        displayText =
+                          typeof textContent === 'string'
+                            ? textContent
+                            : `选项${optionIndex + 1}`; // 变量未找到，显示原始内容或默认文本
                       }
                     } else {
                       // 没有绑定变量或是placeholder，显示原始内容（应该是指定模式的内容）
-                      displayText = textContent;
+                      displayText =
+                        typeof textContent === 'string'
+                          ? textContent
+                          : `选项${optionIndex + 1}`;
                     }
                   } else {
                     // 指定模式，显示指定文本
-                    displayText = textContent;
+                    displayText =
+                      typeof textContent === 'string'
+                        ? textContent
+                        : `选项${optionIndex + 1}`;
                   }
                 }
               } else if (option.label) {
@@ -4195,7 +4211,10 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                   typeof option.text === 'object' &&
                   option.text.content
                 ) {
-                  displayText = option.text.content;
+                  displayText =
+                    typeof option.text.content === 'string'
+                      ? option.text.content
+                      : `选项${optionIndex + 1}`;
                 }
               } else if (option.label) {
                 displayText = option.label;

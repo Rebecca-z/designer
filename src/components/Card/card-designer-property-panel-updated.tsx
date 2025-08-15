@@ -51,6 +51,7 @@ import {
   imageComponentStateManager,
   inputComponentStateManager,
   multiImageComponentStateManager,
+  multiSelectComponentStateManager,
   selectComponentStateManager,
   textComponentStateManager,
 } from './Variable/utils/index';
@@ -59,6 +60,98 @@ import VariableBinding from './Variable/VariableList';
 const { Option } = Select;
 const { Text } = Typography;
 const { TextArea } = Input;
+
+// 下拉多选选项编辑器组件
+interface MultiSelectOptionsEditorProps {
+  options: Array<any>;
+  onUpdateOptions: (options: Array<any>) => void;
+}
+
+const MultiSelectOptionsEditor: React.FC<MultiSelectOptionsEditorProps> = ({
+  options,
+  onUpdateOptions,
+}) => {
+  // 添加选项
+  const handleAddOption = () => {
+    const newOption = {
+      text: {
+        content: `选项${options.length + 1}`,
+        i18n_content: {
+          'en-US': `Option${options.length + 1}`,
+        },
+      },
+      value: `option_${options.length + 1}`,
+    };
+    const newOptions = [...options, newOption];
+    onUpdateOptions(newOptions);
+  };
+
+  // 更新选项
+  const handleUpdateOption = (index: number, field: string, value: any) => {
+    const newOptions = [...options];
+    if (field === 'content') {
+      newOptions[index] = {
+        ...newOptions[index],
+        text: {
+          ...newOptions[index].text,
+          content: value,
+          i18n_content: {
+            'en-US': value,
+          },
+        },
+      };
+      // 删除label字段
+      delete newOptions[index].label;
+    } else if (field === 'value') {
+      newOptions[index] = {
+        ...newOptions[index],
+        value: value,
+      };
+    }
+    onUpdateOptions(newOptions);
+  };
+
+  // 删除选项
+  const handleDeleteOption = (index: number) => {
+    const newOptions = options.filter((_: any, i: number) => i !== index);
+    onUpdateOptions(newOptions);
+  };
+
+  return (
+    <div>
+      {options.map((opt: any, idx: number) => (
+        <div
+          key={idx}
+          style={{
+            display: 'flex',
+            gap: 8,
+            marginBottom: 8,
+            alignItems: 'center',
+          }}
+        >
+          <Input
+            value={opt.text?.content || opt.label || ''}
+            onChange={(e) => handleUpdateOption(idx, 'content', e.target.value)}
+            placeholder={`选项${idx + 1}名称`}
+            style={{ flex: 2 }}
+          />
+          <Input
+            value={opt.value || ''}
+            onChange={(e) => handleUpdateOption(idx, 'value', e.target.value)}
+            placeholder={`选项${idx + 1}值`}
+            style={{ flex: 2 }}
+          />
+          <Button danger size="small" onClick={() => handleDeleteOption(idx)}>
+            删除
+          </Button>
+        </div>
+      ))}
+      <Button type="dashed" block onClick={handleAddOption}>
+        添加选项
+      </Button>
+    </div>
+  );
+};
 
 // 可拖拽的组件项
 const DraggableComponent: React.FC<{
@@ -991,6 +1084,11 @@ export const PropertyPanel: React.FC<{
     'specify' | 'variable'
   >('specify');
 
+  // 下拉多选组件状态管理
+  const [multiSelectOptionsMode, setMultiSelectOptionsMode] = useState<
+    'specify' | 'variable'
+  >('specify');
+
   // 存储每个选项的指定模式下的值，用于变量模式下的回退
   const [optionSpecifyValues, setOptionSpecifyValues] = useState<
     Record<string, { text: string; value: string }>
@@ -1024,12 +1122,21 @@ export const PropertyPanel: React.FC<{
   const [initializedSelectComponents, setInitializedSelectComponents] =
     useState<Set<string>>(new Set());
 
+  // 跟踪已初始化的下拉多选组件，避免重复设置模式
+  const [
+    initializedMultiSelectComponents,
+    setInitializedMultiSelectComponents,
+  ] = useState<Set<string>>(new Set());
+
   // 变量管理相关状态
   const [isAddVariableModalVisible, setIsAddVariableModalVisible] =
     useState(false);
   const [editingVariable, setEditingVariable] = useState<Variable | null>(null);
   const [isVariableModalFromVariablesTab, setIsVariableModalFromVariablesTab] =
     useState(false); // 新增：标识变量弹窗是否来自变量Tab
+  const [modalComponentType, setModalComponentType] = useState<
+    string | undefined
+  >(undefined); // 新增：保存传递给AddVariableModal的组件类型
 
   // 事件管理相关状态
   const [isEventEditModalVisible, setIsEventEditModalVisible] = useState(false);
@@ -1410,6 +1517,84 @@ export const PropertyPanel: React.FC<{
           );
 
           console.log('💾 记住现有下拉单选组件变量绑定:', {
+            componentId: realComponent.id,
+            variableName,
+          });
+        }
+      }
+    }
+  }, [realComponent]);
+
+  // 下拉多选组件模式同步 - 根据组件状态初始化模式
+  useEffect(() => {
+    if (realComponent && realComponent.tag === 'multi_select_static') {
+      // 检查选项是否有变量绑定
+      const hasOptionsVariableBinding =
+        typeof realComponent.options === 'string' &&
+        (realComponent.options as string).includes('${');
+
+      // 只在组件首次选中时设置模式，不要在变量绑定变化时重新设置
+      if (!initializedMultiSelectComponents.has(realComponent.id)) {
+        // 如果当前选项不是变量占位符，保存为用户编辑的选项
+        if (
+          Array.isArray(realComponent.options) &&
+          !hasOptionsVariableBinding
+        ) {
+          multiSelectComponentStateManager.setUserEditedOptions(
+            realComponent.id,
+            (realComponent.options as any[]).map((opt: any) => ({
+              label: opt.text?.content || opt.label || '',
+              value: opt.value || '',
+            })),
+          );
+        }
+
+        // 设置选项模式
+        if (hasOptionsVariableBinding) {
+          setMultiSelectOptionsMode('variable');
+          console.log('🔄 初始化下拉多选组件选项模式 (检测到变量绑定):', {
+            componentId: realComponent.id,
+            componentTag: realComponent.tag,
+            hasOptionsVariableBinding,
+            optionsContent: realComponent.options,
+            mode: 'variable',
+          });
+        } else {
+          setMultiSelectOptionsMode('specify');
+          console.log('🔄 初始化下拉多选组件选项模式 (默认指定模式):', {
+            componentId: realComponent.id,
+            componentTag: realComponent.tag,
+            hasOptionsVariableBinding,
+            optionsContent: realComponent.options,
+            mode: 'specify',
+          });
+        }
+
+        // 标记该组件已初始化，避免后续重复设置
+        setInitializedMultiSelectComponents((prev) =>
+          new Set(prev).add(realComponent.id),
+        );
+      }
+
+      // 如果当前组件有绑定变量，记住它（但不覆盖已有的记忆）
+      if (hasOptionsVariableBinding && !lastBoundVariables[realComponent.id]) {
+        const variableMatch = (realComponent.options as string).match(
+          /\$\{([^}]+)\}/,
+        );
+        if (variableMatch && variableMatch[1]) {
+          const variableName = variableMatch[1];
+          setLastBoundVariables((prev) => ({
+            ...prev,
+            [realComponent.id]: variableName,
+          }));
+
+          // 同时设置到多选状态管理器中
+          multiSelectComponentStateManager.setBoundVariableName(
+            realComponent.id,
+            variableName,
+          );
+
+          console.log('💾 记住现有下拉多选组件变量绑定:', {
             componentId: realComponent.id,
             variableName,
           });
@@ -1844,19 +2029,15 @@ export const PropertyPanel: React.FC<{
     });
     setEditingVariable(null); // 清空编辑状态
     setIsVariableModalFromVariablesTab(false); // 设置标识：来自组件属性
+    setModalComponentType(componentType); // 保存传递的组件类型
     setIsAddVariableModalVisible(true);
-
-    // 如果指定了组件类型，临时设置以影响AddVariableModal的类型过滤
-    if (componentType) {
-      // 可以通过state或其他方式传递组件类型给AddVariableModal
-      console.log('🎯 指定组件类型用于变量创建:', componentType);
-    }
 
     console.log('✅ 组件属性: 设置标志完成', {
       isVariableModalFromVariablesTab: false,
       isAddVariableModalVisible: true,
       currentComponentType: currentComponent?.tag,
       specifiedComponentType: componentType,
+      modalComponentType: componentType,
     });
   };
 
@@ -2052,6 +2233,7 @@ export const PropertyPanel: React.FC<{
     setIsAddVariableModalVisible(false);
     setEditingVariable(null);
     setIsVariableModalFromVariablesTab(false); // 重置标识
+    setModalComponentType(undefined); // 重置组件类型
   };
 
   // 处理取消添加变量
@@ -2059,6 +2241,7 @@ export const PropertyPanel: React.FC<{
     setIsAddVariableModalVisible(false);
     setEditingVariable(null);
     setIsVariableModalFromVariablesTab(false); // 重置标识
+    setModalComponentType(undefined); // 重置组件类型
   };
 
   // 将VariableItem[]转换为Variable[]用于EventEditModal
@@ -3711,7 +3894,7 @@ export const PropertyPanel: React.FC<{
                         });
                       }
                     }}
-                    componentType="select_static"
+                    componentType="select_static_array"
                     variables={variables}
                     getFilteredVariables={() => {
                       // 只显示"选项数组"类型的变量
@@ -3726,26 +3909,13 @@ export const PropertyPanel: React.FC<{
                     getVariableDisplayName={getVariableDisplayName}
                     getVariableKeys={getVariableKeys}
                     onAddVariable={() => {
-                      handleAddVariableFromComponent('select_static');
+                      handleAddVariableFromComponent('select_static_array');
                     }}
                     label=""
                     placeholder="选择变量"
                     addVariableText="新建选项数组变量"
                   />
                 )}
-              </Form.Item>
-              <Form.Item label="默认值">
-                <Select
-                  value={(currentComponent as any).default_value}
-                  onChange={(val) => handleValueChange('default_value', val)}
-                  style={{ width: '100%' }}
-                >
-                  {options.map((opt: any, idx: number) => (
-                    <Option key={idx} value={opt.value || opt.label}>
-                      {opt.label || `选项${idx + 1}`}
-                    </Option>
-                  ))}
-                </Select>
               </Form.Item>
               <Form.Item label="是否必填">
                 <Switch
@@ -6441,59 +6611,6 @@ export const PropertyPanel: React.FC<{
       const selectComponent = currentComponent as any;
       const options = selectComponent.options || [];
 
-      // 添加选项
-      const handleAddOption = () => {
-        const newOption = {
-          text: {
-            content: `选项${options.length + 1}`,
-            i18n_content: {
-              'en-US': `Option${options.length + 1}`,
-            },
-          },
-          value: `option_${options.length + 1}`,
-        };
-        const newOptions = [...options, newOption];
-        const updatedComponent = {
-          ...currentComponent,
-          options: newOptions,
-        };
-        onUpdateComponent(updatedComponent);
-      };
-
-      // 更新选项
-      const handleUpdateOption = (index: number, field: string, value: any) => {
-        const newOptions = [...options];
-        if (field === 'content') {
-          newOptions[index] = {
-            ...newOptions[index],
-            text: {
-              ...newOptions[index].text,
-              content: value,
-            },
-          };
-        } else if (field === 'value') {
-          newOptions[index] = {
-            ...newOptions[index],
-            value: value,
-          };
-        }
-        const updatedComponent = {
-          ...currentComponent,
-          options: newOptions,
-        };
-        onUpdateComponent(updatedComponent);
-      };
-
-      // 删除选项
-      const handleDeleteOption = (index: number) => {
-        const newOptions = options.filter((_: any, i: number) => i !== index);
-        const updatedComponent = {
-          ...currentComponent,
-          options: newOptions,
-        };
-        onUpdateComponent(updatedComponent);
-      };
-
       return (
         <div>
           <div
@@ -6523,6 +6640,225 @@ export const PropertyPanel: React.FC<{
               🔧 基础设置
             </div>
             <Form form={form} layout="vertical">
+              {/* 选项设置 */}
+              <Form.Item label="选项设置">
+                <Segmented
+                  value={multiSelectOptionsMode}
+                  onChange={(value) => {
+                    const newMode = value as 'specify' | 'variable';
+                    setMultiSelectOptionsMode(newMode);
+
+                    if (newMode === 'specify') {
+                      // 切换到"指定"模式：恢复用户编辑的选项
+                      const userEditedOptions =
+                        multiSelectComponentStateManager.getUserEditedOptions(
+                          currentComponent.id,
+                        );
+                      if (userEditedOptions) {
+                        const formattedOptions = userEditedOptions.map(
+                          (opt) => ({
+                            text: {
+                              content: opt.label,
+                              i18n_content: {
+                                'en-US': opt.label,
+                              },
+                            },
+                            value: opt.value,
+                          }),
+                        );
+                        handleValueChange('options', formattedOptions);
+                      } else {
+                        // 如果没有用户编辑的选项，使用默认选项
+                        handleValueChange('options', [
+                          {
+                            text: {
+                              content: '选项1',
+                              i18n_content: { 'en-US': 'Option1' },
+                            },
+                            value: 'option1',
+                          },
+                          {
+                            text: {
+                              content: '选项2',
+                              i18n_content: { 'en-US': 'Option2' },
+                            },
+                            value: 'option2',
+                          },
+                          {
+                            text: {
+                              content: '选项3',
+                              i18n_content: { 'en-US': 'Option3' },
+                            },
+                            value: 'option3',
+                          },
+                        ]);
+                      }
+                      // 清除变量绑定
+                      multiSelectComponentStateManager.setBoundVariableName(
+                        currentComponent.id,
+                        '',
+                      );
+                    } else {
+                      // 切换到"绑定变量"模式：保存当前选项并设置变量占位符
+                      if (Array.isArray(options)) {
+                        multiSelectComponentStateManager.setUserEditedOptions(
+                          currentComponent.id,
+                          options.map((opt: any) => ({
+                            label: opt.text?.content || opt.label || '',
+                            value: opt.value || '',
+                          })),
+                        );
+                      }
+
+                      // 恢复之前绑定的变量（如果有的话）
+                      const rememberedVariable =
+                        lastBoundVariables[currentComponent.id];
+                      if (rememberedVariable) {
+                        handleValueChange(
+                          'options',
+                          `\${${rememberedVariable}}`,
+                        );
+                        multiSelectComponentStateManager.setBoundVariableName(
+                          currentComponent.id,
+                          rememberedVariable,
+                        );
+                      } else {
+                        // 如果没有记住的变量，设置占位符
+                        handleValueChange('options', '${placeholder}');
+                      }
+                    }
+
+                    console.log('🔄 下拉多选组件选项模式切换完成:', {
+                      componentId: currentComponent.id,
+                      newMode,
+                      previousMode: multiSelectOptionsMode,
+                      note: '已更新DSL数据和画布',
+                    });
+                  }}
+                  options={[
+                    { label: '指定', value: 'specify' },
+                    { label: '绑定变量', value: 'variable' },
+                  ]}
+                  style={{ marginBottom: 16 }}
+                />
+
+                {/* 根据模式显示不同的内容 */}
+                {multiSelectOptionsMode === 'specify' ? (
+                  // 指定模式：显示选项编辑界面
+                  <MultiSelectOptionsEditor
+                    options={options}
+                    onUpdateOptions={(newOptions) => {
+                      handleValueChange('options', newOptions);
+                      // 同时保存到状态管理器
+                      multiSelectComponentStateManager.setUserEditedOptions(
+                        currentComponent.id,
+                        newOptions.map((opt: any) => ({
+                          label: opt.text?.content || opt.label || '',
+                          value: opt.value || '',
+                        })),
+                      );
+                    }}
+                  />
+                ) : (
+                  // 绑定变量模式：显示变量绑定组件
+                  <VariableBinding
+                    value={(() => {
+                      const rememberedVariable =
+                        lastBoundVariables[currentComponent.id];
+                      const currentBoundVariable =
+                        multiSelectComponentStateManager.getBoundVariableName(
+                          currentComponent.id,
+                        );
+                      const displayValue =
+                        currentBoundVariable || rememberedVariable;
+
+                      console.log('🔍 下拉多选组件选项VariableBinding显示值:', {
+                        componentId: currentComponent.id,
+                        rememberedVariable,
+                        currentBoundVariable,
+                        displayValue,
+                      });
+
+                      return displayValue;
+                    })()}
+                    onChange={(variableName) => {
+                      if (variableName) {
+                        // 选择了变量：更新DSL和绑定状态
+                        handleValueChange('options', `\${${variableName}}`);
+                        setLastBoundVariables((prev) => ({
+                          ...prev,
+                          [currentComponent.id]: variableName,
+                        }));
+                        multiSelectComponentStateManager.setBoundVariableName(
+                          currentComponent.id,
+                          variableName,
+                        );
+
+                        console.log(
+                          '💾 选择下拉多选组件选项变量并立即更新DSL和绑定状态:',
+                          {
+                            componentId: currentComponent.id,
+                            selectedVariable: variableName,
+                            newOptions: `\${${variableName}}`,
+                            action: '立即生效并记住，设置绑定状态',
+                          },
+                        );
+                      } else {
+                        // 清除变量选择：恢复用户编辑的选项
+                        const userEditedOptions =
+                          multiSelectComponentStateManager.getUserEditedOptions(
+                            currentComponent.id,
+                          );
+                        if (userEditedOptions) {
+                          const formattedOptions = userEditedOptions.map(
+                            (opt) => ({
+                              text: {
+                                content: opt.label,
+                                i18n_content: {
+                                  'en-US': opt.label,
+                                },
+                              },
+                              value: opt.value,
+                            }),
+                          );
+                          handleValueChange('options', formattedOptions);
+                        }
+                        multiSelectComponentStateManager.setBoundVariableName(
+                          currentComponent.id,
+                          '',
+                        );
+                        setLastBoundVariables((prev) => {
+                          const newState = { ...prev };
+                          delete newState[currentComponent.id];
+                          return newState;
+                        });
+                      }
+                    }}
+                    componentType="multi_select_static_array"
+                    variables={variables}
+                    getFilteredVariables={() => {
+                      // 只显示"选项数组"类型的变量
+                      return variables.filter((variable) => {
+                        const originalType = getVariableOriginalType(
+                          variable,
+                          getVariableKeys(variable)[0],
+                        );
+                        return originalType === 'array';
+                      });
+                    }}
+                    getVariableDisplayName={getVariableDisplayName}
+                    getVariableKeys={getVariableKeys}
+                    onAddVariable={() => {
+                      handleAddVariableFromComponent(
+                        'multi_select_static_array',
+                      );
+                    }}
+                    label=""
+                    placeholder="选择变量"
+                    addVariableText="新建选项数组变量"
+                  />
+                )}
+              </Form.Item>
               <Form.Item label="是否必填">
                 <Switch
                   checked={selectComponent.required || false}
@@ -6530,57 +6866,6 @@ export const PropertyPanel: React.FC<{
                 />
               </Form.Item>
             </Form>
-          </div>
-          {/* 选项设置 */}
-          <div
-            style={{
-              background: '#fff',
-              borderRadius: 6,
-              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-              padding: 16,
-            }}
-          >
-            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>
-              📝 选项设置
-            </div>
-            {options.map((opt: any, idx: number) => (
-              <div
-                key={idx}
-                style={{
-                  display: 'flex',
-                  gap: 8,
-                  marginBottom: 8,
-                  alignItems: 'center',
-                }}
-              >
-                <Input
-                  value={opt.text?.content || ''}
-                  onChange={(e) =>
-                    handleUpdateOption(idx, 'content', e.target.value)
-                  }
-                  placeholder={`选项${idx + 1}名称`}
-                  style={{ flex: 2 }}
-                />
-                <Input
-                  value={opt.value || ''}
-                  onChange={(e) =>
-                    handleUpdateOption(idx, 'value', e.target.value)
-                  }
-                  placeholder={`选项${idx + 1}值`}
-                  style={{ flex: 2 }}
-                />
-                <Button
-                  danger
-                  size="small"
-                  onClick={() => handleDeleteOption(idx)}
-                >
-                  删除
-                </Button>
-              </div>
-            ))}
-            <Button type="dashed" block onClick={handleAddOption}>
-              添加选项
-            </Button>
           </div>
         </div>
       );
@@ -7812,7 +8097,7 @@ export const PropertyPanel: React.FC<{
         componentType={
           isVariableModalFromVariablesTab
             ? undefined // 来自变量Tab时不传递组件类型，显示全部类型
-            : currentComponent?.tag // 来自组件属性时传递组件类型，进行过滤
+            : modalComponentType || currentComponent?.tag // 来自组件属性时优先使用保存的组件类型，回退到当前组件类型
         }
       />
       {/* 事件编辑弹窗 */}

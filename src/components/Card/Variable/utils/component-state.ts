@@ -701,3 +701,106 @@ export const selectComponentStateManager =
 
 // 导出下拉单选组件状态类型
 export type { SelectComponentState };
+
+// 下拉多选组件状态接口
+interface MultiSelectComponentState {
+  userEditedOptions?: Array<{ label: string; value: string }>; // 用户编辑的选项列表
+  boundVariableName?: string; // 绑定的变量名
+}
+
+// 下拉多选组件状态管理器
+export class MultiSelectComponentStateManager {
+  private static instance: MultiSelectComponentStateManager;
+  private stateMap: Map<string, MultiSelectComponentState> = new Map();
+
+  private constructor() {}
+
+  // 单例模式获取实例
+  public static getInstance(): MultiSelectComponentStateManager {
+    if (!MultiSelectComponentStateManager.instance) {
+      MultiSelectComponentStateManager.instance =
+        new MultiSelectComponentStateManager();
+    }
+    return MultiSelectComponentStateManager.instance;
+  }
+
+  // 获取组件状态
+  public getComponentState(componentId: string): MultiSelectComponentState {
+    return this.stateMap.get(componentId) || {};
+  }
+
+  // 设置用户编辑的选项列表
+  public setUserEditedOptions(
+    componentId: string,
+    options: Array<{ label: string; value: string }>,
+  ): void {
+    const currentState = this.getComponentState(componentId);
+    this.stateMap.set(componentId, {
+      ...currentState,
+      userEditedOptions: options,
+    });
+
+    console.log('📝 设置用户编辑选项列表 (多选):', {
+      componentId,
+      options,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取用户编辑的选项列表
+  public getUserEditedOptions(
+    componentId: string,
+  ): Array<{ label: string; value: string }> | undefined {
+    const state = this.getComponentState(componentId);
+    return state.userEditedOptions;
+  }
+
+  // 设置绑定的变量名
+  public setBoundVariableName(componentId: string, variableName: string): void {
+    const currentState = this.getComponentState(componentId);
+    const newState = {
+      ...currentState,
+      boundVariableName: variableName,
+    };
+
+    // 如果变量名为空，清除绑定状态
+    if (!variableName) {
+      delete newState.boundVariableName;
+    }
+
+    this.stateMap.set(componentId, newState);
+
+    console.log('🔗 设置下拉多选组件绑定变量名:', {
+      componentId,
+      variableName,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取绑定的变量名
+  public getBoundVariableName(componentId: string): string | undefined {
+    const state = this.getComponentState(componentId);
+    return state.boundVariableName;
+  }
+
+  // 清除组件状态
+  public clearComponentState(componentId: string): void {
+    this.stateMap.delete(componentId);
+    console.log('🗑️ 清除下拉多选组件状态:', {
+      componentId,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取所有组件状态（调试用）
+  public getAllStates(): Map<string, MultiSelectComponentState> {
+    return new Map(this.stateMap);
+  }
+}
+
+// 导出下拉多选组件状态管理器实例
+export const multiSelectComponentStateManager =
+  MultiSelectComponentStateManager.getInstance();
+
+// 导出下拉多选组件状态类型
+export type { MultiSelectComponentState };
