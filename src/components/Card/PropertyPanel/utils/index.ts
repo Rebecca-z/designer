@@ -381,5 +381,4 @@ export const getVariableKeys = (variable: any): string[] => {
   return [];
 };
 
-// 导出函数
-// export { getComponentRealPath };
+// 函数已在上面使用 export const 导出

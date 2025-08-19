@@ -235,10 +235,48 @@ export const PropertyPanel: React.FC<{
         currentComponent: selectedComponent,
       });
 
-      const updatedComponent = {
-        ...selectedComponent,
-        [key]: value,
-      };
+      // 样式相关字段需要保存到style对象中
+      const styleFields = [
+        'fontSize',
+        'textAlign',
+        'numberOfLines',
+        'color',
+        'width',
+        'height',
+        'backgroundColor',
+        'borderColor',
+        'borderRadius',
+        'padding',
+        'margin',
+        'type',
+        'size',
+        'crop_mode',
+      ];
+
+      let updatedComponent;
+
+      if (styleFields.includes(key)) {
+        // 样式属性：保存到style对象中
+        updatedComponent = {
+          ...selectedComponent,
+          style: {
+            ...((selectedComponent as any).style || {}),
+            [key]: value,
+          },
+        };
+        console.log('🎨 样式属性更新到style对象:', {
+          field: key,
+          value,
+          updatedStyle: updatedComponent.style,
+        });
+      } else {
+        // 非样式属性：直接设置到组件根级
+        updatedComponent = {
+          ...selectedComponent,
+          [key]: value,
+        };
+      }
+
       onUpdateComponent(updatedComponent);
     }
   };
