@@ -245,6 +245,7 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
       if (userEditedContent !== undefined) {
         // 使用用户编辑的内容作为最终文本
         (updatedComponent as any).content = userEditedContent;
+        // 富文本组件：同步更新 i18n_content
         (updatedComponent as any).i18n_content = {
           'en-US': userEditedContent,
         };
@@ -252,6 +253,7 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
         // 如果没有用户编辑的内容，使用默认内容
         const defaultContent = getDefaultRichTextContent();
         (updatedComponent as any).content = defaultContent;
+        // 富文本组件：同步更新 i18n_content
         (updatedComponent as any).i18n_content = {
           'en-US': defaultContent,
         };
@@ -371,6 +373,10 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
                               if (userEditedContent !== undefined) {
                                 (updatedComponent as any).content =
                                   userEditedContent;
+                                // 富文本组件：同步更新 i18n_content
+                                (updatedComponent as any).i18n_content = {
+                                  'en-US': userEditedContent,
+                                };
                               }
 
                               // 清除变量绑定状态，确保画布不再显示变量内容
@@ -504,6 +510,10 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
                                     };
                                     (updatedComponent as any).content =
                                       userEditedContent;
+                                    // 富文本组件：同步更新 i18n_content
+                                    (updatedComponent as any).i18n_content = {
+                                      'en-US': userEditedContent,
+                                    };
                                     onUpdateComponent(updatedComponent);
                                   }
                                 }

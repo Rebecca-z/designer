@@ -246,6 +246,7 @@ export const PropertyPanel: React.FC<{
         'backgroundColor',
         'borderColor',
         'borderRadius',
+        'borderStyle',
         'padding',
         'margin',
         'type',

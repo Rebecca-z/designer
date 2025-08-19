@@ -477,11 +477,14 @@ export const renderComponentToHTML = (
       `;
 
     case 'hr':
+      // const borderStyle = (comp as any).style?.borderStyle || 'solid';
       return `
         <div style="margin: ${verticalSpacing}px 0;">
           <hr style="
             border: none; 
-            border-top: 2px solid #d9d9d9; 
+            border-top: 2px ${
+              (comp as any).style?.borderStyle || 'solid'
+            } #d9d9d9; 
             margin: 0;
             border-radius: 1px;
           " />

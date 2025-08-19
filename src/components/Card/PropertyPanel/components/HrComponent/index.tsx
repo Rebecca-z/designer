@@ -1,10 +1,11 @@
 // HrComponent 编辑界面 - 分割线组件
 import { BgColorsOutlined, SettingOutlined } from '@ant-design/icons';
-import { ColorPicker, Form, InputNumber, Tabs, Typography } from 'antd';
+import { Form, Select, Tabs, Typography } from 'antd';
 import React from 'react';
 import { BaseComponentProps } from '../types';
 
 const { Text } = Typography;
+const { Option } = Select;
 
 const HrComponent: React.FC<BaseComponentProps> = ({
   selectedComponent,
@@ -84,56 +85,75 @@ const HrComponent: React.FC<BaseComponentProps> = ({
                     🎨 样式设置
                   </div>
                   <Form form={form} layout="vertical">
-                    <Form.Item label="分割线颜色">
-                      <ColorPicker
+                    <Form.Item label="边框样式">
+                      <Select
                         value={
-                          (selectedComponent as any).style?.color || '#d9d9d9'
-                        }
-                        onChange={(color) =>
-                          handleValueChange('color', color.toHexString())
-                        }
-                        showText
-                        style={{ width: '100%' }}
-                      />
-                    </Form.Item>
-                    <Form.Item label="分割线高度">
-                      <InputNumber
-                        value={(selectedComponent as any).style?.height || 1}
-                        onChange={(value) => handleValueChange('height', value)}
-                        min={1}
-                        max={10}
-                        style={{ width: '100%' }}
-                        placeholder="设置分割线高度"
-                        addonAfter="px"
-                      />
-                    </Form.Item>
-                    <Form.Item label="上边距">
-                      <InputNumber
-                        value={(selectedComponent as any).style?.marginTop || 8}
-                        onChange={(value) =>
-                          handleValueChange('marginTop', value)
-                        }
-                        min={0}
-                        max={50}
-                        style={{ width: '100%' }}
-                        placeholder="设置上边距"
-                        addonAfter="px"
-                      />
-                    </Form.Item>
-                    <Form.Item label="下边距">
-                      <InputNumber
-                        value={
-                          (selectedComponent as any).style?.marginBottom || 8
+                          (selectedComponent as any).style?.borderStyle ||
+                          'solid'
                         }
                         onChange={(value) =>
-                          handleValueChange('marginBottom', value)
+                          handleValueChange('borderStyle', value)
                         }
-                        min={0}
-                        max={50}
                         style={{ width: '100%' }}
-                        placeholder="设置下边距"
-                        addonAfter="px"
-                      />
+                        placeholder="选择边框样式"
+                      >
+                        <Option value="solid">
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: '40px',
+                                height: '2px',
+                                backgroundColor: '#666',
+                                borderTop: '2px solid #666',
+                                borderStyle: 'solid',
+                              }}
+                            />
+                            实线 (solid)
+                          </div>
+                        </Option>
+                        <Option value="dashed">
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: '40px',
+                                height: '2px',
+                                borderTop: '2px dashed #666',
+                              }}
+                            />
+                            虚线 (dashed)
+                          </div>
+                        </Option>
+                        <Option value="dotted">
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: '40px',
+                                height: '2px',
+                                borderTop: '2px dotted #666',
+                              }}
+                            />
+                            点线 (dotted)
+                          </div>
+                        </Option>
+                      </Select>
                     </Form.Item>
                   </Form>
                 </div>

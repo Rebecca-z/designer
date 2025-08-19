@@ -5359,11 +5359,10 @@ export const PropertyPanel: React.FC<{
                               const updatedComponent = { ...currentComponent };
                               (updatedComponent as any).content =
                                 userEditedContent;
-                              if (isPlainText) {
-                                (updatedComponent as any).i18n_content = {
-                                  'en-US': userEditedContent,
-                                };
-                              }
+                              // 无论是普通文本还是富文本组件，都需要同步更新 i18n_content
+                              (updatedComponent as any).i18n_content = {
+                                'en-US': userEditedContent,
+                              };
                               onUpdateComponent(updatedComponent);
                             }
 
