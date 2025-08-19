@@ -4,6 +4,7 @@ import { ComponentType, VariableItem } from '../../card-designer-types-updated';
 export interface BaseComponentProps {
   selectedComponent: ComponentType;
   selectedPath: (string | number)[] | null;
+  cardData?: any; // 添加cardData用于获取最新组件数据
   variables: VariableItem[];
   topLevelTab: string;
   setTopLevelTab: (tab: string) => void;

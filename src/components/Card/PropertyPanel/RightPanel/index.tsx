@@ -201,6 +201,8 @@ export const PropertyPanel: React.FC<{
     Record<string, string>
   >({});
   const [initializedComponents] = useState<Set<string>>(new Set());
+  // const [initializedMultiImageComponents, setInitializedMultiImageComponents] =
+  //   useState<Set<string>>(new Set());
   // 其他初始化状态已移动到各自的组件中
   // const [setInitializedComponents] = useState<Set<string>>(new Set());
   // const [initializedImageComponents, setInitializedImageComponents] = useState<Set<string>>(new Set());
@@ -688,6 +690,7 @@ export const PropertyPanel: React.FC<{
       <ImgCombinationComponent
         selectedComponent={selectedComponent}
         selectedPath={selectedPath}
+        cardData={cardData}
         variables={variables}
         topLevelTab={topLevelTab}
         setTopLevelTab={setTopLevelTab}
