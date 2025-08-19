@@ -35,7 +35,6 @@ import {
 } from './card-designer-hooks';
 import {
   CardDesignData,
-  CardPadding,
   ComponentType,
   Variable,
   VariableItem,
@@ -836,23 +835,46 @@ const CardDesigner: React.FC = () => {
   };
 
   const handleUpdateSelectedComponent = (updatedComponent: ComponentType) => {
-    // 检查是否是卡片选中状态
+    const path = selection.selectedPath;
+
+    // 检查是否是 header 中的标题组件: ['dsl', 'header']
     if (
-      selection.selectedPath &&
-      selection.selectedPath.length === 2 &&
-      selection.selectedPath[0] === 'dsl' &&
-      selection.selectedPath[1] === 'body'
+      path &&
+      path.length === 2 &&
+      path[0] === 'dsl' &&
+      path[1] === 'header' &&
+      updatedComponent.tag === 'title'
     ) {
+      console.log('📝 更新 header 中的标题组件:', updatedComponent);
+      let newData = JSON.parse(JSON.stringify(safeCardData));
+
+      // 转换组件格式为正确的 header 格式
+      const titleComponent = updatedComponent as any;
+      const headerData = {
+        title: { content: titleComponent.title || '主标题' },
+        subtitle: { content: titleComponent.subtitle || '副标题' },
+        style: titleComponent.style || 'blue',
+      };
+
+      console.log('🔄 转换后的 header 数据格式:', headerData);
+      newData.dsl.header = headerData;
+
+      history.updateData(newData as any);
+      console.log('✅ Header 标题组件更新成功');
+      return;
+    }
+
+    // 检查是否是卡片选中状态
+    if (path && path.length === 2 && path[0] === 'dsl' && path[1] === 'body') {
       console.log('🎯 卡片选中状态，不处理组件更新');
       return;
     }
 
-    if (!selection.selectedPath || selection.selectedPath.length < 4) {
-      console.warn('无效的选中路径:', selection.selectedPath);
+    if (!path || path.length < 4) {
+      console.warn('无效的选中路径:', path);
       return;
     }
 
-    const path = selection.selectedPath;
     let newData = JSON.parse(JSON.stringify(safeCardData));
 
     if (path.length === 4) {
@@ -967,7 +989,6 @@ const CardDesigner: React.FC = () => {
   // 处理卡片属性更新
   const handleUpdateCard = (updates: {
     vertical_spacing?: number;
-    padding?: CardPadding;
     cardData?: CardDesignData; // 新增：支持完整的卡片数据更新
   }) => {
     let newData;

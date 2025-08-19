@@ -12,7 +12,9 @@ import React, { useState } from 'react';
 import AddVariableModal from '../../Variable/AddVariableModal';
 import {
   ButtonComponent,
+  ColumnComponent,
   ColumnSetComponent,
+  FormComponent,
   HrComponent,
   ImageComponent,
   ImgCombinationComponent,
@@ -23,7 +25,7 @@ import {
   TextComponent,
   TitleComponent,
 } from '../components';
-import { getVariableKeys } from '../utils';
+import { getComponentRealPath, getVariableKeys } from '../utils';
 
 // const { Option } = Select;
 const { Text } = Typography;
@@ -40,13 +42,6 @@ interface VariableItem {
   type: string;
   value?: any;
   [key: string]: any;
-}
-
-interface CardPadding {
-  top: number;
-  right: number;
-  bottom: number;
-  left: number;
 }
 
 interface CardDesignData {
@@ -134,7 +129,6 @@ export const PropertyPanel: React.FC<{
   variables: VariableItem[];
   onUpdateVariables: (variables: VariableItem[]) => void;
   cardVerticalSpacing: number;
-  cardPadding: CardPadding;
   headerData?: {
     title?: { content: string };
     subtitle?: { content: string };
@@ -142,18 +136,38 @@ export const PropertyPanel: React.FC<{
   };
   cardData?: CardDesignData;
 }> = ({
-  selectedComponent,
+  selectedComponent: _selectedComponent, // 重命名，避免直接使用
   selectedPath,
   onUpdateComponent,
   onUpdateCard,
   variables,
   onUpdateVariables,
   cardVerticalSpacing,
+  cardData,
   // cardPadding: _cardPadding,
   // headerData: _headerData,
-  // cardData: _cardData,
 }) => {
   const [topLevelTab, setTopLevelTab] = useState<string>('component');
+
+  // 动态生成最新的选中组件数据
+  const getLatestSelectedComponent = (): ComponentType | null => {
+    if (!cardData || !selectedPath) return null;
+
+    const { component } = getComponentRealPath(cardData as any, selectedPath);
+    return component;
+  };
+
+  // 使用最新的组件数据
+  const selectedComponent = getLatestSelectedComponent();
+
+  // 调试日志：对比新旧组件数据
+  console.log('🔄 RightPanel 组件数据对比:', {
+    oldComponent: _selectedComponent,
+    newComponent: selectedComponent,
+    selectedPath,
+    cardDataExists: !!cardData,
+    timestamp: new Date().toISOString(),
+  });
 
   // 状态管理
   const [textContentMode, setTextContentMode] = useState<
@@ -213,6 +227,14 @@ export const PropertyPanel: React.FC<{
   // 处理组件值变化
   const handleValueChange = (key: string, value: any) => {
     if (selectedComponent) {
+      console.log('🔄 RightPanel handleValueChange:', {
+        componentTag: selectedComponent.tag,
+        selectedPath,
+        key,
+        value,
+        currentComponent: selectedComponent,
+      });
+
       const updatedComponent = {
         ...selectedComponent,
         [key]: value,
@@ -815,6 +837,93 @@ export const PropertyPanel: React.FC<{
         handleVariableModalOk={handleVariableModalOk}
         handleVariableModalCancel={handleVariableModalCancel}
         editingVariable={editingVariable}
+        isVariableModalFromVariablesTab={isVariableModalFromVariablesTab}
+        modalComponentType={modalComponentType}
+        VariableManagementPanel={VariableManagementPanel}
+      />
+    );
+  }
+
+  // 检查是否选中了表单组件
+  const isFormComponent = selectedComponent && selectedComponent.tag === 'form';
+
+  console.log('🔍 RightPanel 表单组件检查:', {
+    selectedComponent: selectedComponent
+      ? {
+          id: selectedComponent.id,
+          tag: selectedComponent.tag,
+        }
+      : null,
+    isFormComponent,
+    selectedPath,
+  });
+
+  // 如果选中了表单组件，显示表单编辑界面
+  if (isFormComponent) {
+    return (
+      <FormComponent
+        selectedComponent={selectedComponent}
+        selectedPath={selectedPath}
+        variables={variables}
+        topLevelTab={topLevelTab}
+        setTopLevelTab={setTopLevelTab}
+        lastBoundVariables={lastBoundVariables}
+        setLastBoundVariables={setLastBoundVariables}
+        initializedComponents={initializedComponents}
+        onUpdateComponent={onUpdateComponent}
+        handleValueChange={handleValueChange}
+        getFilteredVariables={getFilteredVariables}
+        getVariableDisplayName={getVariableDisplayName}
+        getVariableKeys={getVariableKeys}
+        handleAddVariableFromComponent={handleAddVariableFromComponent}
+        isVariableModalVisible={isVariableModalVisible}
+        setIsVariableModalVisible={setIsVariableModalVisible}
+        editingVariable={editingVariable}
+        setEditingVariable={setEditingVariable}
+        isVariableModalFromVariablesTab={isVariableModalFromVariablesTab}
+        modalComponentType={modalComponentType}
+        VariableManagementPanel={VariableManagementPanel}
+      />
+    );
+  }
+
+  // 检查是否选中了列组件
+  const isColumnComponent =
+    selectedComponent && selectedComponent.tag === 'column';
+
+  console.log('🔍 RightPanel 列组件检查:', {
+    selectedComponent: selectedComponent
+      ? {
+          id: selectedComponent.id,
+          tag: selectedComponent.tag,
+        }
+      : null,
+    isColumnComponent,
+    selectedPath,
+  });
+
+  // 如果选中了列组件，显示列编辑界面
+  if (isColumnComponent) {
+    return (
+      <ColumnComponent
+        selectedComponent={selectedComponent}
+        selectedPath={selectedPath}
+        variables={variables}
+        topLevelTab={topLevelTab}
+        setTopLevelTab={setTopLevelTab}
+        lastBoundVariables={lastBoundVariables}
+        setLastBoundVariables={setLastBoundVariables}
+        initializedComponents={initializedComponents}
+        onUpdateComponent={onUpdateComponent}
+        handleValueChange={handleValueChange}
+        getFilteredVariables={getFilteredVariables}
+        getVariableDisplayName={getVariableDisplayName}
+        getVariableKeys={getVariableKeys}
+        handleAddVariableFromComponent={handleAddVariableFromComponent}
+        isVariableModalVisible={isVariableModalVisible}
+        setIsVariableModalVisible={setIsVariableModalVisible}
+        editingVariable={editingVariable}
+        setEditingVariable={setEditingVariable}
         isVariableModalFromVariablesTab={isVariableModalFromVariablesTab}
         modalComponentType={modalComponentType}
         VariableManagementPanel={VariableManagementPanel}

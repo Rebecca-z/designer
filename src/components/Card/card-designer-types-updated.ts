@@ -216,18 +216,9 @@ export type ComponentType =
   | RichTextComponent
   | ImageCombinationComponent;
 
-// 新的卡片数据结构
-export interface CardPadding {
-  top: number;
-  right: number;
-  bottom: number;
-  left: number;
-}
-
 export interface CardBody {
   direction: 'vertical' | 'flow'; // 修改：支持垂直和流式布局
   vertical_spacing: number;
-  padding?: CardPadding;
   elements: ComponentType[];
   styles?: {
     // 布局样式

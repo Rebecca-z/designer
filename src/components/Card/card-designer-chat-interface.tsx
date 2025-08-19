@@ -3,18 +3,13 @@
 import { Avatar, Typography } from 'antd';
 import React from 'react';
 import CardWrapper from './card-designer-card-wrapper';
-import {
-  CardPadding,
-  ComponentType,
-  VariableItem,
-} from './card-designer-types-updated';
+import { ComponentType, VariableItem } from './card-designer-types-updated';
 
 const { Text } = Typography;
 
 interface ChatInterfaceProps {
   elements: ComponentType[];
   verticalSpacing: number;
-  padding: CardPadding;
   selectedPath: (string | number)[] | null;
   hoveredPath: (string | number)[] | null;
   onElementsChange: (elements: ComponentType[]) => void;

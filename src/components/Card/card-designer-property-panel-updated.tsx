@@ -38,7 +38,6 @@ import {
 } from './card-designer-constants';
 import {
   CardDesignData,
-  CardPadding,
   ComponentType,
   Variable,
   VariableItem,
@@ -214,10 +213,12 @@ const getComponentRealPath = (
     selectedPath[0] === 'dsl' &&
     selectedPath[1] === 'header'
   ) {
-    // 创建一个虚拟的标题组件用于属性编辑
+    // 创建一个虚拟的标题组件用于属性编辑，包含所有必要的属性
     const titleComponent: ComponentType = {
       id: 'title-component',
       tag: 'title',
+      title: data.dsl.header?.title?.content || '主标题',
+      subtitle: data.dsl.header?.subtitle?.content || '副标题',
       style: (data.dsl.header?.style || 'blue') as
         | 'blue'
         | 'wathet'
@@ -226,7 +227,7 @@ const getComponentRealPath = (
         | 'yellow'
         | 'orange'
         | 'red',
-    };
+    } as any;
     return { component: titleComponent, realPath: selectedPath };
   }
 
@@ -929,7 +930,6 @@ export const PropertyPanel: React.FC<{
   variables: VariableItem[];
   onUpdateVariables: (variables: VariableItem[]) => void;
   cardVerticalSpacing: number;
-  cardPadding: CardPadding;
   // 新增：标题数据
   headerData?: {
     title?: { content: string };

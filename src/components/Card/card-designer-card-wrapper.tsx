@@ -6,7 +6,6 @@ import React, { useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import ComponentRenderer from './card-designer-components';
 import {
-  CardPadding,
   ComponentType,
   DragItem,
   VariableItem,
@@ -332,7 +331,6 @@ const DragSortableItem: React.FC<{
 interface CardWrapperProps {
   elements: ComponentType[];
   verticalSpacing: number;
-  padding: CardPadding;
   selectedPath: (string | number)[] | null;
   hoveredPath: (string | number)[] | null;
   onElementsChange: (elements: ComponentType[]) => void;
@@ -3137,10 +3135,12 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
             onMouseDown={(e) => {
               e.stopPropagation();
               console.log('🎯 标题被点击 (onMouseDown)，选中标题组件');
-              // 创建一个虚拟的标题组件用于选中
+              // 创建一个虚拟的标题组件用于选中，包含完整的标题数据
               const titleComponent = {
                 id: 'title-component',
                 tag: 'title' as const,
+                title: headerData?.title?.content || '主标题',
+                subtitle: headerData?.subtitle?.content || '副标题',
                 style: (headerData?.style || 'blue') as
                   | 'blue'
                   | 'wathet'
@@ -3156,10 +3156,12 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
             onClick={(e) => {
               e.stopPropagation();
               console.log('🎯 标题被点击 (onClick)，选中标题组件');
-              // 创建一个虚拟的标题组件用于选中
+              // 创建一个虚拟的标题组件用于选中，包含完整的标题数据
               const titleComponent = {
                 id: 'title-component',
                 tag: 'title' as const,
+                title: headerData?.title?.content || '主标题',
+                subtitle: headerData?.subtitle?.content || '副标题',
                 style: (headerData?.style || 'blue') as
                   | 'blue'
                   | 'wathet'

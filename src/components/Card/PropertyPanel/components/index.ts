@@ -1,6 +1,8 @@
 // 统一导出所有组件编辑界面
 export { default as ButtonComponent } from './ButtonComponent';
+export { default as ColumnComponent } from './ColumnComponent';
 export { default as ColumnSetComponent } from './ColumnSetComponent';
+export { default as FormComponent } from './FormComponent';
 export { default as HrComponent } from './HrComponent';
 export { default as ImageComponent } from './ImageComponent';
 export { default as ImgCombinationComponent } from './ImgCombinationComponent';
