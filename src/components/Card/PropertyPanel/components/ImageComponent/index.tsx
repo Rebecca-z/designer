@@ -1,6 +1,6 @@
 // ImageComponent 编辑界面 - 图片组件
 import { BgColorsOutlined, SettingOutlined } from '@ant-design/icons';
-import { Form, InputNumber, Segmented, Select, Tabs, Typography } from 'antd';
+import { Form, Input, Segmented, Select, Space, Tabs, Typography } from 'antd';
 import React from 'react';
 import ImageUpload from '../../../ImageUpload';
 import AddVariableModal from '../../../Variable/AddVariableModal';
@@ -124,7 +124,60 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
                         value={imageContentMode}
                         style={{ marginBottom: 16 }}
                         onChange={(value) => {
-                          setImageContentMode(value as 'specify' | 'variable');
+                          const newMode = value as 'specify' | 'variable';
+                          setImageContentMode(newMode);
+
+                          // 处理模式切换时的图片显示逻辑
+                          const updatedComponent = { ...selectedComponent };
+
+                          if (newMode === 'specify') {
+                            // 切换到指定模式：显示用户编辑的图片
+                            const userEditedUrl =
+                              imageComponentStateManager.getUserEditedUrl(
+                                selectedComponent.id,
+                              );
+                            (updatedComponent as any).img_url =
+                              userEditedUrl || '';
+                            // 同步更新 i18n_img_url
+                            (updatedComponent as any).i18n_img_url = {
+                              'en-US': userEditedUrl || '',
+                            };
+                          } else {
+                            // 切换到变量模式：检查是否有绑定的变量
+                            const boundVariable =
+                              imageComponentStateManager.getBoundVariableName(
+                                selectedComponent.id,
+                              );
+                            const rememberedVariable =
+                              lastBoundVariables[selectedComponent.id];
+
+                            if (boundVariable || rememberedVariable) {
+                              // 如果有绑定变量，显示变量占位符
+                              const variableName =
+                                boundVariable || rememberedVariable;
+                              const variablePlaceholder = `\${${variableName}}`;
+                              (updatedComponent as any).img_url =
+                                variablePlaceholder;
+                              // 同步更新 i18n_img_url
+                              (updatedComponent as any).i18n_img_url = {
+                                'en-US': variablePlaceholder,
+                              };
+                            } else {
+                              // 如果没有绑定变量，显示指定图片
+                              const userEditedUrl =
+                                imageComponentStateManager.getUserEditedUrl(
+                                  selectedComponent.id,
+                                );
+                              (updatedComponent as any).img_url =
+                                userEditedUrl || '';
+                              // 同步更新 i18n_img_url
+                              (updatedComponent as any).i18n_img_url = {
+                                'en-US': userEditedUrl || '',
+                              };
+                            }
+                          }
+
+                          onUpdateComponent(updatedComponent);
                         }}
                         options={[
                           { label: '指定', value: 'specify' },
@@ -134,14 +187,64 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
 
                       {imageContentMode === 'specify' && (
                         <div>
-                          <ImageUpload
-                            value={(selectedComponent as any).img_url || ''}
-                            onChange={(value) => {
-                              const updatedComponent = { ...selectedComponent };
-                              (updatedComponent as any).img_url = value;
-                              onUpdateComponent(updatedComponent);
-                            }}
-                          />
+                          <Space.Compact style={{ width: '100%' }}>
+                            <Input
+                              value={
+                                imageComponentStateManager.getUserEditedUrl(
+                                  selectedComponent.id,
+                                ) || ''
+                              }
+                              onChange={(e) => {
+                                // 保存用户编辑的URL到独立状态
+                                imageComponentStateManager.setUserEditedUrl(
+                                  selectedComponent.id,
+                                  e.target.value,
+                                );
+
+                                // 立即更新组件显示（只在指定模式下）
+                                const updatedComponent = {
+                                  ...selectedComponent,
+                                };
+                                (updatedComponent as any).img_url =
+                                  e.target.value;
+                                // 同步更新 i18n_img_url
+                                (updatedComponent as any).i18n_img_url = {
+                                  'en-US': e.target.value,
+                                };
+                                onUpdateComponent(updatedComponent);
+                              }}
+                              placeholder="请输入图片路径或选择上传"
+                              style={{ flex: 1 }}
+                            />
+                            <ImageUpload
+                              onUploadSuccess={(imageUrl) => {
+                                // 保存上传的URL到独立状态
+                                imageComponentStateManager.setUserEditedUrl(
+                                  selectedComponent.id,
+                                  imageUrl,
+                                );
+
+                                // 立即更新组件显示（只在指定模式下）
+                                const updatedComponent = {
+                                  ...selectedComponent,
+                                };
+                                (updatedComponent as any).img_url = imageUrl;
+                                // 同步更新 i18n_img_url
+                                (updatedComponent as any).i18n_img_url = {
+                                  'en-US': imageUrl,
+                                };
+                                onUpdateComponent(updatedComponent);
+                              }}
+                              style={{
+                                borderRadius: '0 6px 6px 0',
+                              }}
+                              buttonProps={{
+                                type: 'primary',
+                                children: '上传',
+                                title: '上传图片',
+                              }}
+                            />
+                          </Space.Compact>
                         </div>
                       )}
 
@@ -176,6 +279,7 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
                               // 处理图片变量绑定逻辑
                               if (selectedComponent) {
                                 if (value) {
+                                  // 绑定变量时
                                   setLastBoundVariables((prev) => ({
                                     ...prev,
                                     [selectedComponent.id]: value,
@@ -192,8 +296,13 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
                                   const variablePlaceholder = `\${${value}}`;
                                   (updatedComponent as any).img_url =
                                     variablePlaceholder;
+                                  // 同步更新 i18n_img_url
+                                  (updatedComponent as any).i18n_img_url = {
+                                    'en-US': variablePlaceholder,
+                                  };
                                   onUpdateComponent(updatedComponent);
                                 } else {
+                                  // 清除变量绑定时
                                   setLastBoundVariables((prev) => {
                                     const newState = { ...prev };
                                     delete newState[selectedComponent.id];
@@ -205,10 +314,32 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
                                     '',
                                   );
 
+                                  // 清除绑定变量后，根据当前模式决定显示的图片
                                   const updatedComponent = {
                                     ...selectedComponent,
                                   };
-                                  (updatedComponent as any).img_url = '';
+
+                                  if (imageContentMode === 'variable') {
+                                    // 在变量模式下清除绑定，显示指定图片（如果有的话）
+                                    const userEditedUrl =
+                                      imageComponentStateManager.getUserEditedUrl(
+                                        selectedComponent.id,
+                                      );
+                                    (updatedComponent as any).img_url =
+                                      userEditedUrl || '';
+                                    // 同步更新 i18n_img_url
+                                    (updatedComponent as any).i18n_img_url = {
+                                      'en-US': userEditedUrl || '',
+                                    };
+                                  } else {
+                                    // 在指定模式下（理论上不会发生）
+                                    (updatedComponent as any).img_url = '';
+                                    // 同步更新 i18n_img_url
+                                    (updatedComponent as any).i18n_img_url = {
+                                      'en-US': '',
+                                    };
+                                  }
+
                                   onUpdateComponent(updatedComponent);
                                 }
                               }
@@ -243,54 +374,21 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
                     🎨 样式设置
                   </div>
                   <Form form={form} layout="vertical">
-                    <Form.Item label="显示模式">
+                    <Form.Item label="裁剪方式">
                       <Select
                         value={
-                          (selectedComponent as any).style?.mode || 'cover'
-                        }
-                        onChange={(value) => handleValueChange('mode', value)}
-                        style={{ width: '100%' }}
-                      >
-                        <Option value="cover">填充</Option>
-                        <Option value="contain">适应</Option>
-                        <Option value="fill">拉伸</Option>
-                      </Select>
-                    </Form.Item>
-                    <Form.Item label="宽度">
-                      <InputNumber
-                        value={(selectedComponent as any).style?.width}
-                        onChange={(value) => handleValueChange('width', value)}
-                        min={20}
-                        max={500}
-                        style={{ width: '100%' }}
-                        placeholder="自动"
-                        addonAfter="px"
-                      />
-                    </Form.Item>
-                    <Form.Item label="高度">
-                      <InputNumber
-                        value={(selectedComponent as any).style?.height}
-                        onChange={(value) => handleValueChange('height', value)}
-                        min={20}
-                        max={500}
-                        style={{ width: '100%' }}
-                        placeholder="自动"
-                        addonAfter="px"
-                      />
-                    </Form.Item>
-                    <Form.Item label="圆角">
-                      <InputNumber
-                        value={
-                          (selectedComponent as any).style?.borderRadius || 0
+                          (selectedComponent as any).style?.crop_mode ||
+                          'default'
                         }
                         onChange={(value) =>
-                          handleValueChange('borderRadius', value)
+                          handleValueChange('crop_mode', value)
                         }
-                        min={0}
-                        max={50}
                         style={{ width: '100%' }}
-                        addonAfter="px"
-                      />
+                      >
+                        <Option value="default">完整展示</Option>
+                        <Option value="top">顶部裁剪</Option>
+                        <Option value="center">居中裁剪</Option>
+                      </Select>
                     </Form.Item>
                   </Form>
                 </div>
