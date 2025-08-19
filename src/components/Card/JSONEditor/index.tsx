@@ -383,6 +383,7 @@ const JSONEditor = forwardRef<JSONEditorRef, JSONEditorProps>(
       title = 'JSON 编辑器',
       height = '400px',
       className,
+      onJSONChange,
       onSave,
       readOnly = false,
       isVariableModalOpen = false,
@@ -479,8 +480,13 @@ const JSONEditor = forwardRef<JSONEditorRef, JSONEditorProps>(
             // 忽略解析错误
           }
         }
+
+        // 调用父组件的onChange回调，通知JSON数据已更新
+        if (onJSONChange && typeof onJSONChange === 'function') {
+          onJSONChange(newText);
+        }
       },
-      [collapsedPaths, isFormatting, isUpdatingFromCollapse],
+      [collapsedPaths, isFormatting, isUpdatingFromCollapse, onJSONChange],
     );
 
     // 撤销功能

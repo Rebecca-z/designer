@@ -192,10 +192,18 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
             {
               img_url:
                 'https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png',
+              i18n_img_url: {
+                'en-US':
+                  'https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png',
+              },
             },
             {
               img_url:
                 'https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png',
+              i18n_img_url: {
+                'en-US':
+                  'https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png',
+              },
             },
           ],
           null,
@@ -329,8 +337,21 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
           break;
 
         case 'richtext':
-          actualMockData = jsonData;
-          internalType = 'object';
+          try {
+            // 富文本变量的值应该保存为JSON对象
+            actualMockData = JSON.parse(jsonData);
+            internalType = 'object';
+            console.log('🎨 富文本变量保存为JSON对象:', {
+              variableName: values.name,
+              jsonData,
+              parsedData: actualMockData,
+              timestamp: new Date().toISOString(),
+            });
+          } catch (error) {
+            console.error('富文本JSON解析失败:', error);
+            actualMockData = jsonData; // 降级为字符串
+            internalType = 'text';
+          }
           break;
 
         case 'array':
@@ -376,6 +397,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
 
   // 处理JSON编辑器数据变化
   const handleJSONChange = (newData: string) => {
+    setIsUserEditing(true); // 标记用户正在编辑
     setJsonData(newData);
     // 当用户修改JSON内容时，清除错误信息
     if (jsonError) {
@@ -438,7 +460,6 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
               placeholder="请输入数字"
               min={-999999}
               max={999999}
-              defaultValue={1}
             />
           </Form.Item>
         );
@@ -553,16 +574,67 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         setSelectedType(formType);
 
         // 设置表单数据
+        let mockDataValue;
+        if (
+          (formType === 'richtext' ||
+            formType === 'array' ||
+            formType === 'imageArray') &&
+          typeof editingVariable.value === 'object'
+        ) {
+          // JSON类型（富文本、数组、图片数组）：对象转字符串
+          mockDataValue = JSON.stringify(editingVariable.value, null, 2);
+          console.log('📋 JSON类型变量表单数据处理:', {
+            variableName: editingVariable.name,
+            formType,
+            originalValue: editingVariable.value,
+            convertedValue: mockDataValue,
+            timestamp: new Date().toISOString(),
+          });
+        } else if (formType === 'number') {
+          // 整数类型：确保是数值类型
+          mockDataValue = Number(editingVariable.value);
+          console.log('🔢 整数变量回显数据处理:', {
+            variableName: editingVariable.name,
+            originalValue: editingVariable.value,
+            convertedValue: mockDataValue,
+            valueType: typeof mockDataValue,
+            timestamp: new Date().toISOString(),
+          });
+        } else {
+          // 其他类型：保持原值
+          mockDataValue = editingVariable.value;
+        }
+
         form.setFieldsValue({
           type: formType,
           name: editingVariable.name,
           description: editingVariable.description || '', // 回显描述信息
-          mockData: editingVariable.value,
+          mockData: mockDataValue,
         });
 
         // 设置JSON编辑器数据（仅对非图片类型）
         if (formType !== 'image') {
-          setJsonData(editingVariable.value);
+          // 对于需要JSON格式的类型，确保jsonData是字符串格式
+          if (
+            (formType === 'richtext' ||
+              formType === 'array' ||
+              formType === 'imageArray') &&
+            typeof editingVariable.value === 'object'
+          ) {
+            // 如果变量的值是JSON对象，需要序列化为字符串
+            const jsonString = JSON.stringify(editingVariable.value, null, 2);
+            setJsonData(jsonString);
+            console.log('📋 JSON类型变量回显，对象转字符串:', {
+              variableName: editingVariable.name,
+              formType,
+              originalValue: editingVariable.value,
+              jsonString,
+              timestamp: new Date().toISOString(),
+            });
+          } else {
+            // 其他类型或者变量的值已经是字符串格式
+            setJsonData(editingVariable.value);
+          }
         }
 
         console.log('🔄 回显编辑数据:', {
@@ -647,6 +719,28 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
     }
   }, [selectedType, visible, editingVariable, form]);
 
+  // 调试日志：Modal渲染状态
+  console.log('🔍 AddVariableModal 渲染状态:', {
+    visible,
+    editingVariable: editingVariable?.name,
+    title: editingVariable ? '编辑变量' : '添加变量',
+    timestamp: new Date().toISOString(),
+    componentType,
+    zIndex: 1000,
+    containerTarget: 'document.body',
+    modalId: `modal-${Math.random().toString(36).substr(2, 9)}`, // 添加唯一ID
+  });
+
+  // 详细的弹窗状态日志
+  console.log('🔍 AddVariableModal 状态更新:', {
+    visible,
+    editingVariable: editingVariable?.name || 'null',
+    isEditing: !!editingVariable,
+    componentType,
+    title: editingVariable ? '编辑变量' : '添加变量',
+    timestamp: new Date().toISOString(),
+  });
+
   return (
     <Modal
       title={editingVariable ? '编辑变量' : '添加变量'}
@@ -668,7 +762,9 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         </Button>,
       ]}
       width={600}
-      destroyOnHidden
+      centered
+      zIndex={1000}
+      getContainer={() => document.body}
     >
       <Form
         form={form}

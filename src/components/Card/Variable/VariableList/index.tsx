@@ -195,20 +195,46 @@ const VariableBinding: React.FC<VariableBindingProps> = ({
         >
           {filteredVariables.map((variable, index) => {
             if (typeof variable === 'object' && variable !== null) {
-              const keys = getVariableKeys(variable);
-              if (keys.length > 0) {
-                const variableName = keys[0];
-                const displayName = getVariableDisplayName(variable);
+              let variableName: string;
 
-                return (
-                  <Select.Option
-                    key={`${variableName}-${index}`}
-                    value={variableName}
-                  >
-                    {displayName}
-                  </Select.Option>
-                );
+              // 检查是否是标准Variable对象格式
+              if (
+                variable.name &&
+                (variable.type !== undefined || variable.value !== undefined)
+              ) {
+                // 标准Variable对象：直接使用name属性作为变量名
+                variableName = variable.name;
+              } else {
+                // 键值对格式：获取变量的实际键名
+                const keys = getVariableKeys(variable);
+                if (keys.length > 0) {
+                  variableName = keys[0];
+                } else {
+                  return null;
+                }
               }
+
+              const displayName = getVariableDisplayName(variable);
+
+              console.log('🔗 VariableBinding 选项设置:', {
+                variable,
+                variableName,
+                displayName,
+                isStandardFormat: !!(
+                  variable.name &&
+                  (variable.type !== undefined || variable.value !== undefined)
+                ),
+                timestamp: new Date().toISOString(),
+              });
+
+              return (
+                <Select.Option
+                  key={`${variableName}-${index}`}
+                  value={variableName}
+                >
+                  {displayName}
+                </Select.Option>
+              );
             }
             return null;
           })}

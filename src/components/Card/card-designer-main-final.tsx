@@ -1,10 +1,7 @@
 // 验证导出 - 模拟 card-designer-main-final.tsx 的导入语句
 
 // 从合并的文件中导入组件
-import {
-  ComponentPanel,
-  PropertyPanel,
-} from './card-designer-property-panel-updated';
+import { ComponentPanel, PropertyPanel } from './PropertyPanel';
 
 // 其他导入
 import Canvas from './card-designer-canvas-with-card';
@@ -117,32 +114,67 @@ const CardDesigner: React.FC = () => {
 
     newVariables.forEach((variable) => {
       if (typeof variable === 'object' && variable !== null) {
-        // 新的格式：{变量名: 模拟数据值, __变量名_originalType: 原始类型}
-        const variableRecord = variable as { [key: string]: any };
-        const keys = Object.keys(variableRecord);
-
-        // 分离实际变量名和内部属性
-        const actualVariableNames = keys.filter((key) => !key.startsWith('__'));
-        const internalKeys = keys.filter((key) => key.startsWith('__'));
-
-        // 只保存实际变量到全局数据，不保存内部属性
-        actualVariableNames.forEach((variableName) => {
-          cardVariables[variableName] = variableRecord[variableName];
-        });
-
-        // 内部属性（如 originalType）不保存到全局数据中
-        // 这些信息将通过内存缓存和组件状态维护
-        if (internalKeys.length > 0) {
-          console.log('🔧 内部属性不保存到全局数据:', {
-            internalKeys,
-            message: 'originalType信息通过内存缓存维护',
-            timestamp: new Date().toISOString(),
+        // 检查是否是标准的Variable对象格式 {name, type, value, originalType, description}
+        const varRecord = variable as any;
+        if (varRecord.name && varRecord.value !== undefined) {
+          // 标准Variable对象格式
+          console.log('🔧 处理标准Variable对象:', {
+            name: varRecord.name,
+            type: varRecord.type,
+            value: varRecord.value,
+            originalType: varRecord.originalType,
+            description: varRecord.description,
           });
+
+          // 保存变量名和值到全局数据
+          cardVariables[varRecord.name] = varRecord.value;
+
+          // 如果有 originalType，也需要保存到缓存中以便后续恢复
+          if (varRecord.originalType) {
+            const originalTypeKey = `__${varRecord.name}_originalType`;
+            variableCacheManager.setVariable(
+              originalTypeKey,
+              varRecord.originalType,
+            );
+            console.log('💾 保存 originalType 到缓存:', {
+              variableName: varRecord.name,
+              originalType: varRecord.originalType,
+              originalTypeKey,
+              timestamp: new Date().toISOString(),
+            });
+          }
+        } else {
+          // 自定义格式：{变量名: 模拟数据值, __变量名_originalType: 原始类型}
+          const variableRecord = variable as { [key: string]: any };
+          const keys = Object.keys(variableRecord);
+
+          // 分离实际变量名和内部属性
+          const actualVariableNames = keys.filter(
+            (key) => !key.startsWith('__'),
+          );
+          const internalKeys = keys.filter((key) => key.startsWith('__'));
+
+          // 只保存实际变量到全局数据，不保存内部属性
+          actualVariableNames.forEach((variableName) => {
+            cardVariables[variableName] = variableRecord[variableName];
+          });
+
+          // 内部属性（如 originalType）不保存到全局数据中
+          // 这些信息将通过内存缓存和组件状态维护
+          if (internalKeys.length > 0) {
+            console.log('🔧 内部属性不保存到全局数据:', {
+              internalKeys,
+              message: 'originalType信息通过内存缓存维护',
+              timestamp: new Date().toISOString(),
+            });
+          }
         }
       } else {
-        // 兼容旧的Variable格式
+        // 兼容旧的Variable格式（向后兼容）
         const varAsVariable = variable as Variable;
-        cardVariables[varAsVariable.name] = varAsVariable.value;
+        if (varAsVariable.name) {
+          cardVariables[varAsVariable.name] = varAsVariable.value;
+        }
       }
     });
 
@@ -187,18 +219,28 @@ const CardDesigner: React.FC = () => {
       );
 
       actualVariableEntries.forEach(([variableName, variableValue]) => {
-        // 构建变量对象，只包含变量名和值
-        const variableItem: Record<string, any> = {
-          [variableName]: variableValue,
-        };
-
         // 尝试从缓存中获取originalType信息
         const originalTypeKey = `__${variableName}_originalType`;
         const cachedOriginalType =
           variableCacheManager.getVariable(originalTypeKey);
 
+        // 构建标准Variable对象格式
+        const variableItem: Variable = {
+          name: variableName,
+          type:
+            typeof variableValue === 'number'
+              ? 'number'
+              : typeof variableValue === 'object'
+              ? 'object'
+              : 'text',
+          value: variableValue,
+          originalType:
+            cachedOriginalType ||
+            (typeof variableValue === 'number' ? 'number' : 'text'),
+          description: '',
+        };
+
         if (cachedOriginalType) {
-          variableItem[originalTypeKey] = cachedOriginalType;
           console.log('🔄 重建变量时从缓存恢复originalType:', {
             variableName,
             originalTypeKey,
@@ -209,7 +251,8 @@ const CardDesigner: React.FC = () => {
           console.log('🔍 重建变量时未找到originalType缓存:', {
             variableName,
             originalTypeKey,
-            message: '将使用类型推断',
+            inferredType: variableItem.originalType,
+            message: '使用类型推断',
           });
         }
 
