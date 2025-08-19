@@ -823,7 +823,7 @@ export const createDefaultComponent = (type: string): ComponentType => {
                     ],
                   },
                 ],
-                flex: 1,
+                style: { flex: 1 }, // 移动到style.flex字段
               },
             ],
           },
@@ -839,17 +839,17 @@ export const createDefaultComponent = (type: string): ComponentType => {
           {
             tag: 'column',
             elements: [],
-            flex: 1, // 默认列宽比例
+            style: { flex: 1 }, // 移动到style.flex字段
           },
           {
             tag: 'column',
             elements: [],
-            flex: 1, // 默认列宽比例
+            style: { flex: 1 }, // 移动到style.flex字段
           },
           {
             tag: 'column',
             elements: [],
-            flex: 1, // 默认列宽比例
+            style: { flex: 1 }, // 移动到style.flex字段
           },
         ],
       } as ComponentType;

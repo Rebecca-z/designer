@@ -2477,7 +2477,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             }}
             data-columns-count={columns.length}
             data-total-width={columns.reduce(
-              (sum: number, col: any) => sum + (col.width || 1),
+              (sum: number, col: any) => sum + (col.style?.flex || 1),
               0,
             )}
           >
@@ -2508,9 +2508,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               }
 
               // 计算列宽比例
-              const columnFlex = column.flex || 1;
+              const columnFlex = column.style?.flex || 1;
               const totalFlex = columns.reduce(
-                (sum: number, col: any) => sum + (col.flex || 1),
+                (sum: number, col: any) => sum + (col.style?.flex || 1),
                 0,
               );
               const flexValue = columnFlex / totalFlex;

@@ -1267,7 +1267,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                           .substr(2, 9)}`,
                         tag: 'column',
                         name: 'Column',
-                        width: '33.33%',
+                        style: { flex: 1 }, // 使用style.flex而不是width
                         elements: [],
                       },
                       {
@@ -1276,7 +1276,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                           .substr(2, 9)}`,
                         tag: 'column',
                         name: 'Column',
-                        width: '33.33%',
+                        style: { flex: 1 }, // 使用style.flex而不是width
                         elements: [],
                       },
                       {
@@ -1285,7 +1285,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                           .substr(2, 9)}`,
                         tag: 'column',
                         name: 'Column',
-                        width: '33.33%',
+                        style: { flex: 1 }, // 使用style.flex而不是width
                         elements: [],
                       },
                     ],

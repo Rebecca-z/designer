@@ -3875,7 +3875,7 @@ export const PropertyPanel: React.FC<{
             newColumns.push({
               tag: 'column',
               elements: [],
-              flex: 1, // 默认flex为1
+              style: { flex: 1 }, // 移动到style.flex字段
             });
           }
         } else if (count < columns.length) {
@@ -3923,14 +3923,14 @@ export const PropertyPanel: React.FC<{
 
         // 重新计算剩余列的宽度，保持总宽度不变
         const totalFlex = newColumns.reduce(
-          (sum: number, col: any) => sum + (col.flex || 1),
+          (sum: number, col: any) => sum + (col.style?.flex || 1),
           0,
         );
 
         // 如果总宽度为0，给所有列设置默认flex为1
         if (totalFlex === 0) {
           newColumns.forEach((col: any) => {
-            col.flex = 1;
+            col.style = { ...col.style, flex: 1 };
           });
         }
 
@@ -3945,7 +3945,10 @@ export const PropertyPanel: React.FC<{
       const handleColumnWidthChange = (columnIndex: number, flex: number) => {
         const newColumns = columns.map((col: any, index: number) => {
           if (index === columnIndex) {
-            return { ...col, flex };
+            return {
+              ...col,
+              style: { ...col.style, flex },
+            };
           }
           return col;
         });
@@ -3960,11 +3963,11 @@ export const PropertyPanel: React.FC<{
       // 计算列宽百分比
       const calculateColumnWidths = () => {
         const totalWidth = columns.reduce(
-          (sum: number, col: any) => sum + (col.flex || 1),
+          (sum: number, col: any) => sum + (col.style?.flex || 1),
           0,
         );
         return columns.map((col: any) => {
-          const flex = col.flex || 1;
+          const flex = col.style?.flex || 1;
           return Math.round((flex / totalWidth) * 100);
         });
       };
@@ -4042,7 +4045,7 @@ export const PropertyPanel: React.FC<{
                       }}
                     >
                       <InputNumber
-                        value={column.flex || 1}
+                        value={column.style?.flex || 1}
                         onChange={(value) =>
                           handleColumnWidthChange(index, value || 1)
                         }

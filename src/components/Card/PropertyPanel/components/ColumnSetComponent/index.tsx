@@ -1,11 +1,10 @@
 // ColumnSetComponent 编辑界面 - 分栏组件
 import { BgColorsOutlined, SettingOutlined } from '@ant-design/icons';
-import { Form, InputNumber, Select, Tabs, Typography } from 'antd';
+import { Form, InputNumber, Tabs, Typography } from 'antd';
 import React from 'react';
 import { BaseComponentProps } from '../types';
 
 const { Text } = Typography;
-const { Option } = Select;
 
 const ColumnSetComponent: React.FC<BaseComponentProps> = ({
   selectedComponent,
@@ -88,53 +87,28 @@ const ColumnSetComponent: React.FC<BaseComponentProps> = ({
                   <Form form={form} layout="vertical">
                     <Form.Item label="分栏数量">
                       <InputNumber
-                        value={(selectedComponent as any).columns?.length || 2}
+                        value={(selectedComponent as any).columns?.length || 3}
                         onChange={(value) => {
+                          const columnCount = value || 3;
                           const newColumns = Array.from(
-                            { length: value || 2 },
-                            (_, index) => ({
-                              width: `${Math.floor(100 / (value || 2))}%`,
-                              elements:
-                                (selectedComponent as any).columns?.[index]
-                                  ?.elements || [],
-                            }),
+                            { length: columnCount },
+                            (_, index) => {
+                              const existingColumn = (selectedComponent as any)
+                                .columns?.[index];
+                              return {
+                                tag: 'column',
+                                style: { flex: 1 }, // 移动到style.flex字段
+                                elements: existingColumn?.elements || [],
+                              };
+                            },
                           );
                           handleValueChange('columns', newColumns);
                         }}
                         min={1}
-                        max={4}
+                        max={6}
                         style={{ width: '100%' }}
                         placeholder="设置分栏数量"
                       />
-                    </Form.Item>
-                    <Form.Item label="分栏间距">
-                      <InputNumber
-                        value={(selectedComponent as any).spacing || 16}
-                        onChange={(value) =>
-                          handleValueChange('spacing', value)
-                        }
-                        min={0}
-                        max={50}
-                        style={{ width: '100%' }}
-                        placeholder="设置分栏间距"
-                        addonAfter="px"
-                      />
-                    </Form.Item>
-                    <Form.Item label="垂直对齐">
-                      <Select
-                        value={
-                          (selectedComponent as any).verticalAlign || 'top'
-                        }
-                        onChange={(value) =>
-                          handleValueChange('verticalAlign', value)
-                        }
-                        style={{ width: '100%' }}
-                      >
-                        <Option value="top">顶部对齐</Option>
-                        <Option value="middle">居中对齐</Option>
-                        <Option value="bottom">底部对齐</Option>
-                        <Option value="stretch">拉伸对齐</Option>
-                      </Select>
                     </Form.Item>
                   </Form>
                 </div>
@@ -152,42 +126,165 @@ const ColumnSetComponent: React.FC<BaseComponentProps> = ({
                     <div
                       style={{
                         fontWeight: 600,
-                        marginBottom: 8,
+                        marginBottom: 12,
                         fontSize: 15,
                       }}
                     >
-                      📏 分栏宽度
+                      📏 列宽设置
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: '#666',
+                        marginBottom: 16,
+                        padding: 8,
+                        backgroundColor: '#f8f9fa',
+                        borderRadius: 4,
+                      }}
+                    >
+                      💡 提示：设置每列的权重比例（1-5），列宽将按比例分配
                     </div>
                     {(selectedComponent as any).columns.map(
-                      (column: any, index: number) => (
-                        <Form key={index} layout="vertical">
-                          <Form.Item label={`第 ${index + 1} 栏宽度`}>
-                            <Select
-                              value={column.width || 'auto'}
-                              onChange={(value) => {
-                                const newColumns = [
-                                  ...(selectedComponent as any).columns,
-                                ];
-                                newColumns[index] = {
-                                  ...column,
-                                  width: value,
-                                };
-                                handleValueChange('columns', newColumns);
-                              }}
-                              style={{ width: '100%' }}
+                      (column: any, index: number) => {
+                        // 计算当前列的百分比宽度
+                        const columns = (selectedComponent as any).columns;
+                        const totalWeight = columns.reduce(
+                          (sum: number, col: any) =>
+                            sum + (col.style?.flex || 1),
+                          0,
+                        );
+                        const currentWeight = column.style?.flex || 1;
+                        const percentage = (
+                          (currentWeight / totalWeight) *
+                          100
+                        ).toFixed(1);
+
+                        return (
+                          <Form key={index} layout="vertical">
+                            <Form.Item
+                              label={
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                  }}
+                                >
+                                  <span>第 {index + 1} 列权重</span>
+                                  <span style={{ fontSize: 11, color: '#999' }}>
+                                    当前宽度: {percentage}%
+                                  </span>
+                                </div>
+                              }
                             >
-                              <Option value="auto">自动</Option>
-                              <Option value="25%">25%</Option>
-                              <Option value="33.33%">33.33%</Option>
-                              <Option value="50%">50%</Option>
-                              <Option value="66.67%">66.67%</Option>
-                              <Option value="75%">75%</Option>
-                              <Option value="100%">100%</Option>
-                            </Select>
-                          </Form.Item>
-                        </Form>
-                      ),
+                              <InputNumber
+                                value={column.style?.flex || 1}
+                                onChange={(value) => {
+                                  const newWeight = Math.max(
+                                    1,
+                                    Math.min(5, value || 1),
+                                  );
+                                  const newColumns = [
+                                    ...(selectedComponent as any).columns,
+                                  ];
+                                  newColumns[index] = {
+                                    ...column,
+                                    style: {
+                                      ...column.style,
+                                      flex: newWeight, // 移动到style.flex字段
+                                    },
+                                  };
+                                  handleValueChange('columns', newColumns);
+
+                                  console.log('🔧 列宽权重更新:', {
+                                    columnIndex: index,
+                                    newWeight,
+                                    columns: newColumns.map((col, idx) => ({
+                                      index: idx,
+                                      weight: col.style?.flex,
+                                      percentage:
+                                        (
+                                          (col.style?.flex /
+                                            newColumns.reduce(
+                                              (sum, c) =>
+                                                sum + (c.style?.flex || 1),
+                                              0,
+                                            )) *
+                                          100
+                                        ).toFixed(1) + '%',
+                                    })),
+                                  });
+                                }}
+                                min={1}
+                                max={5}
+                                step={1}
+                                style={{ width: '100%' }}
+                                placeholder="权重值"
+                              />
+                            </Form.Item>
+                          </Form>
+                        );
+                      },
                     )}
+
+                    {/* 权重预览 */}
+                    <div
+                      style={{
+                        marginTop: 12,
+                        padding: 8,
+                        backgroundColor: '#f0f9ff',
+                        borderRadius: 4,
+                        border: '1px solid #bae6fd',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          marginBottom: 4,
+                          color: '#0369a1',
+                        }}
+                      >
+                        📊 宽度预览
+                      </div>
+                      <div style={{ display: 'flex', gap: 2 }}>
+                        {(selectedComponent as any).columns.map(
+                          (column: any, index: number) => {
+                            const columns = (selectedComponent as any).columns;
+                            const totalWeight = columns.reduce(
+                              (sum: number, col: any) =>
+                                sum + (col.style?.flex || 1),
+                              0,
+                            );
+                            const currentWeight = column.style?.flex || 1;
+                            const percentage =
+                              (currentWeight / totalWeight) * 100;
+
+                            return (
+                              <div
+                                key={index}
+                                style={{
+                                  flex: currentWeight,
+                                  height: 20,
+                                  backgroundColor: `hsl(${
+                                    210 + index * 30
+                                  }, 70%, 60%)`,
+                                  borderRadius: 2,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: 10,
+                                  color: 'white',
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {percentage.toFixed(0)}%
+                              </div>
+                            );
+                          },
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

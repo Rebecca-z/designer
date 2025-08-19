@@ -660,7 +660,10 @@ const CardDesigner: React.FC = () => {
           columnSetComponent.columns = columnSetComponent.columns.map(
             (col: any) => ({
               ...col,
-              flex: col.flex || 1, // 确保每列都有flex属性，默认为1
+              style: {
+                ...col.style,
+                flex: col.style?.flex || col.flex || 1, // 兼容旧数据和新数据格式
+              },
             }),
           );
         }
@@ -723,7 +726,10 @@ const CardDesigner: React.FC = () => {
             columnSetComponent.columns = columnSetComponent.columns.map(
               (col: any) => ({
                 ...col,
-                flex: col.flex || 1, // 确保每列都有flex属性，默认为1
+                style: {
+                  ...col.style,
+                  flex: col.style?.flex || col.flex || 1, // 兼容旧数据和新数据格式
+                },
               }),
             );
           }

@@ -163,7 +163,10 @@ export interface ColumnSetComponent extends ComponentBase {
   columns: Array<{
     tag: 'column';
     elements: ComponentType[];
-    flex?: number; // 列宽比例，默认为1，范围1-5
+    flex?: number; // 列宽比例，默认为1，范围1-5（向后兼容）
+    style?: {
+      flex?: number; // 新的列宽存储方式，范围1-5
+    };
   }>;
 }
 
