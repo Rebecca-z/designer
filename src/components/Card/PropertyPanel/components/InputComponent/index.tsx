@@ -1,24 +1,13 @@
 // InputComponent 编辑界面 - 输入框组件
 import { BgColorsOutlined, SettingOutlined } from '@ant-design/icons';
-import {
-  ColorPicker,
-  Form,
-  Input,
-  InputNumber,
-  Segmented,
-  Select,
-  Switch,
-  Tabs,
-  Typography,
-} from 'antd';
+import { Form, Input, Segmented, Switch, Tabs, Typography } from 'antd';
 import React from 'react';
 import AddVariableModal from '../../../Variable/AddVariableModal';
 import VariableBinding from '../../../Variable/VariableList';
+import { inputComponentStateManager } from '../../../Variable/utils';
 import { InputComponentProps } from '../types';
 
 const { Text } = Typography;
-// const { TextArea } = Typography; // 暂时未使用
-const { Option } = Select;
 
 const InputComponent: React.FC<InputComponentProps> = ({
   selectedComponent,
@@ -52,6 +41,136 @@ const InputComponent: React.FC<InputComponentProps> = ({
     topLevelTab,
     variablesCount: variables.length,
   });
+
+  // 获取绑定的占位符变量名
+  const getBoundPlaceholderVariableName = () => {
+    return (
+      inputComponentStateManager.getBoundPlaceholderVariableName(
+        selectedComponent.id,
+      ) || ''
+    );
+  };
+
+  // 获取绑定的默认值变量名
+  const getBoundDefaultValueVariableName = () => {
+    return (
+      inputComponentStateManager.getBoundDefaultValueVariableName(
+        selectedComponent.id,
+      ) || ''
+    );
+  };
+
+  // 更新占位符变量绑定
+  const updatePlaceholderVariableBinding = (
+    variableName: string | undefined,
+  ) => {
+    console.log('🔄 更新占位符变量绑定:', {
+      componentId: selectedComponent.id,
+      variableName,
+      timestamp: new Date().toISOString(),
+    });
+
+    const updatedComponent = { ...selectedComponent };
+
+    if (variableName) {
+      // 绑定变量时，先保存当前的指定内容到缓存
+      const currentContent =
+        (selectedComponent as any).placeholder?.content || '';
+      if (currentContent && !currentContent.startsWith('${')) {
+        // 只有当前内容不是变量占位符时才保存
+        inputComponentStateManager.setUserEditedPlaceholder(
+          selectedComponent.id,
+          currentContent,
+        );
+      }
+
+      // 设置变量占位符
+      const variablePlaceholder = `\${${variableName}}`;
+      (updatedComponent as any).placeholder = {
+        content: variablePlaceholder,
+        i18n_content: { 'en-US': variablePlaceholder },
+      };
+
+      inputComponentStateManager.setBoundPlaceholderVariableName(
+        selectedComponent.id,
+        variableName,
+      );
+    } else {
+      // 清除变量绑定，恢复用户编辑的内容
+      const userEditedPlaceholder =
+        inputComponentStateManager.getUserEditedPlaceholder(
+          selectedComponent.id,
+        );
+      const content = userEditedPlaceholder || '';
+      (updatedComponent as any).placeholder = {
+        content: content,
+        i18n_content: { 'en-US': content },
+      };
+
+      inputComponentStateManager.setBoundPlaceholderVariableName(
+        selectedComponent.id,
+        undefined,
+      );
+    }
+
+    onUpdateComponent(updatedComponent);
+  };
+
+  // 更新默认值变量绑定
+  const updateDefaultValueVariableBinding = (
+    variableName: string | undefined,
+  ) => {
+    console.log('🔄 更新默认值变量绑定:', {
+      componentId: selectedComponent.id,
+      variableName,
+      timestamp: new Date().toISOString(),
+    });
+
+    const updatedComponent = { ...selectedComponent };
+
+    if (variableName) {
+      // 绑定变量时，先保存当前的指定内容到缓存
+      const currentContent =
+        (selectedComponent as any).default_value?.content || '';
+      if (currentContent && !currentContent.startsWith('${')) {
+        // 只有当前内容不是变量占位符时才保存
+        inputComponentStateManager.setUserEditedDefaultValue(
+          selectedComponent.id,
+          currentContent,
+        );
+      }
+
+      // 设置变量占位符
+      const variablePlaceholder = `\${${variableName}}`;
+      (updatedComponent as any).default_value = {
+        content: variablePlaceholder,
+        i18n_content: { content: variablePlaceholder },
+      };
+
+      inputComponentStateManager.setBoundDefaultValueVariableName(
+        selectedComponent.id,
+        variableName,
+      );
+    } else {
+      // 清除变量绑定，恢复用户编辑的内容
+      const userEditedDefaultValue =
+        inputComponentStateManager.getUserEditedDefaultValue(
+          selectedComponent.id,
+        );
+      const content = userEditedDefaultValue || '';
+      (updatedComponent as any).default_value = {
+        content: content,
+        i18n_content: { content: content },
+      };
+
+      inputComponentStateManager.setBoundDefaultValueVariableName(
+        selectedComponent.id,
+        undefined,
+      );
+    }
+
+    onUpdateComponent(updatedComponent);
+  };
 
   return (
     <div
@@ -130,36 +249,11 @@ const InputComponent: React.FC<InputComponentProps> = ({
                     ⚙️ 基础设置
                   </div>
                   <Form form={form} layout="vertical">
-                    <Form.Item label="输入框类型">
-                      <Select
-                        value={(selectedComponent as any).input_type || 'text'}
-                        onChange={(value) =>
-                          handleValueChange('input_type', value)
-                        }
-                        style={{ width: '100%' }}
-                      >
-                        <Option value="text">文本</Option>
-                        <Option value="number">数字</Option>
-                        <Option value="email">邮箱</Option>
-                        <Option value="password">密码</Option>
-                        <Option value="tel">电话</Option>
-                      </Select>
-                    </Form.Item>
-
                     <Form.Item label="必填">
                       <Switch
                         checked={(selectedComponent as any).required || false}
                         onChange={(checked) =>
                           handleValueChange('required', checked)
-                        }
-                      />
-                    </Form.Item>
-
-                    <Form.Item label="禁用">
-                      <Switch
-                        checked={(selectedComponent as any).disabled || false}
-                        onChange={(checked) =>
-                          handleValueChange('disabled', checked)
                         }
                       />
                     </Form.Item>
@@ -187,9 +281,44 @@ const InputComponent: React.FC<InputComponentProps> = ({
                         value={inputPlaceholderMode}
                         style={{ marginBottom: 16 }}
                         onChange={(value) => {
-                          setInputPlaceholderMode(
-                            value as 'specify' | 'variable',
-                          );
+                          const newMode = value as 'specify' | 'variable';
+                          setInputPlaceholderMode(newMode);
+
+                          // 处理模式切换时的占位符显示逻辑
+                          const updatedComponent = { ...selectedComponent };
+
+                          if (newMode === 'specify') {
+                            // 切换到指定模式：显示用户编辑的占位符内容
+                            const userEditedPlaceholder =
+                              inputComponentStateManager.getUserEditedPlaceholder(
+                                selectedComponent.id,
+                              );
+                            const content = userEditedPlaceholder || '';
+                            (updatedComponent as any).placeholder = {
+                              content: content,
+                              i18n_content: { 'en-US': content },
+                            };
+                          } else {
+                            // 切换到变量模式：检查是否有绑定的变量
+                            const boundVariable =
+                              inputComponentStateManager.getBoundPlaceholderVariableName(
+                                selectedComponent.id,
+                              );
+
+                            if (boundVariable) {
+                              // 如果有绑定的变量，显示变量占位符
+                              const variablePlaceholder = `\${${boundVariable}}`;
+                              (updatedComponent as any).placeholder = {
+                                content: variablePlaceholder,
+                                i18n_content: { 'en-US': variablePlaceholder },
+                              };
+                            } else {
+                              // 如果没有绑定变量，保持当前内容不变
+                              // 不需要修改组件，让用户选择变量
+                            }
+                          }
+
+                          onUpdateComponent(updatedComponent);
                         }}
                         options={[
                           { label: '指定', value: 'specify' },
@@ -204,9 +333,16 @@ const InputComponent: React.FC<InputComponentProps> = ({
                             ''
                           }
                           onChange={(e) => {
+                            // 保存用户编辑的内容到状态管理器
+                            inputComponentStateManager.setUserEditedPlaceholder(
+                              selectedComponent.id,
+                              e.target.value,
+                            );
+
                             const updatedComponent = { ...selectedComponent };
                             (updatedComponent as any).placeholder = {
                               content: e.target.value,
+                              i18n_content: { 'en-US': e.target.value },
                             };
                             onUpdateComponent(updatedComponent);
                           }}
@@ -219,9 +355,9 @@ const InputComponent: React.FC<InputComponentProps> = ({
                           componentType="input"
                           variables={variables}
                           getFilteredVariables={getFilteredVariables}
-                          value={''}
-                          onChange={() => {
-                            // 处理变量绑定逻辑
+                          value={getBoundPlaceholderVariableName()}
+                          onChange={(value: string | undefined) => {
+                            updatePlaceholderVariableBinding(value);
                           }}
                           getVariableDisplayName={getVariableDisplayName}
                           getVariableKeys={getVariableKeys}
@@ -258,9 +394,44 @@ const InputComponent: React.FC<InputComponentProps> = ({
                         value={inputDefaultValueMode}
                         style={{ marginBottom: 16 }}
                         onChange={(value) => {
-                          setInputDefaultValueMode(
-                            value as 'specify' | 'variable',
-                          );
+                          const newMode = value as 'specify' | 'variable';
+                          setInputDefaultValueMode(newMode);
+
+                          // 处理模式切换时的默认值显示逻辑
+                          const updatedComponent = { ...selectedComponent };
+
+                          if (newMode === 'specify') {
+                            // 切换到指定模式：显示用户编辑的默认值内容
+                            const userEditedDefaultValue =
+                              inputComponentStateManager.getUserEditedDefaultValue(
+                                selectedComponent.id,
+                              );
+                            const content = userEditedDefaultValue || '';
+                            (updatedComponent as any).default_value = {
+                              content: content,
+                              i18n_content: { content: content },
+                            };
+                          } else {
+                            // 切换到变量模式：检查是否有绑定的变量
+                            const boundVariable =
+                              inputComponentStateManager.getBoundDefaultValueVariableName(
+                                selectedComponent.id,
+                              );
+
+                            if (boundVariable) {
+                              // 如果有绑定的变量，显示变量占位符
+                              const variablePlaceholder = `\${${boundVariable}}`;
+                              (updatedComponent as any).default_value = {
+                                content: variablePlaceholder,
+                                i18n_content: { content: variablePlaceholder },
+                              };
+                            } else {
+                              // 如果没有绑定变量，保持当前内容不变
+                              // 不需要修改组件，让用户选择变量
+                            }
+                          }
+
+                          onUpdateComponent(updatedComponent);
                         }}
                         options={[
                           { label: '指定', value: 'specify' },
@@ -275,9 +446,16 @@ const InputComponent: React.FC<InputComponentProps> = ({
                             ''
                           }
                           onChange={(e) => {
+                            // 保存用户编辑的内容到状态管理器
+                            inputComponentStateManager.setUserEditedDefaultValue(
+                              selectedComponent.id,
+                              e.target.value,
+                            );
+
                             const updatedComponent = { ...selectedComponent };
                             (updatedComponent as any).default_value = {
                               content: e.target.value,
+                              i18n_content: { content: e.target.value },
                             };
                             onUpdateComponent(updatedComponent);
                           }}
@@ -290,9 +468,9 @@ const InputComponent: React.FC<InputComponentProps> = ({
                           componentType="input"
                           variables={variables}
                           getFilteredVariables={getFilteredVariables}
-                          value={''}
-                          onChange={() => {
-                            // 处理变量绑定逻辑
+                          value={getBoundDefaultValueVariableName()}
+                          onChange={(value: string | undefined) => {
+                            updateDefaultValueVariableBinding(value);
                           }}
                           getVariableDisplayName={getVariableDisplayName}
                           getVariableKeys={getVariableKeys}
@@ -304,65 +482,6 @@ const InputComponent: React.FC<InputComponentProps> = ({
                           addVariableText="+新建变量"
                         />
                       )}
-                    </Form.Item>
-                  </Form>
-                </div>
-
-                {/* 样式设置 */}
-                <div
-                  style={{
-                    background: '#fff',
-                    borderRadius: 6,
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-                    padding: 16,
-                  }}
-                >
-                  <div
-                    style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}
-                  >
-                    🎨 样式设置
-                  </div>
-                  <Form form={form} layout="vertical">
-                    <Form.Item label="字体大小">
-                      <InputNumber
-                        value={(selectedComponent as any).style?.fontSize || 14}
-                        onChange={(value) =>
-                          handleValueChange('fontSize', value)
-                        }
-                        min={12}
-                        max={24}
-                        style={{ width: '100%' }}
-                        placeholder="设置字体大小"
-                        addonAfter="px"
-                      />
-                    </Form.Item>
-                    <Form.Item label="文字颜色">
-                      <ColorPicker
-                        value={
-                          (selectedComponent as any).style?.color || '#000000'
-                        }
-                        onChange={(color) =>
-                          handleValueChange('color', color.toHexString())
-                        }
-                        showText
-                        style={{ width: '100%' }}
-                      />
-                    </Form.Item>
-                    <Form.Item label="背景颜色">
-                      <ColorPicker
-                        value={
-                          (selectedComponent as any).style?.backgroundColor ||
-                          '#ffffff'
-                        }
-                        onChange={(color) =>
-                          handleValueChange(
-                            'backgroundColor',
-                            color.toHexString(),
-                          )
-                        }
-                        showText
-                        style={{ width: '100%' }}
-                      />
                     </Form.Item>
                   </Form>
                 </div>

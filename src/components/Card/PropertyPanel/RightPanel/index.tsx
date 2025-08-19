@@ -304,7 +304,7 @@ export const PropertyPanel: React.FC<{
       rich_text: ['richtext', 'object'], // 富文本变量：支持 originalType='richtext' 或旧的 type='object'
       img: ['image', 'string'],
       img_combination: ['imageArray', 'image_array'], // 图片数组变量：支持新旧格式
-      input: ['text', 'string'],
+      input: ['text', 'string', 'number', 'integer'],
       select_static: ['array', 'string_array'],
       multi_select_static: ['array', 'string_array'],
     };
