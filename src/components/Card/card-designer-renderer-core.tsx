@@ -3765,32 +3765,36 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
     case 'button': {
       // 检查当前组件是否被选中
       const isCurrentSelected = isSamePath(selectedPath || null, path);
-      const buttonColor = (comp as any).style?.color || '#fff';
+      // const buttonColor = (comp as any).style?.color || '#fff';
 
       // 获取按钮颜色样式
-      const getButtonStyle = (customColor?: string) => {
-        const baseStyle = {
-          backgroundColor: '#1890ff',
-          color: '#ffffff',
-        };
-
-        // 如果有自定义颜色，覆盖默认颜色
-        if (customColor) {
-          return {
-            ...baseStyle,
-            border: `1px solid ${
-              buttonColor === '#000000' ? '#d0d3d6' : customColor
-            }`,
-            backgroundColor:
-              buttonColor === '#000000' ? '#ffffff' : customColor,
-            color: buttonColor === '#000000' ? '#1f2329' : '#ffffff',
-          };
+      const getButtonStyleByColor = (buttonColor?: string) => {
+        switch (buttonColor) {
+          case 'black':
+            return {
+              backgroundColor: '#ffffff',
+              color: '#000000',
+              border: '1px solid #d9d9d9',
+            };
+          case 'red':
+            return {
+              backgroundColor: '#ff4d4f',
+              color: '#ffffff',
+              border: '1px solid #ff4d4f',
+            };
+          case 'blue':
+          default:
+            return {
+              backgroundColor: '#1890ff',
+              color: '#ffffff',
+              border: '1px solid #1890ff',
+            };
         }
-
-        return baseStyle;
       };
 
-      const buttonStyle = getButtonStyle((comp as any).style?.color);
+      const buttonStyle = getButtonStyleByColor(
+        (comp as any).style?.buttonColor,
+      );
 
       const buttonContent = (
         <div
@@ -3805,9 +3809,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           }}
         >
           <Button
-            type={comp.type || 'primary'}
-            size={comp.size || 'middle'}
-            danger={comp.danger || false}
+            type="primary"
+            size="middle"
+            danger={false}
             style={{
               padding: '8px 16px',
               borderRadius: '6px',

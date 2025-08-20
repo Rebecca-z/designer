@@ -1,19 +1,10 @@
 // ButtonComponent 编辑界面 - 按钮组件
 import { BgColorsOutlined, SettingOutlined } from '@ant-design/icons';
-import {
-  ColorPicker,
-  Form,
-  Input,
-  InputNumber,
-  Select,
-  Tabs,
-  Typography,
-} from 'antd';
+import { Form, Input, Select, Tabs, Typography } from 'antd';
 import React from 'react';
 import { BaseComponentProps } from '../types';
 
 const { Text } = Typography;
-const { Option } = Select;
 
 const ButtonComponent: React.FC<BaseComponentProps> = ({
   selectedComponent,
@@ -94,38 +85,23 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
                     📝 内容设置
                   </div>
                   <Form form={form} layout="vertical">
-                    <Form.Item label="按钮文字">
+                    <Form.Item label="按钮文案">
                       <Input
-                        value={(selectedComponent as any).text || ''}
-                        onChange={(e) =>
-                          handleValueChange('text', e.target.value)
+                        value={
+                          (selectedComponent as any).text?.content || '按钮'
                         }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          // 限制最多8个字符
+                          if (value.length <= 8) {
+                            handleValueChange('text.content', value);
+                          }
+                        }}
                         placeholder="按钮"
+                        maxLength={8}
+                        showCount
+                        style={{ width: '100%' }}
                       />
-                    </Form.Item>
-                    <Form.Item label="按钮类型">
-                      <Select
-                        value={(selectedComponent as any).type || 'primary'}
-                        onChange={(value) => handleValueChange('type', value)}
-                        style={{ width: '100%' }}
-                      >
-                        <Option value="primary">主要按钮</Option>
-                        <Option value="default">默认按钮</Option>
-                        <Option value="dashed">虚线按钮</Option>
-                        <Option value="text">文本按钮</Option>
-                        <Option value="link">链接按钮</Option>
-                      </Select>
-                    </Form.Item>
-                    <Form.Item label="按钮大小">
-                      <Select
-                        value={(selectedComponent as any).size || 'middle'}
-                        onChange={(value) => handleValueChange('size', value)}
-                        style={{ width: '100%' }}
-                      >
-                        <Option value="large">大号</Option>
-                        <Option value="middle">中号</Option>
-                        <Option value="small">小号</Option>
-                      </Select>
                     </Form.Item>
                   </Form>
                 </div>
@@ -145,69 +121,78 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
                     🎨 样式设置
                   </div>
                   <Form form={form} layout="vertical">
-                    <Form.Item label="宽度">
-                      <InputNumber
-                        value={(selectedComponent as any).style?.width}
-                        onChange={(value) => handleValueChange('width', value)}
-                        min={50}
-                        max={300}
-                        style={{ width: '100%' }}
-                        placeholder="自动"
-                        addonAfter="px"
-                      />
-                    </Form.Item>
-                    <Form.Item label="高度">
-                      <InputNumber
-                        value={(selectedComponent as any).style?.height}
-                        onChange={(value) => handleValueChange('height', value)}
-                        min={20}
-                        max={80}
-                        style={{ width: '100%' }}
-                        placeholder="自动"
-                        addonAfter="px"
-                      />
-                    </Form.Item>
-                    <Form.Item label="背景颜色">
-                      <ColorPicker
+                    <Form.Item label="按钮颜色">
+                      <Select
                         value={
-                          (selectedComponent as any).style?.backgroundColor ||
-                          '#1890ff'
-                        }
-                        onChange={(color) =>
-                          handleValueChange(
-                            'backgroundColor',
-                            color.toHexString(),
-                          )
-                        }
-                        showText
-                        style={{ width: '100%' }}
-                      />
-                    </Form.Item>
-                    <Form.Item label="文字颜色">
-                      <ColorPicker
-                        value={
-                          (selectedComponent as any).style?.color || '#ffffff'
-                        }
-                        onChange={(color) =>
-                          handleValueChange('color', color.toHexString())
-                        }
-                        showText
-                        style={{ width: '100%' }}
-                      />
-                    </Form.Item>
-                    <Form.Item label="圆角">
-                      <InputNumber
-                        value={
-                          (selectedComponent as any).style?.borderRadius || 6
+                          (selectedComponent as any).style?.buttonColor ||
+                          'blue'
                         }
                         onChange={(value) =>
-                          handleValueChange('borderRadius', value)
+                          handleValueChange('buttonColor', value)
                         }
-                        min={0}
-                        max={50}
                         style={{ width: '100%' }}
-                        addonAfter="px"
-                      />
+                      >
+                        <Select.Option value="black">
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: '16px',
+                                height: '16px',
+                                backgroundColor: '#000000',
+                                border: '1px solid #d9d9d9',
+                                borderRadius: '2px',
+                              }}
+                            />
+                            黑色
+                          </div>
+                        </Select.Option>
+                        <Select.Option value="blue">
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: '16px',
+                                height: '16px',
+                                backgroundColor: '#1890ff',
+                                border: '1px solid #d9d9d9',
+                                borderRadius: '2px',
+                              }}
+                            />
+                            蓝色
+                          </div>
+                        </Select.Option>
+                        <Select.Option value="red">
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: '16px',
+                                height: '16px',
+                                backgroundColor: '#ff4d4f',
+                                border: '1px solid #d9d9d9',
+                                borderRadius: '2px',
+                              }}
+                            />
+                            红色
+                          </div>
+                        </Select.Option>
+                      </Select>
                     </Form.Item>
                   </Form>
                 </div>

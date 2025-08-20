@@ -272,6 +272,24 @@ export const PropertyPanel: React.FC<{
           value,
           updatedStyle: updatedComponent.style,
         });
+      } else if (key === 'text.content' && selectedComponent.tag === 'button') {
+        // 特殊处理按钮文案：同时更新 text.content 和 text.i18n_content['en-US']
+        updatedComponent = {
+          ...selectedComponent,
+          text: {
+            ...((selectedComponent as any).text || {}),
+            content: value,
+            i18n_content: {
+              ...((selectedComponent as any).text?.i18n_content || {}),
+              'en-US': value,
+            },
+          },
+        };
+        console.log('🔄 按钮文案同步更新:', {
+          textContent: value,
+          i18nContent: value,
+          updatedComponent,
+        });
       } else {
         // 非样式属性：直接设置到组件根级
         updatedComponent = {

@@ -52,6 +52,7 @@ const buttonHtml = (comp: any) => {
   const buttonText = comp.text?.content || '按钮';
   const isSubmit = comp.form_action_type === 'submit';
   const isReset = comp.form_action_type === 'reset';
+  const buttonColor = comp.style?.buttonColor || 'blue';
 
   let buttonStyle = `
     padding: 8px 16px;
@@ -64,6 +65,7 @@ const buttonHtml = (comp: any) => {
     margin: 8px 4px;
   `;
 
+  // 优先使用表单按钮的颜色样式
   if (isSubmit) {
     buttonStyle += `
       background-color: #1890ff;
@@ -77,11 +79,31 @@ const buttonHtml = (comp: any) => {
       color: white;
     `;
   } else {
-    buttonStyle += `
-      background-color: #f5f5f5;
-      border-color: #d9d9d9;
-      color: #333;
-    `;
+    // 使用按钮颜色设置
+    switch (buttonColor) {
+      case 'black':
+        buttonStyle += `
+          background-color: #ffffff;
+          border-color: #d9d9d9;
+          color: #000000;
+        `;
+        break;
+      case 'red':
+        buttonStyle += `
+          background-color: #ff4d4f;
+          border-color: #ff4d4f;
+          color: #ffffff;
+        `;
+        break;
+      case 'blue':
+      default:
+        buttonStyle += `
+          background-color: #1890ff;
+          border-color: #1890ff;
+          color: #ffffff;
+        `;
+        break;
+    }
   }
 
   return `
@@ -784,12 +806,12 @@ export const createDefaultComponent = (type: string): ComponentType => {
                       tag: 'plain_text',
                       content: '提交',
                       i18n_content: {
-                        'en-US': 'Submit',
+                        'en-US': '提交',
                       },
                     },
                     form_action_type: 'submit',
                     style: {
-                      color: '#1890ff', // 默认蓝色
+                      buttonColor: 'blue', // 默认蓝色
                     },
                     behaviors: [
                       {
@@ -809,12 +831,12 @@ export const createDefaultComponent = (type: string): ComponentType => {
                       tag: 'plain_text',
                       content: '取消',
                       i18n_content: {
-                        'en-US': 'Cancel',
+                        'en-US': '取消',
                       },
                     },
                     form_action_type: 'reset',
                     style: {
-                      color: '#000000', // 默认黑色
+                      buttonColor: 'black', // 默认黑色
                     },
                     behaviors: [
                       {
@@ -1024,8 +1046,11 @@ export const createDefaultComponent = (type: string): ComponentType => {
           tag: 'plain_text',
           content: '按钮',
           i18n_content: {
-            'en-US': 'Button',
+            'en-US': '按钮',
           },
+        },
+        style: {
+          buttonColor: 'blue', // 默认蓝色
         },
         behaviors: [
           {
