@@ -7,7 +7,7 @@ import {
   PlusOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
-import { Button, Card, InputNumber, Tabs, Typography } from 'antd';
+import { Button, Card, Tabs, Typography } from 'antd';
 import React, { useState } from 'react';
 import AddVariableModal from '../../Variable/AddVariableModal';
 import {
@@ -25,6 +25,7 @@ import {
   TextComponent,
   TitleComponent,
 } from '../components';
+import CardRootComponent from '../components/CardRootComponent';
 import { getComponentRealPath, getVariableKeys } from '../utils';
 
 // const { Option } = Select;
@@ -228,6 +229,36 @@ export const PropertyPanel: React.FC<{
 
   // 处理组件值变化
   const handleValueChange = (key: string, value: any) => {
+    // 处理卡片链接配置
+    if (key === 'card_link.multi_url') {
+      console.log('🔗 更新卡片链接配置:', {
+        key,
+        value,
+        cardData: cardData,
+      });
+
+      if (!cardData) {
+        console.warn('⚠️ cardData为空，无法更新卡片链接');
+        return;
+      }
+
+      // 更新卡片数据中的 card_link.multi_url
+      const updatedCardData = {
+        ...cardData,
+        dsl: {
+          ...cardData.dsl,
+          card_link: {
+            ...cardData.dsl.card_link,
+            multi_url: value,
+          },
+        },
+      };
+
+      // 使用正确的格式传递完整的卡片数据
+      onUpdateCard({ cardData: updatedCardData });
+      return;
+    }
+
     if (selectedComponent) {
       console.log('🔄 RightPanel handleValueChange:', {
         componentTag: selectedComponent.tag,
@@ -1058,65 +1089,12 @@ export const PropertyPanel: React.FC<{
               </span>
             ),
             children: isCardRootSelected ? (
-              <div>
-                <div
-                  style={{
-                    marginBottom: '16px',
-                    padding: '12px',
-                    backgroundColor: '#f0f9ff',
-                    border: '1px solid #bae6fd',
-                    borderRadius: '6px',
-                  }}
-                >
-                  <Text style={{ fontSize: '12px', color: '#0369a1' }}>
-                    🎯 当前选中：卡片
-                  </Text>
-                </div>
-
-                <div
-                  style={{
-                    background: '#fff',
-                    borderRadius: 6,
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-                    padding: 16,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontWeight: 600,
-                      marginBottom: 8,
-                      fontSize: 15,
-                    }}
-                  >
-                    ⚙️ 卡片属性
-                  </div>
-                  <div style={{ marginBottom: '16px' }}>
-                    <label
-                      style={{
-                        display: 'block',
-                        marginBottom: '8px',
-                        fontWeight: 500,
-                        color: '#333',
-                      }}
-                    >
-                      垂直间距
-                    </label>
-                    <InputNumber
-                      value={cardVerticalSpacing || 8}
-                      onChange={(value) => {
-                        console.log('垂直间距输入变化:', value);
-                        onUpdateCard({ vertical_spacing: value || 0 });
-                      }}
-                      min={0}
-                      max={100}
-                      step={1}
-                      style={{ width: '100%' }}
-                      addonAfter="px"
-                      placeholder="设置垂直间距"
-                    />
-                  </div>
-                </div>
-              </div>
+              <CardRootComponent
+                cardVerticalSpacing={cardVerticalSpacing}
+                onUpdateCard={onUpdateCard}
+                cardData={cardData}
+                handleValueChange={handleValueChange}
+              />
             ) : (
               <div
                 style={{
