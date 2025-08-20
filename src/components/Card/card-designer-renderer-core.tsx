@@ -3768,8 +3768,8 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       // const buttonColor = (comp as any).style?.color || '#fff';
 
       // 获取按钮颜色样式
-      const getButtonStyleByColor = (buttonColor?: string) => {
-        switch (buttonColor) {
+      const getButtonStyleByColor = (colorTheme?: string) => {
+        switch (colorTheme) {
           case 'black':
             return {
               backgroundColor: '#ffffff',
@@ -3792,9 +3792,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         }
       };
 
-      const buttonStyle = getButtonStyleByColor(
-        (comp as any).style?.buttonColor,
-      );
+      const buttonStyle = getButtonStyleByColor((comp as any).style?.color);
 
       const buttonContent = (
         <div

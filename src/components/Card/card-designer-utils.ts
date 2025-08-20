@@ -52,7 +52,7 @@ const buttonHtml = (comp: any) => {
   const buttonText = comp.text?.content || '按钮';
   const isSubmit = comp.form_action_type === 'submit';
   const isReset = comp.form_action_type === 'reset';
-  const buttonColor = comp.style?.buttonColor || 'blue';
+  const buttonColor = comp.style?.color || 'blue';
 
   let buttonStyle = `
     padding: 8px 16px;
@@ -811,7 +811,7 @@ export const createDefaultComponent = (type: string): ComponentType => {
                     },
                     form_action_type: 'submit',
                     style: {
-                      buttonColor: 'blue', // 默认蓝色
+                      color: 'blue', // 默认蓝色
                     },
                     behaviors: [
                       {
@@ -836,7 +836,7 @@ export const createDefaultComponent = (type: string): ComponentType => {
                     },
                     form_action_type: 'reset',
                     style: {
-                      buttonColor: 'black', // 默认黑色
+                      color: 'black', // 默认黑色
                     },
                     behaviors: [
                       {
@@ -1050,7 +1050,7 @@ export const createDefaultComponent = (type: string): ComponentType => {
           },
         },
         style: {
-          buttonColor: 'blue', // 默认蓝色
+          color: 'blue', // 默认蓝色
         },
         behaviors: [
           {

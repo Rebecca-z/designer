@@ -124,12 +124,9 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
                     <Form.Item label="按钮颜色">
                       <Select
                         value={
-                          (selectedComponent as any).style?.buttonColor ||
-                          'blue'
+                          (selectedComponent as any).style?.color || 'blue'
                         }
-                        onChange={(value) =>
-                          handleValueChange('buttonColor', value)
-                        }
+                        onChange={(value) => handleValueChange('color', value)}
                         style={{ width: '100%' }}
                       >
                         <Select.Option value="black">
