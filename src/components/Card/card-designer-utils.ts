@@ -813,14 +813,7 @@ export const createDefaultComponent = (type: string): ComponentType => {
                     style: {
                       color: 'blue', // 默认蓝色
                     },
-                    behaviors: [
-                      {
-                        type: 'callback',
-                        callback: {
-                          action: 'click',
-                        },
-                      },
-                    ],
+                    behaviors: [],
                   },
                   // 取消按钮
                   {
@@ -838,14 +831,7 @@ export const createDefaultComponent = (type: string): ComponentType => {
                     style: {
                       color: 'black', // 默认黑色
                     },
-                    behaviors: [
-                      {
-                        type: 'callback',
-                        callback: {
-                          action: 'click',
-                        },
-                      },
-                    ],
+                    behaviors: [],
                   },
                 ],
                 style: { flex: 1 }, // 移动到style.flex字段
@@ -1052,14 +1038,8 @@ export const createDefaultComponent = (type: string): ComponentType => {
         style: {
           color: 'blue', // 默认蓝色
         },
-        behaviors: [
-          {
-            type: 'callback',
-            callback: {
-              action: 'click',
-            },
-          },
-        ],
+        // 默认空的behaviors数组
+        behaviors: [],
       } as ComponentType;
 
     case 'select_static':

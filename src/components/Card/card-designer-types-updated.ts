@@ -113,6 +113,13 @@ export interface ButtonComponent extends ComponentBase {
     color?: string;
     [key: string]: any;
   };
+  // 新增事件相关属性
+  enableClickEvent?: boolean;
+  clickEventType?: 'link' | 'callback';
+  pcUrl?: string;
+  mobileUrl?: string;
+  paramType?: 'string' | 'object';
+  paramValue?: string;
   behaviors?: Array<{
     type: 'open_url' | 'callback';
     open_url?: {
