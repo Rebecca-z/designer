@@ -43,7 +43,6 @@ export interface OutlineTreeProps {
 export interface ComponentPanelProps {
   cardData: CardDesignData;
   selectedPath: (string | number)[] | null;
-  onSelect: (path: (string | number)[]) => void;
   onOutlineHover: (path: (string | number)[] | null) => void;
   onOutlineSelect: (
     component: ComponentType | null,

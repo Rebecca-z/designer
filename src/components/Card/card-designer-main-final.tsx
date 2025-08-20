@@ -1163,7 +1163,7 @@ const CardDesigner: React.FC = () => {
         <div style={{ flex: 1, display: 'flex' }}>
           {/* 左侧组件面板 - 包含组件库和大纲树的Tab */}
           <ComponentPanel
-            data={safeCardData}
+            cardData={safeCardData}
             selectedPath={selection.selectedPath}
             onOutlineHover={outline.handleOutlineHover}
             onOutlineSelect={handleOutlineSelect}
