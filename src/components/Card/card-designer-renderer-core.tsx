@@ -3899,10 +3899,36 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                   text: {
                     content:
                       typeof item === 'object'
-                        ? item.label || item.text || item
+                        ? item.text?.content || item.label || item.text || item
                         : item,
                   },
                 }));
+              }
+
+              // 如果变量值是字符串，尝试解析为JSON数组
+              if (typeof variableValue === 'string') {
+                try {
+                  const parsedValue = JSON.parse(variableValue);
+                  if (Array.isArray(parsedValue)) {
+                    return parsedValue.map((item: any, index: number) => ({
+                      value:
+                        typeof item === 'object'
+                          ? item.value || `option_${index}`
+                          : item,
+                      text: {
+                        content:
+                          typeof item === 'object'
+                            ? item.text?.content ||
+                              item.label ||
+                              item.text ||
+                              item
+                            : item,
+                      },
+                    }));
+                  }
+                } catch (e) {
+                  console.warn('⚠️ 无法解析变量值为JSON:', variableValue);
+                }
               }
             }
 
