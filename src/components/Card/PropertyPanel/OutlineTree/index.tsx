@@ -16,6 +16,12 @@ const OutlineTree: React.FC<OutlineTreeProps> = ({
 }) => {
   // 构建树形数据 - 正确反映卡片数据结构
   const treeData = useMemo(() => {
+    // 添加空值检查，防止访问 undefined 的属性
+    if (!data || !data.dsl || !data.dsl.body || !data.dsl.body.elements) {
+      console.warn('⚠️ OutlineTree: 数据结构不完整，返回空树');
+      return [];
+    }
+
     const buildTreeNode = (
       component: any,
       index: number,
@@ -87,7 +93,7 @@ const OutlineTree: React.FC<OutlineTreeProps> = ({
 
     // 如果存在标题数据，添加标题节点
     if (
-      data.dsl.header &&
+      data.dsl?.header &&
       (data.dsl.header.title?.content || data.dsl.header.subtitle?.content)
     ) {
       const titleNode: any = {
@@ -105,7 +111,7 @@ const OutlineTree: React.FC<OutlineTreeProps> = ({
         component: {
           id: 'title-component',
           tag: 'title',
-          style: data.dsl.header.style || 'blue',
+          style: data.dsl.header?.style || 'blue',
         },
       };
       nodes.push(titleNode);
@@ -132,7 +138,32 @@ const OutlineTree: React.FC<OutlineTreeProps> = ({
     nodes.push(cardNode);
 
     return nodes;
-  }, [data.dsl.body.elements, data.dsl.header]);
+  }, [data?.dsl?.body?.elements, data?.dsl?.header]);
+
+  // 早期返回，如果数据为空
+  if (!data) {
+    console.warn('⚠️ OutlineTree: data 为空，显示空状态');
+    return (
+      <div style={{ padding: '16px' }}>
+        <div
+          style={{
+            textAlign: 'center',
+            color: '#999',
+            padding: '40px 20px',
+            border: '2px dashed #d9d9d9',
+            borderRadius: '8px',
+            backgroundColor: '#fafafa',
+          }}
+        >
+          <BarsOutlined style={{ fontSize: '32px', marginBottom: '12px' }} />
+          <div style={{ fontSize: '14px', marginBottom: '8px' }}>
+            数据加载中
+          </div>
+          <div style={{ fontSize: '12px' }}>请稍等数据加载完成</div>
+        </div>
+      </div>
+    );
+  }
 
   const handleSelect = (selectedKeys: React.Key[], info: any) => {
     if (info.node?.path) {
@@ -185,7 +216,7 @@ const OutlineTree: React.FC<OutlineTreeProps> = ({
             }}
           >
             <Text style={{ fontSize: '12px', color: '#0958d9' }}>
-              📊 卡片包含 {data.dsl.body.elements.length} 个组件
+              📊 卡片包含 {data?.dsl?.body?.elements?.length || 0} 个组件
             </Text>
           </div>
 

@@ -804,3 +804,208 @@ export const multiSelectComponentStateManager =
 
 // 导出下拉多选组件状态类型
 export type { MultiSelectComponentState };
+
+// ==================== 选项编辑状态管理 ====================
+
+// 选项编辑状态接口
+interface OptionEditState {
+  userEditedTextContent?: string; // 用户编辑的选项文本内容
+  boundTextVariableName?: string; // 绑定的文本变量名
+  userEditedValue?: string; // 用户编辑的回传参数
+  boundValueVariableName?: string; // 绑定的回传参数变量名
+}
+
+// 选项编辑状态管理器
+export class OptionEditStateManager {
+  private static instance: OptionEditStateManager;
+  private stateMap: Map<string, OptionEditState> = new Map();
+
+  private constructor() {}
+
+  // 单例模式获取实例
+  public static getInstance(): OptionEditStateManager {
+    if (!OptionEditStateManager.instance) {
+      OptionEditStateManager.instance = new OptionEditStateManager();
+    }
+    return OptionEditStateManager.instance;
+  }
+
+  // 生成选项的唯一键
+  private getOptionKey(componentId: string, optionIndex: number): string {
+    return `${componentId}_option_${optionIndex}`;
+  }
+
+  // 获取选项状态
+  public getOptionState(
+    componentId: string,
+    optionIndex: number,
+  ): OptionEditState {
+    const key = this.getOptionKey(componentId, optionIndex);
+    return this.stateMap.get(key) || {};
+  }
+
+  // 设置用户编辑的文本内容
+  public setUserEditedTextContent(
+    componentId: string,
+    optionIndex: number,
+    content: string,
+  ): void {
+    const key = this.getOptionKey(componentId, optionIndex);
+    const currentState = this.getOptionState(componentId, optionIndex);
+    this.stateMap.set(key, {
+      ...currentState,
+      userEditedTextContent: content,
+    });
+
+    console.log('📝 设置选项文本内容:', {
+      componentId,
+      optionIndex,
+      content,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取用户编辑的文本内容
+  public getUserEditedTextContent(
+    componentId: string,
+    optionIndex: number,
+  ): string | undefined {
+    const state = this.getOptionState(componentId, optionIndex);
+    return state.userEditedTextContent;
+  }
+
+  // 设置绑定的文本变量名
+  public setBoundTextVariableName(
+    componentId: string,
+    optionIndex: number,
+    variableName: string | undefined,
+  ): void {
+    const key = this.getOptionKey(componentId, optionIndex);
+    const currentState = this.getOptionState(componentId, optionIndex);
+    const newState = { ...currentState };
+
+    if (variableName) {
+      newState.boundTextVariableName = variableName;
+    } else {
+      delete newState.boundTextVariableName;
+    }
+
+    this.stateMap.set(key, newState);
+
+    console.log('🔗 设置选项文本绑定变量名:', {
+      componentId,
+      optionIndex,
+      variableName,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取绑定的文本变量名
+  public getBoundTextVariableName(
+    componentId: string,
+    optionIndex: number,
+  ): string | undefined {
+    const state = this.getOptionState(componentId, optionIndex);
+    return state.boundTextVariableName;
+  }
+
+  // 设置用户编辑的回传参数
+  public setUserEditedValue(
+    componentId: string,
+    optionIndex: number,
+    value: string,
+  ): void {
+    const key = this.getOptionKey(componentId, optionIndex);
+    const currentState = this.getOptionState(componentId, optionIndex);
+    this.stateMap.set(key, {
+      ...currentState,
+      userEditedValue: value,
+    });
+
+    console.log('📝 设置选项回传参数:', {
+      componentId,
+      optionIndex,
+      value,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取用户编辑的回传参数
+  public getUserEditedValue(
+    componentId: string,
+    optionIndex: number,
+  ): string | undefined {
+    const state = this.getOptionState(componentId, optionIndex);
+    return state.userEditedValue;
+  }
+
+  // 设置绑定的回传参数变量名
+  public setBoundValueVariableName(
+    componentId: string,
+    optionIndex: number,
+    variableName: string | undefined,
+  ): void {
+    const key = this.getOptionKey(componentId, optionIndex);
+    const currentState = this.getOptionState(componentId, optionIndex);
+    const newState = { ...currentState };
+
+    if (variableName) {
+      newState.boundValueVariableName = variableName;
+    } else {
+      delete newState.boundValueVariableName;
+    }
+
+    this.stateMap.set(key, newState);
+
+    console.log('🔗 设置选项回传参数绑定变量名:', {
+      componentId,
+      optionIndex,
+      variableName,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取绑定的回传参数变量名
+  public getBoundValueVariableName(
+    componentId: string,
+    optionIndex: number,
+  ): string | undefined {
+    const state = this.getOptionState(componentId, optionIndex);
+    return state.boundValueVariableName;
+  }
+
+  // 清除选项状态
+  public clearOptionState(componentId: string, optionIndex: number): void {
+    const key = this.getOptionKey(componentId, optionIndex);
+    this.stateMap.delete(key);
+    console.log('🗑️ 清除选项状态:', {
+      componentId,
+      optionIndex,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 清除组件的所有选项状态
+  public clearComponentOptionStates(componentId: string): void {
+    const keysToDelete = Array.from(this.stateMap.keys()).filter((key) =>
+      key.startsWith(`${componentId}_option_`),
+    );
+    keysToDelete.forEach((key) => this.stateMap.delete(key));
+    console.log('🗑️ 清除组件所有选项状态:', {
+      componentId,
+      deletedCount: keysToDelete.length,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取所有状态
+  public getAllStates(): Map<string, OptionEditState> {
+    return new Map(this.stateMap);
+  }
+}
+
+// 导出选项编辑状态管理器单例实例
+export const optionEditStateManager = OptionEditStateManager.getInstance();
+
+// 导出选项编辑状态类型
+export type { OptionEditState };

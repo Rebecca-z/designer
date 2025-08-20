@@ -4139,18 +4139,47 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
               // 如果变量值是数组，直接使用
               if (Array.isArray(variableValue)) {
-                return variableValue.map((item: any, index: number) => ({
-                  value:
-                    typeof item === 'object'
-                      ? item.value || `option_${index}`
-                      : item,
-                  text: {
-                    content:
-                      typeof item === 'object'
-                        ? item.label || item.text || item
-                        : item,
-                  },
-                }));
+                return variableValue.map((item: any, index: number) => {
+                  console.log('🔍 处理选项数组项:', { item, index });
+
+                  if (typeof item === 'object' && item !== null) {
+                    // 处理标准的选项对象格式：{text: {content: "..."}, value: "..."}
+                    if (
+                      item.text &&
+                      typeof item.text === 'object' &&
+                      item.text.content
+                    ) {
+                      return {
+                        value: item.value || `option_${index}`,
+                        text: {
+                          content: item.text.content,
+                          i18n_content: item.text.i18n_content,
+                        },
+                      };
+                    }
+
+                    // 兼容其他格式：{label: "...", value: "..."} 或 {text: "...", value: "..."}
+                    const displayText =
+                      item.label ||
+                      item.text ||
+                      item.name ||
+                      `选项${index + 1}`;
+                    return {
+                      value: item.value || `option_${index}`,
+                      text: {
+                        content: displayText,
+                      },
+                    };
+                  }
+
+                  // 如果是字符串或其他类型，直接使用
+                  return {
+                    value: `option_${index}`,
+                    text: {
+                      content: String(item),
+                    },
+                  };
+                });
               }
             }
 
@@ -4236,6 +4265,51 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                 }
               } else if (option.label) {
                 displayText = option.label;
+              }
+
+              // 解析变量值以显示实际内容
+              if (displayText && displayText.includes('${')) {
+                console.log('🎨 画布变量解析开始:', { displayText });
+                const variableMatch = displayText.match(/\$\{([^}]+)\}/);
+                if (variableMatch && variableMatch[1]) {
+                  const variableName = variableMatch[1];
+                  console.log('🎨 画布提取变量名:', variableName);
+                  console.log('🎨 画布所有变量:', variables);
+
+                  // 查找变量
+                  const variable = variables.find((v: any) => {
+                    if (typeof v === 'object' && v !== null) {
+                      const keys = Object.keys(v as Record<string, any>);
+                      console.log('🎨 画布检查变量:', {
+                        v,
+                        keys,
+                        variableName,
+                      });
+                      return keys.length > 0 && keys[0] === variableName;
+                    }
+                    return false;
+                  });
+
+                  console.log('🎨 画布找到变量:', variable);
+
+                  if (variable && typeof variable === 'object') {
+                    const variableValue = (variable as any)[variableName];
+                    console.log('🎨 画布变量值:', {
+                      variableName,
+                      variableValue,
+                    });
+                    if (variableValue !== undefined && variableValue !== null) {
+                      displayText = String(variableValue);
+                      console.log('🎨 画布最终显示:', displayText);
+                    } else {
+                      // 如果找不到变量值，显示变量名（不带${}）
+                      displayText = variableName;
+                    }
+                  } else {
+                    // 如果找不到变量，显示变量名（不带${}）
+                    displayText = variableName;
+                  }
+                }
               }
 
               return (
