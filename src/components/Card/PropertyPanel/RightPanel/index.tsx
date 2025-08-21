@@ -8,7 +8,7 @@ import {
   SettingOutlined,
 } from '@ant-design/icons';
 import { Button, Card, Tabs, Typography } from 'antd';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import AddVariableModal from '../../Variable/AddVariableModal';
 import {
   ButtonComponent,
@@ -149,6 +149,10 @@ export const PropertyPanel: React.FC<{
   // headerData: _headerData,
 }) => {
   const [topLevelTab, setTopLevelTab] = useState<string>('component');
+  const [lastSelectedComponentId, setLastSelectedComponentId] = useState<
+    string | null
+  >(null);
+  // const [userManuallyChangedTab, setUserManuallyChangedTab] = useState(false);
 
   // 动态生成最新的选中组件数据
   const getLatestSelectedComponent = (): ComponentType | null => {
@@ -160,6 +164,50 @@ export const PropertyPanel: React.FC<{
 
   // 使用最新的组件数据
   const selectedComponent = getLatestSelectedComponent();
+
+  // 🎯 当选中组件时自动切换到组件属性Tab
+  useEffect(() => {
+    if (selectedComponent) {
+      // 只有当选中的是具体组件（不是卡片根节点）时才切换到组件属性Tab
+      const isCardRoot =
+        selectedPath &&
+        selectedPath.length === 2 &&
+        selectedPath[0] === 'dsl' &&
+        selectedPath[1] === 'body';
+
+      // 检查是否是新选中的组件
+      const isNewComponent = selectedComponent.id !== lastSelectedComponentId;
+
+      if (!isCardRoot && isNewComponent) {
+        console.log('🎯 检测到新组件选中，自动切换到组件属性Tab:', {
+          componentId: selectedComponent.id,
+          componentTag: selectedComponent.tag,
+          selectedPath,
+          currentTab: topLevelTab,
+          lastSelectedComponentId,
+          timestamp: new Date().toISOString(),
+        });
+        setTopLevelTab('component');
+        // setUserManuallyChangedTab(false); // 重置手动切换标记
+      }
+
+      // 更新最后选中的组件ID
+      setLastSelectedComponentId(selectedComponent.id);
+    } else {
+      // 如果没有选中组件，清除状态
+      setLastSelectedComponentId(null);
+    }
+  }, [selectedComponent, selectedPath, lastSelectedComponentId, topLevelTab]);
+
+  // 创建一个包装的setTopLevelTab函数来跟踪手动切换
+  const handleTabChange = (activeKey: string) => {
+    setTopLevelTab(activeKey);
+    // setUserManuallyChangedTab(true); // 标记为手动切换
+    console.log('👤 用户手动切换Tab:', {
+      newTab: activeKey,
+      timestamp: new Date().toISOString(),
+    });
+  };
 
   // 调试日志：对比新旧组件数据
   console.log('🔄 RightPanel 组件数据对比:', {
@@ -1076,7 +1124,7 @@ export const PropertyPanel: React.FC<{
     >
       <Tabs
         activeKey={topLevelTab}
-        onChange={setTopLevelTab}
+        onChange={handleTabChange}
         items={[
           {
             key: 'component',

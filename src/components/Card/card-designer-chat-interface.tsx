@@ -57,7 +57,6 @@ interface ChatInterfaceProps {
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
   elements,
   verticalSpacing,
-  padding,
   selectedPath,
   hoveredPath,
   onElementsChange,
@@ -141,7 +140,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           <CardWrapper
             elements={elements}
             verticalSpacing={verticalSpacing}
-            padding={padding}
             selectedPath={selectedPath}
             hoveredPath={hoveredPath}
             onElementsChange={onElementsChange}

@@ -10,7 +10,64 @@ import { getComponentRealPath } from '../../utils';
 import { ImgCombinationComponentProps } from '../types';
 
 const { Text } = Typography;
-// const { Option } = Select;
+
+const DEFAULT_IMAGE_URL = 'demo.png';
+
+// 样式常量
+const STYLES = {
+  container: {
+    width: '300px',
+    height: 'calc(100vh - 60px)',
+    backgroundColor: '#fafafa',
+    borderLeft: '1px solid #d9d9d9',
+    padding: '16px',
+    overflow: 'auto',
+  },
+  tabBarStyle: {
+    padding: '0 16px',
+    backgroundColor: '#fff',
+    margin: 0,
+    borderBottom: '1px solid #d9d9d9',
+  },
+  contentPadding: { padding: '16px' },
+  infoBox: {
+    marginBottom: '16px',
+    padding: '12px',
+    backgroundColor: '#f0f9ff',
+    border: '1px solid #bae6fd',
+    borderRadius: '6px',
+  },
+  section: {
+    background: '#fff',
+    borderRadius: 6,
+    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+    padding: 16,
+  },
+  sectionTitle: {
+    fontWeight: 600,
+    marginBottom: 8,
+    fontSize: 15,
+  },
+  layoutGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, 1fr)',
+    gap: '6px',
+    marginBottom: '8px',
+  },
+  layoutItem: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '4px',
+    cursor: 'pointer',
+  },
+  inputCompact: {
+    width: '100%',
+  },
+  uploadButton: {
+    borderRadius: '0 6px 6px 0',
+  },
+} as const;
 
 // 布局图标组件
 const LayoutIcon: React.FC<{
@@ -360,6 +417,41 @@ const getImageCountForLayout = (layoutType: string): number => {
   }
 };
 
+// 全局状态管理 - 记录用户选择的布局类型（不保存到全局数据）
+// 这个状态在页面刷新时会重置，但在用户操作期间会保持
+class LayoutChoiceManager {
+  private static instance: LayoutChoiceManager;
+  private choices = new Map<string, string>();
+
+  static getInstance(): LayoutChoiceManager {
+    if (!LayoutChoiceManager.instance) {
+      LayoutChoiceManager.instance = new LayoutChoiceManager();
+    }
+    return LayoutChoiceManager.instance;
+  }
+
+  setChoice(componentId: string, layoutType: string) {
+    this.choices.set(componentId, layoutType);
+  }
+
+  getChoice(componentId: string): string | undefined {
+    return this.choices.get(componentId);
+  }
+
+  clearChoice(componentId: string) {
+    this.choices.delete(componentId);
+  }
+}
+
+const layoutChoiceManager = LayoutChoiceManager.getInstance();
+
+// 导出函数供渲染器使用
+export const getComponentLayoutChoice = (
+  componentId: string,
+): string | undefined => {
+  return layoutChoiceManager.getChoice(componentId);
+};
+
 const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
   selectedComponent,
   selectedPath,
@@ -392,14 +484,6 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
   // 获取最新的组件数据
   const getLatestSelectedComponent = (): any => {
     if (!cardData || !selectedPath) {
-      console.warn(
-        '🔍 getLatestSelectedComponent: cardData或selectedPath不存在',
-        {
-          hasCardData: !!cardData,
-          hasSelectedPath: !!selectedPath,
-          selectedPath,
-        },
-      );
       return selectedComponent;
     }
     try {
@@ -411,19 +495,8 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
 
       const { component } = result;
       if (!component) {
-        console.warn('🔍 getComponentRealPath返回结果中没有component', {
-          result,
-          selectedPath,
-        });
         return selectedComponent;
       }
-
-      console.log('✅ 成功获取最新组件数据', {
-        componentId: component.id,
-        tag: component.tag,
-        combination_mode: (component as any).combination_mode,
-        layoutType: (component as any).layoutType,
-      });
 
       return component;
     } catch (error) {
@@ -456,17 +529,6 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
 
         // 标记该组件已初始化，避免后续重复设置
         initializedComponents.add(selectedComponent.id);
-
-        console.log('🔄 初始化多图混排内容模式 (首次选中组件):', {
-          componentId: selectedComponent.id,
-          componentTag: selectedComponent.tag,
-          hasVariableBinding,
-          imgList: selectedComponent.img_list,
-          expectedMode,
-          savedUserImageList: !hasVariableBinding
-            ? selectedComponent.img_list
-            : undefined,
-        });
       }
 
       // 如果当前组件有绑定变量，记住它（但不覆盖已有的记忆）
@@ -550,7 +612,6 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
         console.log('🔄 useEffect-多图混排-调整图片数量:', {
           componentId: selectedComponent.id,
           combinationMode: currentCombinationMode,
-          savedLayoutType,
           currentLayoutType,
           requiredImageCount,
           oldListLength: currentImageList.length,
@@ -572,23 +633,8 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
     multiImageContentMode,
   ]);
 
-  console.log('📝 渲染多图混排组件编辑界面:', {
-    componentId: selectedComponent.id,
-    topLevelTab,
-    variablesCount: variables.length,
-  });
-
   return (
-    <div
-      style={{
-        width: '300px',
-        height: 'calc(100vh - 60px)',
-        backgroundColor: '#fafafa',
-        borderLeft: '1px solid #d9d9d9',
-        padding: '16px',
-        overflow: 'auto',
-      }}
-    >
+    <div style={STYLES.container}>
       <AddVariableModal
         visible={isVariableModalVisible}
         onOk={handleVariableModalOk}
@@ -605,12 +651,7 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
         activeKey={topLevelTab}
         onChange={setTopLevelTab}
         style={{ height: '100%' }}
-        tabBarStyle={{
-          padding: '0 16px',
-          backgroundColor: '#fff',
-          margin: 0,
-          borderBottom: '1px solid #d9d9d9',
-        }}
+        tabBarStyle={STYLES.tabBarStyle}
         size="small"
         items={[
           {
@@ -624,77 +665,179 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
               </span>
             ),
             children: (
-              <div style={{ padding: '16px' }}>
-                <div
-                  style={{
-                    marginBottom: '16px',
-                    padding: '12px',
-                    backgroundColor: '#f0f9ff',
-                    border: '1px solid #bae6fd',
-                    borderRadius: '6px',
-                  }}
-                >
+              <div style={STYLES.contentPadding}>
+                <div style={STYLES.infoBox}>
                   <Text style={{ fontSize: '12px', color: '#0369a1' }}>
                     🎯 当前选中：多图混排组件
                   </Text>
                 </div>
 
                 {/* 布局设置 */}
-                <div
-                  style={{
-                    background: '#fff',
-                    borderRadius: 6,
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-                    padding: 16,
-                  }}
-                >
-                  <div
-                    style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}
-                  >
-                    📐 布局设置
-                  </div>
+                <div style={STYLES.section}>
+                  <div style={STYLES.sectionTitle}>📐 布局设置</div>
                   <Form form={form} layout="vertical">
                     <Form.Item label="布局模式">
                       {(() => {
                         // 获取当前图片数量
-                        const currentImageList = Array.isArray(
-                          (selectedComponent as any).img_list,
-                        )
-                          ? (selectedComponent as any).img_list
-                          : [];
-                        const imageCount = currentImageList.length;
+                        let imageCount = 0;
+                        let currentImageList = [];
+
+                        if (multiImageContentMode === 'specify') {
+                          // 指定模式：从图片数组获取数量
+                          currentImageList = Array.isArray(
+                            (selectedComponent as any).img_list,
+                          )
+                            ? (selectedComponent as any).img_list
+                            : [];
+                          imageCount = currentImageList.length;
+                        } else if (multiImageContentMode === 'variable') {
+                          // 变量模式：从 combination_mode 和变量图片数量动态推断布局类型
+                          const currentCombinationMode =
+                            (selectedComponent as any).combination_mode ||
+                            'double';
+
+                          // 获取变量中的实际图片数量
+                          // 需要重新解析变量获取图片列表
+                          let actualImageCount = 0;
+                          if (
+                            typeof (selectedComponent as any).img_list ===
+                              'string' &&
+                            (selectedComponent as any).img_list.includes('${')
+                          ) {
+                            const variableMatch = (
+                              selectedComponent as any
+                            ).img_list.match(/\$\{([^}]+)\}/);
+                            if (variableMatch && variableMatch[1]) {
+                              const variableName = variableMatch[1];
+                              const variable = variables.find((v) => {
+                                if (typeof v === 'object' && v !== null) {
+                                  const keys = Object.keys(
+                                    v as Record<string, any>,
+                                  );
+                                  return (
+                                    keys.length > 0 && keys[0] === variableName
+                                  );
+                                }
+                                return false;
+                              });
+                              if (variable) {
+                                const variableValue = (
+                                  variable as Record<string, any>
+                                )[variableName];
+                                if (Array.isArray(variableValue)) {
+                                  actualImageCount = variableValue.length;
+                                }
+                              }
+                            }
+                          }
+
+                          let currentLayoutType;
+
+                          // 根据 combination_mode 和实际图片数量动态推断布局类型
+                          const detailedModes = [
+                            'bisect_2',
+                            'bisect_4',
+                            'bisect_6',
+                            'trisect_3',
+                            'trisect_6',
+                            'trisect_9',
+                            'double',
+                            'triple',
+                          ];
+
+                          if (detailedModes.includes(currentCombinationMode)) {
+                            // 如果是具体的布局类型，直接使用
+                            currentLayoutType = currentCombinationMode;
+                          } else {
+                            // 对于简化的模式，根据实际图片数量智能推断
+                            switch (currentCombinationMode) {
+                              case 'bisect':
+                                if (actualImageCount <= 2)
+                                  currentLayoutType = 'bisect_2';
+                                else if (actualImageCount <= 4)
+                                  currentLayoutType = 'bisect_4';
+                                else currentLayoutType = 'bisect_6';
+                                break;
+                              case 'trisect':
+                                if (actualImageCount <= 3)
+                                  currentLayoutType = 'trisect_3';
+                                else if (actualImageCount <= 6)
+                                  currentLayoutType = 'trisect_6';
+                                else currentLayoutType = 'trisect_9';
+                                break;
+                              default:
+                                currentLayoutType = 'double';
+                            }
+                          }
+
+                          imageCount =
+                            getImageCountForLayout(currentLayoutType);
+                        }
 
                         // 获取可用的布局选项
-                        const availableLayouts =
-                          getAvailableLayouts(imageCount);
+                        const availableLayouts = getAvailableLayouts();
 
                         // 获取最新的组件数据
                         const latestComponent = getLatestSelectedComponent();
 
                         // 安全检查：确保获取到了有效的组件数据
                         if (!latestComponent) {
-                          console.warn(
-                            '⚠️ 渲染时无法获取最新组件数据，使用fallback',
-                          );
-                          // 使用fallback数据（同样基于推断，不使用保存的layoutType）
+                          // 使用fallback数据
                           const fallbackCombinationMode =
                             (selectedComponent as any).combination_mode ||
                             'double';
-                          const fallbackCurrentLayoutType =
-                            getLayoutTypeFromModeAndCount(
-                              fallbackCombinationMode,
-                              imageCount,
-                            );
 
-                          console.log('🎨 布局模式渲染调试 (fallback):', {
-                            componentId: selectedComponent.id,
-                            currentCombinationMode: fallbackCombinationMode,
-                            currentLayoutType: fallbackCurrentLayoutType,
-                            imageCount,
-                            dataSource: 'fallback',
-                            layoutTypeSource: 'inferred', // 总是基于推断
-                            warning: '使用fallback数据，可能不是最新状态',
-                          });
+                          // 完全基于 combination_mode 和图片数量动态推断布局类型
+                          let fallbackCurrentLayoutType;
+                          if (multiImageContentMode === 'variable') {
+                            // 变量模式：根据 combination_mode 和实际图片数量推断
+                            // 需要重新解析变量获取图片列表
+                            let actualImageCount = 0;
+                            if (
+                              typeof (selectedComponent as any).img_list ===
+                                'string' &&
+                              (selectedComponent as any).img_list.includes('${')
+                            ) {
+                              const variableMatch = (
+                                selectedComponent as any
+                              ).img_list.match(/\$\{([^}]+)\}/);
+                              if (variableMatch && variableMatch[1]) {
+                                const variableName = variableMatch[1];
+                                const variable = variables.find((v) => {
+                                  if (typeof v === 'object' && v !== null) {
+                                    const keys = Object.keys(
+                                      v as Record<string, any>,
+                                    );
+                                    return (
+                                      keys.length > 0 &&
+                                      keys[0] === variableName
+                                    );
+                                  }
+                                  return false;
+                                });
+                                if (variable) {
+                                  const variableValue = (
+                                    variable as Record<string, any>
+                                  )[variableName];
+                                  if (Array.isArray(variableValue)) {
+                                    actualImageCount = variableValue.length;
+                                  }
+                                }
+                              }
+                            }
+                            fallbackCurrentLayoutType =
+                              getLayoutTypeFromModeAndCount(
+                                fallbackCombinationMode,
+                                actualImageCount,
+                              );
+                          } else {
+                            // 指定模式：从 combination_mode 和图片数量推断
+                            fallbackCurrentLayoutType =
+                              getLayoutTypeFromModeAndCount(
+                                fallbackCombinationMode,
+                                imageCount,
+                              );
+                          }
 
                           return (
                             <div>
@@ -714,39 +857,21 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                                       const requiredImageCount =
                                         getImageCountForLayout(layout.type);
 
-                                      console.log(
-                                        '🖱️ 布局图标点击 (fallback):',
-                                        {
-                                          clickedLayout: layout.type,
-                                          newCombinationMode,
-                                          requiredImageCount,
-                                          componentId: selectedComponent.id,
-                                          before: {
-                                            combination_mode: (
-                                              selectedComponent as any
-                                            ).combination_mode,
-                                            layoutType: (
-                                              selectedComponent as any
-                                            ).layoutType,
-                                            img_list_length: (
-                                              selectedComponent as any
-                                            ).img_list?.length,
-                                          },
-                                        },
+                                      // 记录用户选择的具体布局类型（仅用于UI显示）
+                                      layoutChoiceManager.setChoice(
+                                        selectedComponent.id,
+                                        layout.type,
                                       );
 
                                       handleValueChange(
                                         'combination_mode',
                                         newCombinationMode,
                                       );
-                                      handleValueChange(
-                                        'layoutType',
-                                        layout.type,
-                                      );
                                       setTimeout(() => {
                                         forceUpdate();
                                       }, 50);
 
+                                      // 根据当前模式处理图片列表
                                       if (multiImageContentMode === 'specify') {
                                         multiImageComponentStateManager.setUserEditedImageList(
                                           selectedComponent.id,
@@ -759,9 +884,9 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                                           i++
                                         ) {
                                           newImageList.push({
-                                            img_url: 'demo.png',
+                                            img_url: DEFAULT_IMAGE_URL,
                                             i18n_img_url: {
-                                              'en-US': 'demo.png',
+                                              'en-US': DEFAULT_IMAGE_URL,
                                             },
                                           });
                                         }
@@ -769,40 +894,64 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                                           'img_list',
                                           newImageList,
                                         );
-                                      }
-
-                                      setTimeout(() => {
+                                      } else if (
+                                        multiImageContentMode === 'variable'
+                                      ) {
+                                        // 变量模式：只更新布局模式，不修改图片列表
                                         console.log(
-                                          '🔍 布局切换后延迟检查 (fallback):',
+                                          '🔗 变量绑定模式下切换布局 (fallback):',
                                           {
                                             componentId: selectedComponent.id,
-                                            combination_mode: (
-                                              selectedComponent as any
-                                            ).combination_mode,
-                                            layoutType: (
-                                              selectedComponent as any
-                                            ).layoutType,
-                                            img_list_length: (
-                                              selectedComponent as any
-                                            ).img_list?.length,
-                                            expectedValues: {
-                                              combination_mode:
-                                                newCombinationMode,
-                                              layoutType: layout.type,
-                                              img_list_length:
-                                                requiredImageCount,
-                                            },
+                                            newCombinationMode,
+                                            layoutType: layout.type,
+                                            note: '变量模式下不更新img_list',
                                           },
                                         );
-                                      }, 200);
+                                        // 在变量模式下，不需要更新 img_list
+                                      }
                                     }}
                                   >
                                     <LayoutIcon
                                       type={layout.type}
-                                      isSelected={
-                                        fallbackCurrentLayoutType ===
-                                        layout.type
-                                      }
+                                      isSelected={(() => {
+                                        const currentCombinationMode = (
+                                          selectedComponent as any
+                                        ).combination_mode;
+                                        const userChosenLayout =
+                                          layoutChoiceManager.getChoice(
+                                            selectedComponent.id,
+                                          );
+
+                                        // 如果有用户选择的记录，优先使用
+                                        if (userChosenLayout) {
+                                          return (
+                                            userChosenLayout === layout.type
+                                          );
+                                        }
+
+                                        // 如果是精确匹配，直接选中
+                                        if (
+                                          currentCombinationMode === layout.type
+                                        ) {
+                                          return true;
+                                        }
+
+                                        // 如果是简化模式，根据图片数量智能推断
+                                        const layoutCombinationMode =
+                                          layoutToCombinationMode(layout.type);
+                                        if (
+                                          currentCombinationMode ===
+                                          layoutCombinationMode
+                                        ) {
+                                          // 推断最可能的布局类型
+                                          const inferredLayoutType =
+                                            fallbackCurrentLayoutType;
+                                          return (
+                                            inferredLayoutType === layout.type
+                                          );
+                                        }
+                                        return false;
+                                      })()}
                                     />
                                     <Text
                                       style={{
@@ -825,44 +974,58 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                         const currentCombinationMode =
                           (latestComponent as any).combination_mode || 'double';
 
-                        // 根据 combination_mode 和图片数量推断当前布局类型（不再使用保存的layoutType）
-                        const currentLayoutType = getLayoutTypeFromModeAndCount(
-                          currentCombinationMode,
-                          imageCount,
-                        );
-
-                        console.log('🎨 布局模式渲染调试:', {
-                          componentId: selectedComponent.id,
-                          currentCombinationMode,
-                          currentLayoutType,
-                          imageCount,
-                          dataSource: 'latest',
-                          latestComponentData: {
-                            combination_mode: (latestComponent as any)
-                              .combination_mode,
-                            img_list_length: (latestComponent as any).img_list
-                              ?.length,
-                          },
-                          availableLayoutsCount: availableLayouts.length,
-                          layoutTypeSource: 'inferred', // 总是基于推断
-                          availableLayouts: availableLayouts.map((l) => ({
-                            key: l.key,
-                            label: l.label,
-                            type: l.type,
-                            isSelected: currentLayoutType === l.type,
-                          })),
-                        });
+                        // 完全基于 combination_mode 和图片数量动态推断布局类型
+                        let currentLayoutType;
+                        if (multiImageContentMode === 'variable') {
+                          // 变量模式：根据 combination_mode 和实际图片数量推断
+                          // 需要重新解析变量获取图片列表
+                          let actualImageCount = 0;
+                          if (
+                            typeof (selectedComponent as any).img_list ===
+                              'string' &&
+                            (selectedComponent as any).img_list.includes('${')
+                          ) {
+                            const variableMatch = (
+                              selectedComponent as any
+                            ).img_list.match(/\$\{([^}]+)\}/);
+                            if (variableMatch && variableMatch[1]) {
+                              const variableName = variableMatch[1];
+                              const variable = variables.find((v) => {
+                                if (typeof v === 'object' && v !== null) {
+                                  const keys = Object.keys(
+                                    v as Record<string, any>,
+                                  );
+                                  return (
+                                    keys.length > 0 && keys[0] === variableName
+                                  );
+                                }
+                                return false;
+                              });
+                              if (variable) {
+                                const variableValue = (
+                                  variable as Record<string, any>
+                                )[variableName];
+                                if (Array.isArray(variableValue)) {
+                                  actualImageCount = variableValue.length;
+                                }
+                              }
+                            }
+                          }
+                          currentLayoutType = getLayoutTypeFromModeAndCount(
+                            currentCombinationMode,
+                            actualImageCount,
+                          );
+                        } else {
+                          // 指定模式：从 combination_mode 和图片数量推断
+                          currentLayoutType = getLayoutTypeFromModeAndCount(
+                            currentCombinationMode,
+                            imageCount,
+                          );
+                        }
 
                         return (
                           <div>
-                            <div
-                              style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(4, 1fr)',
-                                gap: '6px',
-                                marginBottom: '8px',
-                              }}
-                            >
+                            <div style={STYLES.layoutGrid}>
                               {availableLayouts.map((layout) => (
                                 <div
                                   key={layout.key}
@@ -872,45 +1035,21 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                                     const requiredImageCount =
                                       getImageCountForLayout(layout.type);
 
-                                    console.log('🖱️ 布局图标点击 (正常路径):', {
-                                      clickedLayout: layout.type,
-                                      newCombinationMode,
-                                      requiredImageCount,
-                                      componentId: selectedComponent.id,
-                                      before: {
-                                        combination_mode: (
-                                          latestComponent as any
-                                        ).combination_mode,
-                                        layoutType: (latestComponent as any)
-                                          .layoutType,
-                                        img_list_length: (
-                                          latestComponent as any
-                                        ).img_list?.length,
-                                      },
-                                    });
-
-                                    // 🔧 一次性更新所有相关属性，避免竞态条件
-                                    console.log(
-                                      '🔄 开始布局切换，一次性更新多个属性:',
-                                      {
-                                        componentId: selectedComponent.id,
-                                        newCombinationMode,
-                                        newLayoutType: layout.type,
-                                        requiredImageCount,
-                                        multiImageContentMode,
-                                      },
+                                    // 记录用户选择的具体布局类型（仅用于UI显示）
+                                    layoutChoiceManager.setChoice(
+                                      selectedComponent.id,
+                                      layout.type,
                                     );
 
-                                    // 创建更新后的组件数据（不保存layoutType到全局数据）
+                                    // 创建更新后的组件数据
                                     let updatedComponent = {
                                       ...latestComponent,
                                       combination_mode: newCombinationMode,
-                                      // 注意：不再保存layoutType到全局数据，只在UI层面使用
                                     };
 
-                                    // 如果是指定模式，同时更新图片列表
+                                    // 根据当前模式处理图片列表
                                     if (multiImageContentMode === 'specify') {
-                                      // 清除状态管理器中的缓存
+                                      // 指定模式：清除缓存并创建匹配布局的图片列表
                                       multiImageComponentStateManager.setUserEditedImageList(
                                         selectedComponent.id,
                                         [], // 清空缓存
@@ -924,8 +1063,10 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                                         i++
                                       ) {
                                         newImageList.push({
-                                          img_url: 'demo.png',
-                                          i18n_img_url: { 'en-US': 'demo.png' },
+                                          img_url: DEFAULT_IMAGE_URL,
+                                          i18n_img_url: {
+                                            'en-US': DEFAULT_IMAGE_URL,
+                                          },
                                         });
                                       }
 
@@ -933,26 +1074,25 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                                         ...updatedComponent,
                                         img_list: newImageList,
                                       };
+                                    } else if (
+                                      multiImageContentMode === 'variable'
+                                    ) {
+                                      // 变量模式：保持变量占位符不变，只更新布局模式
+                                      console.log(
+                                        '🔗 变量绑定模式下切换布局:',
+                                        {
+                                          componentId: selectedComponent.id,
+                                          newCombinationMode,
+                                          layoutType: layout.type,
+                                          currentImgList: (
+                                            updatedComponent as any
+                                          ).img_list,
+                                          note: '变量模式下保持img_list为变量占位符',
+                                        },
+                                      );
+                                      // 在变量模式下，img_list 应该保持为变量占位符字符串
+                                      // 不需要修改 img_list，只更新 combination_mode
                                     }
-
-                                    console.log('📋 一次性组件更新数据:', {
-                                      before: {
-                                        combination_mode: (
-                                          latestComponent as any
-                                        ).combination_mode,
-                                        img_list_length: (
-                                          latestComponent as any
-                                        ).img_list?.length,
-                                      },
-                                      after: {
-                                        combination_mode:
-                                          updatedComponent.combination_mode,
-                                        img_list_length: (
-                                          updatedComponent as any
-                                        ).img_list?.length,
-                                      },
-                                      uiLayoutType: layout.type, // 仅用于UI显示，不保存到全局数据
-                                    });
 
                                     // 一次性调用组件更新
                                     onUpdateComponent(updatedComponent);
@@ -961,117 +1101,51 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                                     setTimeout(() => {
                                       forceUpdate();
                                     }, 50);
-
-                                    // 延迟检查全局数据是否更新成功
-                                    setTimeout(() => {
-                                      const verifyLatestComponent =
-                                        getLatestSelectedComponent();
-                                      console.log('🔍 验证全局数据更新结果:', {
-                                        componentId: selectedComponent.id,
-                                        globalData: verifyLatestComponent
-                                          ? {
-                                              combination_mode: (
-                                                verifyLatestComponent as any
-                                              ).combination_mode,
-                                              img_list_length: (
-                                                verifyLatestComponent as any
-                                              ).img_list?.length,
-                                            }
-                                          : null,
-                                        expectedValues: {
-                                          combination_mode: newCombinationMode,
-                                          img_list_length: requiredImageCount,
-                                        },
-                                        inferredLayoutType:
-                                          verifyLatestComponent
-                                            ? getLayoutTypeFromModeAndCount(
-                                                (verifyLatestComponent as any)
-                                                  .combination_mode || 'double',
-                                                (verifyLatestComponent as any)
-                                                  .img_list?.length || 0,
-                                              )
-                                            : null,
-                                        updateSuccess:
-                                          verifyLatestComponent &&
-                                          (verifyLatestComponent as any)
-                                            .combination_mode ===
-                                            newCombinationMode,
-                                      });
-                                    }, 200);
-
-                                    console.log('🎨 多图混排布局切换:', {
-                                      componentId: selectedComponent.id,
-                                      clickedLayout: {
-                                        key: layout.key,
-                                        label: layout.label,
-                                        type: layout.type,
-                                      },
-                                      layoutType: layout.type,
-                                      combinationMode: newCombinationMode,
-                                      requiredImageCount,
-                                      oldImageCount: imageCount,
-                                      mode: multiImageContentMode,
-                                      cacheCleared:
-                                        multiImageContentMode === 'specify',
-                                      beforeUpdate: {
-                                        currentCombinationMode: (
-                                          selectedComponent as any
-                                        ).combination_mode,
-                                        currentLayoutType,
-                                        savedLayoutType: (
-                                          selectedComponent as any
-                                        ).layoutType,
-                                        wasSelected:
-                                          currentLayoutType === layout.type,
-                                      },
-                                      afterUpdate: {
-                                        newCombinationMode,
-                                        newLayoutType: layout.type,
-                                        expectedLayoutType: layout.type,
-                                      },
-                                      note: '布局切换时清除图片缓存，将使用默认值',
-                                    });
-
-                                    // 延迟检查数据是否正确保存
-                                    setTimeout(() => {
-                                      // 注意：selectedComponent 可能没有及时更新，这里需要从全局状态读取
-                                      console.log(
-                                        '🔍 延迟检查布局数据 (selectedComponent):',
-                                        {
-                                          componentId: selectedComponent.id,
-                                          combination_mode: (
-                                            selectedComponent as any
-                                          ).combination_mode,
-                                          layoutType: (selectedComponent as any)
-                                            .layoutType,
-                                          img_list_length: (
-                                            selectedComponent as any
-                                          ).img_list?.length,
-                                          expectedValues: {
-                                            combination_mode:
-                                              newCombinationMode,
-                                            layoutType: layout.type,
-                                            img_list_length: requiredImageCount,
-                                          },
-                                          warning:
-                                            'selectedComponent可能未及时更新，如果数据不匹配是正常的',
-                                        },
-                                      );
-                                    }, 100);
                                   }}
-                                  style={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    gap: '4px',
-                                    cursor: 'pointer',
-                                  }}
+                                  style={STYLES.layoutItem}
                                 >
                                   <LayoutIcon
                                     type={layout.type}
-                                    isSelected={
-                                      currentLayoutType === layout.type
-                                    }
+                                    isSelected={(() => {
+                                      const currentCombinationMode = (
+                                        latestComponent as any
+                                      ).combination_mode;
+                                      const userChosenLayout =
+                                        layoutChoiceManager.getChoice(
+                                          selectedComponent.id,
+                                        );
+
+                                      // 如果有用户选择的记录，优先使用
+                                      if (userChosenLayout) {
+                                        return userChosenLayout === layout.type;
+                                      }
+
+                                      // 如果是精确匹配，直接选中
+                                      if (
+                                        currentCombinationMode === layout.type
+                                      ) {
+                                        return true;
+                                      }
+
+                                      // 如果是简化模式，根据图片数量智能推断
+                                      const layoutCombinationMode =
+                                        layoutToCombinationMode(layout.type);
+                                      if (
+                                        currentCombinationMode ===
+                                        layoutCombinationMode
+                                      ) {
+                                        // 推断最可能的布局类型
+                                        const inferredLayoutType =
+                                          getLayoutTypeFromModeAndCount(
+                                            currentCombinationMode,
+                                            imageCount,
+                                          );
+                                        return (
+                                          inferredLayoutType === layout.type
+                                        );
+                                      }
+                                      return false;
+                                    })()}
                                   />
                                   <Text
                                     style={{
@@ -1119,20 +1193,8 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                 </div>
 
                 {/* 图片设置 */}
-                <div
-                  style={{
-                    marginBottom: '16px',
-                    background: '#fff',
-                    borderRadius: 6,
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-                    padding: 16,
-                  }}
-                >
-                  <div
-                    style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}
-                  >
-                    🖼️ 图片设置
-                  </div>
+                <div style={STYLES.section}>
+                  <div style={STYLES.sectionTitle}>🖼️ 图片设置</div>
                   <Form form={form} layout="vertical">
                     <Form.Item label="图片来源">
                       <Segmented
@@ -1153,11 +1215,6 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                               );
                             (updatedComponent as any).img_list =
                               userEditedImageList || [];
-
-                            console.log('🔄 多图混排切换到指定模式:', {
-                              componentId: selectedComponent.id,
-                              userEditedImageList,
-                            });
                           } else {
                             // 切换到变量模式：检查是否有绑定的变量
                             const boundVariable =
@@ -1174,14 +1231,6 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                               (
                                 updatedComponent as any
                               ).img_list = `\${${variableName}}`;
-
-                              console.log(
-                                '🔄 多图混排切换到变量模式（有绑定）:',
-                                {
-                                  componentId: selectedComponent.id,
-                                  variableName,
-                                },
-                              );
                             } else {
                               // 如果没有绑定变量，保持当前指定的图片列表
                               const currentImageList = Array.isArray(
@@ -1194,14 +1243,6 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                               multiImageComponentStateManager.setUserEditedImageList(
                                 selectedComponent.id,
                                 currentImageList,
-                              );
-
-                              console.log(
-                                '🔄 多图混排切换到变量模式（无绑定）:',
-                                {
-                                  componentId: selectedComponent.id,
-                                  savedImageList: currentImageList,
-                                },
                               );
                             }
                           }
@@ -1217,30 +1258,12 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                       {multiImageContentMode === 'specify' && (
                         <div style={{ marginBottom: 16 }}>
                           {(() => {
-                            const currentCombinationMode =
-                              (selectedComponent as any).combination_mode ||
-                              'double';
-                            const requiredImageCount = getImageCountForLayout(
-                              currentCombinationMode,
-                            );
-
                             // 获取当前组件的图片列表
                             let currentImageList = Array.isArray(
                               (selectedComponent as any).img_list,
                             )
                               ? (selectedComponent as any).img_list
                               : [];
-
-                            // 仅在渲染时处理图片显示，不在这里更新状态
-                            // 这样避免与状态更新产生冲突
-
-                            console.log('🖼️ 多图混排-渲染图片列表:', {
-                              componentId: selectedComponent.id,
-                              combinationMode: currentCombinationMode,
-                              requiredImageCount,
-                              currentImageList,
-                              imageCount: currentImageList.length,
-                            });
 
                             return currentImageList.map(
                               (image: any, index: number) => (
@@ -1260,7 +1283,7 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                                   >
                                     图片 {index + 1}
                                   </Text>
-                                  <Space.Compact style={{ width: '100%' }}>
+                                  <Space.Compact style={STYLES.inputCompact}>
                                     <Input
                                       value={image.img_url || ''}
                                       onChange={(e) => {
@@ -1280,14 +1303,6 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                                           selectedComponent.id,
                                           newImageList,
                                         );
-
-                                        console.log('🖼️ 多图混排-输入框更新:', {
-                                          componentId: selectedComponent.id,
-                                          imageIndex: index,
-                                          newUrl: e.target.value,
-                                          newImageList,
-                                        });
-
                                         handleValueChange(
                                           'img_list',
                                           newImageList,
@@ -1314,22 +1329,12 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                                           selectedComponent.id,
                                           newImageList,
                                         );
-
-                                        console.log('🖼️ 多图混排-上传更新:', {
-                                          componentId: selectedComponent.id,
-                                          imageIndex: index,
-                                          newUrl: imageUrl,
-                                          newImageList,
-                                        });
-
                                         handleValueChange(
                                           'img_list',
                                           newImageList,
                                         );
                                       }}
-                                      style={{
-                                        borderRadius: '0 6px 6px 0',
-                                      }}
+                                      style={STYLES.uploadButton}
                                       buttonProps={{
                                         type: 'primary',
                                         children: '上传',
@@ -1381,12 +1386,6 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                                   (updatedComponent as any).img_list =
                                     variablePlaceholder;
 
-                                  console.log('🔗 多图混排绑定变量:', {
-                                    componentId: selectedComponent.id,
-                                    variableName: value,
-                                    variablePlaceholder,
-                                  });
-
                                   onUpdateComponent(updatedComponent);
                                 } else {
                                   // 清除变量绑定时
@@ -1414,11 +1413,6 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                                       );
                                     (updatedComponent as any).img_list =
                                       userEditedImageList || [];
-
-                                    console.log('🗑️ 多图混排清除变量绑定:', {
-                                      componentId: selectedComponent.id,
-                                      restoredImageList: userEditedImageList,
-                                    });
                                   } else {
                                     // 在指定模式下（理论上不会发生）
                                     (updatedComponent as any).img_list = [];

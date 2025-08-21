@@ -953,6 +953,10 @@ export const PropertyPanel: React.FC<{
   const [form] = Form.useForm();
   const [activeTab, setActiveTab] = useState<string>('properties');
   const [topLevelTab, setTopLevelTab] = useState<string>('component'); // 新增顶层Tab状态
+  const [lastSelectedComponentId, setLastSelectedComponentId] = useState<
+    string | null
+  >(null);
+  // const [userManuallyChangedTab, setUserManuallyChangedTab] = useState(false);
 
   // 文本内容模式状态管理
   const [textContentMode, setTextContentMode] = useState<
@@ -1535,6 +1539,50 @@ export const PropertyPanel: React.FC<{
 
   // 总是使用从cardData中获取的真实组件数据
   const currentComponent = realComponent;
+
+  // 🎯 当选中组件时自动切换到组件属性Tab
+  useEffect(() => {
+    if (currentComponent) {
+      // 只有当选中的是具体组件（不是卡片根节点）时才切换到组件属性Tab
+      const isCardRoot =
+        selectedPath &&
+        selectedPath.length === 2 &&
+        selectedPath[0] === 'dsl' &&
+        selectedPath[1] === 'body';
+
+      // 检查是否是新选中的组件
+      const isNewComponent = currentComponent.id !== lastSelectedComponentId;
+
+      if (!isCardRoot && isNewComponent) {
+        console.log('🎯 检测到新组件选中，自动切换到组件属性Tab:', {
+          componentId: currentComponent.id,
+          componentTag: currentComponent.tag,
+          selectedPath,
+          currentTab: topLevelTab,
+          lastSelectedComponentId,
+          timestamp: new Date().toISOString(),
+        });
+        setTopLevelTab('component');
+        // setUserManuallyChangedTab(false); // 重置手动切换标记
+      }
+
+      // 更新最后选中的组件ID
+      setLastSelectedComponentId(currentComponent.id);
+    } else {
+      // 如果没有选中组件，清除状态
+      setLastSelectedComponentId(null);
+    }
+  }, [currentComponent, selectedPath, lastSelectedComponentId, topLevelTab]);
+
+  // 创建一个包装的setTopLevelTab函数来跟踪手动切换
+  const handleTabChange = (activeKey: string) => {
+    setTopLevelTab(activeKey);
+    // setUserManuallyChangedTab(true); // 标记为手动切换
+    console.log('👤 用户手动切换Tab:', {
+      newTab: activeKey,
+      timestamp: new Date().toISOString(),
+    });
+  };
 
   // 监听currentComponent变化，强制重新渲染
   useEffect(() => {
@@ -8699,7 +8747,7 @@ export const PropertyPanel: React.FC<{
       </style>
       <Tabs
         activeKey={topLevelTab}
-        onChange={setTopLevelTab}
+        onChange={handleTabChange}
         style={{ flex: 1 }}
         tabBarStyle={{
           padding: '0 16px',

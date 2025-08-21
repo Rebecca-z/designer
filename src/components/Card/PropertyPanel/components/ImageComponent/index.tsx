@@ -1,7 +1,7 @@
 // ImageComponent 编辑界面 - 图片组件
 import { BgColorsOutlined, SettingOutlined } from '@ant-design/icons';
 import { Form, Input, Segmented, Select, Space, Tabs, Typography } from 'antd';
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import ImageUpload from '../../../ImageUpload';
 import AddVariableModal from '../../../Variable/AddVariableModal';
 import { imageComponentStateManager } from '../../../Variable/utils/index';
@@ -10,6 +10,73 @@ import { ImageComponentProps } from '../types';
 
 const { Text } = Typography;
 const { Option } = Select;
+
+// 类型定义
+interface ImageData {
+  img_url?: string;
+  i18n_img_url?: {
+    'en-US': string;
+  };
+  style?: {
+    crop_mode?: 'default' | 'top' | 'center';
+  };
+}
+
+// 常量定义
+const CROP_MODES = [
+  { value: 'default', label: '完整展示' },
+  { value: 'top', label: '顶部裁剪' },
+  { value: 'center', label: '居中裁剪' },
+] as const;
+
+const CONTENT_MODES = [
+  { label: '指定', value: 'specify' },
+  { label: '绑定变量', value: 'variable' },
+] as const;
+
+// 样式常量
+const STYLES = {
+  container: {
+    width: '300px',
+    height: 'calc(100vh - 60px)',
+    backgroundColor: '#fafafa',
+    borderLeft: '1px solid #d9d9d9',
+    padding: '16px',
+    overflow: 'auto',
+  },
+  tabBarStyle: {
+    padding: '0 16px',
+    backgroundColor: '#fff',
+    margin: 0,
+    borderBottom: '1px solid #d9d9d9',
+  },
+  contentPadding: { padding: '16px' },
+  infoBox: {
+    marginBottom: '16px',
+    padding: '12px',
+    backgroundColor: '#f0f9ff',
+    border: '1px solid #bae6fd',
+    borderRadius: '6px',
+  },
+  section: {
+    marginBottom: '16px',
+    background: '#fff',
+    borderRadius: 6,
+    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+    padding: 16,
+  },
+  sectionTitle: {
+    fontWeight: 600,
+    marginBottom: 8,
+    fontSize: 15,
+  },
+  inputCompact: {
+    width: '100%',
+  },
+  uploadButton: {
+    borderRadius: '0 6px 6px 0',
+  },
+} as const;
 
 const ImageComponent: React.FC<ImageComponentProps> = ({
   selectedComponent,
@@ -36,23 +103,277 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
 }) => {
   const [form] = Form.useForm();
 
-  console.log('📝 渲染图片组件编辑界面:', {
-    componentId: selectedComponent.id,
-    topLevelTab,
-    variablesCount: variables.length,
-  });
+  // 获取图片信息 - 使用useMemo优化
+  const imageInfo = useMemo(() => {
+    const component = selectedComponent as any as ImageData;
+    return {
+      imgUrl: component.img_url || '',
+      cropMode: component.style?.crop_mode || 'default',
+      userEditedUrl:
+        imageComponentStateManager.getUserEditedUrl(selectedComponent.id) || '',
+    };
+  }, [selectedComponent]);
+
+  // 获取变量绑定信息 - 使用useMemo优化
+  const variableBindingInfo = useMemo(() => {
+    const rememberedVariable = lastBoundVariables[selectedComponent.id];
+    const currentBoundVariable =
+      imageComponentStateManager.getBoundVariableName(selectedComponent.id);
+    const displayValue = rememberedVariable || currentBoundVariable;
+
+    return {
+      rememberedVariable,
+      currentBoundVariable,
+      displayValue,
+    };
+  }, [selectedComponent.id, lastBoundVariables]);
+
+  // 处理模式切换 - 使用useCallback优化
+  const handleModeChange = useCallback(
+    (value: 'specify' | 'variable') => {
+      setImageContentMode(value);
+
+      const updatedComponent = { ...selectedComponent };
+
+      if (value === 'specify') {
+        // 切换到指定模式：显示用户编辑的图片
+        const userEditedUrl = imageComponentStateManager.getUserEditedUrl(
+          selectedComponent.id,
+        );
+        (updatedComponent as any).img_url = userEditedUrl || '';
+        (updatedComponent as any).i18n_img_url = {
+          'en-US': userEditedUrl || '',
+        };
+      } else {
+        // 切换到变量模式：检查是否有绑定的变量
+        const boundVariable = imageComponentStateManager.getBoundVariableName(
+          selectedComponent.id,
+        );
+        const rememberedVariable = lastBoundVariables[selectedComponent.id];
+
+        if (boundVariable || rememberedVariable) {
+          const variableName = boundVariable || rememberedVariable;
+          const variablePlaceholder = `\${${variableName}}`;
+          (updatedComponent as any).img_url = variablePlaceholder;
+          (updatedComponent as any).i18n_img_url = {
+            'en-US': variablePlaceholder,
+          };
+        } else {
+          const userEditedUrl = imageComponentStateManager.getUserEditedUrl(
+            selectedComponent.id,
+          );
+          (updatedComponent as any).img_url = userEditedUrl || '';
+          (updatedComponent as any).i18n_img_url = {
+            'en-US': userEditedUrl || '',
+          };
+        }
+      }
+
+      onUpdateComponent(updatedComponent);
+    },
+    [
+      selectedComponent,
+      setImageContentMode,
+      lastBoundVariables,
+      onUpdateComponent,
+    ],
+  );
+
+  // 处理图片URL变化 - 使用useCallback优化
+  const handleImageUrlChange = useCallback(
+    (url: string) => {
+      imageComponentStateManager.setUserEditedUrl(selectedComponent.id, url);
+
+      const updatedComponent = { ...selectedComponent };
+      (updatedComponent as any).img_url = url;
+      (updatedComponent as any).i18n_img_url = {
+        'en-US': url,
+      };
+      onUpdateComponent(updatedComponent);
+    },
+    [selectedComponent, onUpdateComponent],
+  );
+
+  // 处理变量绑定变化 - 使用useCallback优化
+  const handleVariableBindingChange = useCallback(
+    (value: string | undefined) => {
+      if (!selectedComponent) return;
+
+      if (value) {
+        // 绑定变量时
+        setLastBoundVariables((prev) => ({
+          ...prev,
+          [selectedComponent.id]: value,
+        }));
+
+        imageComponentStateManager.setBoundVariableName(
+          selectedComponent.id,
+          value,
+        );
+
+        const updatedComponent = { ...selectedComponent };
+        const variablePlaceholder = `\${${value}}`;
+        (updatedComponent as any).img_url = variablePlaceholder;
+        (updatedComponent as any).i18n_img_url = {
+          'en-US': variablePlaceholder,
+        };
+        onUpdateComponent(updatedComponent);
+      } else {
+        // 清除变量绑定时
+        setLastBoundVariables((prev) => {
+          const newState = { ...prev };
+          delete newState[selectedComponent.id];
+          return newState;
+        });
+
+        imageComponentStateManager.setBoundVariableName(
+          selectedComponent.id,
+          '',
+        );
+
+        const updatedComponent = { ...selectedComponent };
+        if (imageContentMode === 'variable') {
+          const userEditedUrl = imageComponentStateManager.getUserEditedUrl(
+            selectedComponent.id,
+          );
+          (updatedComponent as any).img_url = userEditedUrl || '';
+          (updatedComponent as any).i18n_img_url = {
+            'en-US': userEditedUrl || '',
+          };
+        } else {
+          (updatedComponent as any).img_url = '';
+          (updatedComponent as any).i18n_img_url = {
+            'en-US': '',
+          };
+        }
+
+        onUpdateComponent(updatedComponent);
+      }
+    },
+    [
+      selectedComponent,
+      setLastBoundVariables,
+      imageContentMode,
+      onUpdateComponent,
+    ],
+  );
+
+  // 渲染图片设置内容 - 使用useMemo优化
+  const imageSettingsContent = useMemo(
+    () => (
+      <div style={STYLES.section}>
+        <div style={STYLES.sectionTitle}>🖼️ 图片设置</div>
+        <Form form={form} layout="vertical">
+          <Form.Item label="图片来源">
+            <Segmented
+              value={imageContentMode}
+              style={{ marginBottom: 16 }}
+              onChange={handleModeChange}
+              options={[...CONTENT_MODES]}
+            />
+
+            {imageContentMode === 'specify' && (
+              <div>
+                <Space.Compact style={STYLES.inputCompact}>
+                  <Input
+                    value={imageInfo.userEditedUrl}
+                    onChange={(e) => handleImageUrlChange(e.target.value)}
+                    placeholder="请输入图片路径或选择上传"
+                    style={{ flex: 1 }}
+                  />
+                  <ImageUpload
+                    onUploadSuccess={handleImageUrlChange}
+                    style={STYLES.uploadButton}
+                    buttonProps={{
+                      type: 'primary',
+                      children: '上传',
+                      title: '上传图片',
+                    }}
+                  />
+                </Space.Compact>
+              </div>
+            )}
+
+            {imageContentMode === 'variable' && (
+              <div>
+                <VariableBinding
+                  componentType="img"
+                  variables={variables}
+                  getFilteredVariables={getFilteredVariables}
+                  value={variableBindingInfo.displayValue}
+                  onChange={handleVariableBindingChange}
+                  getVariableDisplayName={getVariableDisplayName}
+                  getVariableKeys={getVariableKeys}
+                  onAddVariable={() => handleAddVariableFromComponent('img')}
+                  placeholder="请选择图片变量"
+                  label="绑定变量"
+                  addVariableText="+新建图片变量"
+                />
+              </div>
+            )}
+          </Form.Item>
+        </Form>
+      </div>
+    ),
+    [
+      form,
+      imageContentMode,
+      handleModeChange,
+      imageInfo.userEditedUrl,
+      handleImageUrlChange,
+      variables,
+      getFilteredVariables,
+      variableBindingInfo.displayValue,
+      handleVariableBindingChange,
+      getVariableDisplayName,
+      getVariableKeys,
+      handleAddVariableFromComponent,
+    ],
+  );
+
+  // 渲染样式设置内容 - 使用useMemo优化
+  const styleSettingsContent = useMemo(
+    () => (
+      <div style={STYLES.section}>
+        <div style={STYLES.sectionTitle}>🎨 样式设置</div>
+        <Form form={form} layout="vertical">
+          <Form.Item label="裁剪方式">
+            <Select
+              value={imageInfo.cropMode}
+              onChange={(value) => handleValueChange('crop_mode', value)}
+              style={{ width: '100%' }}
+            >
+              {CROP_MODES.map(({ value, label }) => (
+                <Option key={value} value={value}>
+                  {label}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+        </Form>
+      </div>
+    ),
+    [form, imageInfo.cropMode, handleValueChange],
+  );
+
+  // 渲染组件属性Tab内容 - 使用useMemo优化
+  const componentTabContent = useMemo(
+    () => (
+      <div style={STYLES.contentPadding}>
+        <div style={STYLES.infoBox}>
+          <Text style={{ fontSize: '12px', color: '#0369a1' }}>
+            🎯 当前选中：图片组件
+          </Text>
+        </div>
+        {imageSettingsContent}
+        {styleSettingsContent}
+      </div>
+    ),
+    [imageSettingsContent, styleSettingsContent],
+  );
 
   return (
-    <div
-      style={{
-        width: '300px',
-        height: 'calc(100vh - 60px)',
-        backgroundColor: '#fafafa',
-        borderLeft: '1px solid #d9d9d9',
-        padding: '16px',
-        overflow: 'auto',
-      }}
-    >
+    <div style={STYLES.container}>
       <AddVariableModal
         visible={isVariableModalVisible}
         onOk={handleVariableModalOk}
@@ -69,12 +390,7 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
         activeKey={topLevelTab}
         onChange={setTopLevelTab}
         style={{ height: '100%' }}
-        tabBarStyle={{
-          padding: '0 16px',
-          backgroundColor: '#fff',
-          margin: 0,
-          borderBottom: '1px solid #d9d9d9',
-        }}
+        tabBarStyle={STYLES.tabBarStyle}
         size="small"
         items={[
           {
@@ -87,313 +403,7 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
                 组件属性
               </span>
             ),
-            children: (
-              <div style={{ padding: '16px' }}>
-                <div
-                  style={{
-                    marginBottom: '16px',
-                    padding: '12px',
-                    backgroundColor: '#f0f9ff',
-                    border: '1px solid #bae6fd',
-                    borderRadius: '6px',
-                  }}
-                >
-                  <Text style={{ fontSize: '12px', color: '#0369a1' }}>
-                    🎯 当前选中：图片组件
-                  </Text>
-                </div>
-
-                {/* 图片设置 */}
-                <div
-                  style={{
-                    marginBottom: '16px',
-                    background: '#fff',
-                    borderRadius: 6,
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-                    padding: 16,
-                  }}
-                >
-                  <div
-                    style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}
-                  >
-                    🖼️ 图片设置
-                  </div>
-                  <Form form={form} layout="vertical">
-                    <Form.Item label="图片来源">
-                      <Segmented
-                        value={imageContentMode}
-                        style={{ marginBottom: 16 }}
-                        onChange={(value) => {
-                          const newMode = value as 'specify' | 'variable';
-                          setImageContentMode(newMode);
-
-                          // 处理模式切换时的图片显示逻辑
-                          const updatedComponent = { ...selectedComponent };
-
-                          if (newMode === 'specify') {
-                            // 切换到指定模式：显示用户编辑的图片
-                            const userEditedUrl =
-                              imageComponentStateManager.getUserEditedUrl(
-                                selectedComponent.id,
-                              );
-                            (updatedComponent as any).img_url =
-                              userEditedUrl || '';
-                            // 同步更新 i18n_img_url
-                            (updatedComponent as any).i18n_img_url = {
-                              'en-US': userEditedUrl || '',
-                            };
-                          } else {
-                            // 切换到变量模式：检查是否有绑定的变量
-                            const boundVariable =
-                              imageComponentStateManager.getBoundVariableName(
-                                selectedComponent.id,
-                              );
-                            const rememberedVariable =
-                              lastBoundVariables[selectedComponent.id];
-
-                            if (boundVariable || rememberedVariable) {
-                              // 如果有绑定变量，显示变量占位符
-                              const variableName =
-                                boundVariable || rememberedVariable;
-                              const variablePlaceholder = `\${${variableName}}`;
-                              (updatedComponent as any).img_url =
-                                variablePlaceholder;
-                              // 同步更新 i18n_img_url
-                              (updatedComponent as any).i18n_img_url = {
-                                'en-US': variablePlaceholder,
-                              };
-                            } else {
-                              // 如果没有绑定变量，显示指定图片
-                              const userEditedUrl =
-                                imageComponentStateManager.getUserEditedUrl(
-                                  selectedComponent.id,
-                                );
-                              (updatedComponent as any).img_url =
-                                userEditedUrl || '';
-                              // 同步更新 i18n_img_url
-                              (updatedComponent as any).i18n_img_url = {
-                                'en-US': userEditedUrl || '',
-                              };
-                            }
-                          }
-
-                          onUpdateComponent(updatedComponent);
-                        }}
-                        options={[
-                          { label: '指定', value: 'specify' },
-                          { label: '绑定变量', value: 'variable' },
-                        ]}
-                      />
-
-                      {imageContentMode === 'specify' && (
-                        <div>
-                          <Space.Compact style={{ width: '100%' }}>
-                            <Input
-                              value={
-                                imageComponentStateManager.getUserEditedUrl(
-                                  selectedComponent.id,
-                                ) || ''
-                              }
-                              onChange={(e) => {
-                                // 保存用户编辑的URL到独立状态
-                                imageComponentStateManager.setUserEditedUrl(
-                                  selectedComponent.id,
-                                  e.target.value,
-                                );
-
-                                // 立即更新组件显示（只在指定模式下）
-                                const updatedComponent = {
-                                  ...selectedComponent,
-                                };
-                                (updatedComponent as any).img_url =
-                                  e.target.value;
-                                // 同步更新 i18n_img_url
-                                (updatedComponent as any).i18n_img_url = {
-                                  'en-US': e.target.value,
-                                };
-                                onUpdateComponent(updatedComponent);
-                              }}
-                              placeholder="请输入图片路径或选择上传"
-                              style={{ flex: 1 }}
-                            />
-                            <ImageUpload
-                              onUploadSuccess={(imageUrl) => {
-                                // 保存上传的URL到独立状态
-                                imageComponentStateManager.setUserEditedUrl(
-                                  selectedComponent.id,
-                                  imageUrl,
-                                );
-
-                                // 立即更新组件显示（只在指定模式下）
-                                const updatedComponent = {
-                                  ...selectedComponent,
-                                };
-                                (updatedComponent as any).img_url = imageUrl;
-                                // 同步更新 i18n_img_url
-                                (updatedComponent as any).i18n_img_url = {
-                                  'en-US': imageUrl,
-                                };
-                                onUpdateComponent(updatedComponent);
-                              }}
-                              style={{
-                                borderRadius: '0 6px 6px 0',
-                              }}
-                              buttonProps={{
-                                type: 'primary',
-                                children: '上传',
-                                title: '上传图片',
-                              }}
-                            />
-                          </Space.Compact>
-                        </div>
-                      )}
-
-                      {imageContentMode === 'variable' && (
-                        <div>
-                          <VariableBinding
-                            componentType="img"
-                            variables={variables}
-                            getFilteredVariables={getFilteredVariables}
-                            value={(() => {
-                              const rememberedVariable = selectedComponent
-                                ? lastBoundVariables[selectedComponent.id]
-                                : undefined;
-                              const currentBoundVariable =
-                                imageComponentStateManager.getBoundVariableName(
-                                  selectedComponent.id,
-                                );
-
-                              const displayValue =
-                                rememberedVariable || currentBoundVariable;
-
-                              console.log('🔍 图片VariableBinding显示值:', {
-                                componentId: selectedComponent?.id,
-                                rememberedVariable,
-                                currentBoundVariable,
-                                displayValue,
-                              });
-
-                              return displayValue;
-                            })()}
-                            onChange={(value: string | undefined) => {
-                              // 处理图片变量绑定逻辑
-                              if (selectedComponent) {
-                                if (value) {
-                                  // 绑定变量时
-                                  setLastBoundVariables((prev) => ({
-                                    ...prev,
-                                    [selectedComponent.id]: value,
-                                  }));
-
-                                  imageComponentStateManager.setBoundVariableName(
-                                    selectedComponent.id,
-                                    value,
-                                  );
-
-                                  const updatedComponent = {
-                                    ...selectedComponent,
-                                  };
-                                  const variablePlaceholder = `\${${value}}`;
-                                  (updatedComponent as any).img_url =
-                                    variablePlaceholder;
-                                  // 同步更新 i18n_img_url
-                                  (updatedComponent as any).i18n_img_url = {
-                                    'en-US': variablePlaceholder,
-                                  };
-                                  onUpdateComponent(updatedComponent);
-                                } else {
-                                  // 清除变量绑定时
-                                  setLastBoundVariables((prev) => {
-                                    const newState = { ...prev };
-                                    delete newState[selectedComponent.id];
-                                    return newState;
-                                  });
-
-                                  imageComponentStateManager.setBoundVariableName(
-                                    selectedComponent.id,
-                                    '',
-                                  );
-
-                                  // 清除绑定变量后，根据当前模式决定显示的图片
-                                  const updatedComponent = {
-                                    ...selectedComponent,
-                                  };
-
-                                  if (imageContentMode === 'variable') {
-                                    // 在变量模式下清除绑定，显示指定图片（如果有的话）
-                                    const userEditedUrl =
-                                      imageComponentStateManager.getUserEditedUrl(
-                                        selectedComponent.id,
-                                      );
-                                    (updatedComponent as any).img_url =
-                                      userEditedUrl || '';
-                                    // 同步更新 i18n_img_url
-                                    (updatedComponent as any).i18n_img_url = {
-                                      'en-US': userEditedUrl || '',
-                                    };
-                                  } else {
-                                    // 在指定模式下（理论上不会发生）
-                                    (updatedComponent as any).img_url = '';
-                                    // 同步更新 i18n_img_url
-                                    (updatedComponent as any).i18n_img_url = {
-                                      'en-US': '',
-                                    };
-                                  }
-
-                                  onUpdateComponent(updatedComponent);
-                                }
-                              }
-                            }}
-                            getVariableDisplayName={getVariableDisplayName}
-                            getVariableKeys={getVariableKeys}
-                            onAddVariable={() =>
-                              handleAddVariableFromComponent('img')
-                            }
-                            placeholder="请选择图片变量"
-                            label="绑定变量"
-                            addVariableText="+新建图片变量"
-                          />
-                        </div>
-                      )}
-                    </Form.Item>
-                  </Form>
-                </div>
-
-                {/* 样式设置 */}
-                <div
-                  style={{
-                    background: '#fff',
-                    borderRadius: 6,
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-                    padding: 16,
-                  }}
-                >
-                  <div
-                    style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}
-                  >
-                    🎨 样式设置
-                  </div>
-                  <Form form={form} layout="vertical">
-                    <Form.Item label="裁剪方式">
-                      <Select
-                        value={
-                          (selectedComponent as any).style?.crop_mode ||
-                          'default'
-                        }
-                        onChange={(value) =>
-                          handleValueChange('crop_mode', value)
-                        }
-                        style={{ width: '100%' }}
-                      >
-                        <Option value="default">完整展示</Option>
-                        <Option value="top">顶部裁剪</Option>
-                        <Option value="center">居中裁剪</Option>
-                      </Select>
-                    </Form.Item>
-                  </Form>
-                </div>
-              </div>
-            ),
+            children: componentTabContent,
           },
           {
             key: 'variables',

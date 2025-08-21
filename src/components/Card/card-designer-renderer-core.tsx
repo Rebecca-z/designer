@@ -10,6 +10,7 @@ import {
   VariableItem,
 } from './card-designer-types-updated';
 import { replaceVariables } from './card-designer-utils';
+import { getComponentLayoutChoice } from './PropertyPanel/components/ImgCombinationComponent';
 import RichTextStyles from './RichTextEditor/RichTextStyles';
 import { convertJSONToHTML } from './RichTextEditor/RichTextUtils';
 import {
@@ -1856,10 +1857,11 @@ const ImgRenderer: React.FC<{ item: any; style?: React.CSSProperties }> = (
   // 安全处理 undefined 或 null 的 item
   const item = props.item || {};
   const hasValidImage = item.img_url && item.img_url.trim() !== '';
+  const isPlaceholder = item.isPlaceholder || !hasValidImage;
 
   return (
     <>
-      {hasValidImage ? (
+      {hasValidImage && !isPlaceholder ? (
         <img
           src={item.img_url}
           onError={(e) => {
@@ -4447,6 +4449,115 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
       const resolvedImageList = getImageList();
 
+      // 根据布局类型确定所需的图片数量
+      const getRequiredImageCount = (
+        combinationMode: string,
+        layoutType?: string,
+      ) => {
+        // 如果有具体的布局类型，优先使用
+        if (layoutType) {
+          switch (layoutType) {
+            case 'double':
+              return 2;
+            case 'triple':
+              return 3;
+            case 'bisect_2':
+              return 2;
+            case 'bisect_4':
+              return 4;
+            case 'bisect_6':
+              return 6;
+            case 'trisect_3':
+              return 3;
+            case 'trisect_6':
+              return 6;
+            case 'trisect_9':
+              return 9;
+            default:
+              break;
+          }
+        }
+
+        // 从 combination_mode 推断
+        switch (combinationMode) {
+          case 'double':
+            return 2;
+          case 'triple':
+            return 3;
+          case 'bisect':
+            return 4; // 默认双列两行
+          case 'trisect':
+            return 6; // 默认三列两行
+          default:
+            return 2;
+        }
+      };
+
+      // 生成完整的图片列表（包含占位符）
+      const generateCompleteImageList = () => {
+        // 智能推断所需的图片数量
+        let requiredCount;
+
+        // 优先使用用户选择的布局类型
+        const userChosenLayout = getComponentLayoutChoice(comp.id);
+        if (userChosenLayout) {
+          requiredCount = getRequiredImageCount(userChosenLayout, undefined);
+        } else if (comp.layoutType) {
+          // 如果有 layoutType，使用它
+          requiredCount = getRequiredImageCount(
+            comp.combination_mode,
+            comp.layoutType,
+          );
+        } else {
+          // 根据 combination_mode 推断默认的图片数量
+          switch (comp.combination_mode) {
+            case 'double':
+              requiredCount = 2;
+              break;
+            case 'triple':
+              requiredCount = 3;
+              break;
+            case 'bisect':
+              requiredCount = 4; // 默认双列两行
+              break;
+            case 'trisect':
+              requiredCount = 6; // 默认三列两行
+              break;
+            default:
+              requiredCount = 2;
+          }
+        }
+        const actualImages = resolvedImageList || [];
+        const completeList = [];
+
+        console.log('🎯 生成完整图片列表:', {
+          componentId: comp.id,
+          combinationMode: comp.combination_mode,
+          layoutType: comp.layoutType,
+          requiredCount,
+          actualImageCount: actualImages.length,
+          needsPlaceholders: actualImages.length < requiredCount,
+        });
+
+        // 添加实际图片
+        for (let i = 0; i < requiredCount; i++) {
+          if (i < actualImages.length && actualImages[i]) {
+            completeList.push(actualImages[i]);
+          } else {
+            // 添加占位符
+            completeList.push({
+              img_url: null, // 使用 null 表示占位符
+              i18n_img_url: { 'en-US': null },
+              isPlaceholder: true,
+            });
+          }
+        }
+
+        return completeList;
+      };
+
+      const completeImageList = generateCompleteImageList();
+
       const imgCombContent = (
         <div
           style={{
@@ -4494,7 +4605,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             {comp.combination_mode === 'double' && (
               <>
                 <ImgRenderer
-                  item={resolvedImageList?.[0]}
+                  item={completeImageList?.[0]}
                   key="double-img-0"
                   style={{
                     width: '32.4%',
@@ -4504,7 +4615,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                   }}
                 />
                 <ImgRenderer
-                  item={resolvedImageList?.[1]}
+                  item={completeImageList?.[1]}
                   key="double-img-1"
                   style={{
                     width: 'calc(100% - 32.4% - 4px)',
@@ -4520,7 +4631,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             {comp.combination_mode === 'triple' && (
               <>
                 <ImgRenderer
-                  item={resolvedImageList?.[0]}
+                  item={completeImageList?.[0]}
                   key="triple-img-0"
                   style={{
                     width: '66.5%',
@@ -4543,7 +4654,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                   }}
                 >
                   <ImgRenderer
-                    item={resolvedImageList?.[1]}
+                    item={completeImageList?.[1]}
                     key="triple-img-1"
                     style={{
                       aspectRatio: '1',
@@ -4553,7 +4664,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                     }}
                   />
                   <ImgRenderer
-                    item={resolvedImageList?.[2]}
+                    item={completeImageList?.[2]}
                     key="triple-img-2"
                     style={{
                       aspectRatio: '1',
@@ -4568,11 +4679,15 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             {/* 两列模式 */}
             {comp.combination_mode.includes('bisect') && (
               <>
-                {(resolvedImageList || []).map(
+                {(completeImageList || []).map(
                   (item: any, imgIndex: number) => (
                     <ImgRenderer
                       item={item}
-                      key={`bisect-img-${imgIndex}-${item?.img_url || 'empty'}`}
+                      key={`bisect-img-${imgIndex}-${
+                        item?.img_url || item?.isPlaceholder
+                          ? 'placeholder'
+                          : 'empty'
+                      }`}
                       style={{
                         width: 'calc(50% - 2px)',
                         aspectRatio: 1,
@@ -4587,12 +4702,14 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             {/* 三列模式 */}
             {comp.combination_mode.includes('trisect') && (
               <>
-                {(resolvedImageList || []).map(
+                {(completeImageList || []).map(
                   (item: any, imgIndex: number) => (
                     <ImgRenderer
                       item={item}
                       key={`trisect-img-${imgIndex}-${
-                        item?.img_url || 'empty'
+                        item?.img_url || item?.isPlaceholder
+                          ? 'placeholder'
+                          : 'empty'
                       }`}
                       style={{
                         width: 'calc(33.33% - 2.67px)',
@@ -4606,28 +4723,29 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               </>
             )}
 
-            {resolvedImageList.length === 0 && (
-              <div
-                style={{
-                  gridColumn: `span ${
-                    comp.combination_mode === 'trisect' ||
-                    comp.combination_mode.startsWith?.('trisect_')
-                      ? 3
-                      : comp.combination_mode === 'bisect' ||
-                        comp.combination_mode.startsWith?.('bisect_')
-                      ? 2
-                      : 2
-                  }`,
-                  textAlign: 'center',
-                  color: '#999',
-                  padding: '20px',
-                  border: '1px dashed #d9d9d9',
-                  borderRadius: '4px',
-                }}
-              >
-                📷 图片组合
-              </div>
-            )}
+            {resolvedImageList.length === 0 &&
+              completeImageList.every((item) => item.isPlaceholder) && (
+                <div
+                  style={{
+                    gridColumn: `span ${
+                      comp.combination_mode === 'trisect' ||
+                      comp.combination_mode.startsWith?.('trisect_')
+                        ? 3
+                        : comp.combination_mode === 'bisect' ||
+                          comp.combination_mode.startsWith?.('bisect_')
+                        ? 2
+                        : 2
+                    }`,
+                    textAlign: 'center',
+                    color: '#999',
+                    padding: '20px',
+                    border: '1px dashed #d9d9d9',
+                    borderRadius: '4px',
+                  }}
+                >
+                  📷 图片组合
+                </div>
+              )}
           </div>
         </div>
       );

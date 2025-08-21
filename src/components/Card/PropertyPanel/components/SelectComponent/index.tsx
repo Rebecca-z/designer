@@ -27,8 +27,18 @@ import { SelectComponentProps } from '../types';
 
 const { Text } = Typography;
 
+interface OptionItem {
+  text: {
+    content: string;
+    i18n_content: {
+      'en-US': string;
+    };
+  };
+  value: string;
+}
+
 // 常量定义
-const DEFAULT_OPTIONS = [
+const DEFAULT_OPTIONS: OptionItem[] = [
   {
     text: { content: '选项1', i18n_content: { 'en-US': 'Option 1' } },
     value: 'option1',
@@ -37,17 +47,61 @@ const DEFAULT_OPTIONS = [
     text: { content: '选项2', i18n_content: { 'en-US': 'Option 2' } },
     value: 'option2',
   },
-];
+] as const;
 
-const SEGMENTED_OPTIONS = {
-  MODE: [
-    { label: '指定', value: 'specify' },
-    { label: '绑定变量', value: 'variable' },
-  ],
-  SOURCE: [
-    { label: '指定', value: 'specify' },
-    { label: '绑定变量', value: 'variable' },
-  ],
+const CONTENT_MODES = [
+  { label: '指定', value: 'specify' },
+  { label: '绑定变量', value: 'variable' },
+] as const;
+
+// 样式常量
+const STYLES = {
+  container: {
+    width: '300px',
+    height: 'calc(100vh - 60px)',
+    backgroundColor: '#fafafa',
+    borderLeft: '1px solid #d9d9d9',
+    padding: '16px',
+    overflow: 'auto',
+  },
+  tabBarStyle: {
+    padding: '0 16px',
+    backgroundColor: '#fff',
+    margin: 0,
+    borderBottom: '1px solid #d9d9d9',
+  },
+  contentPadding: { padding: '16px' },
+  infoBox: {
+    marginBottom: '16px',
+    padding: '12px',
+    backgroundColor: '#f6ffed',
+    border: '1px solid #b7eb8f',
+    borderRadius: '6px',
+  },
+  section: {
+    marginBottom: '16px',
+    background: '#fff',
+    borderRadius: 6,
+    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+    padding: 16,
+  },
+  sectionTitle: {
+    fontWeight: 600,
+    marginBottom: 8,
+    fontSize: 15,
+  },
+  optionItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '8px',
+    padding: '8px',
+    backgroundColor: '#f9f9f9',
+    borderRadius: '4px',
+  },
+  popoverContent: {
+    width: '300px',
+  },
 } as const;
 
 const SelectComponent: React.FC<SelectComponentProps> = React.memo(
@@ -177,8 +231,10 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
       optionForm.setFieldsValue({
         textContent: isTextVariableMode
           ? userEditedTextContent || ''
-          : textContent,
-        value: isValueVariableMode ? userEditedValue || '' : valueContent,
+          : userEditedTextContent || textContent,
+        value: isValueVariableMode
+          ? userEditedValue || ''
+          : userEditedValue || valueContent,
       });
 
       setOptionPopoverVisible(true);
@@ -282,6 +338,22 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
           // 如果当前是指定模式，更新保存的选项内容
           if (selectOptionsMode === 'specify') {
             setSavedSpecifyOptions(newOptions);
+
+            // 同时保存到 selectComponentStateManager，用于变量清除时恢复
+            const optionsForStateManager = newOptions.map((option) => ({
+              label: option.text?.content || '',
+              value: option.value || '',
+            }));
+            selectComponentStateManager.setUserEditedOptions(
+              selectedComponent.id,
+              optionsForStateManager,
+            );
+
+            console.log('📝 保存选项到状态管理器:', {
+              componentId: selectedComponent.id,
+              optionsForStateManager,
+              timestamp: new Date().toISOString(),
+            });
           }
         }
         setOptionPopoverVisible(false);
@@ -437,6 +509,7 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
               value={optionTextMode}
               onChange={(value) => {
                 const newMode = value as 'specify' | 'variable';
+                const oldMode = optionTextMode;
                 setOptionTextMode(newMode);
 
                 if (editingOptionIndex !== null) {
@@ -450,10 +523,20 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
                     optionForm.setFieldsValue({
                       textContent: userEditedContent || '',
                     });
+                  } else if (newMode === 'variable' && oldMode === 'specify') {
+                    // 从指定模式切换到变量模式：保存当前输入的内容
+                    const currentFormValues = optionForm.getFieldsValue();
+                    if (currentFormValues.textContent) {
+                      optionEditStateManager.setUserEditedTextContent(
+                        selectedComponent.id,
+                        editingOptionIndex,
+                        currentFormValues.textContent,
+                      );
+                    }
                   }
                 }
               }}
-              options={[...SEGMENTED_OPTIONS.MODE]}
+              options={[...CONTENT_MODES]}
               style={{ marginBottom: 8 }}
             />
             {optionTextMode === 'specify' && (
@@ -501,6 +584,76 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
                       editingOptionIndex,
                       value,
                     );
+
+                    // 如果清除了变量，自动切换到指定模式并恢复之前的内容
+                    if (!value) {
+                      console.log('🔄 变量清除 - 选项文本:', {
+                        componentId: selectedComponent.id,
+                        editingOptionIndex,
+                        step: '开始清除变量',
+                        timestamp: new Date().toISOString(),
+                      });
+
+                      setOptionTextMode('specify');
+                      const userEditedContent =
+                        optionEditStateManager.getUserEditedTextContent(
+                          selectedComponent.id,
+                          editingOptionIndex,
+                        );
+
+                      console.log('🔄 变量清除 - 获取用户编辑内容:', {
+                        componentId: selectedComponent.id,
+                        editingOptionIndex,
+                        userEditedContent,
+                        hasContent: !!userEditedContent,
+                        timestamp: new Date().toISOString(),
+                      });
+
+                      optionForm.setFieldsValue({
+                        textContent: userEditedContent || '',
+                      });
+
+                      // 立即保存到组件数据中，确保画布正确显示
+                      if (editingOptionIndex !== null && userEditedContent) {
+                        const newOptions = [
+                          ...((selectedComponent as any).options || []),
+                        ];
+                        if (newOptions[editingOptionIndex]) {
+                          const oldOption = newOptions[editingOptionIndex];
+                          newOptions[editingOptionIndex] = {
+                            ...newOptions[editingOptionIndex],
+                            text: {
+                              content: userEditedContent,
+                              i18n_content: {
+                                'en-US': userEditedContent,
+                              },
+                            },
+                          };
+
+                          console.log('🔄 变量清除 - 保存到组件数据:', {
+                            componentId: selectedComponent.id,
+                            editingOptionIndex,
+                            oldOption,
+                            newOption: newOptions[editingOptionIndex],
+                            userEditedContent,
+                            timestamp: new Date().toISOString(),
+                          });
+
+                          handleValueChange('options', newOptions);
+                        }
+                      } else {
+                        console.log('⚠️ 变量清除 - 未保存到组件数据:', {
+                          componentId: selectedComponent.id,
+                          editingOptionIndex,
+                          userEditedContent,
+                          hasUserEditedContent: !!userEditedContent,
+                          reason: !userEditedContent
+                            ? '无用户编辑内容'
+                            : '编辑索引为空',
+                          timestamp: new Date().toISOString(),
+                        });
+                      }
+                    }
 
                     // 延迟刷新，避免闪烁
                     setTimeout(() => {
@@ -551,6 +704,7 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
               value={optionValueMode}
               onChange={(value) => {
                 const newMode = value as 'specify' | 'variable';
+                const oldMode = optionValueMode;
                 setOptionValueMode(newMode);
 
                 if (editingOptionIndex !== null) {
@@ -564,10 +718,20 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
                     optionForm.setFieldsValue({
                       value: userEditedValue || '',
                     });
+                  } else if (newMode === 'variable' && oldMode === 'specify') {
+                    // 从指定模式切换到变量模式：保存当前输入的内容
+                    const currentFormValues = optionForm.getFieldsValue();
+                    if (currentFormValues.value) {
+                      optionEditStateManager.setUserEditedValue(
+                        selectedComponent.id,
+                        editingOptionIndex,
+                        currentFormValues.value,
+                      );
+                    }
                   }
                 }
               }}
-              options={[...SEGMENTED_OPTIONS.MODE]}
+              options={[...CONTENT_MODES]}
               style={{ marginBottom: 8 }}
             />
             {optionValueMode === 'specify' && (
@@ -615,6 +779,34 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
                       editingOptionIndex,
                       value,
                     );
+
+                    // 如果清除了变量，自动切换到指定模式并恢复之前的内容
+                    if (!value) {
+                      setOptionValueMode('specify');
+                      const userEditedValue =
+                        optionEditStateManager.getUserEditedValue(
+                          selectedComponent.id,
+                          editingOptionIndex,
+                        );
+                      optionForm.setFieldsValue({
+                        value: userEditedValue || '',
+                      });
+
+                      // 立即保存到组件数据中，确保画布正确显示
+                      if (editingOptionIndex !== null && userEditedValue) {
+                        const newOptions = [
+                          ...((selectedComponent as any).options || []),
+                        ];
+                        if (newOptions[editingOptionIndex]) {
+                          newOptions[editingOptionIndex] = {
+                            ...newOptions[editingOptionIndex],
+                            value: userEditedValue,
+                          };
+
+                          handleValueChange('options', newOptions);
+                        }
+                      }
+                    }
 
                     // 延迟刷新，避免闪烁
                     setTimeout(() => {
@@ -672,16 +864,7 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
     );
 
     return (
-      <div
-        style={{
-          width: '300px',
-          height: 'calc(100vh - 60px)',
-          backgroundColor: '#fafafa',
-          borderLeft: '1px solid #d9d9d9',
-          padding: '16px',
-          overflow: 'auto',
-        }}
-      >
+      <div style={STYLES.container}>
         <AddVariableModal
           visible={isVariableModalVisible}
           onOk={handleVariableModalOk}
@@ -698,12 +881,7 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
           activeKey={topLevelTab}
           onChange={setTopLevelTab}
           style={{ height: '100%' }}
-          tabBarStyle={{
-            padding: '0 16px',
-            backgroundColor: '#fff',
-            margin: 0,
-            borderBottom: '1px solid #d9d9d9',
-          }}
+          tabBarStyle={STYLES.tabBarStyle}
           size="small"
           items={[
             {
@@ -928,6 +1106,17 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
                                       // 如果当前是指定模式，更新保存的选项内容
                                       if (selectOptionsMode === 'specify') {
                                         setSavedSpecifyOptions(newOptions);
+
+                                        // 同时保存到 selectComponentStateManager
+                                        const optionsForStateManager =
+                                          newOptions.map((option) => ({
+                                            label: option.text?.content || '',
+                                            value: option.value || '',
+                                          }));
+                                        selectComponentStateManager.setUserEditedOptions(
+                                          selectedComponent.id,
+                                          optionsForStateManager,
+                                        );
                                       }
                                     }}
                                   />
@@ -957,6 +1146,18 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
                                 // 如果当前是指定模式，更新保存的选项内容
                                 if (selectOptionsMode === 'specify') {
                                   setSavedSpecifyOptions(newOptions);
+
+                                  // 同时保存到 selectComponentStateManager
+                                  const optionsForStateManager = newOptions.map(
+                                    (option) => ({
+                                      label: option.text?.content || '',
+                                      value: option.value || '',
+                                    }),
+                                  );
+                                  selectComponentStateManager.setUserEditedOptions(
+                                    selectedComponent.id,
+                                    optionsForStateManager,
+                                  );
                                 }
                               }}
                             >
@@ -1015,10 +1216,71 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
                                       '',
                                     );
 
-                                    // 恢复为指定模式的默认选项
+                                    console.log('🔄 清除选项列表变量绑定:', {
+                                      componentId: selectedComponent.id,
+                                      savedSpecifyOptions,
+                                      useDefault:
+                                        savedSpecifyOptions.length === 0,
+                                      timestamp: new Date().toISOString(),
+                                    });
+
+                                    // 尝试从状态管理器恢复用户编辑的选项内容
+                                    const userEditedOptions =
+                                      selectComponentStateManager.getUserEditedOptions(
+                                        selectedComponent.id,
+                                      );
+                                    console.log(
+                                      '🔄 从状态管理器获取用户编辑选项:',
+                                      {
+                                        componentId: selectedComponent.id,
+                                        userEditedOptions,
+                                        hasUserOptions:
+                                          !!userEditedOptions &&
+                                          userEditedOptions.length > 0,
+                                        timestamp: new Date().toISOString(),
+                                      },
+                                    );
+
+                                    let optionsToRestore;
+                                    if (
+                                      userEditedOptions &&
+                                      userEditedOptions.length > 0
+                                    ) {
+                                      // 使用状态管理器中保存的用户编辑选项
+                                      optionsToRestore = userEditedOptions.map(
+                                        (option) => ({
+                                          text: {
+                                            content: option.label,
+                                            i18n_content: {
+                                              'en-US': option.label,
+                                            },
+                                          },
+                                          value: option.value,
+                                        }),
+                                      );
+                                    } else if (savedSpecifyOptions.length > 0) {
+                                      // 使用组件内保存的指定选项
+                                      optionsToRestore = savedSpecifyOptions;
+                                    } else {
+                                      // 使用默认选项
+                                      optionsToRestore = DEFAULT_OPTIONS;
+                                    }
+
+                                    console.log('🔄 选择恢复的选项:', {
+                                      componentId: selectedComponent.id,
+                                      optionsToRestore,
+                                      source:
+                                        userEditedOptions?.length > 0
+                                          ? 'stateManager'
+                                          : savedSpecifyOptions.length > 0
+                                          ? 'savedState'
+                                          : 'default',
+                                      timestamp: new Date().toISOString(),
+                                    });
+
                                     handleValueChange(
                                       'options',
-                                      DEFAULT_OPTIONS,
+                                      optionsToRestore,
                                     );
                                   }
                                 }

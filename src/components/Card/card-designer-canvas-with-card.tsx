@@ -152,14 +152,6 @@ const Canvas: React.FC<CanvasProps> = ({
               return data.dsl.body.elements;
             })()}
             verticalSpacing={data.dsl.body.vertical_spacing}
-            padding={
-              data.dsl.body.padding || {
-                top: 16,
-                right: 16,
-                bottom: 16,
-                left: 16,
-              }
-            }
             selectedPath={selectedPath}
             hoveredPath={hoveredPath}
             onElementsChange={handleElementsChange}

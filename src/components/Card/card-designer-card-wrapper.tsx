@@ -364,7 +364,6 @@ interface CardWrapperProps {
 const CardWrapper: React.FC<CardWrapperProps> = ({
   elements,
   verticalSpacing,
-  // padding,
   selectedPath,
   hoveredPath,
   onElementsChange,
@@ -3049,7 +3048,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     boxShadow: isCardSelected
       ? '0 0 8px rgba(24, 144, 255, 0.3)'
       : '0 2px 8px rgba(0, 0, 0, 0.1)',
-    // padding: `${padding.top}px ${padding.right}px ${padding.bottom}px ${padding.left}px`,
     padding: '4px',
     minHeight: '200px',
     cursor: 'pointer',

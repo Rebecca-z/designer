@@ -1,7 +1,7 @@
 // RichTextComponent 编辑界面 - 专门处理富文本组件
 import { BgColorsOutlined, SettingOutlined } from '@ant-design/icons';
 import { Form, Segmented, Tabs, Typography } from 'antd';
-import React from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import {
   ComponentType,
   VariableItem,
@@ -12,6 +12,54 @@ import { textComponentStateManager } from '../../../Variable/utils/index';
 import VariableBinding from '../../../Variable/VariableList';
 
 const { Text } = Typography;
+
+// 类型定义
+interface RichTextData {
+  text?: {
+    content?: string;
+    i18n_content?: {
+      'en-US': string;
+    };
+  };
+}
+
+// 样式常量
+const STYLES = {
+  container: {
+    width: '300px',
+    height: 'calc(100vh - 60px)',
+    backgroundColor: '#fafafa',
+    borderLeft: '1px solid #d9d9d9',
+    padding: '16px',
+    overflow: 'auto',
+  },
+  tabBarStyle: {
+    padding: '0 16px',
+    backgroundColor: '#fff',
+    margin: 0,
+    borderBottom: '1px solid #d9d9d9',
+  },
+  contentPadding: { padding: '16px' },
+  infoBox: {
+    marginBottom: '16px',
+    padding: '12px',
+    backgroundColor: '#f6ffed',
+    border: '1px solid #b7eb8f',
+    borderRadius: '6px',
+  },
+  section: {
+    marginBottom: '16px',
+    background: '#fff',
+    borderRadius: 6,
+    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+    padding: 16,
+  },
+  sectionTitle: {
+    fontWeight: 600,
+    marginBottom: 8,
+    fontSize: 15,
+  },
+} as const;
 
 export interface RichTextComponentProps {
   selectedComponent: ComponentType;
@@ -67,15 +115,8 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
 }) => {
   const [form] = Form.useForm();
 
-  console.log('📝 渲染富文本组件编辑界面:', {
-    componentTag: selectedComponent.tag,
-    componentId: selectedComponent.id,
-    topLevelTab,
-    variablesCount: variables.length,
-  });
-
-  // 获取默认富文本内容
-  const getDefaultRichTextContent = () => {
+  // 获取默认富文本内容 - 使用useCallback优化
+  const getDefaultRichTextContent = useCallback(() => {
     return {
       type: 'doc',
       content: [
@@ -90,15 +131,48 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
         },
       ],
     };
-  };
+  }, []);
 
-  // 获取绑定的变量名
-  const getBoundVariableName = () => {
+  // 初始化变量绑定状态 - 从组件数据中检测现有的变量占位符
+  useEffect(() => {
+    const component = selectedComponent as any as RichTextData;
+    const textContent = component.text?.content || '';
+
+    if (textContent.startsWith('${') && textContent.endsWith('}')) {
+      const variableName = textContent.slice(2, -1);
+      const currentBinding = textComponentStateManager.getBoundVariableName(
+        selectedComponent.id,
+      );
+      if (currentBinding !== variableName) {
+        textComponentStateManager.setBoundVariableName(
+          selectedComponent.id,
+          variableName,
+        );
+      }
+    }
+  }, [selectedComponent.id, selectedComponent]);
+
+  // 获取绑定的变量名 - 使用useCallback优化
+  const getBoundVariableName = useCallback(() => {
     const boundVariableName =
       textComponentStateManager.getBoundVariableName(selectedComponent.id) ||
       '';
     return boundVariableName;
-  };
+  }, [selectedComponent.id]);
+
+  // 计算变量绑定值 - 使用useMemo优化
+  const variableBindingValue = useMemo(() => {
+    // 在绑定变量模式下，优先显示记住的变量
+    const rememberedVariable = selectedComponent
+      ? lastBoundVariables[selectedComponent.id]
+      : undefined;
+    const currentBoundVariable = getBoundVariableName();
+
+    // 如果有记住的变量，使用记住的变量；否则使用当前绑定的变量
+    const displayValue = rememberedVariable || currentBoundVariable;
+
+    return displayValue;
+  }, [selectedComponent, lastBoundVariables, getBoundVariableName]);
 
   // 获取富文本内容 - 根据当前模式显示不同内容
   const getRichTextContent = () => {
@@ -270,21 +344,8 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
     }
   };
 
-  console.log('🚀🚀🚀 富文本组件编辑界面 - return 开始执行');
-
   return (
-    <div
-      style={{
-        width: '300px',
-        height: 'calc(100vh - 60px)',
-        backgroundColor: '#fafafa',
-        borderLeft: '1px solid #d9d9d9',
-        padding: '16px',
-        overflow: 'auto',
-      }}
-    >
-      {/* 富文本组件编辑界面的变量添加模态框 - 最优先渲染 */}
-      {console.log('🔥 富文本组件编辑界面 - 准备渲染AddVariableModal (最优先)')}
+    <div style={STYLES.container}>
       <AddVariableModal
         visible={isVariableModalVisible}
         onOk={handleVariableModalOk}
@@ -301,12 +362,7 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
         activeKey={topLevelTab}
         onChange={setTopLevelTab}
         style={{ height: '100%' }}
-        tabBarStyle={{
-          padding: '0 16px',
-          backgroundColor: '#fff',
-          margin: 0,
-          borderBottom: '1px solid #d9d9d9',
-        }}
+        tabBarStyle={STYLES.tabBarStyle}
         size="small"
         items={[
           {
@@ -441,20 +497,7 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
                             componentType="rich_text"
                             variables={variables}
                             getFilteredVariables={getFilteredVariables}
-                            value={(() => {
-                              // 在绑定变量模式下，优先显示记住的变量
-                              const rememberedVariable = selectedComponent
-                                ? lastBoundVariables[selectedComponent.id]
-                                : undefined;
-                              const currentBoundVariable =
-                                getBoundVariableName();
-
-                              // 如果有记住的变量，使用记住的变量；否则使用当前绑定的变量
-                              const displayValue =
-                                rememberedVariable || currentBoundVariable;
-
-                              return displayValue;
-                            })()}
+                            value={variableBindingValue}
                             onChange={(value: string | undefined) => {
                               // 立即更新DSL中的变量绑定
                               updateBoundVariableName(value || '');
