@@ -554,7 +554,7 @@ const InputComponent: React.FC<InputComponentProps> = ({
                 组件属性
               </span>
             ),
-            children: componentTabContent,
+            children: componentTabContent as React.ReactNode,
           },
           {
             key: 'variables',
