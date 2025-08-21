@@ -16,7 +16,7 @@ import {
   Tabs,
   Typography,
 } from 'antd';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import AddVariableModal from '../../../Variable/AddVariableModal';
 import VariableBinding from '../../../Variable/VariableList';
 import {
@@ -107,6 +107,7 @@ const STYLES = {
 const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
   ({
     selectedComponent,
+    selectedPath,
     variables,
     topLevelTab,
     setTopLevelTab,
@@ -126,6 +127,36 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
     modalComponentType,
     VariableManagementPanel,
   }) => {
+    // 检查组件是否嵌套在表单中
+    const isNestedInForm = useMemo(() => {
+      if (!selectedPath) return false;
+
+      // 表单内组件路径：['dsl', 'body', 'elements', formIndex, 'elements', componentIndex]
+      if (
+        selectedPath.length === 6 &&
+        selectedPath[0] === 'dsl' &&
+        selectedPath[1] === 'body' &&
+        selectedPath[2] === 'elements' &&
+        selectedPath[4] === 'elements'
+      ) {
+        return true;
+      }
+
+      // 表单内分栏容器内的组件路径：['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', componentIndex]
+      if (
+        selectedPath.length === 10 &&
+        selectedPath[0] === 'dsl' &&
+        selectedPath[1] === 'body' &&
+        selectedPath[2] === 'elements' &&
+        selectedPath[4] === 'elements' &&
+        selectedPath[6] === 'columns' &&
+        selectedPath[8] === 'elements'
+      ) {
+        return true;
+      }
+
+      return false;
+    }, [selectedPath]);
     const [form] = Form.useForm();
     const [optionPopoverVisible, setOptionPopoverVisible] = useState(false);
     const [editingOptionIndex, setEditingOptionIndex] = useState<number | null>(
@@ -865,32 +896,52 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
                     </Text>
                   </div>
 
-                  {/* 基础设置 */}
-                  <div
-                    style={{
-                      marginBottom: '16px',
-                      background: '#fff',
-                      borderRadius: 6,
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-                      padding: 16,
-                    }}
-                  >
+                  {/* 基础设置 - 只有在表单中才显示 */}
+                  {isNestedInForm && (
                     <div
-                      style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}
+                      style={{
+                        marginBottom: '16px',
+                        background: '#fff',
+                        borderRadius: 6,
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                        padding: 16,
+                      }}
                     >
-                      ⚙️ 基础设置
+                      <div
+                        style={{
+                          fontWeight: 600,
+                          marginBottom: 8,
+                          fontSize: 15,
+                        }}
+                      >
+                        ⚙️ 基础设置
+                      </div>
+                      <Form form={form} layout="vertical">
+                        <Form.Item label="必填">
+                          <Switch
+                            checked={
+                              (selectedComponent as any).required || false
+                            }
+                            onChange={(checked) => {
+                              // 只有在表单中才更新 required 字段到全局数据
+                              if (isNestedInForm) {
+                                handleValueChange('required', checked);
+                                console.log('✅ 下拉多选-更新 required 字段:', {
+                                  checked,
+                                  isNestedInForm,
+                                });
+                              } else {
+                                console.log(
+                                  '⚠️ 下拉多选-跳过更新 required 字段：组件不在表单中',
+                                  { checked, isNestedInForm },
+                                );
+                              }
+                            }}
+                          />
+                        </Form.Item>
+                      </Form>
                     </div>
-                    <Form form={form} layout="vertical">
-                      <Form.Item label="必填">
-                        <Switch
-                          checked={(selectedComponent as any).required || false}
-                          onChange={(checked) =>
-                            handleValueChange('required', checked)
-                          }
-                        />
-                      </Form.Item>
-                    </Form>
-                  </div>
+                  )}
 
                   {/* 选项设置 */}
                   <div

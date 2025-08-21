@@ -623,6 +623,99 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     return null;
   };
 
+  // 工具函数：根据目标位置清理组件的required字段
+  const cleanRequiredFieldBasedOnTarget = (
+    component: ComponentType,
+    targetPath: (string | number)[],
+  ): ComponentType => {
+    // 需要处理required字段的组件类型
+    const componentsWithRequired = [
+      'input',
+      'select_static',
+      'multi_select_static',
+    ];
+
+    if (!componentsWithRequired.includes(component.tag)) {
+      console.log('⏭️ 组件类型不需要处理 required 字段:', component.tag);
+      return component;
+    }
+
+    // 检查目标位置是否在表单中
+    const isTargetInForm =
+      targetPath.length >= 6 &&
+      targetPath[0] === 'dsl' &&
+      targetPath[1] === 'body' &&
+      targetPath[2] === 'elements' &&
+      targetPath[4] === 'elements';
+
+    // 检查目标位置是否在表单内的分栏容器中
+    const isTargetInFormColumn =
+      targetPath.length >= 10 &&
+      targetPath[0] === 'dsl' &&
+      targetPath[1] === 'body' &&
+      targetPath[2] === 'elements' &&
+      targetPath[4] === 'elements' &&
+      targetPath[6] === 'columns' &&
+      targetPath[8] === 'elements';
+
+    // 检查目标位置是否在画布根节点
+    const isTargetInRoot =
+      targetPath.length === 3 &&
+      targetPath[0] === 'dsl' &&
+      targetPath[1] === 'body' &&
+      targetPath[2] === 'elements';
+
+    const cleanedComponent = { ...component };
+
+    if (isTargetInRoot) {
+      // 移动到画布根节点：删除required字段
+      console.log('🎯 检测到移动到画布根节点，准备删除 required 字段');
+      if ((cleanedComponent as any).required !== undefined) {
+        const beforeValue = (cleanedComponent as any).required;
+        delete (cleanedComponent as any).required;
+        console.log('🧹 ✅ 成功删除 required 字段:', {
+          componentId: component.id,
+          componentTag: component.tag,
+          beforeValue,
+          afterHasRequired: (cleanedComponent as any).required !== undefined,
+          targetPath,
+          action: 'delete required field',
+        });
+      } else {
+        console.log('ℹ️ 组件没有 required 字段，无需删除');
+      }
+    } else if (isTargetInForm || isTargetInFormColumn) {
+      // 移动到表单中：保留required字段（如果有的话）
+      console.log('✅ 保留required字段 - 移动到表单中:', {
+        componentId: component.id,
+        componentTag: component.tag,
+        hasRequired: (cleanedComponent as any).required !== undefined,
+        requiredValue: (cleanedComponent as any).required,
+        targetPath,
+        action: 'keep required field',
+      });
+      // 不需要特殊处理，required字段会被保留
+    } else {
+      console.log('⚠️ 未匹配到任何目标位置类型:', {
+        componentId: component.id,
+        targetPath,
+        isTargetInRoot,
+        isTargetInForm,
+        isTargetInFormColumn,
+      });
+    }
+
+    console.log('🔍 cleanRequiredFieldBasedOnTarget 执行完成:', {
+      componentId: component.id,
+      originalHasRequired: (component as any).required !== undefined,
+      cleanedHasRequired: (cleanedComponent as any).required !== undefined,
+      originalValue: (component as any).required,
+      cleanedValue: (cleanedComponent as any).required,
+    });
+
+    return cleanedComponent;
+  };
+
   // 根据路径添加组件到指定位置
   const addComponentByPath = (
     elements: ComponentType[],
@@ -632,6 +725,12 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
   ): ComponentType[] => {
     const newElements = [...elements];
 
+    // 根据目标位置清理组件的required字段
+    const cleanedComponent = cleanRequiredFieldBasedOnTarget(
+      newComponent,
+      path,
+    );
+
     console.log('🎯 添加组件到路径:', {
       path,
       pathLength: path.length,
@@ -640,20 +739,20 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         item,
         type: typeof item,
       })),
-      newComponent: { id: newComponent.id, tag: newComponent.tag },
+      newComponent: { id: cleanedComponent.id, tag: cleanedComponent.tag },
       insertIndex,
     });
 
     // 如果是根级别（直接添加到卡片）
     if (path.length === 3 && path[2] === 'elements') {
       if (insertIndex !== undefined) {
-        newElements.splice(insertIndex, 0, newComponent);
+        newElements.splice(insertIndex, 0, cleanedComponent);
       } else {
-        newElements.push(newComponent);
+        newElements.push(cleanedComponent);
       }
       console.log('✅ 根级别组件添加成功:', {
-        componentId: newComponent.id,
-        componentTag: newComponent.tag,
+        componentId: cleanedComponent.id,
+        componentTag: cleanedComponent.tag,
         insertIndex,
         finalLength: newElements.length,
       });
@@ -932,13 +1031,13 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           if (Array.isArray(target)) {
             // target本身就是elements数组
             if (insertIndex !== undefined) {
-              target.splice(insertIndex, 0, newComponent);
+              target.splice(insertIndex, 0, componentToAdd);
             } else {
-              target.push(newComponent);
+              target.push(componentToAdd);
             }
             console.log('✅ 组件添加成功 (elements数组):', {
-              componentId: newComponent.id,
-              componentTag: newComponent.tag,
+              componentId: componentToAdd.id,
+              componentTag: componentToAdd.tag,
               insertIndex,
               arrayLength: target.length,
             });
@@ -950,13 +1049,13 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           ) {
             // target是组件对象，需要访问其elements属性
             if (insertIndex !== undefined) {
-              target.elements.splice(insertIndex, 0, newComponent);
+              target.elements.splice(insertIndex, 0, componentToAdd);
             } else {
-              target.elements.push(newComponent);
+              target.elements.push(componentToAdd);
             }
             console.log('✅ 组件添加成功 (组件elements):', {
-              componentId: newComponent.id,
-              componentTag: newComponent.tag,
+              componentId: componentToAdd.id,
+              componentTag: componentToAdd.tag,
               insertIndex,
               arrayLength: target.elements.length,
             });
@@ -978,14 +1077,14 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
               }
 
               if (insertIndex !== undefined) {
-                target.elements.splice(insertIndex, 0, newComponent);
+                target.elements.splice(insertIndex, 0, componentToAdd);
               } else {
-                target.elements.push(newComponent);
+                target.elements.push(componentToAdd);
               }
 
               console.log('✅ 组件添加成功 (修复后):', {
-                componentId: newComponent.id,
-                componentTag: newComponent.tag,
+                componentId: componentToAdd.id,
+                componentTag: componentToAdd.tag,
                 insertIndex,
                 arrayLength: target.elements.length,
               });
@@ -1051,19 +1150,19 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                   nextKey,
                   targetLength: target.length,
                   depth,
-                  componentId: newComponent.id,
-                  componentTag: newComponent.tag,
+                  componentId: componentToAdd.id,
+                  componentTag: componentToAdd.tag,
                 });
 
                 if (insertIndex !== undefined) {
-                  target.splice(insertIndex, 0, newComponent);
+                  target.splice(insertIndex, 0, componentToAdd);
                 } else {
-                  target.push(newComponent);
+                  target.push(componentToAdd);
                 }
 
                 console.log('✅ 组件添加成功 (空数组):', {
-                  componentId: newComponent.id,
-                  componentTag: newComponent.tag,
+                  componentId: componentToAdd.id,
+                  componentTag: componentToAdd.tag,
                   insertIndex,
                   arrayLength: target.length,
                 });
@@ -1220,19 +1319,19 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                   console.log('✅ 已到达elements数组，直接添加组件:', {
                     targetLength: target.length,
                     insertIndex,
-                    componentId: newComponent.id,
-                    componentTag: newComponent.tag,
+                    componentId: componentToAdd.id,
+                    componentTag: componentToAdd.tag,
                   });
 
                   if (insertIndex !== undefined) {
-                    target.splice(insertIndex, 0, newComponent);
+                    target.splice(insertIndex, 0, componentToAdd);
                   } else {
-                    target.push(newComponent);
+                    target.push(componentToAdd);
                   }
 
                   console.log('✅ 组件添加成功 (elements数组):', {
-                    componentId: newComponent.id,
-                    componentTag: newComponent.tag,
+                    componentId: componentToAdd.id,
+                    componentTag: componentToAdd.tag,
                     insertIndex,
                     arrayLength: target.length,
                   });
@@ -1621,7 +1720,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       0,
       newElements,
       path,
-      newComponent,
+      cleanedComponent,
     );
 
     if (success) {
@@ -2960,8 +3059,15 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         // 新组件
         const newComponent = createDefaultComponent(item.type);
 
+        // 清理组件：如果是拖拽到画布根节点，移除 required 字段
+        const cleanedComponent = cleanRequiredFieldBasedOnTarget(newComponent, [
+          'dsl',
+          'body',
+          'elements',
+        ]);
+
         // 其他组件添加到末尾
-        onElementsChange([...elements, newComponent]);
+        onElementsChange([...elements, cleanedComponent]);
         message.success(`${item.type} 组件已添加到画布`);
       } else if (item.component && item.path) {
         // 现有组件移动到画布根级别

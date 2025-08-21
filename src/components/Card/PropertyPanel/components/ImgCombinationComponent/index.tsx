@@ -637,8 +637,8 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
     <div style={STYLES.container}>
       <AddVariableModal
         visible={isVariableModalVisible}
-        onOk={handleVariableModalOk}
-        onCancel={handleVariableModalCancel}
+        onOk={handleVariableModalOk || (() => {})}
+        onCancel={handleVariableModalCancel || (() => {})}
         editingVariable={editingVariable}
         componentType={
           isVariableModalFromVariablesTab

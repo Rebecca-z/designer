@@ -72,6 +72,7 @@ const STYLES = {
 
 const InputComponent: React.FC<InputComponentProps> = ({
   selectedComponent,
+  selectedPath,
   variables,
   topLevelTab,
   setTopLevelTab,
@@ -93,6 +94,36 @@ const InputComponent: React.FC<InputComponentProps> = ({
   modalComponentType,
   VariableManagementPanel,
 }) => {
+  // 检查组件是否嵌套在表单中
+  const isNestedInForm = useMemo(() => {
+    if (!selectedPath) return false;
+
+    // 表单内组件路径：['dsl', 'body', 'elements', formIndex, 'elements', componentIndex]
+    if (
+      selectedPath.length === 6 &&
+      selectedPath[0] === 'dsl' &&
+      selectedPath[1] === 'body' &&
+      selectedPath[2] === 'elements' &&
+      selectedPath[4] === 'elements'
+    ) {
+      return true;
+    }
+
+    // 表单内分栏容器内的组件路径：['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', componentIndex]
+    if (
+      selectedPath.length === 10 &&
+      selectedPath[0] === 'dsl' &&
+      selectedPath[1] === 'body' &&
+      selectedPath[2] === 'elements' &&
+      selectedPath[4] === 'elements' &&
+      selectedPath[6] === 'columns' &&
+      selectedPath[8] === 'elements'
+    ) {
+      return true;
+    }
+
+    return false;
+  }, [selectedPath]);
   const [form] = Form.useForm();
   const [, forceUpdate] = useState({});
 
@@ -379,13 +410,27 @@ const InputComponent: React.FC<InputComponentProps> = ({
           <Form.Item label="必填">
             <Switch
               checked={inputInfo.required}
-              onChange={(checked) => handleValueChange('required', checked)}
+              onChange={(checked) => {
+                // 只有在表单中才更新 required 字段到全局数据
+                if (isNestedInForm) {
+                  handleValueChange('required', checked);
+                  console.log('✅ 更新 required 字段:', {
+                    checked,
+                    isNestedInForm,
+                  });
+                } else {
+                  console.log('⚠️ 跳过更新 required 字段：组件不在表单中', {
+                    checked,
+                    isNestedInForm,
+                  });
+                }
+              }}
             />
           </Form.Item>
         </Form>
       </div>
     ),
-    [form, inputInfo.required, handleValueChange],
+    [form, inputInfo.required, handleValueChange, isNestedInForm],
   );
 
   // 渲染占位符设置内容 - 使用useMemo优化
@@ -511,12 +556,13 @@ const InputComponent: React.FC<InputComponentProps> = ({
             🎯 当前选中：输入框组件
           </Text>
         </div>
-        {basicSettingsContent}
+        {isNestedInForm && basicSettingsContent}
         {placeholderSettingsContent}
         {defaultValueSettingsContent}
       </div>
     ),
     [
+      isNestedInForm,
       basicSettingsContent,
       placeholderSettingsContent,
       defaultValueSettingsContent,
