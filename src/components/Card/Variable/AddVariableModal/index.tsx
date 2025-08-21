@@ -22,7 +22,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
   onOk,
   onCancel,
   initialType = 'text',
-  editingVariable = null, // 新增：编辑的变量
+  editingVariable = undefined, // 新增：编辑的变量
   componentType, // 新增：当前选中组件的类型
 }) => {
   const jsonEditorRef = useRef<JSONEditorRef>(null);
@@ -115,17 +115,6 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
 
   // 获取默认的变量类型
   const defaultType = getDefaultVariableType(componentType);
-
-  // 调试信息
-  console.log('🔧 AddVariableModal 状态:', {
-    componentType,
-    availableTypes,
-    defaultType,
-    selectedType,
-    initialType,
-    isEditing: !!editingVariable,
-    editingVariableName: editingVariable?.name,
-  });
 
   // 获取默认模拟数据
   const getDefaultMockData = (type: VariableType): string => {

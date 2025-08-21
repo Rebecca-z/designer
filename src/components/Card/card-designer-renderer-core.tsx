@@ -4501,7 +4501,10 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         // 优先使用用户选择的布局类型
         const userChosenLayout = getComponentLayoutChoice(comp.id);
         if (userChosenLayout) {
-          requiredCount = getRequiredImageCount(userChosenLayout, undefined);
+          requiredCount = getRequiredImageCount(
+            comp.combination_mode,
+            userChosenLayout,
+          );
         } else if (comp.layoutType) {
           // 如果有 layoutType，使用它
           requiredCount = getRequiredImageCount(
@@ -4534,9 +4537,15 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           componentId: comp.id,
           combinationMode: comp.combination_mode,
           layoutType: comp.layoutType,
+          userChosenLayout,
           requiredCount,
           actualImageCount: actualImages.length,
           needsPlaceholders: actualImages.length < requiredCount,
+          debugInfo: {
+            hasUserChoice: !!userChosenLayout,
+            hasLayoutType: !!comp.layoutType,
+            fallbackToCombinationMode: !userChosenLayout && !comp.layoutType,
+          },
         });
 
         // 添加实际图片

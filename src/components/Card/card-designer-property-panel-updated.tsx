@@ -1542,6 +1542,15 @@ export const PropertyPanel: React.FC<{
 
   // 🎯 当选中组件时自动切换到组件属性Tab
   useEffect(() => {
+    console.log('🔄 旧版Tab自动切换逻辑执行:', {
+      hasCurrentComponent: !!currentComponent,
+      componentId: currentComponent?.id,
+      componentTag: currentComponent?.tag,
+      selectedPath,
+      lastSelectedComponentId,
+      currentTab: topLevelTab,
+    });
+
     if (currentComponent) {
       // 只有当选中的是具体组件（不是卡片根节点）时才切换到组件属性Tab
       const isCardRoot =
@@ -1554,12 +1563,14 @@ export const PropertyPanel: React.FC<{
       const isNewComponent = currentComponent.id !== lastSelectedComponentId;
 
       if (!isCardRoot && isNewComponent) {
-        console.log('🎯 检测到新组件选中，自动切换到组件属性Tab:', {
+        console.log('🎯 旧版检测到新组件选中，自动切换到组件属性Tab:', {
           componentId: currentComponent.id,
           componentTag: currentComponent.tag,
           selectedPath,
           currentTab: topLevelTab,
           lastSelectedComponentId,
+          isNewComponent,
+          isCardRoot,
           timestamp: new Date().toISOString(),
         });
         setTopLevelTab('component');
@@ -5434,9 +5445,7 @@ export const PropertyPanel: React.FC<{
                       }
                       placeholder="请选择要绑定的变量"
                       label="绑定变量"
-                      addVariableText={
-                        isRichText ? '+新建富文本变量' : '+新建变量'
-                      }
+                      addVariableText="+新建变量"
                     />
                   </div>
                 )}

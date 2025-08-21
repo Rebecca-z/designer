@@ -20,8 +20,8 @@ export interface BaseComponentProps {
   getVariableKeys: (variable: any) => string[];
   handleAddVariableFromComponent: (componentType: string) => void;
   isVariableModalVisible: boolean;
-  handleVariableModalOk: (variable: any) => void;
-  handleVariableModalCancel: () => void;
+  handleVariableModalOk?: (variable: any) => void;
+  handleVariableModalCancel?: () => void;
   editingVariable: any;
   isVariableModalFromVariablesTab: boolean;
   modalComponentType?: string;
@@ -46,7 +46,6 @@ export interface InputComponentProps extends BaseComponentProps {
 export interface ImageComponentProps extends BaseComponentProps {
   imageContentMode: 'specify' | 'variable';
   setImageContentMode: (mode: 'specify' | 'variable') => void;
-  initializedImageComponents: Set<string>;
 }
 
 // 多图混排组件特有的Props

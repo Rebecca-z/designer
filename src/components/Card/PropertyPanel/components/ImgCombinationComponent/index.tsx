@@ -863,6 +863,15 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                                         layout.type,
                                       );
 
+                                      console.log('🎯 用户选择布局:', {
+                                        componentId: selectedComponent.id,
+                                        selectedLayoutType: layout.type,
+                                        newCombinationMode,
+                                        requiredImageCount,
+                                        currentMode: multiImageContentMode,
+                                        timestamp: new Date().toISOString(),
+                                      });
+
                                       handleValueChange(
                                         'combination_mode',
                                         newCombinationMode,

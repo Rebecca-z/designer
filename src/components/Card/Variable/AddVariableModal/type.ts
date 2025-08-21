@@ -13,7 +13,7 @@ export interface AddVariableModalProps {
   onOk: (variable: Variable) => void;
   onCancel: () => void;
   initialType?: VariableType;
-  editingVariable?: Variable | null; // 新增：编辑的变量
+  editingVariable?: Variable | undefined; // 新增：编辑的变量
   componentType?: string; // 新增：当前选中组件的类型，用于过滤变量类型
 }
 

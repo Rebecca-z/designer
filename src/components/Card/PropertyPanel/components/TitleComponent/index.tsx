@@ -1,4 +1,8 @@
-import { FileTextOutlined } from '@ant-design/icons';
+import {
+  BgColorsOutlined,
+  FileTextOutlined,
+  SettingOutlined,
+} from '@ant-design/icons';
 import { Form, Input, Select, Tabs, Typography } from 'antd';
 import React, { useCallback, useMemo } from 'react';
 import AddVariableModal from '../../../Variable/AddVariableModal';
@@ -36,20 +40,26 @@ const STYLES = {
     padding: '16px',
     overflow: 'auto',
   },
+  tabBarStyle: {
+    padding: '0 16px',
+    backgroundColor: '#fff',
+    margin: 0,
+    borderBottom: '1px solid #d9d9d9',
+  },
+  contentPadding: { padding: '16px' },
   infoBox: {
-    background: '#e6f7ff',
-    border: '1px solid #91d5ff',
-    borderRadius: 6,
-    padding: 12,
-    marginBottom: 16,
-    textAlign: 'center' as const,
+    marginBottom: '16px',
+    padding: '12px',
+    backgroundColor: '#f0f9ff',
+    border: '1px solid #bae6fd',
+    borderRadius: '6px',
   },
   sectionCard: {
+    marginBottom: '16px',
     background: '#fff',
     borderRadius: 6,
     boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
     padding: 16,
-    marginBottom: 16,
   },
   sectionTitle: {
     fontWeight: 600,
@@ -111,7 +121,7 @@ const TitleComponent: React.FC<BaseComponentProps> = ({
   // 组件内容 - 使用useMemo优化
   const componentTabContent = useMemo(
     () => (
-      <div style={{ padding: '8px 0' }}>
+      <div style={STYLES.contentPadding}>
         {/* 组件类型提示 */}
         <div style={STYLES.infoBox}>
           <FileTextOutlined
@@ -191,15 +201,32 @@ const TitleComponent: React.FC<BaseComponentProps> = ({
       <Tabs
         activeKey={topLevelTab}
         onChange={setTopLevelTab}
+        style={{ height: '100%' }}
+        tabBarStyle={STYLES.tabBarStyle}
+        size="small"
         items={[
           {
-            key: 'properties',
-            label: '组件属性',
+            key: 'component',
+            label: (
+              <span
+                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                <SettingOutlined />
+                组件属性
+              </span>
+            ),
             children: componentTabContent,
           },
           {
             key: 'variables',
-            label: '变量',
+            label: (
+              <span
+                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                <BgColorsOutlined />
+                变量
+              </span>
+            ),
             children: <VariableManagementPanel />,
           },
         ]}

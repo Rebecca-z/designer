@@ -9,6 +9,10 @@ import {
 } from '@ant-design/icons';
 import { Button, Card, Tabs, Typography } from 'antd';
 import React, { useEffect, useState } from 'react';
+import {
+  ComponentType as ImportedComponentType,
+  Variable,
+} from '../../card-designer-types-updated';
 import AddVariableModal from '../../Variable/AddVariableModal';
 import {
   ButtonComponent,
@@ -28,15 +32,9 @@ import {
 import CardRootComponent from '../components/CardRootComponent';
 import { getComponentRealPath, getVariableKeys } from '../utils';
 
-// const { Option } = Select;
 const { Text } = Typography;
 
-// 类型定义
-interface ComponentType {
-  id: string;
-  tag: string;
-  [key: string]: any;
-}
+type ComponentType = ImportedComponentType;
 
 interface VariableItem {
   name: string;
@@ -49,81 +47,7 @@ interface CardDesignData {
   [key: string]: any;
 }
 
-// 事件编辑弹窗组件
-// 事件编辑弹窗组件（暂时未使用）
-// const EventEditModal: React.FC<{
-//   visible: boolean;
-//   eventAction: EventAction;
-//   variables: any[];
-//   onOk: (action: EventAction) => void;
-//   onCancel: () => void;
-//   onChange: (field: string, value: any) => void;
-//   onAddVariable: () => void;
-// }> = ({ visible, eventAction, onOk, onCancel, onChange, onAddVariable }) => {
-//   return (
-//     <Modal
-//       title="编辑动作"
-//       open={visible}
-//       onOk={() => onOk(eventAction)}
-//       onCancel={onCancel}
-//       okText="确定"
-//       cancelText="取消"
-//       width={500}
-//     >
-//       <Form layout="vertical">
-//         <Form.Item label="动作" required>
-//           <Select
-//             value={eventAction.action}
-//             onChange={(value) => onChange('action', value)}
-//             style={{ width: '100%' }}
-//           >
-//             <Option value="callback">请求回调</Option>
-//           </Select>
-//         </Form.Item>
-
-//         <Form.Item label="参数类型" required>
-//           <Select
-//             value={eventAction.paramType}
-//             onChange={(value) => onChange('paramType', value)}
-//             style={{ width: '100%' }}
-//           >
-//             <Option value="string">字符串</Option>
-//             <Option value="object">对象</Option>
-//           </Select>
-//         </Form.Item>
-
-//         <Form.Item label="参数值" required>
-//           <Select
-//             value={eventAction.paramValue}
-//             onChange={(value) => onChange('paramValue', value)}
-//             style={{ width: '100%' }}
-//             placeholder="请选择参数值"
-//             dropdownRender={(menu) => (
-//               <div>
-//                 {menu}
-//                 <div
-//                   style={{
-//                     padding: '8px',
-//                     borderTop: '1px solid #f0f0f0',
-//                     cursor: 'pointer',
-//                   }}
-//                   onClick={onAddVariable}
-//                 >
-//                   + 新建变量
-//                 </div>
-//               </div>
-//             )}
-//           >
-//             {/* 这里应该根据variables动态生成选项 */}
-//           </Select>
-//         </Form.Item>
-//       </Form>
-//     </Modal>
-//   );
-// };
-
 export const PropertyPanel: React.FC<{
-  selectedComponent: ComponentType | null;
   selectedPath: (string | number)[] | null;
   onUpdateComponent: (component: ComponentType) => void;
   onUpdateCard: (updates: any) => void;
@@ -137,7 +61,6 @@ export const PropertyPanel: React.FC<{
   };
   cardData?: CardDesignData;
 }> = ({
-  selectedComponent: _selectedComponent, // 重命名，避免直接使用
   selectedPath,
   onUpdateComponent,
   onUpdateCard,
@@ -145,28 +68,33 @@ export const PropertyPanel: React.FC<{
   onUpdateVariables,
   cardVerticalSpacing,
   cardData,
-  // cardPadding: _cardPadding,
-  // headerData: _headerData,
 }) => {
   const [topLevelTab, setTopLevelTab] = useState<string>('component');
   const [lastSelectedComponentId, setLastSelectedComponentId] = useState<
     string | null
   >(null);
-  // const [userManuallyChangedTab, setUserManuallyChangedTab] = useState(false);
 
   // 动态生成最新的选中组件数据
   const getLatestSelectedComponent = (): ComponentType | null => {
     if (!cardData || !selectedPath) return null;
-
     const { component } = getComponentRealPath(cardData as any, selectedPath);
     return component;
   };
 
   // 使用最新的组件数据
-  const selectedComponent = getLatestSelectedComponent();
+  const selectedComponent = getLatestSelectedComponent() as ComponentType;
 
   // 🎯 当选中组件时自动切换到组件属性Tab
   useEffect(() => {
+    console.log('🔄 Tab自动切换逻辑执行:', {
+      hasSelectedComponent: !!selectedComponent,
+      componentId: selectedComponent?.id,
+      componentTag: selectedComponent?.tag,
+      selectedPath,
+      lastSelectedComponentId,
+      currentTab: topLevelTab,
+    });
+
     if (selectedComponent) {
       // 只有当选中的是具体组件（不是卡片根节点）时才切换到组件属性Tab
       const isCardRoot =
@@ -185,10 +113,11 @@ export const PropertyPanel: React.FC<{
           selectedPath,
           currentTab: topLevelTab,
           lastSelectedComponentId,
+          isNewComponent,
+          isCardRoot,
           timestamp: new Date().toISOString(),
         });
         setTopLevelTab('component');
-        // setUserManuallyChangedTab(false); // 重置手动切换标记
       }
 
       // 更新最后选中的组件ID
@@ -202,21 +131,7 @@ export const PropertyPanel: React.FC<{
   // 创建一个包装的setTopLevelTab函数来跟踪手动切换
   const handleTabChange = (activeKey: string) => {
     setTopLevelTab(activeKey);
-    // setUserManuallyChangedTab(true); // 标记为手动切换
-    console.log('👤 用户手动切换Tab:', {
-      newTab: activeKey,
-      timestamp: new Date().toISOString(),
-    });
   };
-
-  // 调试日志：对比新旧组件数据
-  console.log('🔄 RightPanel 组件数据对比:', {
-    oldComponent: _selectedComponent,
-    newComponent: selectedComponent,
-    selectedPath,
-    cardDataExists: !!cardData,
-    timestamp: new Date().toISOString(),
-  });
 
   // 状态管理
   const [textContentMode, setTextContentMode] = useState<
@@ -240,25 +155,10 @@ export const PropertyPanel: React.FC<{
   const [multiSelectOptionsMode, setMultiSelectOptionsMode] = useState<
     'specify' | 'variable'
   >('specify');
-  // 下拉选择相关状态（已移动到各自的组件中）
-  // const [optionPopoverVisible, setOptionPopoverVisible] = useState(false);
-  // const [editingOptionIndex, setEditingOptionIndex] = useState<number>(-1);
-  // const [optionTextMode, setOptionTextMode] = useState<'specify' | 'variable'>('specify');
-  // const [optionValueMode, setOptionValueMode] = useState<'specify' | 'variable'>('specify');
-  // const [optionSpecifyValues, setOptionSpecifyValues] = useState<Record<string, { text: string; value: string }>>({});
   const [lastBoundVariables, setLastBoundVariables] = useState<
     Record<string, string>
   >({});
   const [initializedComponents] = useState<Set<string>>(new Set());
-  // const [initializedMultiImageComponents, setInitializedMultiImageComponents] =
-  //   useState<Set<string>>(new Set());
-  // 其他初始化状态已移动到各自的组件中
-  // const [setInitializedComponents] = useState<Set<string>>(new Set());
-  // const [initializedImageComponents, setInitializedImageComponents] = useState<Set<string>>(new Set());
-  // const [initializedMultiImageComponents, setInitializedMultiImageComponents] = useState<Set<string>>(new Set());
-  // const [initializedInputComponents, setInitializedInputComponents] = useState<Set<string>>(new Set());
-  // const [initializedSelectComponents, setInitializedSelectComponents] = useState<Set<string>>(new Set());
-  // const [initializedMultiSelectComponents, setInitializedMultiSelectComponents] = useState<Set<string>>(new Set());
 
   // 模态框状态
   const [isVariableModalVisible, setIsVariableModalVisible] = useState(false);
@@ -267,24 +167,15 @@ export const PropertyPanel: React.FC<{
   const [modalComponentType, setModalComponentType] = useState<
     string | undefined
   >(undefined);
-  const [editingVariable, setEditingVariable] = useState<VariableItem | null>(
-    null,
+  const [editingVariable, setEditingVariable] = useState<Variable | undefined>(
+    undefined,
   );
   const [editingVariableIndex, setEditingVariableIndex] = useState<number>(-1);
-  // 事件相关状态（暂时未使用）
-  // const [isEventModalVisible, setIsEventModalVisible] = useState(false);
-  // const [currentEventAction, setCurrentEventAction] = useState<EventAction | null>(null);
 
   // 处理组件值变化
   const handleValueChange = (key: string, value: any) => {
     // 处理卡片链接配置
     if (key === 'card_link.multi_url') {
-      console.log('🔗 更新卡片链接配置:', {
-        key,
-        value,
-        cardData: cardData,
-      });
-
       if (!cardData) {
         console.warn('⚠️ cardData为空，无法更新卡片链接');
         return;
@@ -308,14 +199,6 @@ export const PropertyPanel: React.FC<{
     }
 
     if (selectedComponent) {
-      console.log('🔄 RightPanel handleValueChange:', {
-        componentTag: selectedComponent.tag,
-        selectedPath,
-        key,
-        value,
-        currentComponent: selectedComponent,
-      });
-
       // 样式相关字段需要保存到style对象中
       const styleFields = [
         'fontSize',
@@ -341,16 +224,11 @@ export const PropertyPanel: React.FC<{
         // 样式属性：保存到style对象中
         updatedComponent = {
           ...selectedComponent,
-          style: {
+          styles: {
             ...((selectedComponent as any).style || {}),
             [key]: value,
           },
         };
-        console.log('🎨 样式属性更新到style对象:', {
-          field: key,
-          value,
-          updatedStyle: updatedComponent.style,
-        });
       } else if (key === 'text.content' && selectedComponent.tag === 'button') {
         // 特殊处理按钮文案：同时更新 text.content 和 text.i18n_content['en-US']
         updatedComponent = {
@@ -364,11 +242,6 @@ export const PropertyPanel: React.FC<{
             },
           },
         };
-        console.log('🔄 按钮文案同步更新:', {
-          textContent: value,
-          i18nContent: value,
-          updatedComponent,
-        });
       } else {
         // 非样式属性：直接设置到组件根级
         updatedComponent = {
@@ -386,7 +259,7 @@ export const PropertyPanel: React.FC<{
     setIsVariableModalFromVariablesTab(false);
     setModalComponentType(componentType);
     setIsVariableModalVisible(false);
-    setEditingVariable(null);
+    setEditingVariable(undefined);
     setEditingVariableIndex(-1);
     setTimeout(() => {
       setIsVariableModalVisible(true);
@@ -411,17 +284,6 @@ export const PropertyPanel: React.FC<{
       // 优先检查 originalType（新格式），再检查 type（旧格式或存储格式）
       const variableType = variable.originalType || variable.type || 'string';
       const isTypeMatch = allowedTypes.includes(variableType);
-
-      console.log('🔍 变量类型过滤:', {
-        componentType,
-        variableName: variable.name || 'unknown',
-        variableType: variable.type,
-        originalType: variable.originalType,
-        finalType: variableType,
-        allowedTypes,
-        isMatch: isTypeMatch,
-      });
-
       return isTypeMatch;
     });
   };
@@ -434,24 +296,12 @@ export const PropertyPanel: React.FC<{
         variable.name &&
         (variable.type !== undefined || variable.value !== undefined)
       ) {
-        // 标准Variable对象：直接使用name属性作为变量名
-        console.log('🏷️ 获取标准Variable对象显示名称:', {
-          variableName: variable.name,
-          variable,
-          timestamp: new Date().toISOString(),
-        });
         return variable.name;
       } else {
         // 键值对格式：获取变量的实际键名作为显示名称
         const keys = getVariableKeys(variable);
         if (keys.length > 0) {
           const variableName = keys[0];
-          console.log('🏷️ 获取键值对变量显示名称:', {
-            variableName,
-            variable,
-            keys,
-            timestamp: new Date().toISOString(),
-          });
           return variableName;
         }
       }
@@ -471,7 +321,7 @@ export const PropertyPanel: React.FC<{
       onUpdateVariables([...variables, variable]);
     }
     setIsVariableModalVisible(false);
-    setEditingVariable(null);
+    setEditingVariable(undefined);
     setEditingVariableIndex(-1);
     setIsVariableModalFromVariablesTab(true);
     setModalComponentType(undefined);
@@ -480,48 +330,15 @@ export const PropertyPanel: React.FC<{
   // 变量模态框取消处理
   const handleVariableModalCancel = () => {
     setIsVariableModalVisible(false);
-    setEditingVariable(null);
+    setEditingVariable(undefined);
     setEditingVariableIndex(-1);
     setIsVariableModalFromVariablesTab(true);
     setModalComponentType(undefined);
   };
 
-  // 交互式组件和事件相关函数（暂时未使用）
-  // const isInteractiveComponent = useMemo(() => {
-  //   return (
-  //     selectedComponent &&
-  //     ['input', 'button', 'select_static', 'multi_select_static'].includes(
-  //       selectedComponent.tag,
-  //     )
-  //   );
-  // }, [selectedComponent]);
-
-  // const getComponentEvents = (): EventAction[] => {
-  //   if (!selectedComponent) return [];
-  //   return (selectedComponent as any).events || [];
-  // };
-
-  // const updateComponentEvents = (events: EventAction[]) => {
-  //   if (selectedComponent) {
-  //     handleValueChange('events', events);
-  //   }
-  // };
-
   // 创建变量管理面板组件
   const VariableManagementPanel = () => (
     <div style={{ padding: '16px' }}>
-      <div
-        style={{
-          marginBottom: '16px',
-          padding: '12px',
-          backgroundColor: '#f6ffed',
-          border: '1px solid #b7eb8f',
-          borderRadius: '6px',
-        }}
-      >
-        <Text style={{ fontSize: '12px', color: '#389e0d' }}>🔗 变量管理</Text>
-      </div>
-
       <div
         style={{
           background: '#fff',
@@ -547,7 +364,7 @@ export const PropertyPanel: React.FC<{
               e.stopPropagation();
               e.preventDefault();
               setIsVariableModalVisible(false);
-              setEditingVariable(null);
+              setEditingVariable(undefined);
               setEditingVariableIndex(-1);
               setIsVariableModalFromVariablesTab(false);
               setModalComponentType(undefined);
@@ -580,9 +397,7 @@ export const PropertyPanel: React.FC<{
                     <Text strong>{getVariableDisplayName(variable)}</Text>
                     <br />
                     <Text type="secondary" style={{ fontSize: '12px' }}>
-                      {typeof variable === 'object'
-                        ? JSON.stringify(variable).substring(0, 50) + '...'
-                        : String(variable)}
+                      {variable.type}
                     </Text>
                   </div>
                   <div>
@@ -594,7 +409,7 @@ export const PropertyPanel: React.FC<{
                         e.stopPropagation();
                         e.preventDefault();
                         setIsVariableModalVisible(false);
-                        setEditingVariable(null);
+                        setEditingVariable(undefined);
                         setEditingVariableIndex(-1);
                         setIsVariableModalFromVariablesTab(false);
                         setModalComponentType(undefined);
@@ -1016,9 +831,7 @@ export const PropertyPanel: React.FC<{
         getVariableKeys={getVariableKeys}
         handleAddVariableFromComponent={handleAddVariableFromComponent}
         isVariableModalVisible={isVariableModalVisible}
-        setIsVariableModalVisible={setIsVariableModalVisible}
         editingVariable={editingVariable}
-        setEditingVariable={setEditingVariable}
         isVariableModalFromVariablesTab={isVariableModalFromVariablesTab}
         modalComponentType={modalComponentType}
         VariableManagementPanel={VariableManagementPanel}
@@ -1028,18 +841,7 @@ export const PropertyPanel: React.FC<{
 
   // 检查是否选中了列组件
   const isColumnComponent =
-    selectedComponent && selectedComponent.tag === 'column';
-
-  console.log('🔍 RightPanel 列组件检查:', {
-    selectedComponent: selectedComponent
-      ? {
-          id: selectedComponent.id,
-          tag: selectedComponent.tag,
-        }
-      : null,
-    isColumnComponent,
-    selectedPath,
-  });
+    selectedComponent && selectedComponent?.tag === 'column';
 
   // 如果选中了列组件，显示列编辑界面
   if (isColumnComponent) {
@@ -1060,9 +862,7 @@ export const PropertyPanel: React.FC<{
         getVariableKeys={getVariableKeys}
         handleAddVariableFromComponent={handleAddVariableFromComponent}
         isVariableModalVisible={isVariableModalVisible}
-        setIsVariableModalVisible={setIsVariableModalVisible}
         editingVariable={editingVariable}
-        setEditingVariable={setEditingVariable}
         isVariableModalFromVariablesTab={isVariableModalFromVariablesTab}
         modalComponentType={modalComponentType}
         VariableManagementPanel={VariableManagementPanel}

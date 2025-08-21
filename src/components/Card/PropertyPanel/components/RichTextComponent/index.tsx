@@ -569,7 +569,7 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
                             }
                             placeholder="请选择要绑定的变量"
                             label="绑定变量"
-                            addVariableText="+新建富文本变量"
+                            addVariableText="+新建变量"
                           />
                         </div>
                       )}
