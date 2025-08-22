@@ -1,15 +1,12 @@
 // InputComponent 编辑界面 - 输入框组件
-import { BgColorsOutlined, SettingOutlined } from '@ant-design/icons';
-import { Form, Input, Segmented, Switch, Tabs, Typography } from 'antd';
+import { Form, Input, Segmented, Switch } from 'antd';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import AddVariableModal from '../../../Variable/AddVariableModal';
 import VariableBinding from '../../../Variable/VariableList';
 import { inputComponentStateManager } from '../../../Variable/utils';
+import { ComponentContent, PropertyPanel, SettingSection } from '../common';
 import ComponentNameInput from '../common/ComponentNameInput';
 import { useComponentName } from '../hooks/useComponentName';
 import { InputComponentProps } from '../types';
-
-const { Text } = Typography;
 
 // 类型定义
 interface InputData {
@@ -33,44 +30,6 @@ const CONTENT_MODES = [
   { label: '指定', value: 'specify' },
   { label: '绑定变量', value: 'variable' },
 ] as const;
-
-// 样式常量
-const STYLES = {
-  container: {
-    width: '300px',
-    height: 'calc(100vh - 60px)',
-    backgroundColor: '#fafafa',
-    borderLeft: '1px solid #d9d9d9',
-    padding: '16px',
-    overflow: 'auto',
-  },
-  tabBarStyle: {
-    padding: '0 16px',
-    backgroundColor: '#fff',
-    margin: 0,
-    borderBottom: '1px solid #d9d9d9',
-  },
-  contentPadding: { padding: '16px' },
-  infoBox: {
-    marginBottom: '16px',
-    padding: '12px',
-    backgroundColor: '#f6ffed',
-    border: '1px solid #b7eb8f',
-    borderRadius: '6px',
-  },
-  section: {
-    marginBottom: '16px',
-    background: '#fff',
-    borderRadius: 6,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-    padding: 16,
-  },
-  sectionTitle: {
-    fontWeight: 600,
-    marginBottom: 8,
-    fontSize: 15,
-  },
-} as const;
 
 const InputComponent: React.FC<InputComponentProps> = ({
   selectedComponent,
@@ -410,19 +369,16 @@ const InputComponent: React.FC<InputComponentProps> = ({
     [selectedComponent, onUpdateComponent],
   );
 
-  // 渲染组件名称设置内容 - 始终显示
-  const componentNameContent = useMemo(
+  // 渲染组件设置内容 - 使用新的SettingSection
+  const componentSettingsContent = useMemo(
     () => (
-      <div style={STYLES.section}>
-        <div style={STYLES.sectionTitle}>🏷️ 组件设置</div>
-        <Form form={form} layout="vertical">
-          <ComponentNameInput
-            prefix="Input_"
-            suffix={componentNameInfo.suffix}
-            onChange={handleNameChange}
-          />
-        </Form>
-      </div>
+      <SettingSection title="🏷️ 组件设置" form={form}>
+        <ComponentNameInput
+          prefix="Input_"
+          suffix={componentNameInfo.suffix}
+          onChange={handleNameChange}
+        />
+      </SettingSection>
     ),
     [form, componentNameInfo.suffix, handleNameChange],
   );
@@ -430,82 +386,69 @@ const InputComponent: React.FC<InputComponentProps> = ({
   // 渲染基础设置内容 - 只在表单内显示
   const basicSettingsContent = useMemo(
     () => (
-      <div style={STYLES.section}>
-        <div style={STYLES.sectionTitle}>⚙️ 基础设置</div>
-        <Form form={form} layout="vertical">
-          <Form.Item label="必填">
-            <Switch
-              checked={inputInfo.required}
-              onChange={(checked) => {
-                // 只有在表单中才更新 required 字段到全局数据
-                if (isNestedInForm) {
-                  handleValueChange('required', checked);
-                  console.log('✅ 更新 required 字段:', {
-                    checked,
-                    isNestedInForm,
-                  });
-                } else {
-                  console.log('⚠️ 跳过更新 required 字段：组件不在表单中', {
-                    checked,
-                    isNestedInForm,
-                  });
-                }
-              }}
-            />
-          </Form.Item>
-        </Form>
-      </div>
+      <SettingSection title="⚙️ 基础设置" form={form}>
+        <Form.Item label="必填">
+          <Switch
+            checked={inputInfo.required}
+            onChange={(checked) => {
+              // 只有在表单中才更新 required 字段到全局数据
+              if (isNestedInForm) {
+                handleValueChange('required', checked);
+                console.log('✅ 更新 required 字段:', {
+                  checked,
+                  isNestedInForm,
+                });
+              } else {
+                console.log('⚠️ 跳过更新 required 字段：组件不在表单中', {
+                  checked,
+                  isNestedInForm,
+                });
+              }
+            }}
+          />
+        </Form.Item>
+      </SettingSection>
     ),
-    [
-      form,
-      inputInfo.required,
-      handleValueChange,
-      isNestedInForm,
-      componentNameInfo.suffix,
-      handleNameChange,
-    ],
+    [form, inputInfo.required, handleValueChange, isNestedInForm],
   );
 
-  // 渲染占位符设置内容 - 使用useMemo优化
+  // 渲染占位符设置内容 - 使用新的SettingSection
   const placeholderSettingsContent = useMemo(
     () => (
-      <div style={STYLES.section}>
-        <div style={STYLES.sectionTitle}>📝 占位符设置</div>
-        <Form form={form} layout="vertical">
-          <Form.Item label="占位符">
-            <Segmented
-              value={inputPlaceholderMode}
-              style={{ marginBottom: 16 }}
-              onChange={handlePlaceholderModeChange}
-              options={[...CONTENT_MODES]}
+      <SettingSection title="📝 占位符设置" form={form}>
+        <Form.Item label="占位符">
+          <Segmented
+            value={inputPlaceholderMode}
+            style={{ marginBottom: 16 }}
+            onChange={handlePlaceholderModeChange}
+            options={[...CONTENT_MODES]}
+          />
+
+          {inputPlaceholderMode === 'specify' && (
+            <Input
+              value={inputInfo.placeholderContent}
+              onChange={handlePlaceholderContentChange}
+              placeholder="请输入占位符文本"
             />
+          )}
 
-            {inputPlaceholderMode === 'specify' && (
-              <Input
-                value={inputInfo.placeholderContent}
-                onChange={handlePlaceholderContentChange}
-                placeholder="请输入占位符文本"
-              />
-            )}
-
-            {inputPlaceholderMode === 'variable' && (
-              <VariableBinding
-                componentType="input"
-                variables={variables}
-                getFilteredVariables={getFilteredVariables}
-                value={variableBindingInfo.placeholderVariable}
-                onChange={updatePlaceholderVariableBinding}
-                getVariableDisplayName={getVariableDisplayName}
-                getVariableKeys={getVariableKeys}
-                onAddVariable={() => handleAddVariableFromComponent('input')}
-                placeholder="请选择占位符变量"
-                label="绑定变量"
-                addVariableText="+新建文本变量"
-              />
-            )}
-          </Form.Item>
-        </Form>
-      </div>
+          {inputPlaceholderMode === 'variable' && (
+            <VariableBinding
+              componentType="input"
+              variables={variables}
+              getFilteredVariables={getFilteredVariables}
+              value={variableBindingInfo.placeholderVariable}
+              onChange={updatePlaceholderVariableBinding}
+              getVariableDisplayName={getVariableDisplayName}
+              getVariableKeys={getVariableKeys}
+              onAddVariable={() => handleAddVariableFromComponent('input')}
+              placeholder="请选择占位符变量"
+              label="绑定变量"
+              addVariableText="+新建文本变量"
+            />
+          )}
+        </Form.Item>
+      </SettingSection>
     ),
     [
       form,
@@ -523,46 +466,43 @@ const InputComponent: React.FC<InputComponentProps> = ({
     ],
   );
 
-  // 渲染默认值设置内容 - 使用useMemo优化
+  // 渲染默认值设置内容 - 使用新的SettingSection
   const defaultValueSettingsContent = useMemo(
     () => (
-      <div style={STYLES.section}>
-        <div style={STYLES.sectionTitle}>🏷️ 默认值设置</div>
-        <Form form={form} layout="vertical">
-          <Form.Item label="默认值">
-            <Segmented
-              value={inputDefaultValueMode}
-              style={{ marginBottom: 16 }}
-              onChange={handleDefaultValueModeChange}
-              options={[...CONTENT_MODES]}
+      <SettingSection title="🏷️ 默认值设置" form={form}>
+        <Form.Item label="默认值">
+          <Segmented
+            value={inputDefaultValueMode}
+            style={{ marginBottom: 16 }}
+            onChange={handleDefaultValueModeChange}
+            options={[...CONTENT_MODES]}
+          />
+
+          {inputDefaultValueMode === 'specify' && (
+            <Input
+              value={inputInfo.defaultValueContent}
+              onChange={handleDefaultValueContentChange}
+              placeholder="请输入默认值"
             />
+          )}
 
-            {inputDefaultValueMode === 'specify' && (
-              <Input
-                value={inputInfo.defaultValueContent}
-                onChange={handleDefaultValueContentChange}
-                placeholder="请输入默认值"
-              />
-            )}
-
-            {inputDefaultValueMode === 'variable' && (
-              <VariableBinding
-                componentType="input"
-                variables={variables}
-                getFilteredVariables={getFilteredVariables}
-                value={variableBindingInfo.defaultValueVariable}
-                onChange={updateDefaultValueVariableBinding}
-                getVariableDisplayName={getVariableDisplayName}
-                getVariableKeys={getVariableKeys}
-                onAddVariable={() => handleAddVariableFromComponent('input')}
-                placeholder="请选择默认值变量"
-                label="绑定变量"
-                addVariableText="+新建变量"
-              />
-            )}
-          </Form.Item>
-        </Form>
-      </div>
+          {inputDefaultValueMode === 'variable' && (
+            <VariableBinding
+              componentType="input"
+              variables={variables}
+              getFilteredVariables={getFilteredVariables}
+              value={variableBindingInfo.defaultValueVariable}
+              onChange={updateDefaultValueVariableBinding}
+              getVariableDisplayName={getVariableDisplayName}
+              getVariableKeys={getVariableKeys}
+              onAddVariable={() => handleAddVariableFromComponent('input')}
+              placeholder="请选择默认值变量"
+              label="绑定变量"
+              addVariableText="+新建变量"
+            />
+          )}
+        </Form.Item>
+      </SettingSection>
     ),
     [
       form,
@@ -580,23 +520,18 @@ const InputComponent: React.FC<InputComponentProps> = ({
     ],
   );
 
-  // 渲染组件属性Tab内容 - 使用useMemo优化
-  const componentTabContent = useMemo(
+  // 组合组件内容
+  const componentContent = useMemo(
     () => (
-      <div style={STYLES.contentPadding}>
-        <div style={STYLES.infoBox}>
-          <Text style={{ fontSize: '12px', color: '#389e0d' }}>
-            🎯 当前选中：输入框组件
-          </Text>
-        </div>
-        {componentNameContent}
+      <ComponentContent componentName="输入框组件">
+        {componentSettingsContent}
         {isNestedInForm && basicSettingsContent}
         {placeholderSettingsContent}
         {defaultValueSettingsContent}
-      </div>
+      </ComponentContent>
     ),
     [
-      componentNameContent,
+      componentSettingsContent,
       isNestedInForm,
       basicSettingsContent,
       placeholderSettingsContent,
@@ -604,54 +539,25 @@ const InputComponent: React.FC<InputComponentProps> = ({
     ],
   );
 
-  return (
-    <div style={STYLES.container}>
-      <AddVariableModal
-        visible={isVariableModalVisible}
-        onOk={handleVariableModalOk || (() => {})}
-        onCancel={handleVariableModalCancel || (() => {})}
-        editingVariable={editingVariable}
-        componentType={
-          isVariableModalFromVariablesTab
-            ? undefined
-            : modalComponentType || selectedComponent?.tag
-        }
-      />
+  // 创建变量管理面板
+  const VariableManagementComponent = React.useCallback(() => {
+    return <VariableManagementPanel />;
+  }, [VariableManagementPanel]);
 
-      <Tabs
-        activeKey={topLevelTab}
-        onChange={setTopLevelTab}
-        style={{ height: '100%' }}
-        tabBarStyle={STYLES.tabBarStyle}
-        size="small"
-        items={[
-          {
-            key: 'component',
-            label: (
-              <span
-                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                <SettingOutlined />
-                组件属性
-              </span>
-            ),
-            children: componentTabContent as React.ReactNode,
-          },
-          {
-            key: 'variables',
-            label: (
-              <span
-                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                <BgColorsOutlined />
-                变量
-              </span>
-            ),
-            children: <VariableManagementPanel />,
-          },
-        ]}
-      />
-    </div>
+  return (
+    <PropertyPanel
+      activeTab={topLevelTab}
+      onTabChange={setTopLevelTab}
+      componentContent={componentContent}
+      variableManagementComponent={<VariableManagementComponent />}
+      isVariableModalVisible={isVariableModalVisible}
+      handleVariableModalOk={handleVariableModalOk}
+      handleVariableModalCancel={handleVariableModalCancel}
+      editingVariable={editingVariable}
+      isVariableModalFromVariablesTab={isVariableModalFromVariablesTab}
+      modalComponentType={modalComponentType}
+      selectedComponentTag={selectedComponent?.tag}
+    />
   );
 };
 

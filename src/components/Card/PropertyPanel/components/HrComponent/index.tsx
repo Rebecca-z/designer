@@ -1,12 +1,11 @@
 // HrComponent 编辑界面 - 分割线组件
-import { BgColorsOutlined, SettingOutlined } from '@ant-design/icons';
-import { Form, Select, Tabs, Typography } from 'antd';
+import { Form, Select } from 'antd';
 import React, { useCallback, useMemo } from 'react';
+import { ComponentContent, PropertyPanel, SettingSection } from '../common';
 import ComponentNameInput from '../common/ComponentNameInput';
 import { useComponentName } from '../hooks/useComponentName';
 import { BaseComponentProps } from '../types';
 
-const { Text } = Typography;
 const { Option } = Select;
 
 // 类型定义
@@ -37,41 +36,8 @@ const BORDER_STYLES = [
   },
 ] as const;
 
-// 样式常量
+// 样式常量（保留必要的样式）
 const STYLES = {
-  container: {
-    width: '300px',
-    height: 'calc(100vh - 60px)',
-    backgroundColor: '#fafafa',
-    borderLeft: '1px solid #d9d9d9',
-    padding: '16px',
-    overflow: 'auto',
-  },
-  tabBarStyle: {
-    padding: '0 16px',
-    backgroundColor: '#fff',
-    margin: 0,
-    borderBottom: '1px solid #d9d9d9',
-  },
-  contentPadding: { padding: '16px' },
-  infoBox: {
-    marginBottom: '16px',
-    padding: '12px',
-    backgroundColor: '#f0f9ff',
-    border: '1px solid #bae6fd',
-    borderRadius: '6px',
-  },
-  section: {
-    background: '#fff',
-    borderRadius: 6,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-    padding: 16,
-  },
-  sectionTitle: {
-    fontWeight: 600,
-    marginBottom: 8,
-    fontSize: 15,
-  },
   previewLine: {
     width: '40px',
     height: '2px',
@@ -83,6 +49,12 @@ const HrComponent: React.FC<BaseComponentProps> = ({
   topLevelTab,
   setTopLevelTab,
   handleValueChange,
+  isVariableModalVisible,
+  handleVariableModalOk,
+  handleVariableModalCancel,
+  editingVariable,
+  isVariableModalFromVariablesTab,
+  modalComponentType,
   VariableManagementPanel,
 }) => {
   const [form] = Form.useForm();
@@ -108,109 +80,86 @@ const HrComponent: React.FC<BaseComponentProps> = ({
     [handleValueChange],
   );
 
+  // 渲染组件设置内容 - 使用useMemo优化
+  const componentSettingsContent = useMemo(
+    () => (
+      <SettingSection title="🏷️ 组件设置" useForm={false}>
+        <ComponentNameInput
+          prefix="Hr_"
+          suffix={componentNameInfo.suffix}
+          onChange={handleNameChange}
+        />
+      </SettingSection>
+    ),
+    [componentNameInfo.suffix, handleNameChange],
+  );
+
   // 渲染样式设置内容 - 使用useMemo优化
   const styleSettingsContent = useMemo(
     () => (
-      <div style={STYLES.section}>
-        <div style={STYLES.sectionTitle}>🎨 样式设置</div>
-        <Form form={form} layout="vertical">
-          <ComponentNameInput
-            prefix="Hr_"
-            suffix={componentNameInfo.suffix}
-            onChange={handleNameChange}
-          />
-
-          <Form.Item label="边框样式">
-            <Select
-              value={currentBorderStyle}
-              onChange={handleBorderStyleChange}
-              style={{ width: '100%' }}
-              placeholder="选择边框样式"
-            >
-              {BORDER_STYLES.map(({ value, label, preview }) => (
-                <Option key={value} value={value}>
+      <SettingSection title="🎨 样式设置" form={form}>
+        <Form.Item label="边框样式">
+          <Select
+            value={currentBorderStyle}
+            onChange={handleBorderStyleChange}
+            style={{ width: '100%' }}
+            placeholder="选择边框样式"
+          >
+            {BORDER_STYLES.map(({ value, label, preview }) => (
+              <Option key={value} value={value}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
                   <div
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
+                      ...STYLES.previewLine,
+                      ...preview,
                     }}
-                  >
-                    <div
-                      style={{
-                        ...STYLES.previewLine,
-                        ...preview,
-                      }}
-                    />
-                    {label}
-                  </div>
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-        </Form>
-      </div>
+                  />
+                  {label}
+                </div>
+              </Option>
+            ))}
+          </Select>
+        </Form.Item>
+      </SettingSection>
     ),
-    [
-      form,
-      currentBorderStyle,
-      handleBorderStyleChange,
-      componentNameInfo.suffix,
-      handleNameChange,
-    ],
+    [form, currentBorderStyle, handleBorderStyleChange],
   );
 
   // 渲染组件属性Tab内容 - 使用useMemo优化
   const componentTabContent = useMemo(
     () => (
-      <div style={STYLES.contentPadding}>
-        <div style={STYLES.infoBox}>
-          <Text style={{ fontSize: '12px', color: '#0369a1' }}>
-            🎯 当前选中：分割线组件
-          </Text>
-        </div>
+      <>
+        {componentSettingsContent}
         {styleSettingsContent}
-      </div>
+      </>
     ),
-    [styleSettingsContent],
+    [componentSettingsContent, styleSettingsContent],
   );
 
   return (
-    <div style={STYLES.container}>
-      <Tabs
-        activeKey={topLevelTab}
-        onChange={setTopLevelTab}
-        style={{ height: '100%' }}
-        tabBarStyle={STYLES.tabBarStyle}
-        size="small"
-        items={[
-          {
-            key: 'component',
-            label: (
-              <span
-                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                <SettingOutlined />
-                组件属性
-              </span>
-            ),
-            children: componentTabContent,
-          },
-          {
-            key: 'variables',
-            label: (
-              <span
-                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                <BgColorsOutlined />
-                变量
-              </span>
-            ),
-            children: <VariableManagementPanel />,
-          },
-        ]}
-      />
-    </div>
+    <PropertyPanel
+      activeTab={topLevelTab}
+      onTabChange={setTopLevelTab}
+      componentContent={
+        <ComponentContent componentName="分割线">
+          {componentTabContent}
+        </ComponentContent>
+      }
+      variableManagementComponent={<VariableManagementPanel />}
+      isVariableModalVisible={isVariableModalVisible}
+      handleVariableModalOk={handleVariableModalOk || (() => {})}
+      handleVariableModalCancel={handleVariableModalCancel || (() => {})}
+      editingVariable={editingVariable}
+      isVariableModalFromVariablesTab={isVariableModalFromVariablesTab}
+      modalComponentType={modalComponentType}
+      selectedComponentTag={selectedComponent?.tag}
+    />
   );
 };
 

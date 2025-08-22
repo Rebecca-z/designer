@@ -1,12 +1,11 @@
 // ImgCombinationComponent 编辑界面 - 多图混排组件
-import { BgColorsOutlined, SettingOutlined } from '@ant-design/icons';
-import { Form, Input, Segmented, Space, Tabs, Typography } from 'antd';
+import { Form, Input, Segmented, Space, Typography } from 'antd';
 import React, { useEffect } from 'react';
 import ImageUpload from '../../../ImageUpload';
-import AddVariableModal from '../../../Variable/AddVariableModal';
 import VariableBinding from '../../../Variable/VariableList';
 import { multiImageComponentStateManager } from '../../../Variable/utils/index';
 import { getComponentRealPath } from '../../utils';
+import { ComponentContent, PropertyPanel, SettingSection } from '../common';
 import ComponentNameInput from '../common/ComponentNameInput';
 import { useComponentName } from '../hooks/useComponentName';
 import { ImgCombinationComponentProps } from '../types';
@@ -17,39 +16,6 @@ const DEFAULT_IMAGE_URL = 'demo.png';
 
 // 样式常量
 const STYLES = {
-  container: {
-    width: '300px',
-    height: 'calc(100vh - 60px)',
-    backgroundColor: '#fafafa',
-    borderLeft: '1px solid #d9d9d9',
-    padding: '16px',
-    overflow: 'auto',
-  },
-  tabBarStyle: {
-    padding: '0 16px',
-    backgroundColor: '#fff',
-    margin: 0,
-    borderBottom: '1px solid #d9d9d9',
-  },
-  contentPadding: { padding: '16px' },
-  infoBox: {
-    marginBottom: '16px',
-    padding: '12px',
-    backgroundColor: '#f0f9ff',
-    border: '1px solid #bae6fd',
-    borderRadius: '6px',
-  },
-  section: {
-    background: '#fff',
-    borderRadius: 6,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-    padding: 16,
-  },
-  sectionTitle: {
-    fontWeight: 600,
-    marginBottom: 8,
-    fontSize: 15,
-  },
   layoutGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, 1fr)',
@@ -588,8 +554,6 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
         ? (selectedComponent as any).img_list
         : [];
 
-      // 注意：latestComponent 已经在上面定义过了，这里不需要重新声明
-
       // 根据 combination_mode 和图片数量推断当前布局类型（不再使用保存的layoutType）
       const currentLayoutType = getLayoutTypeFromModeAndCount(
         currentCombinationMode,
@@ -642,842 +606,518 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
     multiImageContentMode,
   ]);
 
-  return (
-    <div style={STYLES.container}>
-      <AddVariableModal
-        visible={isVariableModalVisible}
-        onOk={handleVariableModalOk || (() => {})}
-        onCancel={handleVariableModalCancel || (() => {})}
-        editingVariable={editingVariable}
-        componentType={
-          isVariableModalFromVariablesTab
-            ? undefined
-            : modalComponentType || selectedComponent?.tag
-        }
-      />
+  // 渲染组件设置内容
+  const componentSettingsContent = React.useMemo(
+    () => (
+      <SettingSection title="🏷️ 组件设置" useForm={false}>
+        <ComponentNameInput
+          prefix="ImgCombination_"
+          suffix={componentNameInfo.suffix}
+          onChange={handleNameChange}
+        />
+      </SettingSection>
+    ),
+    [componentNameInfo.suffix, handleNameChange],
+  );
 
-      <Tabs
-        activeKey={topLevelTab}
-        onChange={setTopLevelTab}
-        style={{ height: '100%' }}
-        tabBarStyle={STYLES.tabBarStyle}
-        size="small"
-        items={[
-          {
-            key: 'component',
-            label: (
-              <span
-                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                <SettingOutlined />
-                组件属性
-              </span>
-            ),
-            children: (
-              <div style={STYLES.contentPadding}>
-                <div style={STYLES.infoBox}>
-                  <Text style={{ fontSize: '12px', color: '#0369a1' }}>
-                    🎯 当前选中：多图混排组件
-                  </Text>
-                </div>
+  // 渲染布局设置内容（保持原有复杂逻辑）
+  const layoutSettingsContent = React.useMemo(() => {
+    return (
+      <SettingSection title="📐 布局设置" form={form}>
+        <Form.Item label="布局模式">
+          {(() => {
+            // 获取当前图片数量
+            let imageCount = 0;
 
-                {/* 布局设置 */}
-                <div style={STYLES.section}>
-                  <div style={STYLES.sectionTitle}>📐 布局设置</div>
-                  <Form form={form} layout="vertical">
-                    <ComponentNameInput
-                      prefix="ImgCombination_"
-                      suffix={componentNameInfo.suffix}
-                      onChange={handleNameChange}
-                    />
+            if (multiImageContentMode === 'specify') {
+              // 指定模式：从图片数组获取数量
+              const currentImageList = Array.isArray(
+                (selectedComponent as any).img_list,
+              )
+                ? (selectedComponent as any).img_list
+                : [];
+              imageCount = currentImageList.length;
+            } else if (multiImageContentMode === 'variable') {
+              // 变量模式：从 combination_mode 和变量图片数量动态推断布局类型
+              const currentCombinationMode =
+                (selectedComponent as any).combination_mode || 'double';
 
-                    <Form.Item label="布局模式">
-                      {(() => {
-                        // 获取当前图片数量
-                        let imageCount = 0;
-                        let currentImageList = [];
+              // 获取变量中的实际图片数量
+              let actualImageCount = 0;
+              if (
+                typeof (selectedComponent as any).img_list === 'string' &&
+                (selectedComponent as any).img_list.includes('${')
+              ) {
+                const variableMatch = (selectedComponent as any).img_list.match(
+                  /\$\{([^}]+)\}/,
+                );
+                if (variableMatch && variableMatch[1]) {
+                  const variableName = variableMatch[1];
+                  const variable = variables.find((v) => {
+                    if (typeof v === 'object' && v !== null) {
+                      const keys = Object.keys(v as Record<string, any>);
+                      return keys.length > 0 && keys[0] === variableName;
+                    }
+                    return false;
+                  });
+                  if (variable) {
+                    const variableValue = (variable as Record<string, any>)[
+                      variableName
+                    ];
+                    if (Array.isArray(variableValue)) {
+                      actualImageCount = variableValue.length;
+                    }
+                  }
+                }
+              }
 
+              const currentLayoutType = getLayoutTypeFromModeAndCount(
+                currentCombinationMode,
+                actualImageCount,
+              );
+              imageCount = getImageCountForLayout(currentLayoutType);
+            }
+
+            // 获取可用的布局选项
+            const availableLayouts = getAvailableLayouts();
+
+            // 获取最新的组件数据
+            const latestComponent = getLatestSelectedComponent();
+
+            if (!latestComponent) {
+              return <div>无法获取组件数据</div>;
+            }
+
+            // 获取当前选中的布局模式
+            const currentCombinationMode =
+              (latestComponent as any).combination_mode || 'double';
+
+            // 推断当前布局类型
+            const currentLayoutType = getLayoutTypeFromModeAndCount(
+              currentCombinationMode,
+              imageCount,
+            );
+
+            return (
+              <div>
+                <div style={STYLES.layoutGrid}>
+                  {availableLayouts.map((layout) => (
+                    <div
+                      key={layout.key}
+                      onClick={() => {
+                        const newCombinationMode = layoutToCombinationMode(
+                          layout.type,
+                        );
+                        const requiredImageCount = getImageCountForLayout(
+                          layout.type,
+                        );
+
+                        // 记录用户选择的具体布局类型（仅用于UI显示）
+                        layoutChoiceManager.setChoice(
+                          selectedComponent.id,
+                          layout.type,
+                        );
+
+                        // 创建更新后的组件数据
+                        let updatedComponent = {
+                          ...latestComponent,
+                          combination_mode: newCombinationMode,
+                        };
+
+                        // 根据当前模式处理图片列表
                         if (multiImageContentMode === 'specify') {
-                          // 指定模式：从图片数组获取数量
-                          currentImageList = Array.isArray(
-                            (selectedComponent as any).img_list,
-                          )
-                            ? (selectedComponent as any).img_list
-                            : [];
-                          imageCount = currentImageList.length;
+                          // 指定模式：清除缓存并创建匹配布局的图片列表
+                          multiImageComponentStateManager.setUserEditedImageList(
+                            selectedComponent.id,
+                            [], // 清空缓存
+                          );
+
+                          // 创建匹配布局的图片列表
+                          const newImageList = [];
+                          for (let i = 0; i < requiredImageCount; i++) {
+                            newImageList.push({
+                              img_url: DEFAULT_IMAGE_URL,
+                              i18n_img_url: {
+                                'en-US': DEFAULT_IMAGE_URL,
+                              },
+                            });
+                          }
+
+                          updatedComponent = {
+                            ...updatedComponent,
+                            img_list: newImageList,
+                          };
                         } else if (multiImageContentMode === 'variable') {
-                          // 变量模式：从 combination_mode 和变量图片数量动态推断布局类型
-                          const currentCombinationMode =
-                            (selectedComponent as any).combination_mode ||
-                            'double';
-
-                          // 获取变量中的实际图片数量
-                          // 需要重新解析变量获取图片列表
-                          let actualImageCount = 0;
-                          if (
-                            typeof (selectedComponent as any).img_list ===
-                              'string' &&
-                            (selectedComponent as any).img_list.includes('${')
-                          ) {
-                            const variableMatch = (
-                              selectedComponent as any
-                            ).img_list.match(/\$\{([^}]+)\}/);
-                            if (variableMatch && variableMatch[1]) {
-                              const variableName = variableMatch[1];
-                              const variable = variables.find((v) => {
-                                if (typeof v === 'object' && v !== null) {
-                                  const keys = Object.keys(
-                                    v as Record<string, any>,
-                                  );
-                                  return (
-                                    keys.length > 0 && keys[0] === variableName
-                                  );
-                                }
-                                return false;
-                              });
-                              if (variable) {
-                                const variableValue = (
-                                  variable as Record<string, any>
-                                )[variableName];
-                                if (Array.isArray(variableValue)) {
-                                  actualImageCount = variableValue.length;
-                                }
-                              }
-                            }
-                          }
-
-                          let currentLayoutType;
-
-                          // 根据 combination_mode 和实际图片数量动态推断布局类型
-                          const detailedModes = [
-                            'bisect_2',
-                            'bisect_4',
-                            'bisect_6',
-                            'trisect_3',
-                            'trisect_6',
-                            'trisect_9',
-                            'double',
-                            'triple',
-                          ];
-
-                          if (detailedModes.includes(currentCombinationMode)) {
-                            // 如果是具体的布局类型，直接使用
-                            currentLayoutType = currentCombinationMode;
-                          } else {
-                            // 对于简化的模式，根据实际图片数量智能推断
-                            switch (currentCombinationMode) {
-                              case 'bisect':
-                                if (actualImageCount <= 2)
-                                  currentLayoutType = 'bisect_2';
-                                else if (actualImageCount <= 4)
-                                  currentLayoutType = 'bisect_4';
-                                else currentLayoutType = 'bisect_6';
-                                break;
-                              case 'trisect':
-                                if (actualImageCount <= 3)
-                                  currentLayoutType = 'trisect_3';
-                                else if (actualImageCount <= 6)
-                                  currentLayoutType = 'trisect_6';
-                                else currentLayoutType = 'trisect_9';
-                                break;
-                              default:
-                                currentLayoutType = 'double';
-                            }
-                          }
-
-                          imageCount =
-                            getImageCountForLayout(currentLayoutType);
+                          // 变量模式：保持变量占位符不变，只更新布局模式
+                          console.log('🔗 变量绑定模式下切换布局:', {
+                            componentId: selectedComponent.id,
+                            newCombinationMode,
+                            layoutType: layout.type,
+                            note: '变量模式下保持img_list为变量占位符',
+                          });
                         }
 
-                        // 获取可用的布局选项
-                        const availableLayouts = getAvailableLayouts();
+                        // 一次性调用组件更新
+                        onUpdateComponent(updatedComponent);
 
-                        // 获取最新的组件数据
-                        const latestComponent = getLatestSelectedComponent();
+                        // 强制重新渲染以确保UI更新
+                        setTimeout(() => {
+                          forceUpdate();
+                        }, 50);
+                      }}
+                      style={STYLES.layoutItem}
+                    >
+                      <LayoutIcon
+                        type={layout.type}
+                        isSelected={(() => {
+                          const userChosenLayout =
+                            layoutChoiceManager.getChoice(selectedComponent.id);
 
-                        // 安全检查：确保获取到了有效的组件数据
-                        if (!latestComponent) {
-                          // 使用fallback数据
-                          const fallbackCombinationMode =
-                            (selectedComponent as any).combination_mode ||
-                            'double';
+                          // 如果有用户选择的记录，优先使用
+                          if (userChosenLayout) {
+                            return userChosenLayout === layout.type;
+                          }
 
-                          // 完全基于 combination_mode 和图片数量动态推断布局类型
-                          let fallbackCurrentLayoutType;
-                          if (multiImageContentMode === 'variable') {
-                            // 变量模式：根据 combination_mode 和实际图片数量推断
-                            // 需要重新解析变量获取图片列表
-                            let actualImageCount = 0;
-                            if (
-                              typeof (selectedComponent as any).img_list ===
-                                'string' &&
-                              (selectedComponent as any).img_list.includes('${')
-                            ) {
-                              const variableMatch = (
-                                selectedComponent as any
-                              ).img_list.match(/\$\{([^}]+)\}/);
-                              if (variableMatch && variableMatch[1]) {
-                                const variableName = variableMatch[1];
-                                const variable = variables.find((v) => {
-                                  if (typeof v === 'object' && v !== null) {
-                                    const keys = Object.keys(
-                                      v as Record<string, any>,
-                                    );
-                                    return (
-                                      keys.length > 0 &&
-                                      keys[0] === variableName
-                                    );
-                                  }
-                                  return false;
-                                });
-                                if (variable) {
-                                  const variableValue = (
-                                    variable as Record<string, any>
-                                  )[variableName];
-                                  if (Array.isArray(variableValue)) {
-                                    actualImageCount = variableValue.length;
-                                  }
-                                }
-                              }
-                            }
-                            fallbackCurrentLayoutType =
+                          // 如果是精确匹配，直接选中
+                          if (currentCombinationMode === layout.type) {
+                            return true;
+                          }
+
+                          // 如果是简化模式，根据图片数量智能推断
+                          const layoutCombinationMode = layoutToCombinationMode(
+                            layout.type,
+                          );
+                          if (
+                            currentCombinationMode === layoutCombinationMode
+                          ) {
+                            const inferredLayoutType =
                               getLayoutTypeFromModeAndCount(
-                                fallbackCombinationMode,
-                                actualImageCount,
-                              );
-                          } else {
-                            // 指定模式：从 combination_mode 和图片数量推断
-                            fallbackCurrentLayoutType =
-                              getLayoutTypeFromModeAndCount(
-                                fallbackCombinationMode,
+                                currentCombinationMode,
                                 imageCount,
                               );
+                            return inferredLayoutType === layout.type;
                           }
-
-                          return (
-                            <div>
-                              <div
-                                style={{
-                                  display: 'grid',
-                                  gridTemplateColumns: 'repeat(4, 1fr)',
-                                  gap: '8px',
-                                }}
-                              >
-                                {availableLayouts.map((layout) => (
-                                  <div
-                                    key={layout.key}
-                                    onClick={() => {
-                                      const newCombinationMode =
-                                        layoutToCombinationMode(layout.type);
-                                      const requiredImageCount =
-                                        getImageCountForLayout(layout.type);
-
-                                      // 记录用户选择的具体布局类型（仅用于UI显示）
-                                      layoutChoiceManager.setChoice(
-                                        selectedComponent.id,
-                                        layout.type,
-                                      );
-
-                                      console.log('🎯 用户选择布局:', {
-                                        componentId: selectedComponent.id,
-                                        selectedLayoutType: layout.type,
-                                        newCombinationMode,
-                                        requiredImageCount,
-                                        currentMode: multiImageContentMode,
-                                        timestamp: new Date().toISOString(),
-                                      });
-
-                                      handleValueChange(
-                                        'combination_mode',
-                                        newCombinationMode,
-                                      );
-                                      setTimeout(() => {
-                                        forceUpdate();
-                                      }, 50);
-
-                                      // 根据当前模式处理图片列表
-                                      if (multiImageContentMode === 'specify') {
-                                        multiImageComponentStateManager.setUserEditedImageList(
-                                          selectedComponent.id,
-                                          [],
-                                        );
-                                        const newImageList = [];
-                                        for (
-                                          let i = 0;
-                                          i < requiredImageCount;
-                                          i++
-                                        ) {
-                                          newImageList.push({
-                                            img_url: DEFAULT_IMAGE_URL,
-                                            i18n_img_url: {
-                                              'en-US': DEFAULT_IMAGE_URL,
-                                            },
-                                          });
-                                        }
-                                        handleValueChange(
-                                          'img_list',
-                                          newImageList,
-                                        );
-                                      } else if (
-                                        multiImageContentMode === 'variable'
-                                      ) {
-                                        // 变量模式：只更新布局模式，不修改图片列表
-                                        console.log(
-                                          '🔗 变量绑定模式下切换布局 (fallback):',
-                                          {
-                                            componentId: selectedComponent.id,
-                                            newCombinationMode,
-                                            layoutType: layout.type,
-                                            note: '变量模式下不更新img_list',
-                                          },
-                                        );
-                                        // 在变量模式下，不需要更新 img_list
-                                      }
-                                    }}
-                                  >
-                                    <LayoutIcon
-                                      type={layout.type}
-                                      isSelected={(() => {
-                                        const currentCombinationMode = (
-                                          selectedComponent as any
-                                        ).combination_mode;
-                                        const userChosenLayout =
-                                          layoutChoiceManager.getChoice(
-                                            selectedComponent.id,
-                                          );
-
-                                        // 如果有用户选择的记录，优先使用
-                                        if (userChosenLayout) {
-                                          return (
-                                            userChosenLayout === layout.type
-                                          );
-                                        }
-
-                                        // 如果是精确匹配，直接选中
-                                        if (
-                                          currentCombinationMode === layout.type
-                                        ) {
-                                          return true;
-                                        }
-
-                                        // 如果是简化模式，根据图片数量智能推断
-                                        const layoutCombinationMode =
-                                          layoutToCombinationMode(layout.type);
-                                        if (
-                                          currentCombinationMode ===
-                                          layoutCombinationMode
-                                        ) {
-                                          // 推断最可能的布局类型
-                                          const inferredLayoutType =
-                                            fallbackCurrentLayoutType;
-                                          return (
-                                            inferredLayoutType === layout.type
-                                          );
-                                        }
-                                        return false;
-                                      })()}
-                                    />
-                                    <Text
-                                      style={{
-                                        fontSize: '12px',
-                                        textAlign: 'center',
-                                        display: 'block',
-                                        marginTop: '4px',
-                                      }}
-                                    >
-                                      {layout.label}
-                                    </Text>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        }
-
-                        // 获取当前选中的布局模式
-                        const currentCombinationMode =
-                          (latestComponent as any).combination_mode || 'double';
-
-                        // 完全基于 combination_mode 和图片数量动态推断布局类型
-                        let currentLayoutType;
-                        if (multiImageContentMode === 'variable') {
-                          // 变量模式：根据 combination_mode 和实际图片数量推断
-                          // 需要重新解析变量获取图片列表
-                          let actualImageCount = 0;
-                          if (
-                            typeof (selectedComponent as any).img_list ===
-                              'string' &&
-                            (selectedComponent as any).img_list.includes('${')
-                          ) {
-                            const variableMatch = (
-                              selectedComponent as any
-                            ).img_list.match(/\$\{([^}]+)\}/);
-                            if (variableMatch && variableMatch[1]) {
-                              const variableName = variableMatch[1];
-                              const variable = variables.find((v) => {
-                                if (typeof v === 'object' && v !== null) {
-                                  const keys = Object.keys(
-                                    v as Record<string, any>,
-                                  );
-                                  return (
-                                    keys.length > 0 && keys[0] === variableName
-                                  );
-                                }
-                                return false;
-                              });
-                              if (variable) {
-                                const variableValue = (
-                                  variable as Record<string, any>
-                                )[variableName];
-                                if (Array.isArray(variableValue)) {
-                                  actualImageCount = variableValue.length;
-                                }
-                              }
-                            }
-                          }
-                          currentLayoutType = getLayoutTypeFromModeAndCount(
-                            currentCombinationMode,
-                            actualImageCount,
-                          );
-                        } else {
-                          // 指定模式：从 combination_mode 和图片数量推断
-                          currentLayoutType = getLayoutTypeFromModeAndCount(
-                            currentCombinationMode,
-                            imageCount,
-                          );
-                        }
-
-                        return (
-                          <div>
-                            <div style={STYLES.layoutGrid}>
-                              {availableLayouts.map((layout) => (
-                                <div
-                                  key={layout.key}
-                                  onClick={() => {
-                                    const newCombinationMode =
-                                      layoutToCombinationMode(layout.type);
-                                    const requiredImageCount =
-                                      getImageCountForLayout(layout.type);
-
-                                    // 记录用户选择的具体布局类型（仅用于UI显示）
-                                    layoutChoiceManager.setChoice(
-                                      selectedComponent.id,
-                                      layout.type,
-                                    );
-
-                                    // 创建更新后的组件数据
-                                    let updatedComponent = {
-                                      ...latestComponent,
-                                      combination_mode: newCombinationMode,
-                                    };
-
-                                    // 根据当前模式处理图片列表
-                                    if (multiImageContentMode === 'specify') {
-                                      // 指定模式：清除缓存并创建匹配布局的图片列表
-                                      multiImageComponentStateManager.setUserEditedImageList(
-                                        selectedComponent.id,
-                                        [], // 清空缓存
-                                      );
-
-                                      // 创建匹配布局的图片列表
-                                      const newImageList = [];
-                                      for (
-                                        let i = 0;
-                                        i < requiredImageCount;
-                                        i++
-                                      ) {
-                                        newImageList.push({
-                                          img_url: DEFAULT_IMAGE_URL,
-                                          i18n_img_url: {
-                                            'en-US': DEFAULT_IMAGE_URL,
-                                          },
-                                        });
-                                      }
-
-                                      updatedComponent = {
-                                        ...updatedComponent,
-                                        img_list: newImageList,
-                                      };
-                                    } else if (
-                                      multiImageContentMode === 'variable'
-                                    ) {
-                                      // 变量模式：保持变量占位符不变，只更新布局模式
-                                      console.log(
-                                        '🔗 变量绑定模式下切换布局:',
-                                        {
-                                          componentId: selectedComponent.id,
-                                          newCombinationMode,
-                                          layoutType: layout.type,
-                                          currentImgList: (
-                                            updatedComponent as any
-                                          ).img_list,
-                                          note: '变量模式下保持img_list为变量占位符',
-                                        },
-                                      );
-                                      // 在变量模式下，img_list 应该保持为变量占位符字符串
-                                      // 不需要修改 img_list，只更新 combination_mode
-                                    }
-
-                                    // 一次性调用组件更新
-                                    onUpdateComponent(updatedComponent);
-
-                                    // 强制重新渲染以确保UI更新
-                                    setTimeout(() => {
-                                      forceUpdate();
-                                    }, 50);
-                                  }}
-                                  style={STYLES.layoutItem}
-                                >
-                                  <LayoutIcon
-                                    type={layout.type}
-                                    isSelected={(() => {
-                                      const currentCombinationMode = (
-                                        latestComponent as any
-                                      ).combination_mode;
-                                      const userChosenLayout =
-                                        layoutChoiceManager.getChoice(
-                                          selectedComponent.id,
-                                        );
-
-                                      // 如果有用户选择的记录，优先使用
-                                      if (userChosenLayout) {
-                                        return userChosenLayout === layout.type;
-                                      }
-
-                                      // 如果是精确匹配，直接选中
-                                      if (
-                                        currentCombinationMode === layout.type
-                                      ) {
-                                        return true;
-                                      }
-
-                                      // 如果是简化模式，根据图片数量智能推断
-                                      const layoutCombinationMode =
-                                        layoutToCombinationMode(layout.type);
-                                      if (
-                                        currentCombinationMode ===
-                                        layoutCombinationMode
-                                      ) {
-                                        // 推断最可能的布局类型
-                                        const inferredLayoutType =
-                                          getLayoutTypeFromModeAndCount(
-                                            currentCombinationMode,
-                                            imageCount,
-                                          );
-                                        return (
-                                          inferredLayoutType === layout.type
-                                        );
-                                      }
-                                      return false;
-                                    })()}
-                                  />
-                                  <Text
-                                    style={{
-                                      fontSize: '11px',
-                                      textAlign: 'center',
-                                      color:
-                                        currentLayoutType === layout.type
-                                          ? '#1890ff'
-                                          : '#666',
-                                      fontWeight:
-                                        currentLayoutType === layout.type
-                                          ? 600
-                                          : 400,
-                                    }}
-                                  >
-                                    {layout.label}
-                                  </Text>
-                                </div>
-                              ))}
-                            </div>
-
-                            <div style={{ marginTop: '8px' }}>
-                              <div>
-                                <Text
-                                  type="secondary"
-                                  style={{ fontSize: '12px' }}
-                                >
-                                  当前图片数量：{imageCount} 张
-                                </Text>
-                                <br />
-                                <Text
-                                  type="secondary"
-                                  style={{ fontSize: '11px' }}
-                                >
-                                  当前模式：{currentCombinationMode} (
-                                  {currentLayoutType})
-                                </Text>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </Form.Item>
-                  </Form>
+                          return false;
+                        })()}
+                      />
+                      <Text
+                        style={{
+                          fontSize: '11px',
+                          textAlign: 'center',
+                          color:
+                            currentLayoutType === layout.type
+                              ? '#1890ff'
+                              : '#666',
+                          fontWeight:
+                            currentLayoutType === layout.type ? 600 : 400,
+                        }}
+                      >
+                        {layout.label}
+                      </Text>
+                    </div>
+                  ))}
                 </div>
 
-                {/* 图片设置 */}
-                <div style={STYLES.section}>
-                  <div style={STYLES.sectionTitle}>🖼️ 图片设置</div>
-                  <Form form={form} layout="vertical">
-                    <Form.Item label="图片来源">
-                      <Segmented
-                        value={multiImageContentMode}
-                        style={{ marginBottom: 16 }}
-                        onChange={(value) => {
-                          const newMode = value as 'specify' | 'variable';
-                          setMultiImageContentMode(newMode);
-
-                          // 处理模式切换时的图片显示逻辑（与图片组件保持一致）
-                          const updatedComponent = { ...selectedComponent };
-
-                          if (newMode === 'specify') {
-                            // 切换到指定模式：恢复用户编辑的图片列表
-                            const userEditedImageList =
-                              multiImageComponentStateManager.getUserEditedImageList(
-                                selectedComponent.id,
-                              );
-                            (updatedComponent as any).img_list =
-                              userEditedImageList || [];
-                          } else {
-                            // 切换到变量模式：检查是否有绑定的变量
-                            const boundVariable =
-                              multiImageComponentStateManager.getBoundVariableName(
-                                selectedComponent.id,
-                              );
-                            const rememberedVariable =
-                              lastBoundVariables[selectedComponent.id];
-
-                            if (boundVariable || rememberedVariable) {
-                              // 如果有绑定变量，显示变量占位符
-                              const variableName =
-                                boundVariable || rememberedVariable;
-                              (
-                                updatedComponent as any
-                              ).img_list = `\${${variableName}}`;
-                            } else {
-                              // 如果没有绑定变量，保持当前指定的图片列表
-                              const currentImageList = Array.isArray(
-                                (selectedComponent as any).img_list,
-                              )
-                                ? (selectedComponent as any).img_list
-                                : [];
-
-                              // 保存当前图片列表到状态管理器
-                              multiImageComponentStateManager.setUserEditedImageList(
-                                selectedComponent.id,
-                                currentImageList,
-                              );
-                            }
-                          }
-
-                          onUpdateComponent(updatedComponent);
-                        }}
-                        options={[
-                          { label: '指定', value: 'specify' },
-                          { label: '绑定变量', value: 'variable' },
-                        ]}
-                      />
-
-                      {multiImageContentMode === 'specify' && (
-                        <div style={{ marginBottom: 16 }}>
-                          {(() => {
-                            // 获取当前组件的图片列表
-                            let currentImageList = Array.isArray(
-                              (selectedComponent as any).img_list,
-                            )
-                              ? (selectedComponent as any).img_list
-                              : [];
-
-                            return currentImageList.map(
-                              (image: any, index: number) => (
-                                <div
-                                  key={`image-${index}`}
-                                  style={{
-                                    marginBottom: 16,
-                                  }}
-                                >
-                                  <Text
-                                    strong
-                                    style={{
-                                      display: 'block',
-                                      marginBottom: 8,
-                                      color: '#1976d2',
-                                    }}
-                                  >
-                                    图片 {index + 1}
-                                  </Text>
-                                  <Space.Compact style={STYLES.inputCompact}>
-                                    <Input
-                                      value={image.img_url || ''}
-                                      onChange={(e) => {
-                                        const newImageList = [
-                                          ...currentImageList,
-                                        ];
-                                        newImageList[index] = {
-                                          ...newImageList[index],
-                                          img_url: e.target.value,
-                                          i18n_img_url: {
-                                            'en-US': e.target.value,
-                                          },
-                                        };
-
-                                        // 保存用户编辑的图片列表到状态管理器（缓存策略）
-                                        multiImageComponentStateManager.setUserEditedImageList(
-                                          selectedComponent.id,
-                                          newImageList,
-                                        );
-                                        handleValueChange(
-                                          'img_list',
-                                          newImageList,
-                                        );
-                                      }}
-                                      placeholder="请输入图片路径或选择上传"
-                                      style={{ flex: 1 }}
-                                    />
-                                    <ImageUpload
-                                      onUploadSuccess={(imageUrl) => {
-                                        const newImageList = [
-                                          ...currentImageList,
-                                        ];
-                                        newImageList[index] = {
-                                          ...newImageList[index],
-                                          img_url: imageUrl,
-                                          i18n_img_url: {
-                                            'en-US': imageUrl,
-                                          },
-                                        };
-
-                                        // 保存用户上传的图片列表到状态管理器（缓存策略）
-                                        multiImageComponentStateManager.setUserEditedImageList(
-                                          selectedComponent.id,
-                                          newImageList,
-                                        );
-                                        handleValueChange(
-                                          'img_list',
-                                          newImageList,
-                                        );
-                                      }}
-                                      style={STYLES.uploadButton}
-                                      buttonProps={{
-                                        type: 'primary',
-                                        children: '上传',
-                                        title: '上传图片',
-                                      }}
-                                    />
-                                  </Space.Compact>
-                                </div>
-                              ),
-                            );
-                          })()}
-                        </div>
-                      )}
-
-                      {multiImageContentMode === 'variable' && (
-                        <div>
-                          <VariableBinding
-                            componentType="img_combination"
-                            variables={variables}
-                            getFilteredVariables={getFilteredVariables}
-                            value={(() => {
-                              const rememberedVariable = selectedComponent
-                                ? lastBoundVariables[selectedComponent.id]
-                                : undefined;
-                              const currentBoundVariable =
-                                multiImageComponentStateManager.getBoundVariableName(
-                                  selectedComponent.id,
-                                );
-                              return rememberedVariable || currentBoundVariable;
-                            })()}
-                            onChange={(value: string | undefined) => {
-                              if (selectedComponent) {
-                                if (value) {
-                                  // 绑定变量时
-                                  setLastBoundVariables((prev) => ({
-                                    ...prev,
-                                    [selectedComponent.id]: value,
-                                  }));
-
-                                  multiImageComponentStateManager.setBoundVariableName(
-                                    selectedComponent.id,
-                                    value,
-                                  );
-
-                                  const updatedComponent = {
-                                    ...selectedComponent,
-                                  };
-                                  const variablePlaceholder = `\${${value}}`;
-                                  (updatedComponent as any).img_list =
-                                    variablePlaceholder;
-
-                                  onUpdateComponent(updatedComponent);
-                                } else {
-                                  // 清除变量绑定时
-                                  setLastBoundVariables((prev) => {
-                                    const newState = { ...prev };
-                                    delete newState[selectedComponent.id];
-                                    return newState;
-                                  });
-
-                                  multiImageComponentStateManager.setBoundVariableName(
-                                    selectedComponent.id,
-                                    '',
-                                  );
-
-                                  // 清除绑定变量后，根据当前模式决定显示的图片
-                                  const updatedComponent = {
-                                    ...selectedComponent,
-                                  };
-
-                                  if (multiImageContentMode === 'variable') {
-                                    // 在变量模式下清除绑定，显示指定图片列表（如果有的话）
-                                    const userEditedImageList =
-                                      multiImageComponentStateManager.getUserEditedImageList(
-                                        selectedComponent.id,
-                                      );
-                                    (updatedComponent as any).img_list =
-                                      userEditedImageList || [];
-                                  } else {
-                                    // 在指定模式下（理论上不会发生）
-                                    (updatedComponent as any).img_list = [];
-                                  }
-
-                                  onUpdateComponent(updatedComponent);
-                                }
-                              }
-                            }}
-                            getVariableDisplayName={getVariableDisplayName}
-                            getVariableKeys={getVariableKeys}
-                            onAddVariable={() =>
-                              handleAddVariableFromComponent('img_combination')
-                            }
-                            placeholder="请选择要绑定的变量"
-                            label="绑定变量"
-                            addVariableText="新建图片数组变量"
-                          />
-                        </div>
-                      )}
-                    </Form.Item>
-                  </Form>
+                <div style={{ marginTop: '8px' }}>
+                  <Text type="secondary" style={{ fontSize: '12px' }}>
+                    当前图片数量：{imageCount} 张
+                  </Text>
+                  <br />
+                  <Text type="secondary" style={{ fontSize: '11px' }}>
+                    当前模式：{currentCombinationMode} ({currentLayoutType})
+                  </Text>
                 </div>
               </div>
-            ),
-          },
-          {
-            key: 'variables',
-            label: (
-              <span
-                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                <BgColorsOutlined />
-                变量
-              </span>
-            ),
-            children: <VariableManagementPanel />,
-          },
-        ]}
-      />
-    </div>
+            );
+          })()}
+        </Form.Item>
+      </SettingSection>
+    );
+  }, [
+    form,
+    multiImageContentMode,
+    selectedComponent,
+    variables,
+    getLatestSelectedComponent,
+    handleValueChange,
+    forceUpdate,
+    onUpdateComponent,
+  ]);
+
+  // 渲染图片设置内容
+  const imageSettingsContent = React.useMemo(() => {
+    return (
+      <SettingSection title="🖼️ 图片设置" form={form}>
+        <Form.Item label="图片来源">
+          <Segmented
+            value={multiImageContentMode}
+            style={{ marginBottom: 16 }}
+            onChange={(value) => {
+              const newMode = value as 'specify' | 'variable';
+              setMultiImageContentMode(newMode);
+
+              // 处理模式切换时的图片显示逻辑
+              const updatedComponent = { ...selectedComponent };
+
+              if (newMode === 'specify') {
+                // 切换到指定模式：恢复用户编辑的图片列表
+                const userEditedImageList =
+                  multiImageComponentStateManager.getUserEditedImageList(
+                    selectedComponent.id,
+                  );
+                (updatedComponent as any).img_list = userEditedImageList || [];
+              } else {
+                // 切换到变量模式：检查是否有绑定的变量
+                const boundVariable =
+                  multiImageComponentStateManager.getBoundVariableName(
+                    selectedComponent.id,
+                  );
+                const rememberedVariable =
+                  lastBoundVariables[selectedComponent.id];
+
+                if (boundVariable || rememberedVariable) {
+                  // 如果有绑定变量，显示变量占位符
+                  const variableName = boundVariable || rememberedVariable;
+                  (updatedComponent as any).img_list = `\${${variableName}}`;
+                } else {
+                  // 如果没有绑定变量，保持当前指定的图片列表
+                  const currentImageList = Array.isArray(
+                    (selectedComponent as any).img_list,
+                  )
+                    ? (selectedComponent as any).img_list
+                    : [];
+
+                  // 保存当前图片列表到状态管理器
+                  multiImageComponentStateManager.setUserEditedImageList(
+                    selectedComponent.id,
+                    currentImageList,
+                  );
+                }
+              }
+
+              onUpdateComponent(updatedComponent);
+            }}
+            options={[
+              { label: '指定', value: 'specify' },
+              { label: '绑定变量', value: 'variable' },
+            ]}
+          />
+
+          {multiImageContentMode === 'specify' && (
+            <div style={{ marginBottom: 16 }}>
+              {(() => {
+                // 获取当前组件的图片列表
+                let currentImageList = Array.isArray(
+                  (selectedComponent as any).img_list,
+                )
+                  ? (selectedComponent as any).img_list
+                  : [];
+
+                return currentImageList.map((image: any, index: number) => (
+                  <div
+                    key={`image-${index}`}
+                    style={{
+                      marginBottom: 16,
+                    }}
+                  >
+                    <Text
+                      strong
+                      style={{
+                        display: 'block',
+                        marginBottom: 8,
+                        color: '#1976d2',
+                      }}
+                    >
+                      图片 {index + 1}
+                    </Text>
+                    <Space.Compact style={STYLES.inputCompact}>
+                      <Input
+                        value={image.img_url || ''}
+                        onChange={(e) => {
+                          const newImageList = [...currentImageList];
+                          newImageList[index] = {
+                            ...newImageList[index],
+                            img_url: e.target.value,
+                            i18n_img_url: {
+                              'en-US': e.target.value,
+                            },
+                          };
+
+                          // 保存用户编辑的图片列表到状态管理器（缓存策略）
+                          multiImageComponentStateManager.setUserEditedImageList(
+                            selectedComponent.id,
+                            newImageList,
+                          );
+                          handleValueChange('img_list', newImageList);
+                        }}
+                        placeholder="请输入图片路径或选择上传"
+                        style={{ flex: 1 }}
+                      />
+                      <ImageUpload
+                        onUploadSuccess={(imageUrl) => {
+                          const newImageList = [...currentImageList];
+                          newImageList[index] = {
+                            ...newImageList[index],
+                            img_url: imageUrl,
+                            i18n_img_url: {
+                              'en-US': imageUrl,
+                            },
+                          };
+
+                          // 保存用户上传的图片列表到状态管理器（缓存策略）
+                          multiImageComponentStateManager.setUserEditedImageList(
+                            selectedComponent.id,
+                            newImageList,
+                          );
+                          handleValueChange('img_list', newImageList);
+                        }}
+                        style={STYLES.uploadButton}
+                        buttonProps={{
+                          type: 'primary',
+                          children: '上传',
+                          title: '上传图片',
+                        }}
+                      />
+                    </Space.Compact>
+                  </div>
+                ));
+              })()}
+            </div>
+          )}
+
+          {multiImageContentMode === 'variable' && (
+            <div>
+              <VariableBinding
+                componentType="img_combination"
+                variables={variables}
+                getFilteredVariables={getFilteredVariables}
+                value={(() => {
+                  const rememberedVariable = selectedComponent
+                    ? lastBoundVariables[selectedComponent.id]
+                    : undefined;
+                  const currentBoundVariable =
+                    multiImageComponentStateManager.getBoundVariableName(
+                      selectedComponent.id,
+                    );
+                  return rememberedVariable || currentBoundVariable;
+                })()}
+                onChange={(value: string | undefined) => {
+                  if (selectedComponent) {
+                    if (value) {
+                      // 绑定变量时
+                      setLastBoundVariables((prev) => ({
+                        ...prev,
+                        [selectedComponent.id]: value,
+                      }));
+
+                      multiImageComponentStateManager.setBoundVariableName(
+                        selectedComponent.id,
+                        value,
+                      );
+
+                      const updatedComponent = {
+                        ...selectedComponent,
+                      };
+                      const variablePlaceholder = `\${${value}}`;
+                      (updatedComponent as any).img_list = variablePlaceholder;
+
+                      onUpdateComponent(updatedComponent);
+                    } else {
+                      // 清除变量绑定时
+                      setLastBoundVariables((prev) => {
+                        const newState = { ...prev };
+                        delete newState[selectedComponent.id];
+                        return newState;
+                      });
+
+                      multiImageComponentStateManager.setBoundVariableName(
+                        selectedComponent.id,
+                        '',
+                      );
+
+                      // 清除绑定变量后，根据当前模式决定显示的图片
+                      const updatedComponent = {
+                        ...selectedComponent,
+                      };
+
+                      if (multiImageContentMode === 'variable') {
+                        // 在变量模式下清除绑定，显示指定图片列表（如果有的话）
+                        const userEditedImageList =
+                          multiImageComponentStateManager.getUserEditedImageList(
+                            selectedComponent.id,
+                          );
+                        (updatedComponent as any).img_list =
+                          userEditedImageList || [];
+                      } else {
+                        // 在指定模式下（理论上不会发生）
+                        (updatedComponent as any).img_list = [];
+                      }
+
+                      onUpdateComponent(updatedComponent);
+                    }
+                  }
+                }}
+                getVariableDisplayName={getVariableDisplayName}
+                getVariableKeys={getVariableKeys}
+                onAddVariable={() =>
+                  handleAddVariableFromComponent('img_combination')
+                }
+                placeholder="请选择要绑定的变量"
+                label="绑定变量"
+                addVariableText="新建图片数组变量"
+              />
+            </div>
+          )}
+        </Form.Item>
+      </SettingSection>
+    );
+  }, [
+    form,
+    multiImageContentMode,
+    setMultiImageContentMode,
+    selectedComponent,
+    lastBoundVariables,
+    setLastBoundVariables,
+    onUpdateComponent,
+    handleValueChange,
+    variables,
+    getFilteredVariables,
+    getVariableDisplayName,
+    getVariableKeys,
+    handleAddVariableFromComponent,
+  ]);
+
+  // 组合组件内容
+  const componentContent = React.useMemo(
+    () => (
+      <ComponentContent componentName="多图混排组件">
+        {componentSettingsContent}
+        {layoutSettingsContent}
+        {imageSettingsContent}
+      </ComponentContent>
+    ),
+    [componentSettingsContent, layoutSettingsContent, imageSettingsContent],
+  );
+
+  // 创建变量管理面板
+  const VariableManagementComponent = React.useCallback(() => {
+    return <VariableManagementPanel />;
+  }, [VariableManagementPanel]);
+
+  return (
+    <PropertyPanel
+      activeTab={topLevelTab}
+      onTabChange={setTopLevelTab}
+      componentContent={componentContent}
+      variableManagementComponent={<VariableManagementComponent />}
+      isVariableModalVisible={isVariableModalVisible}
+      handleVariableModalOk={handleVariableModalOk}
+      handleVariableModalCancel={handleVariableModalCancel}
+      editingVariable={editingVariable}
+      isVariableModalFromVariablesTab={isVariableModalFromVariablesTab}
+      modalComponentType={modalComponentType}
+      selectedComponentTag={selectedComponent?.tag}
+    />
   );
 };
 

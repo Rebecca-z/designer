@@ -1,10 +1,8 @@
 // ColumnSetComponent 编辑界面 - 分栏组件
-import { BgColorsOutlined, SettingOutlined } from '@ant-design/icons';
-import { Form, InputNumber, Tabs, Typography } from 'antd';
+import { Form, InputNumber } from 'antd';
 import React, { useCallback, useMemo } from 'react';
+import { ComponentContent, PropertyPanel, SettingSection } from '../common';
 import { BaseComponentProps } from '../types';
-
-const { Text } = Typography;
 
 // 类型定义
 interface ColumnItem {
@@ -30,70 +28,17 @@ const COLUMN_CONFIG = {
   defaultFlex: 1,
 } as const;
 
-// 样式常量
-const STYLES = {
-  container: {
-    width: '300px',
-    height: 'calc(100vh - 60px)',
-    backgroundColor: '#fafafa',
-    borderLeft: '1px solid #d9d9d9',
-    padding: '16px',
-    overflow: 'auto',
-  },
-  tabBarStyle: {
-    padding: '0 16px',
-    backgroundColor: '#fff',
-    margin: 0,
-    borderBottom: '1px solid #d9d9d9',
-  },
-  contentPadding: { padding: '16px' },
-  infoBox: {
-    marginBottom: '16px',
-    padding: '12px',
-    backgroundColor: '#f0f9ff',
-    border: '1px solid #bae6fd',
-    borderRadius: '6px',
-  },
-  section: {
-    background: '#fff',
-    borderRadius: 6,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-    padding: 16,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontWeight: 600,
-    marginBottom: 8,
-    fontSize: 15,
-  },
-  tip: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 16,
-    padding: 8,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 4,
-  },
-  previewBox: {
-    marginTop: 12,
-    padding: 8,
-    backgroundColor: '#f0f9ff',
-    borderRadius: 4,
-    border: '1px solid #bae6fd',
-  },
-  previewTitle: {
-    fontSize: 12,
-    fontWeight: 600,
-    marginBottom: 4,
-    color: '#0369a1',
-  },
-} as const;
-
 const ColumnSetComponent: React.FC<BaseComponentProps> = ({
   selectedComponent,
   topLevelTab,
   setTopLevelTab,
   handleValueChange,
+  isVariableModalVisible,
+  handleVariableModalOk,
+  handleVariableModalCancel,
+  editingVariable,
+  isVariableModalFromVariablesTab,
+  modalComponentType,
   VariableManagementPanel,
 }) => {
   const [form] = Form.useForm();
@@ -171,21 +116,18 @@ const ColumnSetComponent: React.FC<BaseComponentProps> = ({
   // 渲染布局设置内容 - 使用useMemo优化
   const layoutSettingsContent = useMemo(
     () => (
-      <div style={STYLES.section}>
-        <div style={STYLES.sectionTitle}>📐 布局设置</div>
-        <Form form={form} layout="vertical">
-          <Form.Item label="分栏数量">
-            <InputNumber
-              value={columnData.columnCount}
-              onChange={handleColumnCountChange}
-              min={COLUMN_CONFIG.min}
-              max={COLUMN_CONFIG.max}
-              style={{ width: '100%' }}
-              placeholder="设置分栏数量"
-            />
-          </Form.Item>
-        </Form>
-      </div>
+      <SettingSection title="📐 布局设置" form={form}>
+        <Form.Item label="分栏数量">
+          <InputNumber
+            value={columnData.columnCount}
+            onChange={handleColumnCountChange}
+            min={COLUMN_CONFIG.min}
+            max={COLUMN_CONFIG.max}
+            style={{ width: '100%' }}
+            placeholder="设置分栏数量"
+          />
+        </Form.Item>
+      </SettingSection>
     ),
     [form, columnData.columnCount, handleColumnCountChange],
   );
@@ -195,8 +137,7 @@ const ColumnSetComponent: React.FC<BaseComponentProps> = ({
     if (!columnData.columns.length) return null;
 
     return (
-      <div style={STYLES.section}>
-        <div style={STYLES.sectionTitle}>📏 列宽设置</div>
+      <SettingSection title="📏 列宽设置" useForm={false}>
         {columnData.columns.map((column, index) => {
           const weightData = weightInfo[index];
           return (
@@ -230,62 +171,39 @@ const ColumnSetComponent: React.FC<BaseComponentProps> = ({
             </Form>
           );
         })}
-      </div>
+      </SettingSection>
     );
   }, [columnData.columns, weightInfo, handleColumnWeightChange]);
 
   // 渲染组件属性Tab内容 - 使用useMemo优化
   const componentTabContent = useMemo(
     () => (
-      <div style={STYLES.contentPadding}>
-        <div style={STYLES.infoBox}>
-          <Text style={{ fontSize: '12px', color: '#0369a1' }}>
-            🎯 当前选中：分栏组件
-          </Text>
-        </div>
+      <>
         {layoutSettingsContent}
         {columnWidthContent}
-      </div>
+      </>
     ),
     [layoutSettingsContent, columnWidthContent],
   );
 
   return (
-    <div style={STYLES.container}>
-      <Tabs
-        activeKey={topLevelTab}
-        onChange={setTopLevelTab}
-        style={{ height: '100%' }}
-        tabBarStyle={STYLES.tabBarStyle}
-        size="small"
-        items={[
-          {
-            key: 'component',
-            label: (
-              <span
-                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                <SettingOutlined />
-                组件属性
-              </span>
-            ),
-            children: componentTabContent,
-          },
-          {
-            key: 'variables',
-            label: (
-              <span
-                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                <BgColorsOutlined />
-                变量
-              </span>
-            ),
-            children: <VariableManagementPanel />,
-          },
-        ]}
-      />
-    </div>
+    <PropertyPanel
+      activeTab={topLevelTab}
+      onTabChange={setTopLevelTab}
+      componentContent={
+        <ComponentContent componentName="分栏布局">
+          {componentTabContent}
+        </ComponentContent>
+      }
+      variableManagementComponent={<VariableManagementPanel />}
+      isVariableModalVisible={isVariableModalVisible}
+      handleVariableModalOk={handleVariableModalOk || (() => {})}
+      handleVariableModalCancel={handleVariableModalCancel || (() => {})}
+      editingVariable={editingVariable}
+      isVariableModalFromVariablesTab={isVariableModalFromVariablesTab}
+      modalComponentType={modalComponentType}
+      selectedComponentTag={selectedComponent?.tag}
+    />
   );
 };
 

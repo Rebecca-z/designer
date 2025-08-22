@@ -363,6 +363,15 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         description: values.description || '',
       };
 
+      console.log('🔧 AddVariableModal 创建变量:', {
+        variable,
+        formValues: values,
+        actualMockData,
+        internalType,
+        timestamp: new Date().toISOString(),
+      });
+
+      console.log('🔧 AddVariableModal 调用 onOk 回调');
       onOk(variable);
       form.resetFields();
       setJsonData('');

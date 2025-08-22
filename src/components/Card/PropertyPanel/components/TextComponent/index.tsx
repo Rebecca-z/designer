@@ -1,27 +1,21 @@
 // TextComponent 编辑界面 - 专门处理普通文本组件
-import { BgColorsOutlined, SettingOutlined } from '@ant-design/icons';
-import {
-  ColorPicker,
-  Form,
-  Input,
-  InputNumber,
-  Segmented,
-  Select,
-  Tabs,
-  Typography,
-} from 'antd';
+import { ColorPicker, Form, Input, InputNumber, Segmented, Select } from 'antd';
 import React, { useCallback, useMemo } from 'react';
 import {
   ComponentType,
   VariableItem,
 } from '../../../card-designer-types-updated';
-import AddVariableModal from '../../../Variable/AddVariableModal';
+
 import { textComponentStateManager } from '../../../Variable/utils/index';
 import VariableBinding from '../../../Variable/VariableList';
-import ComponentNameInput from '../common/ComponentNameInput';
+import {
+  ComponentContent,
+  ComponentNameInput,
+  PropertyPanel,
+  SettingSection,
+} from '../common';
 import { useComponentName } from '../hooks/useComponentName';
 
-const { Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
@@ -50,44 +44,6 @@ const TEXT_ALIGN_OPTIONS = [
   { value: 'center', label: '居中对齐' },
   { value: 'right', label: '右对齐' },
 ] as const;
-
-// 样式常量
-const STYLES = {
-  container: {
-    width: '300px',
-    height: 'calc(100vh - 60px)',
-    backgroundColor: '#fafafa',
-    borderLeft: '1px solid #d9d9d9',
-    padding: '16px',
-    overflow: 'auto',
-  },
-  tabBarStyle: {
-    padding: '0 16px',
-    backgroundColor: '#fff',
-    margin: 0,
-    borderBottom: '1px solid #d9d9d9',
-  },
-  contentPadding: { padding: '16px' },
-  infoBox: {
-    marginBottom: '16px',
-    padding: '12px',
-    backgroundColor: '#f0f9ff',
-    border: '1px solid #bae6fd',
-    borderRadius: '6px',
-  },
-  sectionCard: {
-    marginBottom: '16px',
-    background: '#fff',
-    borderRadius: 6,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-    padding: 16,
-  },
-  sectionTitle: {
-    fontWeight: 600,
-    marginBottom: 8,
-    fontSize: 15,
-  },
-} as const;
 
 export interface TextComponentProps {
   selectedComponent: ComponentType;
@@ -276,64 +232,107 @@ const TextComponent: React.FC<TextComponentProps> = ({
   // 组件内容 - 使用useMemo优化
   const componentTabContent = useMemo(
     () => (
-      <div style={STYLES.contentPadding}>
-        <div style={STYLES.infoBox}>
-          <Text style={{ fontSize: '12px', color: '#0369a1' }}>
-            🎯 当前选中：普通文本组件
-          </Text>
-        </div>
+      <>
+        <SettingSection title="📝 内容设置" form={form}>
+          <ComponentNameInput
+            prefix="PlainText_"
+            suffix={componentNameInfo.suffix}
+            onChange={handleNameChange}
+          />
 
-        {/* 内容设置 */}
-        <div style={STYLES.sectionCard}>
-          <div style={STYLES.sectionTitle}>📝 内容设置</div>
-          <Form form={form} layout="vertical">
-            <ComponentNameInput
-              prefix="PlainText_"
-              suffix={componentNameInfo.suffix}
-              onChange={handleNameChange}
-            />
+          <Form.Item label="普通文本内容">
+            {/* 内容模式切换 */}
+            <Segmented
+              value={textContentMode}
+              style={{ marginBottom: 16 }}
+              onChange={(value) => {
+                const newMode = value as 'specify' | 'variable';
+                setTextContentMode(newMode);
 
-            <Form.Item label="普通文本内容">
-              {/* 内容模式切换 */}
-              <Segmented
-                value={textContentMode}
-                style={{ marginBottom: 16 }}
-                onChange={(value) => {
-                  const newMode = value as 'specify' | 'variable';
-                  setTextContentMode(newMode);
+                // 切换模式时的处理逻辑
+                if (selectedComponent) {
+                  const updatedComponent = { ...selectedComponent };
 
-                  // 切换模式时的处理逻辑
-                  if (selectedComponent) {
-                    const updatedComponent = { ...selectedComponent };
+                  if (newMode === 'specify') {
+                    // 切换到指定模式
+                    const userEditedContent =
+                      textComponentStateManager.getUserEditedContent(
+                        selectedComponent.id,
+                      );
 
-                    if (newMode === 'specify') {
-                      // 切换到指定模式
-                      const userEditedContent =
-                        textComponentStateManager.getUserEditedContent(
-                          selectedComponent.id,
-                        );
+                    if (userEditedContent !== undefined) {
+                      (updatedComponent as any).content = userEditedContent;
+                      (updatedComponent as any).i18n_content = {
+                        'en-US': userEditedContent,
+                      };
+                    }
 
-                      if (userEditedContent !== undefined) {
-                        (updatedComponent as any).content = userEditedContent;
-                        (updatedComponent as any).i18n_content = {
-                          'en-US': userEditedContent,
-                        };
-                      }
+                    textComponentStateManager.setBoundVariableName(
+                      selectedComponent.id,
+                      '',
+                    );
+                  } else if (newMode === 'variable') {
+                    // 切换到绑定变量模式
+                    const boundVariableName = getBoundVariableName();
+                    const rememberedVariable =
+                      lastBoundVariables[selectedComponent.id];
+                    const variableName =
+                      rememberedVariable || boundVariableName;
+
+                    if (variableName) {
+                      const variablePlaceholder = `\${${variableName}}`;
+                      (updatedComponent as any).content = variablePlaceholder;
+                      (updatedComponent as any).i18n_content = {
+                        'en-US': variablePlaceholder,
+                      };
 
                       textComponentStateManager.setBoundVariableName(
                         selectedComponent.id,
-                        '',
+                        variableName,
                       );
-                    } else if (newMode === 'variable') {
-                      // 切换到绑定变量模式
-                      const boundVariableName = getBoundVariableName();
-                      const rememberedVariable =
-                        lastBoundVariables[selectedComponent.id];
-                      const variableName =
-                        rememberedVariable || boundVariableName;
+                    }
+                  }
 
-                      if (variableName) {
-                        const variablePlaceholder = `\${${variableName}}`;
+                  onUpdateComponent(updatedComponent);
+                }
+              }}
+              options={[...CONTENT_MODES]}
+            />
+
+            {/* 指定模式下的文本输入 */}
+            {textContentMode === 'specify' && (
+              <div style={{ marginBottom: 16 }}>
+                <TextArea
+                  value={getTextContent()}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                    updateTextContent(e.target.value)
+                  }
+                  placeholder="请输入文本内容"
+                  rows={4}
+                  style={{ width: '100%' }}
+                />
+              </div>
+            )}
+
+            {/* 绑定变量模式 */}
+            {textContentMode === 'variable' && (
+              <div>
+                <VariableBinding
+                  componentType="plain_text"
+                  variables={variables}
+                  getFilteredVariables={getFilteredVariables}
+                  value={variableBindingValue}
+                  onChange={(value: string | undefined) => {
+                    // 处理变量绑定逻辑
+                    if (selectedComponent) {
+                      if (value) {
+                        setLastBoundVariables((prev) => ({
+                          ...prev,
+                          [selectedComponent.id]: value,
+                        }));
+
+                        const updatedComponent = { ...selectedComponent };
+                        const variablePlaceholder = `\${${value}}`;
                         (updatedComponent as any).content = variablePlaceholder;
                         (updatedComponent as any).i18n_content = {
                           'en-US': variablePlaceholder,
@@ -341,154 +340,95 @@ const TextComponent: React.FC<TextComponentProps> = ({
 
                         textComponentStateManager.setBoundVariableName(
                           selectedComponent.id,
-                          variableName,
+                          value,
                         );
-                      }
-                    }
 
-                    onUpdateComponent(updatedComponent);
-                  }
-                }}
-                options={[...CONTENT_MODES]}
-              />
+                        onUpdateComponent(updatedComponent);
+                      } else {
+                        // 清除变量
+                        setLastBoundVariables((prev) => {
+                          const newState = { ...prev };
+                          delete newState[selectedComponent.id];
+                          return newState;
+                        });
 
-              {/* 指定模式下的文本输入 */}
-              {textContentMode === 'specify' && (
-                <div style={{ marginBottom: 16 }}>
-                  <TextArea
-                    value={getTextContent()}
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                      updateTextContent(e.target.value)
-                    }
-                    placeholder="请输入文本内容"
-                    rows={4}
-                    style={{ width: '100%' }}
-                  />
-                </div>
-              )}
+                        textComponentStateManager.setBoundVariableName(
+                          selectedComponent.id,
+                          '',
+                        );
 
-              {/* 绑定变量模式 */}
-              {textContentMode === 'variable' && (
-                <div>
-                  <VariableBinding
-                    componentType="plain_text"
-                    variables={variables}
-                    getFilteredVariables={getFilteredVariables}
-                    value={variableBindingValue}
-                    onChange={(value: string | undefined) => {
-                      // 处理变量绑定逻辑
-                      if (selectedComponent) {
-                        if (value) {
-                          setLastBoundVariables((prev) => ({
-                            ...prev,
-                            [selectedComponent.id]: value,
-                          }));
-
+                        const userEditedContent =
+                          textComponentStateManager.getUserEditedContent(
+                            selectedComponent.id,
+                          );
+                        if (userEditedContent !== undefined) {
                           const updatedComponent = { ...selectedComponent };
-                          const variablePlaceholder = `\${${value}}`;
-                          (updatedComponent as any).content =
-                            variablePlaceholder;
+                          (updatedComponent as any).content = userEditedContent;
                           (updatedComponent as any).i18n_content = {
-                            'en-US': variablePlaceholder,
+                            'en-US': userEditedContent,
                           };
-
-                          textComponentStateManager.setBoundVariableName(
-                            selectedComponent.id,
-                            value,
-                          );
-
                           onUpdateComponent(updatedComponent);
-                        } else {
-                          // 清除变量
-                          setLastBoundVariables((prev) => {
-                            const newState = { ...prev };
-                            delete newState[selectedComponent.id];
-                            return newState;
-                          });
-
-                          textComponentStateManager.setBoundVariableName(
-                            selectedComponent.id,
-                            '',
-                          );
-
-                          const userEditedContent =
-                            textComponentStateManager.getUserEditedContent(
-                              selectedComponent.id,
-                            );
-                          if (userEditedContent !== undefined) {
-                            const updatedComponent = { ...selectedComponent };
-                            (updatedComponent as any).content =
-                              userEditedContent;
-                            (updatedComponent as any).i18n_content = {
-                              'en-US': userEditedContent,
-                            };
-                            onUpdateComponent(updatedComponent);
-                          }
                         }
                       }
-                    }}
-                    getVariableDisplayName={getVariableDisplayName}
-                    getVariableKeys={getVariableKeys}
-                    onAddVariable={() =>
-                      handleAddVariableFromComponent('plain_text')
                     }
-                    placeholder="请选择要绑定的变量"
-                    label="绑定变量"
-                    addVariableText="+新建变量"
-                  />
-                </div>
-              )}
-            </Form.Item>
-          </Form>
-        </div>
+                  }}
+                  getVariableDisplayName={getVariableDisplayName}
+                  getVariableKeys={getVariableKeys}
+                  onAddVariable={() =>
+                    handleAddVariableFromComponent('plain_text')
+                  }
+                  placeholder="请选择要绑定的变量"
+                  label="绑定变量"
+                  addVariableText="+新建变量"
+                />
+              </div>
+            )}
+          </Form.Item>
+        </SettingSection>
 
-        {/* 样式设置 */}
-        <div style={STYLES.sectionCard}>
-          <div style={STYLES.sectionTitle}>🎨 样式设置</div>
-          <Form form={form} layout="vertical">
-            <Form.Item label="字体大小">
-              <InputNumber
-                value={textInfo.style.fontSize}
-                onChange={(value) => handleValueChange('fontSize', value)}
-                min={12}
-                max={48}
-                style={{ width: '100%' }}
-                placeholder="设置字体大小"
-                addonAfter="px"
-              />
-            </Form.Item>
-            <Form.Item label="文字颜色">
-              <ColorPicker
-                value={textInfo.style.color}
-                onChange={(color) =>
-                  handleValueChange('color', color.toHexString())
-                }
-                showText
-                style={{ width: '100%' }}
-              />
-            </Form.Item>
-            <Form.Item label="文字对齐">
-              <Select
-                value={textInfo.style.textAlign}
-                onChange={(value) => handleValueChange('textAlign', value)}
-                style={{ width: '100%' }}
-              >
-                {textAlignOptions}
-              </Select>
-            </Form.Item>
-            <Form.Item label="最大行数">
-              <InputNumber
-                value={textInfo.style.numberOfLines}
-                onChange={(value) => handleValueChange('numberOfLines', value)}
-                min={1}
-                max={10}
-                style={{ width: '100%' }}
-                placeholder="不限制"
-              />
-            </Form.Item>
-          </Form>
-        </div>
-      </div>
+        <SettingSection title="🎨 样式设置" form={form}>
+          <Form.Item label="字体大小">
+            <InputNumber
+              value={textInfo.style.fontSize}
+              onChange={(value) => handleValueChange('fontSize', value)}
+              min={12}
+              max={48}
+              style={{ width: '100%' }}
+              placeholder="设置字体大小"
+              addonAfter="px"
+            />
+          </Form.Item>
+          <Form.Item label="文字颜色">
+            <ColorPicker
+              value={textInfo.style.color}
+              onChange={(color) =>
+                handleValueChange('color', color.toHexString())
+              }
+              showText
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+          <Form.Item label="文字对齐">
+            <Select
+              value={textInfo.style.textAlign}
+              onChange={(value) => handleValueChange('textAlign', value)}
+              style={{ width: '100%' }}
+            >
+              {textAlignOptions}
+            </Select>
+          </Form.Item>
+          <Form.Item label="最大行数">
+            <InputNumber
+              value={textInfo.style.numberOfLines}
+              onChange={(value) => handleValueChange('numberOfLines', value)}
+              min={1}
+              max={10}
+              style={{ width: '100%' }}
+              placeholder="不限制"
+            />
+          </Form.Item>
+        </SettingSection>
+      </>
     ),
     [
       textContentMode,
@@ -514,54 +454,23 @@ const TextComponent: React.FC<TextComponentProps> = ({
   );
 
   return (
-    <div style={STYLES.container}>
-      {/* 文本组件编辑界面的变量添加模态框 */}
-      <AddVariableModal
-        visible={isVariableModalVisible}
-        onOk={handleVariableModalOk}
-        onCancel={handleVariableModalCancel}
-        editingVariable={editingVariable}
-        componentType={
-          isVariableModalFromVariablesTab
-            ? undefined
-            : modalComponentType || selectedComponent?.tag
-        }
-      />
-
-      <Tabs
-        activeKey={topLevelTab}
-        onChange={setTopLevelTab}
-        style={{ height: '100%' }}
-        tabBarStyle={STYLES.tabBarStyle}
-        size="small"
-        items={[
-          {
-            key: 'component',
-            label: (
-              <span
-                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                <SettingOutlined />
-                组件属性
-              </span>
-            ),
-            children: componentTabContent,
-          },
-          {
-            key: 'variables',
-            label: (
-              <span
-                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                <BgColorsOutlined />
-                变量
-              </span>
-            ),
-            children: <VariableManagementPanel />,
-          },
-        ]}
-      />
-    </div>
+    <PropertyPanel
+      activeTab={topLevelTab}
+      onTabChange={setTopLevelTab}
+      componentContent={
+        <ComponentContent componentName="文本组件">
+          {componentTabContent}
+        </ComponentContent>
+      }
+      variableManagementComponent={<VariableManagementPanel />}
+      isVariableModalVisible={isVariableModalVisible}
+      handleVariableModalOk={handleVariableModalOk}
+      handleVariableModalCancel={handleVariableModalCancel}
+      editingVariable={editingVariable}
+      isVariableModalFromVariablesTab={isVariableModalFromVariablesTab}
+      modalComponentType={modalComponentType}
+      selectedComponentTag={selectedComponent?.tag}
+    />
   );
 };
 

@@ -298,15 +298,25 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
       if (selectedComponent) {
         let updatedComponent;
 
-        if (STYLE_FIELDS.includes(key as any)) {
+        // 处理嵌套字段（如 style.color）
+        if (key.includes('.')) {
+          const [parentKey, childKey] = key.split('.');
+          updatedComponent = {
+            ...selectedComponent,
+            [parentKey]: {
+              ...((selectedComponent as any)[parentKey] || {}),
+              [childKey]: value,
+            },
+          };
+        } else if (STYLE_FIELDS.includes(key as any)) {
           // 样式属性：保存到style对象中
           updatedComponent = {
             ...selectedComponent,
-            styles: {
+            style: {
               ...((selectedComponent as any).style || {}),
               [key]: value,
             },
-          };
+          } as ComponentType;
         } else if (
           key === 'text.content' &&
           selectedComponent.tag === 'button'
@@ -362,16 +372,21 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
   // 统一的变量创建处理函数
   const handleAddVariableFromComponent = useCallback(
     (componentType: string) => {
+      console.log('🔧 handleAddVariableFromComponent 被调用:', {
+        componentType,
+        currentModalVisible: isVariableModalVisible,
+        timestamp: new Date().toISOString(),
+      });
+
       setIsVariableModalFromVariablesTab(false);
       setModalComponentType(componentType);
-      setIsVariableModalVisible(false);
       setEditingVariable(undefined);
       setEditingVariableIndex(-1);
-      setTimeout(() => {
-        setIsVariableModalVisible(true);
-      }, 100);
+
+      // 直接设置为可见，不需要先设置为false再延时设置为true
+      setIsVariableModalVisible(true);
     },
-    [],
+    [isVariableModalVisible],
   );
 
   // 变量类型映射常量
@@ -391,13 +406,50 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
   // 获取过滤后的变量列表
   const getFilteredVariables = useCallback(
     (componentType?: string) => {
+      console.log('🔍 getFilteredVariables 调用:', {
+        componentType,
+        totalVariables: variables.length,
+        variables: variables.map((v) => ({
+          name: v.name,
+          type: v.type,
+          originalType: v.originalType,
+          resolvedType: v.originalType || v.type || 'string',
+        })),
+        timestamp: new Date().toISOString(),
+      });
+
       if (!componentType) return variables;
       const allowedTypes = VARIABLE_TYPE_MAPPING[componentType] || [];
 
-      return variables.filter((variable) => {
-        const variableType = variable.originalType || variable.type || 'string';
-        return allowedTypes.includes(variableType);
+      console.log('🎯 变量类型过滤:', {
+        componentType,
+        allowedTypes,
+        mapping: VARIABLE_TYPE_MAPPING[componentType],
       });
+
+      const filteredVariables = variables.filter((variable) => {
+        const variableType = variable.originalType || variable.type || 'string';
+        const isAllowed = allowedTypes.includes(variableType);
+
+        console.log('🔍 变量过滤检查:', {
+          variableName: variable.name,
+          originalType: variable.originalType,
+          type: variable.type,
+          resolvedType: variableType,
+          isAllowed,
+          allowedTypes,
+        });
+
+        return isAllowed;
+      });
+
+      console.log('✅ 过滤结果:', {
+        componentType,
+        filteredCount: filteredVariables.length,
+        filteredVariables: filteredVariables.map((v) => v.name),
+      });
+
+      return filteredVariables;
     },
     [variables, VARIABLE_TYPE_MAPPING],
   );
@@ -428,12 +480,30 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
   // 变量模态框确认处理
   const handleVariableModalOk = useCallback(
     (variable: VariableItem) => {
-      if (editingVariable !== null) {
+      console.log('🔧 RightPanel handleVariableModalOk 接收到变量:', {
+        variable,
+        editingVariable,
+        editingVariableIndex,
+        currentVariablesCount: variables.length,
+        timestamp: new Date().toISOString(),
+      });
+
+      if (editingVariable !== null && editingVariable !== undefined) {
         const newVariables = [...variables];
         newVariables[editingVariableIndex] = variable;
+        console.log('🔧 RightPanel 更新现有变量:', {
+          editingVariableIndex,
+          newVariables,
+        });
         onUpdateVariables(newVariables);
       } else {
-        onUpdateVariables([...variables, variable]);
+        const newVariables = [...variables, variable];
+        console.log('🔧 RightPanel 添加新变量:', {
+          oldVariablesCount: variables.length,
+          newVariablesCount: newVariables.length,
+          newVariables,
+        });
+        onUpdateVariables(newVariables);
       }
       setIsVariableModalVisible(false);
       setEditingVariable(undefined);
@@ -454,18 +524,17 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
   }, []);
 
   // 变量列表操作函数
-  const handleNewVariable = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    setIsVariableModalVisible(false);
+  const handleNewVariable = useCallback((e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    console.log('🔧 点击新建变量按钮');
     setEditingVariable(undefined);
     setEditingVariableIndex(-1);
-    setIsVariableModalFromVariablesTab(false);
+    setIsVariableModalFromVariablesTab(true);
     setModalComponentType(undefined);
-    setTimeout(() => {
-      setIsVariableModalFromVariablesTab(true);
-      setIsVariableModalVisible(true);
-    }, 100);
+    setIsVariableModalVisible(true);
   }, []);
 
   const handleEditVariable = useCallback(

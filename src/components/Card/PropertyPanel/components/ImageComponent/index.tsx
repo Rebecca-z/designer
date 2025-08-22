@@ -1,16 +1,14 @@
 // ImageComponent 编辑界面 - 图片组件
-import { BgColorsOutlined, SettingOutlined } from '@ant-design/icons';
-import { Form, Input, Segmented, Select, Space, Tabs, Typography } from 'antd';
+import { Form, Input, Segmented, Select, Space } from 'antd';
 import React, { useCallback, useMemo } from 'react';
 import ImageUpload from '../../../ImageUpload';
-import AddVariableModal from '../../../Variable/AddVariableModal';
 import { imageComponentStateManager } from '../../../Variable/utils/index';
 import VariableBinding from '../../../Variable/VariableList';
+import { ComponentContent, PropertyPanel, SettingSection } from '../common';
 import ComponentNameInput from '../common/ComponentNameInput';
 import { useComponentName } from '../hooks/useComponentName';
 import { ImageComponentProps } from '../types';
 
-const { Text } = Typography;
 const { Option } = Select;
 
 // 类型定义
@@ -36,42 +34,8 @@ const CONTENT_MODES = [
   { label: '绑定变量', value: 'variable' },
 ] as const;
 
-// 样式常量
+// 样式常量（保留必要的样式）
 const STYLES = {
-  container: {
-    width: '300px',
-    height: 'calc(100vh - 60px)',
-    backgroundColor: '#fafafa',
-    borderLeft: '1px solid #d9d9d9',
-    padding: '16px',
-    overflow: 'auto',
-  },
-  tabBarStyle: {
-    padding: '0 16px',
-    backgroundColor: '#fff',
-    margin: 0,
-    borderBottom: '1px solid #d9d9d9',
-  },
-  contentPadding: { padding: '16px' },
-  infoBox: {
-    marginBottom: '16px',
-    padding: '12px',
-    backgroundColor: '#f0f9ff',
-    border: '1px solid #bae6fd',
-    borderRadius: '6px',
-  },
-  section: {
-    marginBottom: '16px',
-    background: '#fff',
-    borderRadius: 6,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-    padding: 16,
-  },
-  sectionTitle: {
-    fontWeight: 600,
-    marginBottom: 8,
-    fontSize: 15,
-  },
   inputCompact: {
     width: '100%',
   },
@@ -270,59 +234,56 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
   // 渲染图片设置内容 - 使用useMemo优化
   const imageSettingsContent = useMemo(
     () => (
-      <div style={STYLES.section}>
-        <div style={STYLES.sectionTitle}>🖼️ 图片设置</div>
-        <Form form={form} layout="vertical">
-          <Form.Item label="图片来源">
-            <Segmented
-              value={imageContentMode}
-              style={{ marginBottom: 16 }}
-              onChange={handleModeChange}
-              options={[...CONTENT_MODES]}
-            />
+      <SettingSection title="🖼️ 图片设置" form={form}>
+        <Form.Item label="图片来源">
+          <Segmented
+            value={imageContentMode}
+            style={{ marginBottom: 16 }}
+            onChange={handleModeChange}
+            options={[...CONTENT_MODES]}
+          />
 
-            {imageContentMode === 'specify' && (
-              <div>
-                <Space.Compact style={STYLES.inputCompact}>
-                  <Input
-                    value={imageInfo.userEditedUrl}
-                    onChange={(e) => handleImageUrlChange(e.target.value)}
-                    placeholder="请输入图片路径或选择上传"
-                    style={{ flex: 1 }}
-                  />
-                  <ImageUpload
-                    onUploadSuccess={handleImageUrlChange}
-                    style={STYLES.uploadButton}
-                    buttonProps={{
-                      type: 'primary',
-                      children: '上传',
-                      title: '上传图片',
-                    }}
-                  />
-                </Space.Compact>
-              </div>
-            )}
-
-            {imageContentMode === 'variable' && (
-              <div>
-                <VariableBinding
-                  componentType="img"
-                  variables={variables}
-                  getFilteredVariables={getFilteredVariables}
-                  value={variableBindingInfo.displayValue}
-                  onChange={handleVariableBindingChange}
-                  getVariableDisplayName={getVariableDisplayName}
-                  getVariableKeys={getVariableKeys}
-                  onAddVariable={() => handleAddVariableFromComponent('img')}
-                  placeholder="请选择图片变量"
-                  label="绑定变量"
-                  addVariableText="+新建图片变量"
+          {imageContentMode === 'specify' && (
+            <div>
+              <Space.Compact style={STYLES.inputCompact}>
+                <Input
+                  value={imageInfo.userEditedUrl}
+                  onChange={(e) => handleImageUrlChange(e.target.value)}
+                  placeholder="请输入图片路径或选择上传"
+                  style={{ flex: 1 }}
                 />
-              </div>
-            )}
-          </Form.Item>
-        </Form>
-      </div>
+                <ImageUpload
+                  onUploadSuccess={handleImageUrlChange}
+                  style={STYLES.uploadButton}
+                  buttonProps={{
+                    type: 'primary',
+                    children: '上传',
+                    title: '上传图片',
+                  }}
+                />
+              </Space.Compact>
+            </div>
+          )}
+
+          {imageContentMode === 'variable' && (
+            <div>
+              <VariableBinding
+                componentType="img"
+                variables={variables}
+                getFilteredVariables={getFilteredVariables}
+                value={variableBindingInfo.displayValue}
+                onChange={handleVariableBindingChange}
+                getVariableDisplayName={getVariableDisplayName}
+                getVariableKeys={getVariableKeys}
+                onAddVariable={() => handleAddVariableFromComponent('img')}
+                placeholder="请选择图片变量"
+                label="绑定变量"
+                addVariableText="+新建图片变量"
+              />
+            </div>
+          )}
+        </Form.Item>
+      </SettingSection>
     ),
     [
       form,
@@ -340,107 +301,72 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
     ],
   );
 
+  // 渲染组件设置内容 - 使用useMemo优化
+  const componentSettingsContent = useMemo(
+    () => (
+      <SettingSection title="🏷️ 组件设置" useForm={false}>
+        <ComponentNameInput
+          prefix="Img_"
+          suffix={componentNameInfo.suffix}
+          onChange={handleNameChange}
+        />
+      </SettingSection>
+    ),
+    [componentNameInfo.suffix, handleNameChange],
+  );
+
   // 渲染样式设置内容 - 使用useMemo优化
   const styleSettingsContent = useMemo(
     () => (
-      <div style={STYLES.section}>
-        <div style={STYLES.sectionTitle}>🎨 样式设置</div>
-        <Form form={form} layout="vertical">
-          <ComponentNameInput
-            prefix="Img_"
-            suffix={componentNameInfo.suffix}
-            onChange={handleNameChange}
-          />
-
-          <Form.Item label="裁剪方式">
-            <Select
-              value={imageInfo.cropMode}
-              onChange={(value) => handleValueChange('crop_mode', value)}
-              style={{ width: '100%' }}
-            >
-              {CROP_MODES.map(({ value, label }) => (
-                <Option key={value} value={value}>
-                  {label}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-        </Form>
-      </div>
+      <SettingSection title="🎨 样式设置" form={form}>
+        <Form.Item label="裁剪方式">
+          <Select
+            value={imageInfo.cropMode}
+            onChange={(value) => handleValueChange('crop_mode', value)}
+            style={{ width: '100%' }}
+          >
+            {CROP_MODES.map(({ value, label }) => (
+              <Option key={value} value={value}>
+                {label}
+              </Option>
+            ))}
+          </Select>
+        </Form.Item>
+      </SettingSection>
     ),
-    [
-      form,
-      imageInfo.cropMode,
-      handleValueChange,
-      componentNameInfo.suffix,
-      handleNameChange,
-    ],
+    [form, imageInfo.cropMode, handleValueChange],
   );
 
   // 渲染组件属性Tab内容 - 使用useMemo优化
   const componentTabContent = useMemo(
     () => (
-      <div style={STYLES.contentPadding}>
-        <div style={STYLES.infoBox}>
-          <Text style={{ fontSize: '12px', color: '#0369a1' }}>
-            🎯 当前选中：图片组件
-          </Text>
-        </div>
+      <>
+        {componentSettingsContent}
         {imageSettingsContent}
         {styleSettingsContent}
-      </div>
+      </>
     ),
-    [imageSettingsContent, styleSettingsContent],
+    [componentSettingsContent, imageSettingsContent, styleSettingsContent],
   );
 
   return (
-    <div style={STYLES.container}>
-      <AddVariableModal
-        visible={isVariableModalVisible}
-        onOk={handleVariableModalOk}
-        onCancel={handleVariableModalCancel}
-        editingVariable={editingVariable}
-        componentType={
-          isVariableModalFromVariablesTab
-            ? undefined
-            : modalComponentType || selectedComponent?.tag
-        }
-      />
-
-      <Tabs
-        activeKey={topLevelTab}
-        onChange={setTopLevelTab}
-        style={{ height: '100%' }}
-        tabBarStyle={STYLES.tabBarStyle}
-        size="small"
-        items={[
-          {
-            key: 'component',
-            label: (
-              <span
-                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                <SettingOutlined />
-                组件属性
-              </span>
-            ),
-            children: componentTabContent,
-          },
-          {
-            key: 'variables',
-            label: (
-              <span
-                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                <BgColorsOutlined />
-                变量
-              </span>
-            ),
-            children: <VariableManagementPanel />,
-          },
-        ]}
-      />
-    </div>
+    <PropertyPanel
+      activeTab={topLevelTab}
+      onTabChange={setTopLevelTab}
+      componentContent={
+        <ComponentContent componentName="图片">
+          {componentTabContent}
+        </ComponentContent>
+      }
+      variableManagementComponent={<VariableManagementPanel />}
+      isVariableModalVisible={isVariableModalVisible}
+      handleVariableModalOk={handleVariableModalOk || (() => {})}
+      handleVariableModalCancel={handleVariableModalCancel || (() => {})}
+      editingVariable={editingVariable}
+      isVariableModalFromVariablesTab={isVariableModalFromVariablesTab}
+      modalComponentType={modalComponentType}
+      selectedComponentTag={selectedComponent?.tag}
+    />
   );
 };
 

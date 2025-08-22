@@ -1,30 +1,20 @@
 // ButtonComponent 编辑界面 - 按钮组件
-import {
-  BgColorsOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  PlusOutlined,
-  SettingOutlined,
-  ThunderboltOutlined,
-} from '@ant-design/icons';
-import {
-  Button,
-  Form,
-  Input,
-  Popover,
-  Select,
-  Switch,
-  Tabs,
-  Typography,
-} from 'antd';
+import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
+import { Button, Form, Input, Popover, Select, Switch, Typography } from 'antd';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
+import {
+  ComponentContent,
+  ComponentNameInput,
+  PropertyPanel,
+  SettingSection,
+} from '../common';
 import { BaseComponentProps } from '../types';
 import {
   BUTTON_COLORS,
   DEFAULT_FORM_DATA,
   DEFAULT_PARAMETER,
 } from './constans';
-import styles from './index.less';
+
 import type { EventItem, FormData, Parameter } from './type';
 const { Text } = Typography;
 
@@ -35,6 +25,12 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
   setTopLevelTab,
   handleValueChange,
   onUpdateComponent,
+  isVariableModalVisible,
+  handleVariableModalOk,
+  handleVariableModalCancel,
+  editingVariable,
+  isVariableModalFromVariablesTab,
+  modalComponentType,
   VariableManagementPanel,
 }) => {
   const [form] = Form.useForm();
@@ -173,7 +169,12 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
       actionText: '请选择动作',
       behavior: null, // 初始化为null，表示尚未配置
     };
-    setEvents((prev) => [...prev, newEvent]);
+    console.log('🔧 创建新事件:', newEvent);
+    setEvents((prev) => {
+      const updatedEvents = [...prev, newEvent];
+      console.log('🔧 更新后的事件列表:', updatedEvents);
+      return updatedEvents;
+    });
   }, []);
 
   // 删除事件处理函数
@@ -475,371 +476,342 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
     ],
   );
 
-  return (
-    <div
-      style={{
-        width: '300px',
-        height: 'calc(100vh - 60px)',
-        backgroundColor: '#fafafa',
-        borderLeft: '1px solid #d9d9d9',
-        padding: '16px',
-        overflow: 'auto',
-      }}
-    >
-      <Tabs
-        activeKey={topLevelTab}
-        onChange={setTopLevelTab}
-        style={{ height: '100%' }}
-        tabBarStyle={{
-          padding: '0 16px',
-          backgroundColor: '#fff',
-          margin: 0,
-          borderBottom: '1px solid #d9d9d9',
-        }}
-        size="small"
-        items={[
-          {
-            key: 'component',
-            label: (
-              <span
-                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                <SettingOutlined />
-                组件属性
-              </span>
-            ),
-            children: (
-              <div className={styles.container}>
-                <div className={styles.infoBox}>
-                  <Text style={{ fontSize: '12px', color: '#0369a1' }}>
-                    🎯 当前选中：按钮组件
-                  </Text>
-                </div>
+  // 组件属性内容
+  const componentContent = useMemo(
+    () => (
+      <>
+        <SettingSection title="📝 内容设置" form={form}>
+          <ComponentNameInput
+            prefix="Button_"
+            suffix={buttonNameInfo.suffix}
+            onChange={handleButtonNameChange}
+          />
 
-                {/* 内容设置 */}
-                <div className={styles.section}>
-                  <div className={styles.sectionTitle}>📝 内容设置</div>
-                  <Form form={form} layout="vertical">
-                    <Form.Item label="按钮标识符">
-                      <Input
-                        value={buttonNameInfo.suffix}
-                        onChange={handleButtonNameChange}
-                        placeholder="请输入标识符后缀"
-                        addonBefore="Button_"
-                        style={{ width: '100%' }}
-                      />
-                    </Form.Item>
+          <Form.Item label="按钮文案">
+            <Input
+              value={(selectedComponent as any).text?.content || '按钮'}
+              onChange={(e) => {
+                const value = e.target.value;
+                // 限制最多8个字符
+                if (value.length <= 8) {
+                  handleValueChange('text.content', value);
+                }
+              }}
+              placeholder="按钮"
+              maxLength={8}
+              showCount
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+        </SettingSection>
 
-                    <Form.Item label="按钮文案">
-                      <Input
-                        value={
-                          (selectedComponent as any).text?.content || '按钮'
-                        }
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          // 限制最多8个字符
-                          if (value.length <= 8) {
-                            handleValueChange('text.content', value);
-                          }
-                        }}
-                        placeholder="按钮"
-                        maxLength={8}
-                        showCount
-                        style={{ width: '100%' }}
-                      />
-                    </Form.Item>
-                  </Form>
-                </div>
-
-                {/* 样式设置 */}
-                <div className={styles.section}>
-                  <div className={styles.sectionTitle}>🎨 样式设置</div>
-                  <Form form={form} layout="vertical">
-                    <Form.Item label="按钮颜色">
-                      <Select
-                        value={
-                          (selectedComponent as any).style?.color || 'blue'
-                        }
-                        onChange={(value) => handleValueChange('color', value)}
-                        style={{ width: '100%' }}
-                      >
-                        {BUTTON_COLORS.map(({ value, label, color }) => (
-                          <Select.Option key={value} value={value}>
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  width: '16px',
-                                  height: '16px',
-                                  backgroundColor: color,
-                                  border: '1px solid #d9d9d9',
-                                  borderRadius: '2px',
-                                }}
-                              />
-                              {label}
-                            </div>
-                          </Select.Option>
-                        ))}
-                      </Select>
-                    </Form.Item>
-                  </Form>
-                </div>
-
-                {/* 表单按钮配置 - 仅在表单内显示 */}
-                {isInForm && (
-                  <div className={styles.section}>
-                    <div className={styles.sectionTitle}>📋 表单按钮设置</div>
-                    <Form form={form} layout="vertical">
-                      <Form.Item>
-                        <div
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '12px',
-                          }}
-                        >
-                          {/* 提交按钮开关 */}
-                          <div
-                            style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              padding: '8px 0',
-                            }}
-                          >
-                            <Text>设置为&quot;提交&quot;按钮</Text>
-                            <Switch
-                              checked={
-                                (selectedComponent as any)?.form_action_type ===
-                                'submit'
-                              }
-                              onChange={(checked) => {
-                                console.log('🔧 提交按钮开关变更:', {
-                                  checked,
-                                  currentActionType: (selectedComponent as any)
-                                    .form_action_type,
-                                  componentId: selectedComponent.id,
-                                });
-
-                                if (checked) {
-                                  // 设置为提交按钮，需要初始化behaviors字段
-                                  const updatedComponent = {
-                                    ...selectedComponent,
-                                  };
-                                  updatedComponent.form_action_type = 'submit';
-
-                                  // 如果当前没有behaviors字段，初始化为空数组
-                                  if (!(updatedComponent as any).behaviors) {
-                                    (updatedComponent as any).behaviors = [];
-                                  }
-
-                                  console.log(
-                                    '🔧 设置提交按钮，初始化behaviors字段:',
-                                    {
-                                      componentId: selectedComponent.id,
-                                      formActionType: 'submit',
-                                      hasBehaviors: !!(updatedComponent as any)
-                                        .behaviors,
-                                    },
-                                  );
-
-                                  onUpdateComponent(updatedComponent);
-                                } else {
-                                  // 如果关闭提交按钮，清除form_action_type，但保留behaviors字段（如果有的话）
-                                  const updatedComponent = {
-                                    ...selectedComponent,
-                                  };
-                                  delete updatedComponent.form_action_type;
-
-                                  // 如果当前没有behaviors字段，初始化为空数组（普通按钮也可以有事件）
-                                  if (!(updatedComponent as any).behaviors) {
-                                    (updatedComponent as any).behaviors = [];
-                                  }
-
-                                  console.log(
-                                    '🔧 关闭提交按钮，转为普通按钮:',
-                                    {
-                                      componentId: selectedComponent.id,
-                                      hasBehaviors: !!(updatedComponent as any)
-                                        .behaviors,
-                                    },
-                                  );
-
-                                  onUpdateComponent(updatedComponent);
-                                }
-                              }}
-                            />
-                          </div>
-
-                          {/* 重置按钮开关 */}
-                          <div
-                            style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              padding: '8px 0',
-                            }}
-                          >
-                            <Text>设置为&quot;重置&quot;按钮</Text>
-                            <Switch
-                              checked={
-                                (selectedComponent as any)?.form_action_type ===
-                                'reset'
-                              }
-                              onChange={(checked) => {
-                                console.log('🔧 重置按钮开关变更:', {
-                                  checked,
-                                  currentActionType: (selectedComponent as any)
-                                    .form_action_type,
-                                  componentId: selectedComponent.id,
-                                });
-
-                                if (checked) {
-                                  // 重置按钮不需要behaviors字段，通过onUpdateComponent直接删除
-                                  const updatedComponent = {
-                                    ...selectedComponent,
-                                  };
-                                  delete updatedComponent.behaviors;
-                                  updatedComponent.form_action_type = 'reset';
-                                  onUpdateComponent(updatedComponent);
-                                } else {
-                                  // 如果关闭重置按钮，清除form_action_type
-                                  handleValueChange(
-                                    'form_action_type',
-                                    undefined,
-                                  );
-                                }
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </Form.Item>
-                    </Form>
-                  </div>
-                )}
-              </div>
-            ),
-          },
-          {
-            key: 'variables',
-            label: (
-              <span
-                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                <BgColorsOutlined />
-                变量
-              </span>
-            ),
-            children: <VariableManagementPanel />,
-          },
-          {
-            key: 'events',
-            label: (
-              <span
-                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                <ThunderboltOutlined />
-                事件
-              </span>
-            ),
-            children: (
-              <div className={styles.container}>
-                <Button
-                  type="dashed"
-                  icon={<PlusOutlined />}
-                  onClick={handleCreateEvent}
-                  style={{
-                    width: '100%',
-                    height: '40px',
-                    marginBottom: '16px',
-                  }}
-                >
-                  创建事件
-                </Button>
-
-                {/* 事件列表 */}
-                {events.map((event) => (
+        <SettingSection title="🎨 样式设置" form={form}>
+          <Form.Item label="按钮颜色">
+            <Select
+              value={(selectedComponent as any).style?.color || 'blue'}
+              onChange={(value) => handleValueChange('style.color', value)}
+              style={{ width: '100%' }}
+            >
+              {BUTTON_COLORS.map(({ value, label, color }) => (
+                <Select.Option key={value} value={value}>
                   <div
-                    key={event.id}
-                    id={`event-${event.id}`}
-                    className={styles.eventItem}
-                    onClick={() => {
-                      setCurrentEventId(event.id);
-                      loadEventData(event);
-                      setPopoverVisible(true);
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
                     }}
                   >
-                    <Button type="text" style={{ padding: 0, height: 'auto' }}>
-                      {event.actionText}
-                    </Button>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <EditOutlined
-                        style={{
-                          fontSize: '14px',
-                          color: '#1890ff',
-                          cursor: 'pointer',
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setCurrentEventId(event.id);
-                          loadEventData(event); // 使用公共函数回显数据
-                          setPopoverVisible(true);
-                        }}
-                      />
-                      <DeleteOutlined
-                        style={{
-                          fontSize: '14px',
-                          color: '#ff4d4f',
-                          cursor: 'pointer',
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteEvent(event.id);
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-
-                {/* 统一的Popover - 只有一个 */}
-                {popoverVisible && currentEventId !== null && (
-                  <Popover
-                    content={popoverContent}
-                    title={null}
-                    trigger="click"
-                    placement="leftTop"
-                    open={popoverVisible}
-                    onOpenChange={(visible) => {
-                      setPopoverVisible(visible);
-                      if (!visible) {
-                        setCurrentEventId(null);
-                      }
-                    }}
-                  >
-                    {/* 隐藏的触发元素 */}
                     <div
-                      ref={popoverAnchorRef}
                       style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: 0,
-                        height: 0,
+                        width: '16px',
+                        height: '16px',
+                        backgroundColor: color,
+                        border: '1px solid #d9d9d9',
+                        borderRadius: '2px',
                       }}
                     />
-                  </Popover>
-                )}
+                    {label}
+                  </div>
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+        </SettingSection>
+
+        <SettingSection title="📋 表单按钮设置" form={form} visible={isInForm}>
+          <Form.Item>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+              }}
+            >
+              {/* 提交按钮开关 */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '8px 0',
+                }}
+              >
+                <Text>设置为&quot;提交&quot;按钮</Text>
+                <Switch
+                  checked={
+                    (selectedComponent as any)?.form_action_type === 'submit'
+                  }
+                  onChange={(checked) => {
+                    console.log('🔧 提交按钮开关变更:', {
+                      checked,
+                      currentActionType: (selectedComponent as any)
+                        .form_action_type,
+                      componentId: selectedComponent.id,
+                    });
+
+                    if (checked) {
+                      // 设置为提交按钮，需要初始化behaviors字段
+                      const updatedComponent = {
+                        ...selectedComponent,
+                      };
+                      (updatedComponent as any).form_action_type = 'submit';
+
+                      // 如果当前没有behaviors字段，初始化为空数组
+                      if (!(updatedComponent as any).behaviors) {
+                        (updatedComponent as any).behaviors = [];
+                      }
+
+                      console.log('🔧 设置提交按钮，初始化behaviors字段:', {
+                        componentId: selectedComponent.id,
+                        formActionType: 'submit',
+                        hasBehaviors: !!(updatedComponent as any).behaviors,
+                      });
+
+                      onUpdateComponent(updatedComponent);
+                    } else {
+                      // 如果关闭提交按钮，清除form_action_type，但保留behaviors字段（如果有的话）
+                      const updatedComponent = {
+                        ...selectedComponent,
+                      };
+                      delete (updatedComponent as any).form_action_type;
+
+                      // 如果当前没有behaviors字段，初始化为空数组（普通按钮也可以有事件）
+                      if (!(updatedComponent as any).behaviors) {
+                        (updatedComponent as any).behaviors = [];
+                      }
+
+                      console.log('🔧 关闭提交按钮，转为普通按钮:', {
+                        componentId: selectedComponent.id,
+                        hasBehaviors: !!(updatedComponent as any).behaviors,
+                      });
+
+                      onUpdateComponent(updatedComponent);
+                    }
+                  }}
+                />
               </div>
-            ),
-          },
-        ]}
-      />
-    </div>
+
+              {/* 重置按钮开关 */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '8px 0',
+                }}
+              >
+                <Text>设置为&quot;重置&quot;按钮</Text>
+                <Switch
+                  checked={
+                    (selectedComponent as any)?.form_action_type === 'reset'
+                  }
+                  onChange={(checked) => {
+                    console.log('🔧 重置按钮开关变更:', {
+                      checked,
+                      currentActionType: (selectedComponent as any)
+                        .form_action_type,
+                      componentId: selectedComponent.id,
+                    });
+
+                    if (checked) {
+                      // 重置按钮不需要behaviors字段，通过onUpdateComponent直接删除
+                      const updatedComponent = {
+                        ...selectedComponent,
+                      };
+                      delete (updatedComponent as any).behaviors;
+                      (updatedComponent as any).form_action_type = 'reset';
+                      onUpdateComponent(updatedComponent);
+                    } else {
+                      // 如果关闭重置按钮，清除form_action_type
+                      handleValueChange('form_action_type', undefined);
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          </Form.Item>
+        </SettingSection>
+      </>
+    ),
+    [
+      form,
+      buttonNameInfo.suffix,
+      handleButtonNameChange,
+      selectedComponent,
+      handleValueChange,
+      isInForm,
+      onUpdateComponent,
+    ],
+  );
+
+  // 事件内容
+  const eventContent = useMemo(
+    () => (
+      <div style={{ padding: '16px' }}>
+        <Button
+          type="dashed"
+          icon={<PlusOutlined />}
+          onClick={handleCreateEvent}
+          style={{
+            width: '100%',
+            height: '40px',
+            marginBottom: '16px',
+          }}
+        >
+          创建事件
+        </Button>
+
+        {/* 事件列表 */}
+        {(() => {
+          console.log('🔧 事件数组长度:', events.length, '事件数组:', events);
+          return null;
+        })()}
+        {events.length === 0 && (
+          <div style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
+            暂无事件，点击上方按钮创建
+          </div>
+        )}
+        {events.map((event) => {
+          console.log('🔧 渲染事件:', event);
+          return (
+            <div
+              key={event.id}
+              id={`event-${event.id}`}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '8px 12px',
+                marginBottom: '8px',
+                backgroundColor: '#f8f9fa',
+                border: '1px solid #e9ecef',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+              onClick={() => {
+                setCurrentEventId(event.id);
+                loadEventData(event);
+                setPopoverVisible(true);
+              }}
+            >
+              <Button type="text" style={{ padding: 0, height: 'auto' }}>
+                {event.actionText}
+              </Button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <EditOutlined
+                  style={{
+                    fontSize: '14px',
+                    color: '#1890ff',
+                    cursor: 'pointer',
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentEventId(event.id);
+                    loadEventData(event); // 使用公共函数回显数据
+                    setPopoverVisible(true);
+                  }}
+                />
+                <DeleteOutlined
+                  style={{
+                    fontSize: '14px',
+                    color: '#ff4d4f',
+                    cursor: 'pointer',
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteEvent(event.id);
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })}
+
+        {/* 统一的Popover - 只有一个 */}
+        {popoverVisible && currentEventId !== null && (
+          <Popover
+            content={popoverContent}
+            title={null}
+            trigger="click"
+            placement="leftTop"
+            open={popoverVisible}
+            onOpenChange={(visible) => {
+              setPopoverVisible(visible);
+              if (!visible) {
+                setCurrentEventId(null);
+              }
+            }}
+          >
+            {/* 隐藏的触发元素 */}
+            <div
+              ref={popoverAnchorRef}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: 0,
+                height: 0,
+              }}
+            />
+          </Popover>
+        )}
+      </div>
+    ),
+    [
+      events,
+      handleCreateEvent,
+      currentEventId,
+      loadEventData,
+      setPopoverVisible,
+      setCurrentEventId,
+      handleDeleteEvent,
+      popoverVisible,
+      popoverContent,
+      popoverAnchorRef,
+    ],
+  );
+
+  return (
+    <PropertyPanel
+      activeTab={topLevelTab}
+      onTabChange={setTopLevelTab}
+      componentContent={
+        <ComponentContent componentName="按钮组件">
+          {componentContent}
+        </ComponentContent>
+      }
+      eventContent={eventContent}
+      showEventTab={true}
+      variableManagementComponent={<VariableManagementPanel />}
+      isVariableModalVisible={isVariableModalVisible}
+      handleVariableModalOk={handleVariableModalOk || (() => {})}
+      handleVariableModalCancel={handleVariableModalCancel || (() => {})}
+      editingVariable={editingVariable}
+      isVariableModalFromVariablesTab={isVariableModalFromVariablesTab}
+      modalComponentType={modalComponentType}
+      selectedComponentTag={selectedComponent?.tag}
+    />
   );
 };
 
