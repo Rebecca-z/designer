@@ -19,87 +19,14 @@ import {
 } from 'antd';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { BaseComponentProps } from '../types';
-
+import {
+  BUTTON_COLORS,
+  DEFAULT_FORM_DATA,
+  DEFAULT_PARAMETER,
+} from './constans';
+import styles from './index.less';
+import type { EventItem, FormData, Parameter } from './type';
 const { Text } = Typography;
-
-// 类型定义
-interface EventItem {
-  id: number;
-  actionType: string;
-  actionText: string;
-  behavior: any;
-}
-
-interface Parameter {
-  id: number;
-  param1: string;
-  param2: string;
-}
-
-interface FormData {
-  pcUrl: string;
-  mobileUrl: string;
-  paramType: 'object' | 'string';
-}
-
-// 常量定义
-const BUTTON_COLORS = [
-  { value: 'black', label: '黑色', color: '#000000' },
-  { value: 'blue', label: '蓝色', color: '#1890ff' },
-  { value: 'red', label: '红色', color: '#ff4d4f' },
-] as const;
-
-const DEFAULT_FORM_DATA: FormData = {
-  pcUrl: '',
-  mobileUrl: '',
-  paramType: 'object',
-};
-
-const DEFAULT_PARAMETER: Parameter = {
-  id: 1,
-  param1: '',
-  param2: '',
-};
-
-// 样式常量
-const STYLES = {
-  container: { padding: '16px' },
-  infoBox: {
-    marginBottom: '16px',
-    padding: '12px',
-    backgroundColor: '#f0f9ff',
-    border: '1px solid #bae6fd',
-    borderRadius: '6px',
-  },
-  section: {
-    marginBottom: '16px',
-    background: '#fff',
-    borderRadius: 6,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-    padding: 16,
-  },
-  sectionTitle: {
-    fontWeight: 600,
-    marginBottom: 8,
-    fontSize: 15,
-  },
-  eventItem: {
-    border: '1px solid #d9d9d9',
-    borderRadius: '6px',
-    padding: '12px',
-    backgroundColor: '#fafafa',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: '8px',
-  },
-  parameterBlock: {
-    padding: '12px',
-    marginBottom: '8px',
-    backgroundColor: '#fafafa',
-  },
-} as const;
 
 const ButtonComponent: React.FC<BaseComponentProps> = ({
   selectedComponent,
@@ -112,13 +39,22 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
 }) => {
   const [form] = Form.useForm();
 
+  // 事件相关状态
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [popoverVisible, setPopoverVisible] = useState<boolean>(false);
+  const [currentActionType, setCurrentActionType] = useState<
+    'callback' | 'link'
+  >('callback');
+  const [parameters, setParameters] = useState<Parameter[]>([
+    DEFAULT_PARAMETER,
+  ]);
+  const [currentEventId, setCurrentEventId] = useState<number | null>(null);
+  const [formData, setFormData] = useState<FormData>(DEFAULT_FORM_DATA);
+  const popoverAnchorRef = useRef<HTMLDivElement>(null);
+
   // 检查按钮是否在表单内
   const isInForm = useMemo(() => {
     if (!selectedPath) return false;
-
-    // 表单内按钮路径：['dsl', 'body', 'elements', formIndex, 'elements', buttonIndex]
-    // 或在表单内的分栏中：['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', buttonIndex]
-
     // 检查是否在表单内（至少需要6个路径段）
     if (selectedPath.length >= 6) {
       // 简单表单内：['dsl', 'body', 'elements', formIndex, 'elements', buttonIndex]
@@ -147,27 +83,11 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
     return false;
   }, [selectedPath, selectedComponent.id, selectedComponent.tag]);
 
-  // 事件相关状态
-  const [events, setEvents] = useState<EventItem[]>([]);
-  const [popoverVisible, setPopoverVisible] = useState<boolean>(false);
-  const [currentActionType, setCurrentActionType] = useState<
-    'callback' | 'link'
-  >('callback');
-  const [parameters, setParameters] = useState<Parameter[]>([
-    DEFAULT_PARAMETER,
-  ]);
-  const [currentEventId, setCurrentEventId] = useState<number | null>(null);
-  const [formData, setFormData] = useState<FormData>(DEFAULT_FORM_DATA);
-
-  const popoverAnchorRef = useRef<HTMLDivElement>(null);
-
   // 获取按钮名称信息 - 使用useMemo优化
   const buttonNameInfo = useMemo(() => {
     const fullName = (selectedComponent as any).name || 'Button_';
-
     // 提取各种前缀后面的内容，优先处理Button_前缀
     let suffix = '';
-
     if (fullName.startsWith('Button_')) {
       suffix = fullName.substring(7); // Button_
     } else if (fullName.startsWith('SubmitButton_')) {
@@ -177,13 +97,6 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
     } else {
       suffix = fullName; // 没有识别的前缀，使用全名作为后缀
     }
-
-    console.log('🔍 按钮名称解析:', {
-      fullName,
-      suffix,
-      componentId: selectedComponent.id,
-    });
-
     return {
       name: fullName,
       suffix: suffix,
@@ -193,17 +106,7 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
   // 处理按钮名称变化 - 使用useCallback优化
   const handleButtonNameChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const userInput = e.target.value;
-      // 拼接Button_前缀和用户输入的内容
-      const fullName = `Button_${userInput}`;
-
-      console.log('🔧 按钮名称变更:', {
-        userInput,
-        fullName,
-        componentId: selectedComponent.id,
-      });
-
-      handleValueChange('name', fullName);
+      handleValueChange('name', `Button_${e.target.value}`);
     },
     [handleValueChange, selectedComponent.id],
   );
@@ -380,13 +283,6 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
       // 检查当前按钮是否为重置按钮，如果是则不保存behaviors字段
       const isResetButton =
         (selectedComponent as any)?.form_action_type === 'reset';
-
-      console.log('🔧 保存事件时检查按钮类型:', {
-        componentId: selectedComponent.id,
-        formActionType: (selectedComponent as any)?.form_action_type,
-        isResetButton,
-        behaviorsCount: updatedBehaviors.length,
-      });
 
       if (!isResetButton) {
         // 只有非重置按钮且有behaviors时才保存
@@ -613,16 +509,16 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
               </span>
             ),
             children: (
-              <div style={STYLES.container}>
-                <div style={STYLES.infoBox}>
+              <div className={styles.container}>
+                <div className={styles.infoBox}>
                   <Text style={{ fontSize: '12px', color: '#0369a1' }}>
                     🎯 当前选中：按钮组件
                   </Text>
                 </div>
 
                 {/* 内容设置 */}
-                <div style={STYLES.section}>
-                  <div style={STYLES.sectionTitle}>📝 内容设置</div>
+                <div className={styles.section}>
+                  <div className={styles.sectionTitle}>📝 内容设置</div>
                   <Form form={form} layout="vertical">
                     <Form.Item label="按钮标识符">
                       <Input
@@ -656,8 +552,8 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
                 </div>
 
                 {/* 样式设置 */}
-                <div style={STYLES.section}>
-                  <div style={STYLES.sectionTitle}>🎨 样式设置</div>
+                <div className={styles.section}>
+                  <div className={styles.sectionTitle}>🎨 样式设置</div>
                   <Form form={form} layout="vertical">
                     <Form.Item label="按钮颜色">
                       <Select
@@ -696,8 +592,8 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
 
                 {/* 表单按钮配置 - 仅在表单内显示 */}
                 {isInForm && (
-                  <div style={STYLES.section}>
-                    <div style={STYLES.sectionTitle}>📋 表单按钮设置</div>
+                  <div className={styles.section}>
+                    <div className={styles.sectionTitle}>📋 表单按钮设置</div>
                     <Form form={form} layout="vertical">
                       <Form.Item>
                         <div
@@ -852,8 +748,7 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
               </span>
             ),
             children: (
-              <div style={{ ...STYLES.container, position: 'relative' }}>
-                {/* 创建事件按钮 - 永存 */}
+              <div className={styles.container}>
                 <Button
                   type="dashed"
                   icon={<PlusOutlined />}
@@ -872,10 +767,10 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
                   <div
                     key={event.id}
                     id={`event-${event.id}`}
-                    style={STYLES.eventItem}
+                    className={styles.eventItem}
                     onClick={() => {
                       setCurrentEventId(event.id);
-                      loadEventData(event); // 使用公共函数回显数据
+                      loadEventData(event);
                       setPopoverVisible(true);
                     }}
                   >

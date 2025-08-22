@@ -192,8 +192,8 @@ const TitleComponent: React.FC<BaseComponentProps> = ({
       {/* 标题组件编辑界面的变量添加模态框 */}
       <AddVariableModal
         visible={isVariableModalVisible}
-        onOk={handleVariableModalOk}
-        onCancel={handleVariableModalCancel}
+        onOk={handleVariableModalOk || (() => {})}
+        onCancel={handleVariableModalCancel || (() => {})}
         editingVariable={editingVariable}
         componentType={modalComponentType}
       />

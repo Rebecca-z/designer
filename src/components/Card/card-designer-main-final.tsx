@@ -1195,7 +1195,7 @@ const CardDesigner: React.FC = () => {
               selectedPath={selection.selectedPath}
               onUpdateComponent={handleUpdateSelectedComponent}
               onUpdateCard={handleUpdateCard}
-              variables={variables}
+              variables={variables as VariableItem[]}
               onUpdateVariables={handleUpdateVariables}
               cardVerticalSpacing={safeCardData.dsl.body.vertical_spacing}
               cardPadding={
