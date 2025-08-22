@@ -1191,21 +1191,12 @@ const CardDesigner: React.FC = () => {
           {/* 右侧属性面板 - 支持卡片属性配置 */}
           <div data-panel="property" style={{ width: '300px' }}>
             <PropertyPanel
-              selectedComponent={selection.selectedComponent}
               selectedPath={selection.selectedPath}
               onUpdateComponent={handleUpdateSelectedComponent}
               onUpdateCard={handleUpdateCard}
               variables={variables as VariableItem[]}
               onUpdateVariables={handleUpdateVariables}
               cardVerticalSpacing={safeCardData.dsl.body.vertical_spacing}
-              cardPadding={
-                safeCardData.dsl.body.padding || {
-                  top: 16,
-                  right: 16,
-                  bottom: 16,
-                  left: 16,
-                }
-              }
               headerData={safeCardData.dsl.header} // 只有当header存在时才传递
               cardData={safeCardData}
             />
