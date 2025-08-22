@@ -2,6 +2,8 @@
 import { BgColorsOutlined, SettingOutlined } from '@ant-design/icons';
 import { Form, Select, Tabs, Typography } from 'antd';
 import React, { useCallback, useMemo } from 'react';
+import ComponentNameInput from '../common/ComponentNameInput';
+import { useComponentName } from '../hooks/useComponentName';
 import { BaseComponentProps } from '../types';
 
 const { Text } = Typography;
@@ -85,6 +87,13 @@ const HrComponent: React.FC<BaseComponentProps> = ({
 }) => {
   const [form] = Form.useForm();
 
+  // 使用通用的组件名称编辑Hook
+  const { componentNameInfo, handleNameChange } = useComponentName({
+    selectedComponent,
+    prefix: 'Hr_',
+    handleValueChange,
+  });
+
   // 获取当前边框样式 - 使用useMemo优化
   const currentBorderStyle = useMemo(() => {
     const component = selectedComponent as any as HrData;
@@ -105,6 +114,12 @@ const HrComponent: React.FC<BaseComponentProps> = ({
       <div style={STYLES.section}>
         <div style={STYLES.sectionTitle}>🎨 样式设置</div>
         <Form form={form} layout="vertical">
+          <ComponentNameInput
+            prefix="Hr_"
+            suffix={componentNameInfo.suffix}
+            onChange={handleNameChange}
+          />
+
           <Form.Item label="边框样式">
             <Select
               value={currentBorderStyle}
@@ -136,7 +151,13 @@ const HrComponent: React.FC<BaseComponentProps> = ({
         </Form>
       </div>
     ),
-    [form, currentBorderStyle, handleBorderStyleChange],
+    [
+      form,
+      currentBorderStyle,
+      handleBorderStyleChange,
+      componentNameInfo.suffix,
+      handleNameChange,
+    ],
   );
 
   // 渲染组件属性Tab内容 - 使用useMemo优化

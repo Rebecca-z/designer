@@ -73,8 +73,16 @@ const FormComponent: React.FC<BaseComponentProps> = ({
   // 获取表单信息 - 使用useMemo优化
   const formInfo = useMemo(() => {
     const component = selectedComponent as any as FormData;
+    const fullName = component.name || 'Form_';
+
+    // 提取Form_后面的内容
+    const suffix = fullName.startsWith('Form_')
+      ? fullName.substring(5)
+      : fullName;
+
     return {
-      name: component.name || 'Form',
+      name: fullName,
+      suffix: suffix,
       elementsCount: component.elements?.length || 0,
       id: selectedComponent.id,
     };
@@ -83,9 +91,19 @@ const FormComponent: React.FC<BaseComponentProps> = ({
   // 处理表单名称变化 - 使用useCallback优化
   const handleNameChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      handleValueChange('name', e.target.value);
+      const userInput = e.target.value;
+      // 拼接Form_前缀和用户输入的内容
+      const fullName = `Form_${userInput}`;
+
+      console.log('🔧 表单标识符变更:', {
+        userInput,
+        fullName,
+        componentId: selectedComponent.id,
+      });
+
+      handleValueChange('name', fullName);
     },
-    [handleValueChange],
+    [handleValueChange, selectedComponent.id],
   );
 
   // 渲染表单设置内容 - 使用useMemo优化
@@ -94,18 +112,19 @@ const FormComponent: React.FC<BaseComponentProps> = ({
       <div style={STYLES.section}>
         <div style={STYLES.sectionTitle}>📋 表单设置</div>
         <Form form={form} layout="vertical">
-          <Form.Item label="表单名称">
+          <Form.Item label="表单标识符">
             <Input
-              value={formInfo.name}
+              value={formInfo.suffix}
               onChange={handleNameChange}
-              placeholder="设置表单名称"
+              placeholder="请输入标识符后缀"
+              addonBefore="Form_"
               style={{ width: '100%' }}
             />
           </Form.Item>
         </Form>
       </div>
     ),
-    [form, formInfo.name, handleNameChange],
+    [form, formInfo.suffix, handleNameChange],
   );
 
   // 渲染组件属性Tab内容 - 使用useMemo优化

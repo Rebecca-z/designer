@@ -10,6 +10,8 @@ import RichTextEditor from '../../../RichTextEditor/RichTextEditor';
 import AddVariableModal from '../../../Variable/AddVariableModal';
 import { textComponentStateManager } from '../../../Variable/utils/index';
 import VariableBinding from '../../../Variable/VariableList';
+import ComponentNameInput from '../common/ComponentNameInput';
+import { useComponentName } from '../hooks/useComponentName';
 
 const { Text } = Typography;
 
@@ -100,7 +102,7 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
   lastBoundVariables,
   setLastBoundVariables,
   onUpdateComponent,
-  // handleValueChange: _,
+  handleValueChange,
   getFilteredVariables,
   getVariableDisplayName,
   getVariableKeys,
@@ -114,6 +116,13 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
   VariableManagementPanel,
 }) => {
   const [form] = Form.useForm();
+
+  // 使用通用的组件名称编辑Hook
+  const { componentNameInfo, handleNameChange } = useComponentName({
+    selectedComponent,
+    prefix: 'RichText_',
+    handleValueChange,
+  });
 
   // 获取默认富文本内容 - 使用useCallback优化
   const getDefaultRichTextContent = useCallback(() => {
@@ -406,6 +415,12 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
                     📝 内容设置
                   </div>
                   <Form form={form} layout="vertical">
+                    <ComponentNameInput
+                      prefix="RichText_"
+                      suffix={componentNameInfo.suffix}
+                      onChange={handleNameChange}
+                    />
+
                     <Form.Item label="富文本内容">
                       {/* 内容模式切换 */}
                       <Segmented

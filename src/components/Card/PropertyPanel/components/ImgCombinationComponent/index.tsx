@@ -7,6 +7,8 @@ import AddVariableModal from '../../../Variable/AddVariableModal';
 import VariableBinding from '../../../Variable/VariableList';
 import { multiImageComponentStateManager } from '../../../Variable/utils/index';
 import { getComponentRealPath } from '../../utils';
+import ComponentNameInput from '../common/ComponentNameInput';
+import { useComponentName } from '../hooks/useComponentName';
 import { ImgCombinationComponentProps } from '../types';
 
 const { Text } = Typography;
@@ -481,6 +483,13 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
   const [form] = Form.useForm();
   const [, forceUpdate] = React.useReducer((x) => x + 1, 0);
 
+  // 使用通用的组件名称编辑Hook
+  const { componentNameInfo, handleNameChange } = useComponentName({
+    selectedComponent,
+    prefix: 'ImgCombination_',
+    handleValueChange,
+  });
+
   // 获取最新的组件数据
   const getLatestSelectedComponent = (): any => {
     if (!cardData || !selectedPath) {
@@ -676,6 +685,12 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                 <div style={STYLES.section}>
                   <div style={STYLES.sectionTitle}>📐 布局设置</div>
                   <Form form={form} layout="vertical">
+                    <ComponentNameInput
+                      prefix="ImgCombination_"
+                      suffix={componentNameInfo.suffix}
+                      onChange={handleNameChange}
+                    />
+
                     <Form.Item label="布局模式">
                       {(() => {
                         // 获取当前图片数量
@@ -1438,7 +1453,7 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                             }
                             placeholder="请选择要绑定的变量"
                             label="绑定变量"
-                            addVariableText="+新建图片数组变量"
+                            addVariableText="新建图片数组变量"
                           />
                         </div>
                       )}

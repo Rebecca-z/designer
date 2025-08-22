@@ -18,6 +18,8 @@ import {
 import AddVariableModal from '../../../Variable/AddVariableModal';
 import { textComponentStateManager } from '../../../Variable/utils/index';
 import VariableBinding from '../../../Variable/VariableList';
+import ComponentNameInput from '../common/ComponentNameInput';
+import { useComponentName } from '../hooks/useComponentName';
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -139,6 +141,13 @@ const TextComponent: React.FC<TextComponentProps> = ({
   VariableManagementPanel,
 }) => {
   const [form] = Form.useForm();
+
+  // 使用通用的组件名称编辑Hook
+  const { componentNameInfo, handleNameChange } = useComponentName({
+    selectedComponent,
+    prefix: 'PlainText_',
+    handleValueChange,
+  });
 
   // 获取文本组件信息 - 使用useMemo优化
   const textInfo = useMemo(() => {
@@ -278,6 +287,12 @@ const TextComponent: React.FC<TextComponentProps> = ({
         <div style={STYLES.sectionCard}>
           <div style={STYLES.sectionTitle}>📝 内容设置</div>
           <Form form={form} layout="vertical">
+            <ComponentNameInput
+              prefix="PlainText_"
+              suffix={componentNameInfo.suffix}
+              onChange={handleNameChange}
+            />
+
             <Form.Item label="普通文本内容">
               {/* 内容模式切换 */}
               <Segmented

@@ -7,7 +7,16 @@ import {
   SettingOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons';
-import { Button, Form, Input, Popover, Select, Tabs, Typography } from 'antd';
+import {
+  Button,
+  Form,
+  Input,
+  Popover,
+  Select,
+  Switch,
+  Tabs,
+  Typography,
+} from 'antd';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { BaseComponentProps } from '../types';
 
@@ -94,12 +103,49 @@ const STYLES = {
 
 const ButtonComponent: React.FC<BaseComponentProps> = ({
   selectedComponent,
+  selectedPath,
   topLevelTab,
   setTopLevelTab,
   handleValueChange,
+  onUpdateComponent,
   VariableManagementPanel,
 }) => {
   const [form] = Form.useForm();
+
+  // 检查按钮是否在表单内
+  const isInForm = useMemo(() => {
+    if (!selectedPath) return false;
+
+    // 表单内按钮路径：['dsl', 'body', 'elements', formIndex, 'elements', buttonIndex]
+    // 或在表单内的分栏中：['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', buttonIndex]
+
+    // 检查是否在表单内（至少需要6个路径段）
+    if (selectedPath.length >= 6) {
+      // 简单表单内：['dsl', 'body', 'elements', formIndex, 'elements', buttonIndex]
+      if (selectedPath.length === 6) {
+        return (
+          selectedPath[0] === 'dsl' &&
+          selectedPath[1] === 'body' &&
+          selectedPath[2] === 'elements' &&
+          selectedPath[4] === 'elements'
+        );
+      }
+
+      // 表单内分栏中：['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', buttonIndex]
+      if (selectedPath.length === 10) {
+        return (
+          selectedPath[0] === 'dsl' &&
+          selectedPath[1] === 'body' &&
+          selectedPath[2] === 'elements' &&
+          selectedPath[4] === 'elements' &&
+          selectedPath[6] === 'columns' &&
+          selectedPath[8] === 'elements'
+        );
+      }
+    }
+
+    return false;
+  }, [selectedPath, selectedComponent.id, selectedComponent.tag]);
 
   // 事件相关状态
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -114,6 +160,53 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
   const [formData, setFormData] = useState<FormData>(DEFAULT_FORM_DATA);
 
   const popoverAnchorRef = useRef<HTMLDivElement>(null);
+
+  // 获取按钮名称信息 - 使用useMemo优化
+  const buttonNameInfo = useMemo(() => {
+    const fullName = (selectedComponent as any).name || 'Button_';
+
+    // 提取各种前缀后面的内容，优先处理Button_前缀
+    let suffix = '';
+
+    if (fullName.startsWith('Button_')) {
+      suffix = fullName.substring(7); // Button_
+    } else if (fullName.startsWith('SubmitButton_')) {
+      suffix = fullName.substring(13); // SubmitButton_
+    } else if (fullName.startsWith('CancelButton_')) {
+      suffix = fullName.substring(13); // CancelButton_
+    } else {
+      suffix = fullName; // 没有识别的前缀，使用全名作为后缀
+    }
+
+    console.log('🔍 按钮名称解析:', {
+      fullName,
+      suffix,
+      componentId: selectedComponent.id,
+    });
+
+    return {
+      name: fullName,
+      suffix: suffix,
+    };
+  }, [selectedComponent]);
+
+  // 处理按钮名称变化 - 使用useCallback优化
+  const handleButtonNameChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const userInput = e.target.value;
+      // 拼接Button_前缀和用户输入的内容
+      const fullName = `Button_${userInput}`;
+
+      console.log('🔧 按钮名称变更:', {
+        userInput,
+        fullName,
+        componentId: selectedComponent.id,
+      });
+
+      handleValueChange('name', fullName);
+    },
+    [handleValueChange, selectedComponent.id],
+  );
 
   // 回显事件数据的公共函数
   const loadEventData = useCallback((event: EventItem) => {
@@ -284,7 +377,30 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
         .map((event) => event.behavior)
         .filter(Boolean);
 
-      handleValueChange('behaviors', updatedBehaviors);
+      // 检查当前按钮是否为重置按钮，如果是则不保存behaviors字段
+      const isResetButton =
+        (selectedComponent as any)?.form_action_type === 'reset';
+
+      console.log('🔧 保存事件时检查按钮类型:', {
+        componentId: selectedComponent.id,
+        formActionType: (selectedComponent as any)?.form_action_type,
+        isResetButton,
+        behaviorsCount: updatedBehaviors.length,
+      });
+
+      if (!isResetButton) {
+        // 只有非重置按钮且有behaviors时才保存
+        if (updatedBehaviors.length > 0) {
+          handleValueChange('behaviors', updatedBehaviors);
+        } else {
+          // 如果没有behaviors，删除该字段
+          handleValueChange('behaviors', undefined);
+        }
+      } else {
+        // 重置按钮不保存behaviors字段
+        console.log('⚠️ 重置按钮不保存behaviors字段');
+        handleValueChange('behaviors', undefined);
+      }
 
       return updatedEvents;
     });
@@ -508,6 +624,16 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
                 <div style={STYLES.section}>
                   <div style={STYLES.sectionTitle}>📝 内容设置</div>
                   <Form form={form} layout="vertical">
+                    <Form.Item label="按钮标识符">
+                      <Input
+                        value={buttonNameInfo.suffix}
+                        onChange={handleButtonNameChange}
+                        placeholder="请输入标识符后缀"
+                        addonBefore="Button_"
+                        style={{ width: '100%' }}
+                      />
+                    </Form.Item>
+
                     <Form.Item label="按钮文案">
                       <Input
                         value={
@@ -567,6 +693,139 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
                     </Form.Item>
                   </Form>
                 </div>
+
+                {/* 表单按钮配置 - 仅在表单内显示 */}
+                {isInForm && (
+                  <div style={STYLES.section}>
+                    <div style={STYLES.sectionTitle}>📋 表单按钮设置</div>
+                    <Form form={form} layout="vertical">
+                      <Form.Item>
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '12px',
+                          }}
+                        >
+                          {/* 提交按钮开关 */}
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              padding: '8px 0',
+                            }}
+                          >
+                            <Text>设置为&quot;提交&quot;按钮</Text>
+                            <Switch
+                              checked={
+                                (selectedComponent as any)?.form_action_type ===
+                                'submit'
+                              }
+                              onChange={(checked) => {
+                                console.log('🔧 提交按钮开关变更:', {
+                                  checked,
+                                  currentActionType: (selectedComponent as any)
+                                    .form_action_type,
+                                  componentId: selectedComponent.id,
+                                });
+
+                                if (checked) {
+                                  // 设置为提交按钮，需要初始化behaviors字段
+                                  const updatedComponent = {
+                                    ...selectedComponent,
+                                  };
+                                  updatedComponent.form_action_type = 'submit';
+
+                                  // 如果当前没有behaviors字段，初始化为空数组
+                                  if (!(updatedComponent as any).behaviors) {
+                                    (updatedComponent as any).behaviors = [];
+                                  }
+
+                                  console.log(
+                                    '🔧 设置提交按钮，初始化behaviors字段:',
+                                    {
+                                      componentId: selectedComponent.id,
+                                      formActionType: 'submit',
+                                      hasBehaviors: !!(updatedComponent as any)
+                                        .behaviors,
+                                    },
+                                  );
+
+                                  onUpdateComponent(updatedComponent);
+                                } else {
+                                  // 如果关闭提交按钮，清除form_action_type，但保留behaviors字段（如果有的话）
+                                  const updatedComponent = {
+                                    ...selectedComponent,
+                                  };
+                                  delete updatedComponent.form_action_type;
+
+                                  // 如果当前没有behaviors字段，初始化为空数组（普通按钮也可以有事件）
+                                  if (!(updatedComponent as any).behaviors) {
+                                    (updatedComponent as any).behaviors = [];
+                                  }
+
+                                  console.log(
+                                    '🔧 关闭提交按钮，转为普通按钮:',
+                                    {
+                                      componentId: selectedComponent.id,
+                                      hasBehaviors: !!(updatedComponent as any)
+                                        .behaviors,
+                                    },
+                                  );
+
+                                  onUpdateComponent(updatedComponent);
+                                }
+                              }}
+                            />
+                          </div>
+
+                          {/* 重置按钮开关 */}
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              padding: '8px 0',
+                            }}
+                          >
+                            <Text>设置为&quot;重置&quot;按钮</Text>
+                            <Switch
+                              checked={
+                                (selectedComponent as any)?.form_action_type ===
+                                'reset'
+                              }
+                              onChange={(checked) => {
+                                console.log('🔧 重置按钮开关变更:', {
+                                  checked,
+                                  currentActionType: (selectedComponent as any)
+                                    .form_action_type,
+                                  componentId: selectedComponent.id,
+                                });
+
+                                if (checked) {
+                                  // 重置按钮不需要behaviors字段，通过onUpdateComponent直接删除
+                                  const updatedComponent = {
+                                    ...selectedComponent,
+                                  };
+                                  delete updatedComponent.behaviors;
+                                  updatedComponent.form_action_type = 'reset';
+                                  onUpdateComponent(updatedComponent);
+                                } else {
+                                  // 如果关闭重置按钮，清除form_action_type
+                                  handleValueChange(
+                                    'form_action_type',
+                                    undefined,
+                                  );
+                                }
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </Form.Item>
+                    </Form>
+                  </div>
+                )}
               </div>
             ),
           },

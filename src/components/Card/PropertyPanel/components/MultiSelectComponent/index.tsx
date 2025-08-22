@@ -23,6 +23,8 @@ import {
   multiSelectComponentStateManager,
   optionEditStateManager,
 } from '../../../Variable/utils/index';
+import ComponentNameInput from '../common/ComponentNameInput';
+import { useComponentName } from '../hooks/useComponentName';
 import { MultiSelectComponentProps } from '../types';
 
 const { Text } = Typography;
@@ -127,6 +129,13 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
     modalComponentType,
     VariableManagementPanel,
   }) => {
+    // 使用通用的组件名称编辑Hook
+    const { componentNameInfo, handleNameChange } = useComponentName({
+      selectedComponent,
+      prefix: 'MultiSelectStatic_',
+      handleValueChange,
+    });
+
     // 检查组件是否嵌套在表单中
     const isNestedInForm = useMemo(() => {
       if (!selectedPath) return false;
@@ -894,6 +903,34 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
                     <Text style={{ fontSize: '12px', color: '#0369a1' }}>
                       🎯 当前选中：下拉多选组件
                     </Text>
+                  </div>
+
+                  {/* 组件设置 - 始终显示 */}
+                  <div
+                    style={{
+                      marginBottom: '16px',
+                      background: '#fff',
+                      borderRadius: 6,
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                      padding: 16,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        marginBottom: 8,
+                        fontSize: 15,
+                      }}
+                    >
+                      🏷️ 组件设置
+                    </div>
+                    <Form form={form} layout="vertical">
+                      <ComponentNameInput
+                        prefix="MultiSelectStatic_"
+                        suffix={componentNameInfo.suffix}
+                        onChange={handleNameChange}
+                      />
+                    </Form>
                   </div>
 
                   {/* 基础设置 - 只有在表单中才显示 */}

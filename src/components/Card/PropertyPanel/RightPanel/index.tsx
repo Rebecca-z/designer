@@ -329,6 +329,28 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
             ...selectedComponent,
             [key]: value,
           };
+
+          // 特殊处理：当按钮设置为重置类型时，清除behaviors字段
+          if (
+            key === 'form_action_type' &&
+            value === 'reset' &&
+            selectedComponent.tag === 'button'
+          ) {
+            console.log('🔧 设置重置按钮，清除behaviors字段:', {
+              componentId: selectedComponent.id,
+              formActionType: value,
+            });
+            // 删除behaviors字段
+            delete (updatedComponent as any).behaviors;
+          }
+
+          // 特殊处理：当behaviors被设置为undefined时，删除该字段
+          if (key === 'behaviors' && value === undefined) {
+            delete (updatedComponent as any).behaviors;
+          }
+
+          // 特殊处理：当按钮从重置类型切换到其他类型时，不自动初始化behaviors数组
+          // behaviors字段只在实际需要时创建
         }
 
         onUpdateComponent(updatedComponent);

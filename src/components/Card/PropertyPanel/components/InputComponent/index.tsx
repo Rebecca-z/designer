@@ -5,6 +5,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import AddVariableModal from '../../../Variable/AddVariableModal';
 import VariableBinding from '../../../Variable/VariableList';
 import { inputComponentStateManager } from '../../../Variable/utils';
+import ComponentNameInput from '../common/ComponentNameInput';
+import { useComponentName } from '../hooks/useComponentName';
 import { InputComponentProps } from '../types';
 
 const { Text } = Typography;
@@ -94,6 +96,13 @@ const InputComponent: React.FC<InputComponentProps> = ({
   modalComponentType,
   VariableManagementPanel,
 }) => {
+  // 使用通用的组件名称编辑Hook
+  const { componentNameInfo, handleNameChange } = useComponentName({
+    selectedComponent,
+    prefix: 'Input_',
+    handleValueChange,
+  });
+
   // 检查组件是否嵌套在表单中
   const isNestedInForm = useMemo(() => {
     if (!selectedPath) return false;
@@ -401,7 +410,24 @@ const InputComponent: React.FC<InputComponentProps> = ({
     [selectedComponent, onUpdateComponent],
   );
 
-  // 渲染基础设置内容 - 使用useMemo优化
+  // 渲染组件名称设置内容 - 始终显示
+  const componentNameContent = useMemo(
+    () => (
+      <div style={STYLES.section}>
+        <div style={STYLES.sectionTitle}>🏷️ 组件设置</div>
+        <Form form={form} layout="vertical">
+          <ComponentNameInput
+            prefix="Input_"
+            suffix={componentNameInfo.suffix}
+            onChange={handleNameChange}
+          />
+        </Form>
+      </div>
+    ),
+    [form, componentNameInfo.suffix, handleNameChange],
+  );
+
+  // 渲染基础设置内容 - 只在表单内显示
   const basicSettingsContent = useMemo(
     () => (
       <div style={STYLES.section}>
@@ -430,7 +456,14 @@ const InputComponent: React.FC<InputComponentProps> = ({
         </Form>
       </div>
     ),
-    [form, inputInfo.required, handleValueChange, isNestedInForm],
+    [
+      form,
+      inputInfo.required,
+      handleValueChange,
+      isNestedInForm,
+      componentNameInfo.suffix,
+      handleNameChange,
+    ],
   );
 
   // 渲染占位符设置内容 - 使用useMemo优化
@@ -556,12 +589,14 @@ const InputComponent: React.FC<InputComponentProps> = ({
             🎯 当前选中：输入框组件
           </Text>
         </div>
+        {componentNameContent}
         {isNestedInForm && basicSettingsContent}
         {placeholderSettingsContent}
         {defaultValueSettingsContent}
       </div>
     ),
     [
+      componentNameContent,
       isNestedInForm,
       basicSettingsContent,
       placeholderSettingsContent,
@@ -573,8 +608,8 @@ const InputComponent: React.FC<InputComponentProps> = ({
     <div style={STYLES.container}>
       <AddVariableModal
         visible={isVariableModalVisible}
-        onOk={handleVariableModalOk}
-        onCancel={handleVariableModalCancel}
+        onOk={handleVariableModalOk || (() => {})}
+        onCancel={handleVariableModalCancel || (() => {})}
         editingVariable={editingVariable}
         componentType={
           isVariableModalFromVariablesTab

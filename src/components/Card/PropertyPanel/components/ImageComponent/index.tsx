@@ -6,6 +6,8 @@ import ImageUpload from '../../../ImageUpload';
 import AddVariableModal from '../../../Variable/AddVariableModal';
 import { imageComponentStateManager } from '../../../Variable/utils/index';
 import VariableBinding from '../../../Variable/VariableList';
+import ComponentNameInput from '../common/ComponentNameInput';
+import { useComponentName } from '../hooks/useComponentName';
 import { ImageComponentProps } from '../types';
 
 const { Text } = Typography;
@@ -102,6 +104,13 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
   VariableManagementPanel,
 }) => {
   const [form] = Form.useForm();
+
+  // 使用通用的组件名称编辑Hook
+  const { componentNameInfo, handleNameChange } = useComponentName({
+    selectedComponent,
+    prefix: 'Img_',
+    handleValueChange,
+  });
 
   // 获取图片信息 - 使用useMemo优化
   const imageInfo = useMemo(() => {
@@ -337,6 +346,12 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
       <div style={STYLES.section}>
         <div style={STYLES.sectionTitle}>🎨 样式设置</div>
         <Form form={form} layout="vertical">
+          <ComponentNameInput
+            prefix="Img_"
+            suffix={componentNameInfo.suffix}
+            onChange={handleNameChange}
+          />
+
           <Form.Item label="裁剪方式">
             <Select
               value={imageInfo.cropMode}
@@ -353,7 +368,13 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
         </Form>
       </div>
     ),
-    [form, imageInfo.cropMode, handleValueChange],
+    [
+      form,
+      imageInfo.cropMode,
+      handleValueChange,
+      componentNameInfo.suffix,
+      handleNameChange,
+    ],
   );
 
   // 渲染组件属性Tab内容 - 使用useMemo优化

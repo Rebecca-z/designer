@@ -801,7 +801,7 @@ export const createDefaultComponent = (type: string): ComponentType => {
                   {
                     id: generateId(),
                     tag: 'button',
-                    name: `SubmitButton_${generateId()}`,
+                    name: `Button_${generateId()}`,
                     text: {
                       tag: 'plain_text',
                       content: '提交',
@@ -819,7 +819,7 @@ export const createDefaultComponent = (type: string): ComponentType => {
                   {
                     id: generateId(),
                     tag: 'button',
-                    name: `CancelButton_${generateId()}`,
+                    name: `Button_${generateId()}`,
                     text: {
                       tag: 'plain_text',
                       content: '取消',
@@ -831,7 +831,7 @@ export const createDefaultComponent = (type: string): ComponentType => {
                     style: {
                       color: 'black', // 默认黑色
                     },
-                    behaviors: [],
+                    // 重置按钮不包含behaviors字段
                   },
                 ],
                 style: { flex: 1 }, // 移动到style.flex字段
@@ -869,6 +869,7 @@ export const createDefaultComponent = (type: string): ComponentType => {
       return {
         id: generateId(),
         tag: 'plain_text',
+        name: `PlainText_${generateId()}`, // 添加name字段
         content: '这是一段普通文本，以默认的字号、字色、行高、行数展示',
         style: {
           fontSize: 14, // 默认字体大小
@@ -958,6 +959,7 @@ export const createDefaultComponent = (type: string): ComponentType => {
       return {
         tag: 'hr',
         id: generateId(),
+        name: `Hr_${generateId()}`, // 添加name字段
         style: {
           borderStyle: 'solid',
         },
@@ -967,6 +969,7 @@ export const createDefaultComponent = (type: string): ComponentType => {
       return {
         id: generateId(),
         tag: 'img',
+        name: `Img_${generateId()}`, // 添加name字段
         img_url: '/demo.png', // 使用public目录下的demo.png文件
         i18n_img_url: {
           'en-US': '/demo.png',
@@ -980,6 +983,7 @@ export const createDefaultComponent = (type: string): ComponentType => {
       return {
         id: generateId(),
         tag: 'img_combination',
+        name: `ImgCombination_${generateId()}`, // 添加name字段
         combination_mode: 'triple', // 保持原有的triple模式，不需要简化
         img_list: [
           {
@@ -1038,15 +1042,14 @@ export const createDefaultComponent = (type: string): ComponentType => {
         style: {
           color: 'blue', // 默认蓝色
         },
-        // 默认空的behaviors数组
-        behaviors: [],
+        // 不默认创建behaviors字段，只在需要时添加
       } as ComponentType;
 
     case 'select_static':
       return {
         id: generateId(),
         tag: 'select_static',
-        name: `Select_${generateId()}`,
+        name: `SelectStatic_${generateId()}`,
         required: false,
         options: [
           {
@@ -1074,7 +1077,7 @@ export const createDefaultComponent = (type: string): ComponentType => {
       return {
         id: generateId(),
         tag: 'multi_select_static',
-        name: `MultiSelect_${generateId()}`,
+        name: `MultiSelectStatic_${generateId()}`,
         required: false,
         options: [
           {
@@ -1444,6 +1447,7 @@ export const convertToTargetFormat = (data: any): any => {
         break;
 
       case 'plain_text':
+        converted.name = component.name; // 添加name字段
         converted.content = component.content;
         if (component.i18n_content) {
           converted.i18n_content = component.i18n_content;
@@ -1470,6 +1474,7 @@ export const convertToTargetFormat = (data: any): any => {
 
       case 'rich_text': {
         // 导入时处理富文本格式转换
+        converted.name = component.name; // 添加name字段
         const content = component.content;
         if (typeof content === 'string') {
           // 如果是HTML字符串，转换为JSON格式
@@ -1586,13 +1591,19 @@ export const convertToTargetFormat = (data: any): any => {
       }
 
       case 'img':
+        converted.name = component.name; // 添加name字段
         converted.img_url = component.img_url;
         if (component.i18n_img_url) {
           converted.i18n_img_url = component.i18n_img_url;
         }
+        // 处理样式字段
+        if (component.style) {
+          converted.style = { ...component.style };
+        }
         break;
 
       case 'img_combination':
+        converted.name = component.name; // 添加name字段
         converted.combination_mode = component.combination_mode;
         converted.img_list = component.img_list;
         break;
@@ -1610,7 +1621,8 @@ export const convertToTargetFormat = (data: any): any => {
         if (component.form_action_type) {
           converted.form_action_type = component.form_action_type;
         }
-        if (component.behaviors) {
+        // 只有非重置按钮才包含behaviors字段
+        if (component.behaviors && component.form_action_type !== 'reset') {
           converted.behaviors = component.behaviors;
         }
         break;
@@ -1623,7 +1635,11 @@ export const convertToTargetFormat = (data: any): any => {
         break;
 
       case 'hr':
-        // 分割线组件没有额外字段
+        converted.name = component.name; // 添加name字段
+        // 处理样式字段
+        if (component.style) {
+          converted.style = { ...component.style };
+        }
         break;
 
       default:
