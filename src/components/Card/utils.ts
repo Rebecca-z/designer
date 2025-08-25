@@ -1,10 +1,6 @@
 // card-designer-utils.ts - 更新的工具函数文件
 
-import {
-  ComponentType,
-  DesignData,
-  VariableItem,
-} from './card-designer-types-updated';
+import { ComponentType, DesignData, VariableItem } from './type';
 
 import { normalizeRichTextContent } from './RichTextEditor/RichTextUtils';
 

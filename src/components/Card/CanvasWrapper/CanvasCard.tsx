@@ -4,13 +4,9 @@ import { DeleteOutlined, MoreOutlined } from '@ant-design/icons';
 import { Button, Dropdown, message } from 'antd';
 import React, { useCallback, useMemo, useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
-import ComponentRenderer from './card-designer-components';
-import {
-  ComponentType,
-  DragItem,
-  VariableItem,
-} from './card-designer-types-updated';
-import { createDefaultComponent } from './card-designer-utils';
+import { ComponentType, DragItem, VariableItem } from '../type';
+import { createDefaultComponent } from '../utils';
+import ComponentRenderer from './Component';
 import ErrorBoundary from './ErrorBoundary';
 
 // 拖拽排序包装器组件
@@ -413,11 +409,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       if (newPath.length >= 4 && typeof newPath[3] === 'number') {
         const rootIndex = newPath[3] as number;
         if (rootIndex >= elements.length) {
-          console.warn(
-            `⚠️ 根级别索引 ${rootIndex} 超出范围，调整为 ${
-              elements.length - 1
-            }`,
-          );
           newPath[3] = Math.max(0, elements.length - 1);
         }
       }
@@ -440,11 +431,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           ) {
             const columns = rootComponent.columns;
             if (columnIndex >= columns.length) {
-              console.warn(
-                `⚠️ 分栏索引 ${columnIndex} 超出范围，调整为 ${
-                  columns.length - 1
-                }`,
-              );
               newPath[5] = Math.max(0, columns.length - 1);
             }
           }
@@ -500,18 +486,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       for (let i = startIndex; i < path.length; i++) {
         const key = path[i];
         const nextKey = path[i + 1];
-        console.log(`🔍 路径解析步骤 ${i}:`, {
-          key,
-          keyType: typeof key,
-          currentType: current ? typeof current : 'undefined',
-          isArray: Array.isArray(current),
-          hasElements: current && current.elements ? 'yes' : 'no',
-          currentKeys:
-            current && typeof current === 'object'
-              ? Object.keys(current)
-              : 'N/A',
-          nextKey,
-        });
 
         if (key === 'elements') {
           // 1. 如果已经到达最后，直接返回
@@ -543,17 +517,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
             i++;
             continue;
           }
-          console.error('❌ 无效的elements数组索引导航:', {
-            current: current ? 'exists' : 'undefined',
-            isArray: Array.isArray(current),
-            hasElements: current && current.elements ? 'yes' : 'no',
-            nextKey,
-            arrayLength: Array.isArray(current) ? current.length : 'N/A',
-            elementsArrayLength:
-              current && current.elements && Array.isArray(current.elements)
-                ? current.elements.length
-                : 'N/A',
-          });
+
           return null;
         } else if (key === 'columns') {
           const columnIndex = path[i + 1] as number;
@@ -567,32 +531,12 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           ) {
             current = current.columns[columnIndex].elements;
             i += 2; // 跳过下两个索引
-            console.log(
-              `✅ 导航到分栏 ${columnIndex} 的elements:`,
-              current.length,
-            );
           } else {
-            console.error('❌ 尝试在非分栏组件上访问columns1:', {
-              currentTag: current ? current.tag : 'undefined',
-              currentId: current ? current.id : 'undefined',
-              columnIndex,
-              expectedTag: 'column_set',
-              hasColumns: current && current.columns ? 'yes' : 'no',
-              targetColumnExists:
-                current && current.columns && current.columns[columnIndex]
-                  ? 'yes'
-                  : 'no',
-            });
             return null;
           }
         } else if (typeof key === 'number') {
           if (current && Array.isArray(current) && current[key]) {
             current = current[key];
-            console.log(`✅ 导航到数组索引 ${key}:`, {
-              nextComponent: current
-                ? { id: current.id, tag: current.tag }
-                : 'undefined',
-            });
           } else {
             console.error('❌ 无效的数字索引导航:', {
               current: current ? 'exists' : 'undefined',
@@ -605,13 +549,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         } else {
           if (current && current[key] !== undefined) {
             current = current[key];
-            console.log(`✅ 导航到属性 ${key}:`, {
-              nextValue: current
-                ? typeof current === 'object'
-                  ? { id: current.id, tag: current.tag }
-                  : current
-                : 'undefined',
-            });
           } else {
             console.error('❌ 无效的属性导航:', {
               current: current ? 'exists' : 'undefined',
@@ -687,16 +624,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         // 移动到画布根节点：删除required字段
         console.log('🎯 检测到移动到画布根节点，准备删除 required 字段');
         if ((cleanedComponent as any).required !== undefined) {
-          const beforeValue = (cleanedComponent as any).required;
           delete (cleanedComponent as any).required;
-          console.log('🧹 ✅ 成功删除 required 字段:', {
-            componentId: component.id,
-            componentTag: component.tag,
-            beforeValue,
-            afterHasRequired: (cleanedComponent as any).required !== undefined,
-            targetPath,
-            action: 'delete required field',
-          });
         } else {
           console.log('ℹ️ 组件没有 required 字段，无需删除');
         }
@@ -721,14 +649,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         });
       }
 
-      console.log('🔍 cleanRequiredFieldBasedOnTarget 执行完成:', {
-        componentId: component.id,
-        originalHasRequired: (component as any).required !== undefined,
-        cleanedHasRequired: (cleanedComponent as any).required !== undefined,
-        originalValue: (component as any).required,
-        cleanedValue: (cleanedComponent as any).required,
-      });
-
       return cleanedComponent;
     },
     [],
@@ -750,18 +670,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         path,
       );
 
-      console.log('🎯 添加组件到路径:', {
-        path,
-        pathLength: path.length,
-        pathDetails: path.map((item, index) => ({
-          index,
-          item,
-          type: typeof item,
-        })),
-        newComponent: { id: cleanedComponent.id, tag: cleanedComponent.tag },
-        insertIndex,
-      });
-
       // 如果是根级别（直接添加到卡片）
       if (path.length === 3 && path[2] === 'elements') {
         if (insertIndex !== undefined) {
@@ -769,21 +677,8 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         } else {
           newElements.push(cleanedComponent);
         }
-        console.log('✅ 根级别组件添加成功:', {
-          componentId: cleanedComponent.id,
-          componentTag: cleanedComponent.tag,
-          insertIndex,
-          finalLength: newElements.length,
-        });
         return newElements;
       }
-
-      // ✅ 修复：重新设计路径导航逻辑，避免current被错误修改
-      console.log('🚀 开始路径导航 (修复版):', {
-        path,
-        pathLength: path.length,
-        startIndex: 3,
-      });
 
       // 使用递归函数来正确导航路径
       const navigateAndAdd = (
@@ -805,15 +700,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
 
         // 如果路径为空，说明已经到达目标位置，直接添加组件
         if (remainingPath.length === 0) {
-          console.log('✅ 路径导航完成，到达目标位置，准备添加组件:', {
-            targetType: typeof target,
-            isArray: Array.isArray(target),
-            targetLength: Array.isArray(target) ? target.length : 'N/A',
-            insertIndex,
-            componentId: componentToAdd?.id,
-            componentTag: componentToAdd?.tag,
-          });
-
           // 如果目标是数组，直接添加组件
           if (Array.isArray(target) && componentToAdd) {
             if (insertIndex !== undefined) {
@@ -822,12 +708,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
               target.push(componentToAdd);
             }
 
-            console.log('✅ 组件添加成功 (数组目标):', {
-              componentId: componentToAdd?.id,
-              componentTag: componentToAdd?.tag,
-              insertIndex,
-              arrayLength: target.length,
-            });
             return true;
           }
 
@@ -843,12 +723,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
               target.elements.push(componentToAdd);
             }
 
-            console.log('✅ 组件添加成功 (对象elements):', {
-              componentId: componentToAdd?.id,
-              componentTag: componentToAdd?.tag,
-              insertIndex,
-              elementsLength: target.elements.length,
-            });
             return true;
           }
 
@@ -863,32 +737,8 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         const key = remainingPath[0];
         const nextPath = remainingPath.slice(1);
 
-        console.log(`🔍 路径导航步骤 ${depth}:`, {
-          key,
-          keyType: typeof key,
-          targetType: target ? typeof target : 'undefined',
-          isArray: Array.isArray(target),
-          targetState: target
-            ? {
-                tag: target.tag || 'no tag',
-                id: target.id || 'no id',
-                hasElements: target.elements ? 'yes' : 'no',
-                hasColumns: target.columns ? 'yes' : 'no',
-              }
-            : 'null/undefined',
-          remainingPath,
-          nextPath,
-          originalTargetPath,
-        });
-
         // 处理 'columns' 路径段
         if (key === 'columns') {
-          console.log('🔍 处理columns路径段:', {
-            targetTag: target ? target.tag : 'undefined',
-            targetId: target ? target.id : 'undefined',
-            depth,
-          });
-
           // 检查当前对象是否是分栏容器
           if (
             target &&
@@ -910,11 +760,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                 !targetColumn.elements ||
                 !Array.isArray(targetColumn.elements)
               ) {
-                console.warn('⚠️ 分栏列缺少elements数组，自动创建:', {
-                  columnIndex,
-                  columnId: targetColumn.id,
-                  hasElements: targetColumn.elements ? 'yes' : 'no',
-                });
                 targetColumn.elements = [];
               }
 
@@ -936,31 +781,13 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
               return false;
             }
           } else {
-            // ✅ 修复：当路径指向错误的组件类型时，尝试智能修正
-            console.warn('⚠️ 路径指向了非分栏组件，尝试智能修正:', {
-              targetTag: target ? target.tag : 'undefined',
-              targetId: target ? target.id : 'undefined',
-              expectedTag: 'column_set',
-              hasColumns: target && target.columns ? 'yes' : 'no',
-              depth,
-            });
-
             // 如果当前目标是数组（根elements），尝试查找分栏容器
             if (Array.isArray(target)) {
-              console.log('🔍 在根elements数组中查找分栏容器');
-
               const columnSetIndex = target.findIndex(
                 (comp) => comp && comp.tag === 'column_set',
               );
 
               if (columnSetIndex !== -1) {
-                const columnSet = target[columnSetIndex];
-                console.log('✅ 找到分栏容器，修正路径:', {
-                  columnSetIndex,
-                  columnSetId: columnSet.id,
-                  originalPath: remainingPath,
-                });
-
                 // 重新构建路径：先导航到分栏容器，然后处理columns
                 const correctedPath = [columnSetIndex, 'columns', ...nextPath];
                 return navigateAndAdd(
@@ -979,10 +806,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
 
             // ✅ 修复：如果当前目标是组件对象，使用rootElements进行全局查找
             if (target && typeof target === 'object' && target.tag) {
-              console.log(
-                '🔍 当前目标是组件对象，使用rootElements进行全局查找',
-              );
-
               if (target.tag === 'form') {
                 console.warn('⚠️ 路径指向了表单容器，但期望分栏容器');
 
@@ -993,13 +816,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                   );
 
                   if (columnSetIndex !== -1) {
-                    const columnSet = rootElements[columnSetIndex];
-                    console.log('✅ 在全局找到分栏容器，修正路径:', {
-                      columnSetIndex,
-                      columnSetId: columnSet.id,
-                      originalPath: remainingPath,
-                    });
-
                     // 重新构建路径：先导航到分栏容器，然后处理columns
                     const correctedPath = [
                       columnSetIndex,
@@ -1032,21 +848,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
 
         // 处理 'elements' 路径段
         if (key === 'elements') {
-          console.log('🔍 处理elements路径段:', {
-            targetTag: target ? target.tag : 'undefined',
-            targetId: target ? target.id : 'undefined',
-            depth,
-            targetDetails: target
-              ? {
-                  id: target.id,
-                  tag: target.tag,
-                  name: target.name || 'no name',
-                  hasElements: target.elements ? 'yes' : 'no',
-                  hasColumns: target.columns ? 'yes' : 'no',
-                }
-              : 'null/undefined',
-          });
-
           // 如果这是最后一个路径段，直接在这里添加组件
           if (nextPath.length === 0) {
             if (Array.isArray(target)) {
@@ -1056,12 +857,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
               } else {
                 target.push(componentToAdd);
               }
-              console.log('✅ 组件添加成功 (elements数组):', {
-                componentId: componentToAdd?.id,
-                componentTag: componentToAdd?.tag,
-                insertIndex,
-                arrayLength: target.length,
-              });
               return true;
             } else if (
               target &&
@@ -1074,12 +869,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
               } else {
                 target.elements.push(componentToAdd);
               }
-              console.log('✅ 组件添加成功 (组件elements):', {
-                componentId: componentToAdd?.id,
-                componentTag: componentToAdd?.tag,
-                insertIndex,
-                arrayLength: target.elements.length,
-              });
               return true;
             } else {
               // 自动创建elements数组
@@ -1087,12 +876,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                 target &&
                 (target.tag === 'form' || target.tag === 'column_set')
               ) {
-                console.warn('⚠️ 容器组件缺少elements数组，自动创建:', {
-                  componentId: target.id,
-                  componentTag: target.tag,
-                  hasElements: target.elements ? 'yes' : 'no',
-                });
-
                 if (!target.elements || !Array.isArray(target.elements)) {
                   target.elements = [];
                 }
@@ -1148,14 +931,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                 nextKey >= 0 &&
                 nextKey < target.length
               ) {
-                console.log('✅ 数字索引有效，继续导航:', {
-                  nextKey,
-                  targetLength: target.length,
-                  targetItem: target[nextKey]
-                    ? { id: target[nextKey].id, tag: target[nextKey].tag }
-                    : 'undefined',
-                  nextPath: nextPath.slice(1),
-                });
                 return navigateAndAdd(
                   target[nextKey],
                   nextPath.slice(1),
@@ -1181,41 +956,16 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                     target.push(componentToAdd);
                   }
 
-                  console.log('✅ 组件添加成功 (空数组):', {
-                    componentId: componentToAdd?.id,
-                    componentTag: componentToAdd?.tag,
-                    insertIndex,
-                    arrayLength: target.length,
-                  });
                   return true;
                 }
 
                 // ✅ 修复：当目标不是数组时，尝试智能处理
                 if (!Array.isArray(target) && target && target.tag === 'form') {
-                  console.log('✅ 目标不是数组而是表单组件，尝试智能处理:', {
-                    targetTag: target.tag,
-                    targetId: target.id,
-                    hasElements: target.elements ? 'yes' : 'no',
-                    elementsLength: target.elements
-                      ? target.elements.length
-                      : 'N/A',
-                    nextKey,
-                    depth,
-                  });
-
                   // 如果表单有elements数组，尝试访问指定索引
                   if (target.elements && Array.isArray(target.elements)) {
                     // ✅ 修复：如果索引超出范围，尝试智能修正
                     let correctedIndex = nextKey;
                     if (nextKey >= target.elements.length) {
-                      console.warn(
-                        '⚠️ 表单elements数组索引超出范围，尝试修正:',
-                        {
-                          originalIndex: nextKey,
-                          elementsLength: target.elements.length,
-                          correctedIndex: 0,
-                        },
-                      );
                       correctedIndex = 0;
                     }
 
@@ -1223,17 +973,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                       correctedIndex >= 0 &&
                       correctedIndex < target.elements.length
                     ) {
-                      console.log('✅ 从表单elements数组中获取组件:', {
-                        originalIndex: nextKey,
-                        correctedIndex,
-                        elementsLength: target.elements.length,
-                        targetItem: target.elements[correctedIndex]
-                          ? {
-                              id: target.elements[correctedIndex].id,
-                              tag: target.elements[correctedIndex].tag,
-                            }
-                          : 'undefined',
-                      });
                       return navigateAndAdd(
                         target.elements[correctedIndex],
                         nextPath.slice(1),
@@ -1278,24 +1017,8 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                 return false;
               }
             } else if (nextKey === 'elements') {
-              console.log('🔍 处理elements路径段:', {
-                targetTag: target ? target.tag : 'undefined',
-                targetId: target ? target.id : 'undefined',
-                depth,
-                nextPath,
-                hasElements: target && target.elements ? 'yes' : 'no',
-                elementsIsArray:
-                  target && target.elements
-                    ? Array.isArray(target.elements)
-                    : 'N/A',
-              });
-
               // 下一个也是elements，说明这是表单容器的结构
               if (target && target.elements && Array.isArray(target.elements)) {
-                console.log('✅ 找到表单elements数组，继续导航:', {
-                  elementsLength: target.elements.length,
-                  nextPath: nextPath.slice(1),
-                });
                 return navigateAndAdd(
                   target.elements,
                   nextPath.slice(1),
@@ -1307,19 +1030,9 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
               } else {
                 // ✅ 修复：智能修正表单容器路径
                 if (target && target.tag === 'form') {
-                  console.warn('⚠️ 表单组件缺少elements数组，自动创建:', {
-                    componentId: target.id,
-                    componentTag: target.tag,
-                  });
-
                   if (!target.elements || !Array.isArray(target.elements)) {
                     target.elements = [];
                   }
-
-                  console.log('✅ 创建表单elements数组后继续导航:', {
-                    elementsLength: target.elements.length,
-                    nextPath: nextPath.slice(1),
-                  });
 
                   return navigateAndAdd(
                     target.elements,
@@ -1330,35 +1043,13 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                     componentToAdd,
                   );
                 } else {
-                  // ✅ 修复：当路径指向错误的组件类型时，尝试智能修正
-                  console.warn('⚠️ 路径指向了非容器组件，尝试智能修正:', {
-                    targetTag: target ? target.tag : 'undefined',
-                    targetId: target ? target.id : 'undefined',
-                    depth,
-                    nextPath,
-                  });
-
                   // 如果当前目标是数组，说明我们已经到达了elements数组，直接在这里添加组件
                   if (Array.isArray(target)) {
-                    console.log('✅ 已到达elements数组，直接添加组件:', {
-                      targetLength: target.length,
-                      insertIndex,
-                      componentId: componentToAdd?.id,
-                      componentTag: componentToAdd?.tag,
-                    });
-
                     if (insertIndex !== undefined) {
                       target.splice(insertIndex, 0, componentToAdd);
                     } else {
                       target.push(componentToAdd);
                     }
-
-                    console.log('✅ 组件添加成功 (elements数组):', {
-                      componentId: componentToAdd?.id,
-                      componentTag: componentToAdd?.tag,
-                      insertIndex,
-                      arrayLength: target.length,
-                    });
                     return true;
                   }
 
@@ -1368,11 +1059,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                     target.tag === 'form' &&
                     (!target.elements || target.elements.length === 0)
                   ) {
-                    console.log('✅ 表单elements数组为空，创建分栏容器:', {
-                      formId: target.id,
-                      formTag: target.tag,
-                    });
-
                     // 创建分栏容器
                     const columnSetComponent = {
                       id: `column_set_${Date.now()}_${Math.random()
@@ -1416,12 +1102,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                       target.elements = [];
                     }
                     target.elements.push(columnSetComponent);
-
-                    console.log('✅ 分栏容器创建成功:', {
-                      columnSetId: columnSetComponent.id,
-                      columnsCount: columnSetComponent.columns.length,
-                      formElementsLength: target.elements.length,
-                    });
 
                     // 继续导航到分栏容器的第一列
                     return navigateAndAdd(
@@ -1571,21 +1251,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
 
         // 处理数字索引
         if (typeof key === 'number') {
-          console.log('🔍 处理数字索引:', {
-            key,
-            targetType: target ? typeof target : 'undefined',
-            isArray: Array.isArray(target),
-            targetLength: Array.isArray(target) ? target.length : 'N/A',
-            targetComponent:
-              Array.isArray(target) && target[key]
-                ? {
-                    id: target[key].id,
-                    tag: target[key].tag,
-                    name: target[key].name || 'no name',
-                  }
-                : 'undefined',
-            depth,
-          });
           const nextTarget = Array.isArray(target) ? target[key] : undefined;
           // --- 新增：类型校验和全局修正 ---
           if (
@@ -1613,31 +1278,12 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
               originalTargetPath[4] === 'columns' &&
               originalTargetPath[6] === 'elements';
 
-            console.log('🔍 路径修正分析:', {
-              isTargetingForm,
-              isTargetingColumn,
-              targetPath: originalTargetPath || 'undefined',
-              targetPathLength: originalTargetPath?.length || 0,
-              nextTargetTag: nextTarget.tag,
-              expectedTag: isTargetingForm
-                ? 'form'
-                : isTargetingColumn
-                ? 'column_set'
-                : 'unknown',
-            });
-
             // 拖拽到表单容器但实际不是
             if (isTargetingForm && nextTarget.tag !== 'form') {
               const formIndex = rootElements.findIndex(
                 (c) => c && c.tag === 'form',
               );
               if (formIndex !== -1) {
-                const correctedPath = [formIndex, ...nextPath];
-                console.warn('⚠️ 索引指向非表单容器，修正为全局表单容器:', {
-                  originalIndex: key,
-                  correctedIndex: formIndex,
-                  correctedPath,
-                });
                 // 修复：直接导航到修正后的目标，跳过当前数字索引处理
                 const correctedTarget = rootElements[formIndex];
                 return navigateAndAdd(
@@ -1655,12 +1301,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
                 (c) => c && c.tag === 'column_set',
               );
               if (colIndex !== -1) {
-                const correctedPath = [colIndex, ...nextPath];
-                console.warn('⚠️ 索引指向非分栏容器，修正为全局分栏容器:', {
-                  originalIndex: key,
-                  correctedIndex: colIndex,
-                  correctedPath,
-                });
                 // 修复：直接导航到修正后的目标，跳过当前数字索引处理
                 const correctedTarget = rootElements[colIndex];
                 return navigateAndAdd(
@@ -1718,25 +1358,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         }
       };
 
-      // 开始导航，从根elements数组开始
-      console.log('🔍 路径导航开始 - 根elements数组状态:', {
-        path: path.slice(3),
-        pathLength: path.slice(3).length,
-        rootElementsLength: newElements.length,
-        rootElementsDetails: newElements.map((el, idx) => ({
-          index: idx,
-          id: el.id,
-          tag: el.tag,
-          name: el.name || 'no name',
-        })),
-        originalPath: path,
-        pathDetails: path.map((item, index) => ({
-          index,
-          item,
-          type: typeof item,
-        })),
-      });
-
       // 验证路径的有效性
       if (path.length < 3) {
         console.error('❌ 路径长度不足:', {
@@ -1772,70 +1393,19 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     (elements: ComponentType[], path: (string | number)[]): ComponentType[] => {
       const newElements = [...elements];
 
-      console.log('🗑️ 从路径移除组件:', {
-        path,
-        pathLength: path.length,
-        pathDetails: path.map((item, index) => ({
-          index,
-          item,
-          type: typeof item,
-        })),
-        elementsBeforeRemove: elements.length,
-        elementsStructure: elements.map((el, idx) => ({
-          index: idx,
-          id: el.id,
-          tag: el.tag,
-        })),
-      });
-
       // 根级别组件移除
       if (path.length === 4 && path[2] === 'elements') {
         const index = path[3] as number;
-        console.log('✅ 根级别组件移除:', {
-          index,
-          componentToRemove: newElements[index]
-            ? { id: newElements[index].id, tag: newElements[index].tag }
-            : 'undefined',
-          arrayLength: newElements.length,
-          beforeRemove: newElements.map((el, idx) => ({
-            index: idx,
-            id: el.id,
-            tag: el.tag,
-          })),
-        });
 
         if (index >= 0 && index < newElements.length) {
-          const removedComponent = newElements[index];
           newElements.splice(index, 1);
-          console.log('✅ 根级别组件移除成功:', {
-            removedIndex: index,
-            removedComponent: {
-              id: removedComponent.id,
-              tag: removedComponent.tag,
-            },
-            newArrayLength: newElements.length,
-            afterRemove: newElements.map((el, idx) => ({
-              index: idx,
-              id: el.id,
-              tag: el.tag,
-            })),
-            originalArrayLength: elements.length,
-            spliceResult: 'successful',
-          });
         } else {
           console.error('❌ 根级别组件移除失败：索引无效', {
             index,
             arrayLength: newElements.length,
           });
         }
-        console.log('🔄 根级别组件移除 - 返回新数组:', {
-          returnArrayLength: newElements.length,
-          returnArrayStructure: newElements.map((el, idx) => ({
-            index: idx,
-            id: el.id,
-            tag: el.tag,
-          })),
-        });
+
         return newElements;
       }
 
@@ -1847,13 +1417,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       ) {
         const formIndex = path[3] as number;
         const componentIndex = path[5] as number;
-
-        console.log('🗑️ 表单容器内组件移除:', {
-          formIndex,
-          componentIndex,
-          pathDetails: path,
-          elementsLength: newElements.length,
-        });
 
         // 检查表单索引是否有效
         if (formIndex >= 0 && formIndex < newElements.length) {
@@ -1867,26 +1430,9 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           ) {
             const formElements = (formComponent as any).elements;
 
-            console.log('🔍 表单容器检查通过:', {
-              formId: formComponent.id,
-              formElementsLength: formElements.length,
-              componentIndex,
-              componentToRemove: formElements[componentIndex]
-                ? {
-                    id: formElements[componentIndex].id,
-                    tag: formElements[componentIndex].tag,
-                  }
-                : 'undefined',
-            });
-
             // 检查组件索引是否有效
             if (componentIndex >= 0 && componentIndex < formElements.length) {
               formElements.splice(componentIndex, 1);
-              console.log('✅ 表单容器内组件移除成功:', {
-                formIndex,
-                removedComponentIndex: componentIndex,
-                newFormElementsLength: formElements.length,
-              });
             } else {
               console.error('❌ 表单容器内组件移除失败：组件索引无效', {
                 componentIndex,
@@ -1925,13 +1471,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         const columnSetIndex = path[3] as number;
         const columnIndex = path[5] as number;
 
-        console.log('🗑️ 分栏列删除:', {
-          columnSetIndex,
-          columnIndex,
-          pathDetails: path,
-          elementsLength: newElements.length,
-        });
-
         // 检查分栏容器索引是否有效
         if (columnSetIndex >= 0 && columnSetIndex < newElements.length) {
           const columnSetComponent = newElements[columnSetIndex];
@@ -1944,26 +1483,9 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           ) {
             const columns = (columnSetComponent as any).columns;
 
-            console.log('🔍 分栏容器检查通过:', {
-              columnSetId: columnSetComponent.id,
-              columnsLength: columns.length,
-              columnIndex,
-              columnToRemove: columns[columnIndex]
-                ? {
-                    id: columns[columnIndex].id,
-                    tag: columns[columnIndex].tag,
-                  }
-                : 'undefined',
-            });
-
             // 检查列索引是否有效
             if (columnIndex >= 0 && columnIndex < columns.length) {
               columns.splice(columnIndex, 1);
-              console.log('✅ 分栏列删除成功:', {
-                columnSetIndex,
-                removedColumnIndex: columnIndex,
-                newColumnsLength: columns.length,
-              });
 
               // 如果删除后没有列了，删除整个分栏容器
               if (columns.length === 0) {
@@ -2011,14 +1533,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         const columnSetIndex = path[5] as number;
         const columnIndex = path[7] as number;
 
-        console.log('🗑️ 表单内分栏列删除:', {
-          formIndex,
-          columnSetIndex,
-          columnIndex,
-          pathDetails: path,
-          elementsLength: newElements.length,
-        });
-
         // 检查表单索引是否有效
         if (formIndex >= 0 && formIndex < newElements.length) {
           const formComponent = newElements[formIndex];
@@ -2043,28 +1557,9 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
               ) {
                 const columns = (columnSetComponent as any).columns;
 
-                console.log('🔍 表单内分栏容器检查通过:', {
-                  formId: formComponent.id,
-                  columnSetId: columnSetComponent.id,
-                  columnsLength: columns.length,
-                  columnIndex,
-                  columnToRemove: columns[columnIndex]
-                    ? {
-                        id: columns[columnIndex].id,
-                        tag: columns[columnIndex].tag,
-                      }
-                    : 'undefined',
-                });
-
                 // 检查列索引是否有效
                 if (columnIndex >= 0 && columnIndex < columns.length) {
                   columns.splice(columnIndex, 1);
-                  console.log('✅ 表单内分栏列删除成功:', {
-                    formIndex,
-                    columnSetIndex,
-                    removedColumnIndex: columnIndex,
-                    newColumnsLength: columns.length,
-                  });
 
                   // 如果删除后没有列了，删除整个分栏容器
                   if (columns.length === 0) {
@@ -2139,100 +1634,38 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           // 到达目标数组
           const idx = p[0] as number;
           if (idx >= 0 && idx < target.length) {
-            console.log('✅ 递归移除目标:', {
-              idx,
-              id: target[idx]?.id,
-              tag: target[idx]?.tag,
-              depth,
-            });
             target.splice(idx, 1);
             return true;
           } else {
-            console.error('❌ 递归移除失败，索引无效', {
-              idx,
-              arrLen: target.length,
-              depth,
-            });
             return false;
           }
         }
         // 递归进入
         const key = p[0];
 
-        console.log('🔍 递归移除步骤:', {
-          key,
-          keyType: typeof key,
-          depth,
-          remainingPath: p,
-          targetType: Array.isArray(target) ? 'array' : typeof target,
-          targetTag: target?.tag,
-          targetId: target?.id,
-          hasElements: target?.elements !== undefined,
-          elementsIsArray: Array.isArray(target?.elements),
-          hasColumns: target?.columns !== undefined,
-          columnsIsArray: Array.isArray(target?.columns),
-        });
-
         if (key === 'elements' && Array.isArray(target.elements)) {
-          console.log('✅ 递归进入 elements 数组:', {
-            elementsLength: target.elements.length,
-            depth,
-            remainingPath: p.slice(1),
-          });
           return recursiveRemove(target.elements, p.slice(1), depth + 1);
         }
         if (key === 'columns' && Array.isArray(target.columns)) {
           const colIdx = p[1] as number;
           if (colIdx >= 0 && colIdx < target.columns.length) {
-            console.log('✅ 递归进入 columns 数组:', {
-              colIdx,
-              columnsLength: target.columns.length,
-              depth,
-            });
             return recursiveRemove(
               target.columns[colIdx],
               p.slice(2),
               depth + 1,
             );
           } else {
-            console.error('❌ 递归移除失败，columns索引无效', {
-              colIdx,
-              columnsLen: target.columns.length,
-              depth,
-            });
             return false;
           }
         }
         if (typeof key === 'number' && Array.isArray(target)) {
-          console.log('✅ 递归进入数组索引:', {
-            key,
-            targetLength: target.length,
-            depth,
-            remainingPath: p.slice(1),
-          });
           return recursiveRemove(target[key], p.slice(1), depth + 1);
         }
         // 兜底
         if (target[key] !== undefined) {
-          console.log('⚠️ 使用兜底逻辑进入:', {
-            key,
-            targetKeyType: typeof target[key],
-            depth,
-            remainingPath: p.slice(1),
-          });
           return recursiveRemove(target[key], p.slice(1), depth + 1);
         }
-        console.error('❌ 递归移除失败，路径无效', {
-          key,
-          depth,
-          target: {
-            type: Array.isArray(target) ? 'array' : typeof target,
-            tag: target?.tag,
-            id: target?.id,
-            keys: target ? Object.keys(target) : 'null',
-          },
-          remainingPath: p,
-        });
+
         return false;
       }
 
@@ -2252,29 +1685,11 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       targetPath: (string | number)[],
       dropIndex?: number,
     ) => {
-      console.log('🎯 处理容器拖拽:', {
-        draggedItem: {
-          type: draggedItem.type,
-          isNew: draggedItem.isNew,
-          component: draggedItem.component,
-          componentTag: draggedItem.component?.tag,
-        },
-        targetPath,
-        dropIndex,
-        onHeaderDataChange: !!onHeaderDataChange,
-      });
-
       // 特殊处理标题组件
       if (
         draggedItem.type === 'title' ||
         (draggedItem.component && draggedItem.component.tag === 'title')
       ) {
-        console.log('🎯 检测到标题组件拖拽:', {
-          isNew: draggedItem.isNew,
-          component: draggedItem.component,
-          hasCallback: !!onHeaderDataChange,
-        });
-
         // 标题组件不添加到elements中，而是直接更新header数据
         if (draggedItem.isNew) {
           // 新标题组件，使用默认标题数据
@@ -2336,18 +1751,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         // 新组件
         const newComponent = createDefaultComponent(draggedItem.type);
 
-        console.log('🆕 创建新组件:', {
-          componentType: draggedItem.type,
-          componentId: newComponent.id,
-          targetPath,
-          dropIndex,
-          pathAnalysis: {
-            isRoot: isRootLevel,
-            isForm: targetPath.includes('elements') && targetPath.length > 3,
-            isColumn: targetPath.includes('columns'),
-          },
-        });
-
         const newElements = addComponentByPath(
           elements,
           targetPath,
@@ -2359,15 +1762,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         // 现有组件移动
         const draggedComponent = draggedItem.component;
         const draggedPath = draggedItem.path;
-
-        console.log('🔄 现有组件移动 - 开始处理:', {
-          componentId: draggedComponent.id,
-          componentTag: draggedComponent.tag,
-          fromPath: draggedPath,
-          toPath: targetPath,
-          dropIndex,
-          elementsBeforeMove: elements.length,
-        });
 
         // 检查表单组件限制（只在移动到根级别时检查，且不是自身移动）
         const isRootLevel =
@@ -2386,39 +1780,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           return;
         }
 
-        // ✅ 修复：确保操作的原子性，避免重复引用
-        // 先移除原位置的组件
-        console.log('🔄 开始移除组件 - 详细状态:', {
-          originalElementsCount: elements.length,
-          originalElements: elements.map((el, idx) => ({
-            index: idx,
-            id: el.id,
-            tag: el.tag,
-          })),
-          draggedComponentId: draggedComponent.id,
-          draggedPath,
-        });
-
         let newElements = removeComponentByPath(elements, draggedPath);
-
-        console.log('🗑️ 组件移除完成，验证结果:', {
-          originalElementsLength: elements.length,
-          newElementsLength: newElements.length,
-          removedComponentId: draggedComponent.id,
-          removedComponentTag: draggedComponent.tag,
-          originalElements: elements.map((el, idx) => ({
-            index: idx,
-            id: el.id,
-            tag: el.tag,
-          })),
-          newElements: newElements.map((el, idx) => ({
-            index: idx,
-            id: el.id,
-            tag: el.tag,
-          })),
-          arraysAreSame: elements === newElements,
-          deepEqual: JSON.stringify(elements) === JSON.stringify(newElements),
-        });
 
         // ✅ 修复：验证组件确实被移除
         // 注意：这里只验证组件是否从原始位置被移除，而不是验证它完全不存在
@@ -2476,20 +1838,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           const componentIndex = draggedPath[9] as number;
           const formComponent = newElements[formIndex];
 
-          console.log('🔍 分栏容器内普通组件验证 - 路径解析:', {
-            formIndex,
-            columnSetIndex,
-            columnIndex,
-            componentIndex,
-            formComponent: formComponent
-              ? {
-                  id: formComponent.id,
-                  tag: formComponent.tag,
-                  hasElements: (formComponent as any).elements !== undefined,
-                }
-              : 'null',
-          });
-
           if (formComponent && formComponent.tag === 'form') {
             const formElements = (formComponent as any).elements || [];
             const columnSetComponent = formElements[columnSetIndex];
@@ -2511,43 +1859,11 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
             if (columnSetComponent && columnSetComponent.tag === 'column_set') {
               const columns = (columnSetComponent as any).columns || [];
 
-              console.log('🔍 分栏容器内普通组件验证 - 列检查:', {
-                columnsLength: columns.length,
-                columnIndex,
-                targetColumn:
-                  columnIndex < columns.length
-                    ? {
-                        id: columns[columnIndex].id,
-                        tag: columns[columnIndex].tag,
-                        hasElements:
-                          columns[columnIndex].elements !== undefined,
-                        elementsLength:
-                          columns[columnIndex].elements?.length || 0,
-                      }
-                    : 'out of range',
-              });
-
               if (
                 columnIndex < columns.length &&
                 columns[columnIndex].elements
               ) {
                 const columnElements = columns[columnIndex].elements;
-
-                console.log('🔍 分栏容器内普通组件验证 - 最终检查:', {
-                  componentIndex,
-                  columnElementsLength: columnElements.length,
-                  componentAtPosition:
-                    componentIndex < columnElements.length
-                      ? {
-                          id: columnElements[componentIndex].id,
-                          tag: columnElements[componentIndex].tag,
-                        }
-                      : 'out of range',
-                  expectedComponentId: draggedComponent.id,
-                  isRemoved:
-                    componentIndex >= columnElements.length ||
-                    columnElements[componentIndex]?.id !== draggedComponent.id,
-                });
 
                 componentRemovedFromOriginalPosition =
                   componentIndex >= columnElements.length ||
@@ -2556,13 +1872,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
             }
           }
         }
-
-        console.log('🔍 组件移除验证结果:', {
-          componentId: draggedComponent.id,
-          originalPath: draggedPath,
-          removedFromOriginalPosition: componentRemovedFromOriginalPosition,
-          verificationMethod: 'specific position check',
-        });
 
         if (!componentRemovedFromOriginalPosition) {
           console.error('❌ 组件移除失败，组件仍然在原始位置:', {
@@ -2589,28 +1898,8 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           // 如果目标容器在被拖拽组件之后，索引需要减1
           if (targetContainerIndex > draggedIndex) {
             adjustedTargetPath[3] = targetContainerIndex - 1;
-            console.log('🔧 调整目标路径索引:', {
-              originalTargetPath: targetPath,
-              adjustedTargetPath,
-              draggedIndex,
-              originalTargetContainerIndex: targetContainerIndex,
-              adjustedTargetContainerIndex: targetContainerIndex - 1,
-              reason: '移除组件后目标容器索引前移',
-            });
           }
         }
-
-        // 再添加到新位置（使用调整后的路径）
-        console.log('🔄 使用调整后的路径添加组件:', {
-          originalTargetPath: targetPath,
-          adjustedTargetPath,
-          draggedComponent: {
-            id: draggedComponent.id,
-            tag: draggedComponent.tag,
-          },
-          dropIndex,
-          currentElementsCount: newElements.length,
-        });
 
         newElements = addComponentByPath(
           newElements,
@@ -2618,17 +1907,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           draggedComponent,
           dropIndex,
         );
-
-        console.log('✅ 组件移动完成，最终验证:', {
-          finalElementsLength: newElements.length,
-          movedComponentId: draggedComponent.id,
-          targetPath,
-          finalElementsSummary: newElements.map((el, idx) => ({
-            index: idx,
-            id: el.id,
-            tag: el.tag,
-          })),
-        });
 
         onElementsChange(newElements);
       }
@@ -2647,13 +1925,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
   // 处理画布组件排序（专门用于DragSortableItem） - 插入式排序
   const handleCanvasComponentSort = useCallback(
     (dragIndex: number, insertIndex: number) => {
-      console.log('🔄 处理画布组件插入式排序:', {
-        dragIndex,
-        insertIndex,
-        draggedComponent: elements[dragIndex]?.tag,
-        totalElements: elements.length,
-      });
-
       const draggedComponent = elements[dragIndex];
 
       if (!draggedComponent) {
@@ -2737,13 +2008,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       // 插入到新位置
       newElements.splice(adjustedInsertIndex, 0, movedComponent);
 
-      console.log('✅ 插入式排序完成:', {
-        from: dragIndex,
-        insertAt: finalInsertIndex,
-        adjustedTo: adjustedInsertIndex,
-        movedComponent: movedComponent.tag,
-      });
-
       onElementsChange(newElements);
     },
     [elements, onElementsChange],
@@ -2757,30 +2021,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       targetPath: (string | number)[],
       dropIndex: number,
     ) => {
-      console.log('🔄 处理组件排序:', {
-        draggedComponent: {
-          id: draggedComponent.id,
-          tag: draggedComponent.tag,
-        },
-        draggedPath,
-        targetPath,
-        dropIndex,
-      });
-
-      // ✅ 修复：不要错误地修正拖拽路径，保持原始路径
-      console.log('🔍 路径检查:', {
-        originalDraggedPath: draggedPath,
-        draggedComponent: {
-          id: draggedComponent.id,
-          tag: draggedComponent.tag,
-        },
-        currentElements: elements.map((el, idx) => ({
-          index: idx,
-          id: el.id,
-          tag: el.tag,
-        })),
-      });
-
       // 保持原始拖拽路径，不要错误地修正为根级别路径
       let finalDraggedPath = draggedPath;
 
@@ -2797,18 +2037,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
       ) {
         const targetIndex = targetPath[3] as number;
         const targetComponent = elements[targetIndex];
-
-        console.log('🔍 目标路径检查:', {
-          targetIndex,
-          targetComponent: targetComponent
-            ? { id: targetComponent.id, tag: targetComponent.tag }
-            : 'undefined',
-          targetPath,
-          isContainer:
-            targetComponent &&
-            (targetComponent.tag === 'form' ||
-              targetComponent.tag === 'column_set'),
-        });
 
         // 如果目标路径指向的不是容器组件，说明路径错误
         if (
@@ -2830,22 +2058,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         }
       }
 
-      // 添加详细的路径分析日志
-      console.log('🔍 详细路径分析:', {
-        draggedPathLength: finalDraggedPath.length,
-        targetPathLength: finalTargetPath.length,
-        draggedPathDetails: finalDraggedPath.map((item, index) => ({
-          index,
-          item,
-          type: typeof item,
-        })),
-        targetPathDetails: finalTargetPath.map((item, index) => ({
-          index,
-          item,
-          type: typeof item,
-        })),
-      });
-
       // 分析路径结构
       const draggedContainerPath = finalDraggedPath.slice(0, -1);
       const targetContainerPath = finalTargetPath.slice(0, -1);
@@ -2853,38 +2065,12 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         finalDraggedPath.length - 1
       ] as number;
 
-      console.log('🔍 路径分析:', {
-        draggedContainerPath,
-        targetContainerPath,
-        draggedIndex,
-        draggedPathDetails: draggedContainerPath.map((item, index) => ({
-          index,
-          item,
-          type: typeof item,
-        })),
-        targetPathDetails: targetContainerPath.map((item, index) => ({
-          index,
-          item,
-          type: typeof item,
-        })),
-        isSameContainer:
-          JSON.stringify(draggedContainerPath) ===
-          JSON.stringify(targetContainerPath),
-      });
-
       // 检查是否在同一容器内移动
       const isSameContainer =
         JSON.stringify(draggedContainerPath) ===
         JSON.stringify(targetContainerPath);
 
       if (isSameContainer) {
-        // 同容器内移动 - 使用位置交换而不是删除+添加
-        console.log('🔄 同容器内移动:', {
-          draggedIndex,
-          targetIndex: dropIndex,
-          containerPath: draggedContainerPath,
-        });
-
         // 如果是根级别容器（画布），使用专门的排序函数
         if (
           draggedContainerPath.length === 3 &&
@@ -2906,21 +2092,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         // 检查目标路径是否已经包含'elements'
         if (finalTargetPath[finalTargetPath.length - 1] === 'elements') {
           containerTargetPath = finalTargetPath;
-          console.log('✅ 同容器移动：目标路径已包含elements，直接使用:', {
-            originalTargetPath: finalTargetPath,
-            containerTargetPath,
-          });
-        } else {
-          console.log('✅ 同容器移动：为目标路径添加elements:', {
-            targetContainerPath,
-            containerTargetPath,
-          });
         }
-
-        console.log('🔍 查找目标容器:', {
-          containerTargetPath,
-          newElementsLength: newElements.length,
-        });
 
         // 获取目标容器的elements数组
         const targetContainer = getElementsArrayByPath(
@@ -2928,30 +2100,9 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           containerTargetPath,
         );
 
-        console.log('🔍 目标容器查找结果:', {
-          targetContainer: targetContainer
-            ? `array(${targetContainer.length})`
-            : 'null',
-          isArray: Array.isArray(targetContainer),
-        });
-
         if (targetContainer && Array.isArray(targetContainer)) {
           // 执行插入式移动：先移除，后插入（与根级别逻辑保持一致）
           const draggedItem = targetContainer[draggedIndex];
-
-          console.log('🔍 排序前的容器状态:', {
-            containerLength: targetContainer.length,
-            draggedIndex,
-            dropIndex,
-            draggedItem: draggedItem
-              ? { id: draggedItem.id, tag: draggedItem.tag }
-              : 'null',
-            containerElements: targetContainer.map((el, idx) => ({
-              index: idx,
-              id: el.id,
-              tag: el.tag,
-            })),
-          });
 
           // 移除原位置的组件
           targetContainer.splice(draggedIndex, 1);
@@ -2981,32 +2132,8 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
           console.error('❌ 无法找到目标容器');
         }
       } else {
-        // 跨容器移动 - 使用删除+添加
-        console.log('🔄 跨容器移动:', {
-          from: draggedContainerPath,
-          to: targetContainerPath,
-          draggedComponent: {
-            id: draggedComponent.id,
-            tag: draggedComponent.tag,
-          },
-        });
-
         // 先移除原位置的组件
         let newElements = removeComponentByPath(elements, finalDraggedPath);
-
-        console.log('🔍 移除后的数组状态:', {
-          originalLength: elements.length,
-          newLength: newElements.length,
-          removedComponent: {
-            id: draggedComponent.id,
-            tag: draggedComponent.tag,
-          },
-          newElements: newElements.map((el, idx) => ({
-            index: idx,
-            id: el.id,
-            tag: el.tag,
-          })),
-        });
 
         // 计算目标容器路径
         const targetElementsPath = [...targetContainerPath, 'elements'];
@@ -3018,16 +2145,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         if (finalTargetPath[finalTargetPath.length - 1] === 'elements') {
           // 如果目标路径已经以'elements'结尾，直接使用
           containerTargetPath = finalTargetPath;
-          console.log('✅ 目标路径已包含elements，直接使用:', {
-            originalTargetPath: finalTargetPath,
-            containerTargetPath,
-          });
-        } else {
-          // 否则添加'elements'
-          console.log('✅ 为目标路径添加elements:', {
-            targetContainerPath,
-            containerTargetPath,
-          });
         }
 
         // 计算实际的插入位置
@@ -3158,14 +2275,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
 
         // 其他组件添加到末尾
         onElementsChange([...elements, cleanedComponent]);
-        message.success(`${item.type} 组件已添加到画布`);
       } else if (item.component && item.path) {
-        // 现有组件移动到画布根级别
-        // console.log('🔄 移动现有组件到画布根级别:', {
-        //   component: { id: item.component.id, tag: item.component.tag },
-        //   fromPath: item.path,
-        // });
-
         // 检查是否是从容器中移动到根级别
         if (item.path.length > 4) {
           // 从容器移动到根级别
@@ -3185,31 +2295,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
   const handleCardClick = useCallback(
     (e: React.MouseEvent) => {
       const target = e.target as HTMLElement;
-      // const currentTarget = e.currentTarget as HTMLElement;
-
-      // console.log('🎯 卡片点击处理:', {
-      //   targetTag: target.tagName,
-      //   targetClass: target.className,
-      //   targetId: target.id,
-      //   targetDataset: target.dataset,
-      //   targetAttributes: Array.from(target.attributes).map(
-      //     (attr) => `${attr.name}="${attr.value}"`,
-      //   ),
-      //   isCurrentTarget: target === currentTarget,
-      //   hasComponentWrapper: !!target.closest('[data-component-wrapper]'),
-      //   hasDragSortableItem: !!target.closest('[data-drag-sortable-item]'),
-      //   hasCardContainer: !!target.closest('[data-card-container]'),
-      //   isCardSelected,
-      //   componentId: target.getAttribute('data-component-id'),
-      //   closestComponentWrapper: target
-      //     .closest('[data-component-wrapper]')
-      //     ?.getAttribute('data-component-id'),
-      //   targetTextContent: target.textContent?.substring(0, 50),
-      //   targetParentTag: target.parentElement?.tagName,
-      //   targetParentClass: target.parentElement?.className,
-      //   targetParentId: target.parentElement?.id,
-      //   targetParentDataset: target.parentElement?.dataset,
-      // });
 
       // 立即阻止事件冒泡，防止触发画布点击事件
       e.stopPropagation();
@@ -3234,7 +2319,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         return;
       }
 
-      // console.log('✅ 处理卡片选中');
       onCardSelect();
     },
     [onCardSelect],
@@ -3415,9 +2499,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
         })() && (
           <div
             style={{
-              // padding: '16px 0',
               borderBottom: '1px solid #f0f0f0',
-              // marginBottom: '16px',
               position: 'relative',
             }}
             data-component-wrapper="true"

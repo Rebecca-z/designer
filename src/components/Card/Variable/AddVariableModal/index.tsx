@@ -7,9 +7,9 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Variable } from '../../card-designer-types-updated';
 import JSONEditor, { JSONEditorRef } from '../../JSONEditor';
 import RichTextEditor from '../../RichTextEditor/RichTextEditor';
+import { Variable } from '../../type';
 import type {
   AddVariableModalProps,
   VariableFormData,

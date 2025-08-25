@@ -1,17 +1,11 @@
 // card-designer-canvas-with-card.tsx - 集成会话卡片的画布组件
 
 import React, { useRef } from 'react';
-import {
-  CanvasHeader,
-  DeviceIndicator,
-} from './card-designer-canvas-components';
-import ChatInterface from './card-designer-chat-interface';
-import { DEVICE_SIZES } from './card-designer-constants';
-import {
-  CardDesignData,
-  ComponentType,
-  VariableItem,
-} from './card-designer-types-updated';
+import { DEVICE_SIZES } from '../constants';
+import { CardDesignData, ComponentType, VariableItem } from '../type';
+import { CanvasHeader } from './CanvasHeaderTip';
+import ChatInterface from './ChatWrapper';
+import { DeviceIndicator } from './DeviceIndicator';
 
 interface CanvasProps {
   data: CardDesignData;

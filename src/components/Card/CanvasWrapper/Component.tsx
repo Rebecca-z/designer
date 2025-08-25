@@ -3,13 +3,8 @@
 import { CopyOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons';
 import { Button, Dropdown, message } from 'antd';
 import React from 'react';
-import ComponentRendererCore from './card-designer-renderer-core';
-import {
-  ComponentType,
-  DesignData,
-  DragItem,
-  VariableItem,
-} from './card-designer-types-updated';
+import ComponentRendererCore from '../card-designer-renderer-core';
+import { ComponentType, DesignData, DragItem, VariableItem } from '../type';
 import ErrorBoundary from './ErrorBoundary';
 
 interface ComponentRendererProps {
@@ -134,8 +129,6 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
 
   const handleDelete = (e: any) => {
     if (isPreview) return;
-    // Ant Design Menu.Item onClick doesn't provide stopPropagation
-    // Only call stopPropagation if it's available (for regular React events)
     if (e?.stopPropagation && typeof e.stopPropagation === 'function') {
       e.stopPropagation();
     }
@@ -145,8 +138,6 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
 
   const handleCopy = (e: any) => {
     if (isPreview) return;
-    // Ant Design Menu.Item onClick doesn't provide stopPropagation
-    // Only call stopPropagation if it's available (for regular React events)
     if (e?.stopPropagation && typeof e.stopPropagation === 'function') {
       e.stopPropagation();
     }
@@ -163,26 +154,6 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
     path[2] === 'elements' &&
     path[4] === 'elements';
 
-  // 调试信息
-  if (component.tag === 'column_set' && isCurrentSelected) {
-    // console.log('🔍 分栏容器选中状态检查:', {
-    //   componentId: component.id,
-    //   path,
-    //   pathLength: path.length,
-    //   isFormColumnSet,
-    //   isCurrentSelected,
-    //   isPreview,
-    //   shouldShowOperationIcon:
-    //     isCurrentSelected && !isPreview && !isFormColumnSet,
-    //   pathDetails: {
-    //     isDsl: path[0] === 'dsl',
-    //     isBody: path[1] === 'body',
-    //     isElements: path[2] === 'elements',
-    //     hasElementsSegment: path[4] === 'elements',
-    //   },
-    // });
-  }
-
   const contextMenu = {
     items: [
       // 标题组件和表单组件不显示复制选项
@@ -191,7 +162,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             {
               key: 'copy',
               icon: <CopyOutlined />,
-              label: '复制组件1',
+              label: '复制组件',
               onClick: handleCopy,
             },
           ]
@@ -202,7 +173,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             {
               key: 'delete',
               icon: <DeleteOutlined />,
-              label: '删除组件1',
+              label: '删除组件',
               onClick: handleDelete,
               danger: true,
             },
@@ -249,10 +220,8 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
           style={{
             ...getSelectedStyle(isCurrentSelected),
             borderRadius: '8px',
-            // padding: '4px',
             padding: '0',
             margin: '0',
-            // margin: '4px 0',
             position: 'relative',
             cursor: isPreview ? 'default' : 'pointer',
             transition: 'all 0.2s ease',
@@ -365,25 +334,10 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
 
   // 普通组件渲染 - 统一选中样式
   const containerStyle: React.CSSProperties = {
-    // border:
-    //   isCurrentSelected && !isPreview
-    //     ? '2px solid #1890ff'
-    //     : '1px solid transparent',
-    // padding: '4px',
-    // margin: '2px',
     borderRadius: '4px',
     cursor: isPreview ? 'default' : 'pointer',
-    // minHeight: '30px',
     position: 'relative',
     transition: 'all 0.2s ease',
-    // backgroundColor:
-    //   isCurrentSelected && !isPreview
-    //     ? 'rgba(24, 144, 255, 0.05)'
-    //     : 'transparent',
-    // boxShadow:
-    //   isCurrentSelected && !isPreview
-    //     ? '0 0 4px rgba(24, 144, 255, 0.3)'
-    //     : 'none',
   };
 
   return (

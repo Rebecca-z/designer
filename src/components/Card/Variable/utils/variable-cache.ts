@@ -1,6 +1,6 @@
 // 全局变量缓存 数据快速访问 跟随全局变量
 
-import { VariableItem } from '../../card-designer-types-updated';
+import { VariableItem } from '../../type';
 
 // 变量缓存接口
 interface VariableCache {

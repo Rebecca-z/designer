@@ -16,11 +16,7 @@ import {
   SelectOutlined,
   TabletOutlined,
 } from '@ant-design/icons';
-import {
-  CardDesignData,
-  ComponentConfig,
-  DeviceConfig,
-} from './card-designer-types-updated';
+import { CardDesignData, ComponentConfig, DeviceConfig } from './type';
 
 // 设备尺寸配置
 export const DEVICE_SIZES: Record<string, DeviceConfig> = {

@@ -1,7 +1,4 @@
-import {
-  ComponentType,
-  VariableItem,
-} from '../../../card-designer-types-updated';
+import { ComponentType, VariableItem } from '../../../type';
 
 export interface RichTextData {
   text?: {

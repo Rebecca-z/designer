@@ -4,7 +4,7 @@
 import { PlusOutlined } from '@ant-design/icons';
 import { Divider, Form, Select } from 'antd';
 import React from 'react';
-import { VariableItem } from '../../card-designer-types-updated';
+import { VariableItem } from '../../type';
 
 export interface VariableBindingProps {
   /** 当前绑定的变量名 */

@@ -11,17 +11,18 @@ export interface ComponentBase {
 
 export interface TitleComponent extends ComponentBase {
   tag: 'title';
-  // title和subtitle属性已移到CardHeader中
-  // title: string;
-  // subtitle: string;
-  style:
-    | 'blue'
-    | 'wathet'
-    | 'turquoise'
-    | 'green'
-    | 'yellow'
-    | 'orange'
-    | 'red';
+
+  style?: {
+    theme:
+      | 'blue'
+      | 'green'
+      | 'orange'
+      | 'red'
+      | 'turquoise'
+      | 'yellow'
+      | 'wathet';
+    [key: string]: any;
+  };
 }
 
 export interface TextComponent extends ComponentBase {

@@ -1,14 +1,9 @@
-// 验证导出 - 模拟 card-designer-main-final.tsx 的导入语句
-
-// 从合并的文件中导入组件
+import Canvas from './CanvasWrapper/ChatWrapperIndex';
+import { DEFAULT_CARD_DATA, DEVICE_SIZES } from './constants';
+import Modals from './Modals';
 import { ComponentPanel, PropertyPanel } from './PropertyPanel';
-
-// 其他导入
-import Canvas from './card-designer-canvas-with-card';
-import { DEFAULT_CARD_DATA, DEVICE_SIZES } from './card-designer-constants';
-import Modals from './card-designer-modals';
-import Toolbar from './card-designer-toolbar-with-id';
-import { migrateTitleStyle } from './card-designer-utils';
+import Toolbar from './ToolBar';
+import { migrateTitleStyle } from './utils';
 
 // 验证所有导入都存在
 console.log('✅ ComponentPanel 导入成功:', typeof ComponentPanel);
@@ -17,8 +12,6 @@ console.log('✅ Canvas 导入成功:', typeof Canvas);
 console.log('✅ DEFAULT_CARD_DATA 导入成功:', typeof DEFAULT_CARD_DATA);
 console.log('✅ Modals 导入成功:', typeof Modals);
 console.log('✅ Toolbar 导入成功:', typeof Toolbar);
-
-// 现在 card-designer-main-final.tsx 应该能正常工作
 
 import { Modal } from 'antd';
 import React, { useEffect, useState } from 'react';
@@ -32,13 +25,8 @@ import {
   useHistory,
   useKeyboardShortcuts,
   useOutlineTree,
-} from './card-designer-hooks';
-import {
-  CardDesignData,
-  ComponentType,
-  Variable,
-  VariableItem,
-} from './card-designer-types-updated';
+} from './hooks/card-designer-hooks';
+import { CardDesignData, ComponentType, Variable, VariableItem } from './type';
 import { variableCacheManager } from './Variable/utils/index';
 
 const CardDesigner: React.FC = () => {
@@ -66,47 +54,16 @@ const CardDesigner: React.FC = () => {
     // 进行数据迁移
     const migratedData = migrateTitleStyle(data);
 
-    console.log('🔄 safeCardData 更新:', {
-      historyDataId: data.id,
-      elementsCount: data.dsl.body.elements.length,
-      variablesCount: Object.keys(data.variables || {}).length,
-      elements: data.dsl.body.elements.map((el, index) => ({
-        index,
-        id: el.id,
-        tag: el.tag,
-        img_url: (el as any).img_url,
-        content: (el as any).content,
-        boundVariableName: (el as any).boundVariableName,
-        hasBoundVariable: !!(el as any).boundVariableName,
-        // 检查是否有不应该存在的字段
-        hasVariableName: !!(el as any).variable_name,
-        hasOriginalImgUrl: !!(el as any).original_img_url,
-      })),
-      timestamp: new Date().toISOString(),
-    });
-
     return migratedData;
   }, [history.data]);
 
   // 处理变量更新 - 同时更新本地状态、缓存和卡片数据结构
   const handleUpdateVariables = (newVariables: VariableItem[]) => {
-    console.log('🔄 处理变量更新:', {
-      oldVariablesCount: variables.length,
-      newVariablesCount: newVariables.length,
-      newVariables: newVariables,
-      timestamp: new Date().toISOString(),
-    });
-
     // 立即更新本地状态
     setVariables(newVariables);
 
     // 更新变量缓存
     variableCacheManager.setVariables(newVariables);
-
-    console.log('📦 变量缓存更新完成:', {
-      variablesCount: newVariables.length,
-      cacheStats: variableCacheManager.getCacheStats(),
-    });
 
     // 将变量转换为卡片数据结构格式并更新
     const cardVariables: { [key: string]: any } = {};
@@ -116,15 +73,6 @@ const CardDesigner: React.FC = () => {
         // 检查是否是标准的Variable对象格式 {name, type, value, originalType, description}
         const varRecord = variable as any;
         if (varRecord.name && varRecord.value !== undefined) {
-          // 标准Variable对象格式
-          console.log('🔧 处理标准Variable对象:', {
-            name: varRecord.name,
-            type: varRecord.type,
-            value: varRecord.value,
-            originalType: varRecord.originalType,
-            description: varRecord.description,
-          });
-
           // 保存变量名和值到全局数据
           cardVariables[varRecord.name] = varRecord.value;
 
@@ -135,12 +83,6 @@ const CardDesigner: React.FC = () => {
               originalTypeKey,
               varRecord.originalType,
             );
-            console.log('💾 保存 originalType 到缓存:', {
-              variableName: varRecord.name,
-              originalType: varRecord.originalType,
-              originalTypeKey,
-              timestamp: new Date().toISOString(),
-            });
           }
         } else {
           // 自定义格式：{变量名: 模拟数据值, __变量名_originalType: 原始类型}
@@ -151,22 +93,11 @@ const CardDesigner: React.FC = () => {
           const actualVariableNames = keys.filter(
             (key) => !key.startsWith('__'),
           );
-          const internalKeys = keys.filter((key) => key.startsWith('__'));
 
           // 只保存实际变量到全局数据，不保存内部属性
           actualVariableNames.forEach((variableName) => {
             cardVariables[variableName] = variableRecord[variableName];
           });
-
-          // 内部属性（如 originalType）不保存到全局数据中
-          // 这些信息将通过内存缓存和组件状态维护
-          if (internalKeys.length > 0) {
-            console.log('🔧 内部属性不保存到全局数据:', {
-              internalKeys,
-              message: 'originalType信息通过内存缓存维护',
-              timestamp: new Date().toISOString(),
-            });
-          }
         }
       } else {
         // 兼容旧的Variable格式（向后兼容）
@@ -184,19 +115,8 @@ const CardDesigner: React.FC = () => {
       variables: cardVariables,
     };
 
-    console.log('📝 更新卡片数据结构:', {
-      currentVariablesCount: Object.keys(currentData.variables || {}).length,
-      newCardVariablesCount: Object.keys(cardVariables).length,
-      cardVariables: cardVariables,
-      updatedCardData: updatedCardData,
-      timestamp: new Date().toISOString(),
-    });
-
     // 立即更新历史数据，这会触发画布重新渲染
-    console.log('🔄 调用 history.updateData');
     history.updateData(updatedCardData as any);
-
-    console.log('✅ 变量更新完成，画布将实时刷新显示新的变量模拟数据');
   };
 
   // 从卡片数据结构初始化变量
@@ -239,31 +159,7 @@ const CardDesigner: React.FC = () => {
           description: '',
         };
 
-        if (cachedOriginalType) {
-          console.log('🔄 重建变量时从缓存恢复originalType:', {
-            variableName,
-            originalTypeKey,
-            originalType: cachedOriginalType,
-            source: 'cache',
-          });
-        } else {
-          console.log('🔍 重建变量时未找到originalType缓存:', {
-            variableName,
-            originalTypeKey,
-            inferredType: variableItem.originalType,
-            message: '使用类型推断',
-          });
-        }
-
         variableItems.push(variableItem);
-      });
-
-      console.log('🔄 从卡片数据结构初始化变量:', {
-        cardVariables: cardVariables,
-        cardVariableKeys: Object.keys(cardVariables),
-        actualVariableEntries: actualVariableEntries,
-        variableItems: variableItems,
-        timestamp: new Date().toISOString(),
       });
 
       setVariables(variableItems);
@@ -880,17 +776,7 @@ const CardDesigner: React.FC = () => {
     if (path.length === 4) {
       // 根级组件: ['dsl', 'body', 'elements', index]
       const index = path[3] as number;
-      const oldComponent = newData.dsl.body.elements[index];
       newData.dsl.body.elements[index] = updatedComponent;
-
-      console.log('📝 根级组件更新详情:', {
-        index,
-        componentId: updatedComponent.id,
-        oldImgUrl: (oldComponent as any)?.img_url,
-        newImgUrl: (updatedComponent as any).img_url,
-        updateSuccess:
-          newData.dsl.body.elements[index].id === updatedComponent.id,
-      });
     } else if (path.length === 6 && path[4] === 'elements') {
       // 表单内组件（包括分栏容器）: ['dsl', 'body', 'elements', formIndex, 'elements', componentIndex]
       const formIndex = path[3] as number;

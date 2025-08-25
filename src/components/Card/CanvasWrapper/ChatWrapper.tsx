@@ -2,8 +2,8 @@
 
 import { Avatar, Typography } from 'antd';
 import React from 'react';
-import CardWrapper from './card-designer-card-wrapper';
-import { ComponentType, VariableItem } from './card-designer-types-updated';
+import { ComponentType, VariableItem } from '../type';
+import CardWrapper from './CanvasCard';
 
 const { Text } = Typography;
 
@@ -118,9 +118,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       {/* 右侧内容区域 */}
       <div
         style={{
-          // flex: 1,
-          // minWidth: 0,
-          // 修复：确保内容区域能够正确显示
           boxSizing: 'border-box',
           width: '680px',
         }}

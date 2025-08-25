@@ -3,10 +3,7 @@
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { Button, Card, Typography } from 'antd';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  ComponentType as ImportedComponentType,
-  Variable,
-} from '../../card-designer-types-updated';
+import { ComponentType as ImportedComponentType, Variable } from '../../type';
 
 import {
   ButtonComponent,

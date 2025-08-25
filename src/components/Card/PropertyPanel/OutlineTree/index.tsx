@@ -3,7 +3,7 @@
 import { BarsOutlined } from '@ant-design/icons';
 import { Space, Tree, Typography } from 'antd';
 import React, { useMemo } from 'react';
-import { COMPONENT_TYPES } from '../../card-designer-constants';
+import { COMPONENT_TYPES } from '../../constants';
 import { OutlineTreeProps } from '../types';
 
 const { Text } = Typography;

@@ -1,4 +1,4 @@
-import { Variable } from '../../card-designer-types-updated';
+import { Variable } from '../../type';
 
 export type VariableType =
   | 'text'

@@ -1,9 +1,6 @@
 // PropertyPanel 工具函数
 
-import {
-  CardDesignData,
-  ComponentType,
-} from '../../card-designer-types-updated';
+import { CardDesignData, ComponentType } from '../../type';
 
 // 获取组件在数据结构中的实际路径和组件
 export const getComponentRealPath = (

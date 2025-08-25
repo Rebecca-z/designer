@@ -4,15 +4,11 @@ import { CopyOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons';
 import { Button, Divider, Dropdown, Input, Select } from 'antd';
 import React, { useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
-import {
-  ComponentType,
-  DragItem,
-  VariableItem,
-} from './card-designer-types-updated';
-import { replaceVariables } from './card-designer-utils';
 import { getComponentLayoutChoice } from './PropertyPanel/components/ImgCombinationComponent';
 import RichTextStyles from './RichTextEditor/RichTextStyles';
 import { convertJSONToHTML } from './RichTextEditor/RichTextUtils';
+import { ComponentType, DragItem, VariableItem } from './type';
+import { replaceVariables } from './utils';
 import {
   textComponentStateManager,
   variableCacheManager,
@@ -84,12 +80,6 @@ const canDropInContainer = (
   draggedType: string,
   targetPath: (string | number)[],
 ): boolean => {
-  // console.log('🔍 canDropInContainer 检查:', {
-  //   draggedType,
-  //   targetPath,
-  //   targetPathLength: targetPath.length,
-  // });
-
   // 特殊规则：分栏容器可以拖拽到表单容器内，但不能拖拽到表单容器下的分栏容器的列中
   if (draggedType === 'column_set') {
     // 检查目标路径是否指向表单容器的 elements
@@ -111,14 +101,6 @@ const canDropInContainer = (
       targetPath[4] === 'elements' &&
       targetPath[6] === 'columns' &&
       targetPath[8] === 'elements';
-
-    // console.log('🔍 分栏容器拖拽检查:', {
-    //   draggedType,
-    //   targetPath,
-    //   isTargetingFormElements,
-    //   isTargetingFormColumnElements,
-    //   canDrop: isTargetingFormElements && !isTargetingFormColumnElements,
-    // });
 
     // 只允许拖拽到表单容器的 elements，不允许拖拽到表单容器下的分栏容器的列中
     return isTargetingFormElements && !isTargetingFormColumnElements;
@@ -147,12 +129,6 @@ const canDropInContainer = (
       (segment) => segment === 'elements' || segment === 'columns',
     );
 
-    // console.log('🔍 容器组件嵌套检查:', {
-    //   draggedType,
-    //   hasContainerSegment,
-    //   canDrop: !hasContainerSegment,
-    // });
-
     return !hasContainerSegment;
   }
 
@@ -170,27 +146,13 @@ const canDropInContainer = (
     !targetPath.includes('columns');
 
   if (isTargetingColumn) {
-    // console.log('✅ 普通组件可以拖拽到分栏列:', {
-    //   draggedType,
-    //   targetPath,
-    //   canDrop: true,
-    // });
     return true;
   }
 
   if (isTargetingForm) {
-    // console.log('✅ 普通组件可以拖拽到表单容器:', {
-    //   draggedType,
-    //   targetPath,
-    //   canDrop: true,
-    // });
     return true;
   }
 
-  // console.log('✅ 非容器组件可以放置:', {
-  //   draggedType,
-  //   canDrop: true,
-  // });
   return true;
 };
 
@@ -296,18 +258,6 @@ const ContainerSortableItem: React.FC<{
     canDrop: (item: DragItem) => {
       if (!enableSort) return false;
 
-      // console.log('🔍 ContainerSortableItem canDrop 检查:', {
-      //   itemType: item.type,
-      //   isNew: item.isNew,
-      //   hasComponent: !!item.component,
-      //   componentTag: item.component?.tag,
-      //   isChildComponent: item.isChildComponent,
-      //   currentPath: path,
-      //   containerPath,
-      //   currentComponentTag: component.tag,
-      //   currentComponentId: component.id,
-      // });
-
       // 不能拖拽到自己身上
       if (!item.isNew && item.path && isSamePath(item.path, path)) {
         // console.log('❌ 不能拖拽到自己身上');
@@ -319,22 +269,6 @@ const ContainerSortableItem: React.FC<{
         // console.log('❌ 不能拖拽到自己的子元素上');
         return false;
       }
-
-      // 检查是否是根节点组件拖拽到容器
-      // if (!item.isNew && item.component && item.path) {
-      //   const isRootComponent =
-      //     item.path.length === 4 &&
-      //     item.path[0] === 'dsl' &&
-      //     item.path[1] === 'body' &&
-      //     item.path[2] === 'elements';
-
-      //   if (isRootComponent) {
-      //     console.log('🔍 根节点组件拖拽到容器检查:', {
-      //       componentTag: item.component.tag,
-      //       containerPath,
-      //     });
-      //   }
-      // }
 
       // 检查容器嵌套限制
       if (item.isNew) {
@@ -421,22 +355,6 @@ const ContainerSortableItem: React.FC<{
         // 更新缓存状态
         lastHoverState.current = currentHoverState;
 
-        // 获取组件信息用于后续检查和日志
-        // const draggedComponent = item.component;
-        // const hoverComponent = component;
-
-        // console.log('🎯 容器内插入式拖拽检测:', {
-        //   dragIndex,
-        //   hoverIndex,
-        //   hoverClientY,
-        //   hoverMiddleY,
-        //   insertPosition: currentInsertPosition,
-        //   targetIndex,
-        //   draggedComponent: draggedComponent?.tag,
-        //   hoverComponent: hoverComponent.tag,
-        //   willProceed: 'checking...',
-        // });
-
         insertTargetIndex.current = targetIndex; // 更新记录
 
         // 避免无意义的移动
@@ -472,15 +390,6 @@ const ContainerSortableItem: React.FC<{
         return;
       }
 
-      // console.log('✅ ContainerSortableItem drop 开始处理:', {
-      //   componentTag: component.tag,
-      //   componentId: component.id,
-      //   itemType: item.type,
-      //   isNew: item.isNew,
-      //   hasComponent: !!item.component,
-      //   enableSort,
-      // });
-
       // 清除防抖定时器
       if (hoverTimeoutRef.current) {
         clearTimeout(hoverTimeoutRef.current);
@@ -495,26 +404,8 @@ const ContainerSortableItem: React.FC<{
         const draggedContainerPath = draggedPath.slice(0, -1);
         const targetContainerPath = containerPath;
 
-        // console.log('🔍 容器内排序检查:', {
-        //   draggedPath,
-        //   draggedContainerPath,
-        //   targetContainerPath,
-        //   isSameContainer: isSamePath(
-        //     draggedContainerPath,
-        //     targetContainerPath,
-        //   ),
-        //   insertTargetIndex: insertTargetIndex.current,
-        // });
-
         // 检查是否在同一容器内
         if (isSamePath(draggedContainerPath, targetContainerPath)) {
-          // console.log('✅ 执行容器内插入式排序 (drop):', {
-          //   from: item.path[item.path.length - 1],
-          //   insertAt: insertTargetIndex.current,
-          //   draggedComponent: item.component.tag,
-          //   hoverComponent: component.tag,
-          // });
-
           // 用最后一次hover的insertTargetIndex
           const targetPath = [
             ...draggedContainerPath,
@@ -557,13 +448,6 @@ const ContainerSortableItem: React.FC<{
             draggedPath[2] === 'elements';
 
           if (isRootComponent) {
-            // console.log('🔄 ContainerSortableItem: 根节点组件移动到容器:', {
-            //   component: item.component.tag,
-            //   from: draggedPath,
-            //   to: targetContainerPath,
-            //   insertIndex,
-            // });
-
             // 对于根节点组件移动到容器，需要特殊处理路径
             // targetContainerPath 已经是容器的路径，我们需要添加 'elements' 来指向容器的子元素数组
             // 但是要检查路径是否已经包含 'elements'
@@ -576,22 +460,6 @@ const ContainerSortableItem: React.FC<{
               correctTargetPath = [...targetContainerPath, 'elements'];
             }
 
-            // console.log(
-            //   '🎯 ContainerSortableItem 调用 onComponentMove 处理根节点移动:',
-            //   {
-            //     component: item.component.tag,
-            //     fromPath: draggedPath,
-            //     toPath: correctTargetPath,
-            //     insertIndex,
-            //     targetContainerPath,
-            //     pathAnalysis: {
-            //       hasElements:
-            //         targetContainerPath[targetContainerPath.length - 1] ===
-            //         'elements',
-            //       finalPath: correctTargetPath,
-            //     },
-            //   },
-            // );
             onComponentMove(
               item.component,
               draggedPath,
@@ -601,26 +469,9 @@ const ContainerSortableItem: React.FC<{
             return;
           }
 
-          // console.log('🔄 执行跨容器移动:', {
-          //   draggedComponent: {
-          //     id: item.component.id,
-          //     tag: item.component.tag,
-          //   },
-          //   draggedPath,
-          //   targetPath: path,
-          //   insertIndex,
-          //   draggedContainerPath,
-          //   targetContainerPath,
-          // });
-
           // 执行跨容器移动 - 传递正确的目标路径
           const targetPath = [...targetContainerPath, insertIndex];
-          // console.log('🎯 调用 onComponentMove 进行跨容器移动:', {
-          //   component: item.component.tag,
-          //   fromPath: draggedPath,
-          //   toPath: targetPath,
-          //   insertIndex,
-          // });
+
           onComponentMove(item.component, draggedPath, targetPath, insertIndex);
         }
       }
@@ -664,9 +515,8 @@ const ContainerSortableItem: React.FC<{
       style={{
         opacity,
         position: 'relative',
-        transition: 'all 0.15s ease', // 减少过渡时间，提高响应速度
+        transition: 'all 0.15s ease',
         cursor: component.tag === 'title' ? 'default' : 'grab',
-        // marginBottom: '8px',
         // 🎯 新增：拖拽悬停时显示蓝色线条指示线
         boxShadow:
           isOver && enableSort ? '0 0 8px rgba(24, 144, 255, 0.4)' : 'none',
@@ -695,10 +545,6 @@ const ContainerSortableItem: React.FC<{
           }}
         />
       )}
-      {/* 移除插入位置指示线 */}
-
-      {/* 移除拖拽悬停样式 */}
-
       {children}
     </div>
   );
@@ -774,11 +620,7 @@ const DraggableWrapper: React.FC<{
     }),
     canDrag: () => {
       const canDrag = component.tag !== 'title';
-      // console.log('🎯 DraggableWrapper canDrag 检查:', {
-      //   componentTag: component.tag,
-      //   canDrag,
-      //   isChildComponent,
-      // });
+
       return canDrag;
     },
   });
@@ -788,17 +630,6 @@ const DraggableWrapper: React.FC<{
     accept: ['component', 'existing-component', 'canvas-component'], // 添加canvas-component类型
     canDrop: (item: DragItem) => {
       if (!enableSort) return false;
-
-      // console.log('🔍 DraggableWrapper canDrop 检查:', {
-      //   itemType: item.type,
-      //   isNew: item.isNew,
-      //   hasComponent: !!item.component,
-      //   componentTag: item.component?.tag,
-      //   isChildComponent: item.isChildComponent,
-      //   currentComponentTag: component.tag,
-      //   currentPath: path,
-      //   containerPath,
-      // });
 
       // 不能拖拽到自己身上
       if (!item.isNew && item.path && isSamePath(item.path, path)) {
@@ -833,15 +664,6 @@ const DraggableWrapper: React.FC<{
           return false;
         }
       }
-
-      // 检查是否在同一容器中
-      // const draggedContainerPath = item.path ? item.path.slice(0, -1) : [];
-      // const currentContainerPath = containerPath;
-
-      // const isSameContainer = isSamePath(
-      //   draggedContainerPath,
-      //   currentContainerPath,
-      // );
 
       return true;
     },
@@ -943,43 +765,8 @@ const DraggableWrapper: React.FC<{
                 component.tag === 'form')); // 当前组件是表单容器
 
           if (isRootComponentToContainer) {
-            // console.log(
-            //   '🚫 ContainerSortableItem hover: 阻止根节点到容器的排序:',
-            //   {
-            //     draggedComponent: item.component.tag,
-            //     draggedPath,
-            //     targetPath: path,
-            //     reason: '这应该由drop处理器处理跨容器移动',
-            //   },
-            // );
             return; // 阻止在hover时处理，留给drop处理器
           }
-
-          // console.log('🔄 执行同容器排序:', {
-          //   draggedComponent: {
-          //     id: item.component.id,
-          //     tag: item.component.tag,
-          //   },
-          //   draggedPath,
-          //   targetPath: path,
-          //   targetIndex,
-          //   isChildComponent,
-          // });
-
-          // ✅ 修复：hover事件不执行实际移动，只用于视觉反馈
-          // 实际的移动操作将在drop事件中处理
-          // console.log('💡 hover检测到排序需求，等待drop事件执行实际移动:', {
-          //   component: item.component.tag,
-          //   fromPath: draggedPath,
-          //   targetPath: path,
-          //   targetIndex,
-          // });
-        } else {
-          // console.warn('⚠️ 跳过无效的排序操作:', {
-          //   draggedPath,
-          //   targetPath: path,
-          //   reason: '路径格式不正确或缺少必要数据',
-          // });
         }
       }, 50); // 50ms防抖延迟
     },
@@ -1003,14 +790,6 @@ const DraggableWrapper: React.FC<{
           draggedContainerPath,
           targetContainerPath,
         );
-
-        // console.log('🎯 drop事件处理组件移动:', {
-        //   draggedComponent: item.component.tag,
-        //   draggedPath,
-        //   targetContainerPath,
-        //   isSameContainer,
-        //   isChildComponent,
-        // });
 
         if (!isSameContainer) {
           // 跨容器移动
@@ -1041,25 +820,9 @@ const DraggableWrapper: React.FC<{
             path[0] === 'dsl' &&
             path[1] === 'body'
           ) {
-            // console.log('🔄 执行跨容器移动:', {
-            //   draggedComponent: {
-            //     id: item.component.id,
-            //     tag: item.component.tag,
-            //   },
-            //   draggedPath,
-            //   targetPath: path,
-            //   insertIndex,
-            //   draggedContainerPath,
-            //   targetContainerPath,
-            // });
-
             // 执行跨容器移动 - 使用正确的目标容器路径
             const targetPath = [...targetContainerPath, insertIndex];
-            // console.log('🔄 计算目标路径:', {
-            //   targetContainerPath,
-            //   insertIndex,
-            //   computedTargetPath: targetPath,
-            // });
+
             onComponentMove(
               item.component,
               draggedPath,
@@ -1075,12 +838,6 @@ const DraggableWrapper: React.FC<{
           }
         } else {
           // 同容器内排序
-          // console.log('🔄 同容器内排序 (drop事件):', {
-          //   draggedComponent: item.component.tag,
-          //   draggedPath,
-          //   targetPath: path,
-          //   index,
-          // });
 
           // 确定目标索引
           const rect = ref.current?.getBoundingClientRect();
@@ -1103,17 +860,6 @@ const DraggableWrapper: React.FC<{
             path[0] === 'dsl' &&
             path[1] === 'body'
           ) {
-            // console.log('✅ 执行同容器排序:', {
-            //   draggedComponent: {
-            //     id: item.component.id,
-            //     tag: item.component.tag,
-            //   },
-            //   draggedPath,
-            //   targetPath: path,
-            //   targetIndex,
-            //   isChildComponent,
-            // });
-
             // 执行排序
             onComponentMove(item.component, draggedPath, path, targetIndex);
           } else {
@@ -1134,9 +880,6 @@ const DraggableWrapper: React.FC<{
 
   const opacity = isDragging ? 0.4 : 1;
   drag(drop(ref));
-
-  // 检查当前组件是否被选中
-  // const isCurrentSelected = isSamePath(selectedPath || null, path);
 
   // 处理组件点击选中
   const handleWrapperClick = (e: React.MouseEvent) => {
@@ -1172,9 +915,7 @@ const DraggableWrapper: React.FC<{
   // 包装器样式
   const wrapperStyle: React.CSSProperties = {
     position: 'relative',
-    // border: isCurrentSelected ? '2px solid #1890ff' : '1px solid transparent', // 只有DraggableWrapper显示选中边框
     borderRadius: '4px',
-    // padding: '2px',
     padding: '0',
     margin: '1px 0',
     backgroundColor: isCurrentSelected
@@ -1300,17 +1041,6 @@ const SmartDropZone: React.FC<{
   const [{ isOver, canDrop, draggedItem }, drop] = useDrop({
     accept: ['component', 'existing-component', 'canvas-component'],
     canDrop: (item: DragItem) => {
-      // console.log('🔍 SmartDropZone canDrop 检查:', {
-      //   itemType: item.type,
-      //   isNew: item.isNew,
-      //   hasComponent: !!item.component,
-      //   componentTag: item.component?.tag,
-      //   isChildComponent: item.isChildComponent,
-      //   targetPath,
-      //   childElementsCount: childElements.length,
-      //   containerType,
-      // });
-
       // 特殊处理标题组件 - 标题组件不能拖拽到容器中
       if (
         item.type === 'title' ||
@@ -1372,28 +1102,12 @@ const SmartDropZone: React.FC<{
           return false;
         }
 
-        // if (isRootComponent) {
-        //   console.log('🔍 根节点组件拖拽到容器检查:', {
-        //     componentTag: item.component.tag,
-        //     targetPath,
-        //     containerType,
-        //   });
-        // }
-
-        // ✅ 修复：限制容器热区的拖拽接受条件
-        // 只有当组件是从根级别拖拽到容器时，才允许容器热区接受
-        // 但是对于分栏列和表单容器，我们允许从任何位置拖拽普通组件
         if (
           !isRootComponent &&
           (containerType === 'column' || containerType === 'form')
         ) {
           // 分栏列和表单容器允许接受任何非容器组件的拖拽
           if (isContainerComponent(item.component?.tag || item.type)) {
-            // console.log(
-            //   `❌ 容器组件不能拖拽到${
-            //     containerType === 'column' ? '分栏列' : '表单容器'
-            //   }中`,
-            // );
             return false;
           }
 
@@ -1418,11 +1132,6 @@ const SmartDropZone: React.FC<{
             }
           }
 
-          // console.log(
-          //   `✅ 普通组件可以拖拽到${
-          //     containerType === 'column' ? '分栏列' : '表单容器'
-          //   }中`,
-          // );
           return true;
         } else if (!isRootComponent) {
           console.log('❌ 非根级别组件不能拖拽到容器热区');
@@ -1430,7 +1139,6 @@ const SmartDropZone: React.FC<{
         }
 
         const canDrop = canDropInContainer(item.component.tag, targetPath);
-        // console.log('✅ 现有组件拖拽检查结果:', canDrop);
         return canDrop;
       }
       console.log('❌ 默认拒绝拖拽');
@@ -1523,30 +1231,7 @@ const SmartDropZone: React.FC<{
       // 清除指示线位置
       setIndicatorPosition(null);
 
-      // console.log('🎯 SmartDropZone 拖拽处理:', {
-      //   containerType,
-      //   targetPath,
-      //   item: {
-      //     type: item.type,
-      //     isNew: item.isNew,
-      //     hasComponent: !!item.component,
-      //     hasPath: !!item.path,
-      //     isChildComponent: item.isChildComponent,
-      //   },
-      //   childElementsCount: childElements.length,
-      //   columnIndex,
-      //   insertPosition,
-      //   insertIndex,
-      // });
-
       if (item.isNew) {
-        // 新组件添加到指定位置
-        // console.log('✅ 新组件拖拽到容器:', {
-        //   itemType: item.type,
-        //   targetPath,
-        //   insertIndex,
-        //   insertPosition,
-        // });
         onContainerDrop?.(item, targetPath, insertIndex);
       } else if (item.component && item.path) {
         // 现有组件移动
@@ -1572,43 +1257,10 @@ const SmartDropZone: React.FC<{
             item.path[2] === 'elements';
 
           if (isRootComponent) {
-            // console.log('🔄 根节点组件移动到容器:', {
-            //   component: item.component.tag,
-            //   from: item.path,
-            //   to: targetPath,
-            //   containerType,
-            //   insertIndex,
-            // });
-
-            // 对于根节点组件移动到容器，使用 onContainerDrop 来处理移动逻辑
-            // 这样会正确地移除原组件并添加到新位置
-            // console.log('🎯 调用 onContainerDrop 处理根节点到容器的移动:', {
-            //   draggedItem: item,
-            //   targetPath,
-            //   insertIndex,
-            // });
             onContainerDrop?.(item, targetPath, insertIndex);
             return;
           }
 
-          // 子组件跨容器移动的特殊处理
-          // if (item.isChildComponent) {
-          //   console.log('🔄 子组件跨容器移动:', {
-          //     component: item.component.tag,
-          //     from: draggedContainerPath,
-          //     to: targetPath,
-          //     containerType,
-          //   });
-          // }
-
-          // 容器间移动到指定位置（非根节点组件）
-          // console.log('🎯 调用 onComponentMove (跨容器):', {
-          //   component: item.component.tag,
-          //   fromPath: item.path,
-          //   toPath: targetPath,
-          //   insertIndex,
-          //   targetPath,
-          // });
           onComponentMove?.(
             item.component,
             item.path,
@@ -1616,13 +1268,6 @@ const SmartDropZone: React.FC<{
             insertIndex,
           );
         } else {
-          // 同容器内的拖拽 - 移动到指定位置
-          // console.log('🔄 同容器内拖拽到指定位置:', {
-          //   component: item.component.tag,
-          //   targetPath,
-          //   insertIndex,
-          // });
-
           // 检查拖拽限制
           if (!canDropInContainer(item.component.tag, targetPath)) {
             console.warn(
@@ -1633,14 +1278,6 @@ const SmartDropZone: React.FC<{
             return;
           }
 
-          // 移动到指定位置
-          // console.log('🎯 调用 onComponentMove (同容器):', {
-          //   component: item.component.tag,
-          //   fromPath: item.path,
-          //   toPath: targetPath,
-          //   insertIndex,
-          //   targetPath,
-          // });
           onComponentMove?.(
             item.component,
             item.path,
@@ -1693,13 +1330,6 @@ const SmartDropZone: React.FC<{
 
   // 处理点击事件 - 确保不阻止子组件的选中
   const handleContainerClick = (e: React.MouseEvent) => {
-    // console.log('🖱️ SmartDropZone 点击事件:', {
-    //   containerType,
-    //   target: e.target,
-    //   currentTarget: e.currentTarget,
-    //   clickedOnSelf: e.target === e.currentTarget,
-    // });
-
     // 对于分栏列，触发选中回调
     if (containerType === 'column') {
       // console.log('✅ 分栏列点击 - 触发选中回调');
@@ -1931,21 +1561,25 @@ const mergeStyles = (
   component: ComponentType,
   defaultStyles: React.CSSProperties,
 ): React.CSSProperties => {
-  const componentStyles = component.styles || {};
+  const componentStyles = component.style || {};
 
   // 合并默认样式和组件样式
   const mergedStyles = { ...defaultStyles };
 
-  // 应用组件样式
-  Object.keys(componentStyles).forEach((key) => {
-    if (
-      key !== 'customCSS' &&
-      componentStyles[key] !== undefined &&
-      componentStyles[key] !== ''
-    ) {
-      mergedStyles[key as keyof React.CSSProperties] = componentStyles[key];
-    }
-  });
+  if (
+    typeof componentStyles === 'object' &&
+    '[key: string]' in componentStyles
+  ) {
+    Object.keys(componentStyles).forEach((key) => {
+      if (
+        key !== 'customCSS' &&
+        componentStyles[key] !== undefined &&
+        componentStyles[key] !== ''
+      ) {
+        mergedStyles[key as keyof React.CSSProperties] = componentStyles[key];
+      }
+    });
+  }
 
   return mergedStyles;
 };
@@ -2341,11 +1975,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         selectedPath[3] === path[3] // 分栏组件的索引
       ) {
         selectedColumnIndex = selectedPath[5] as number;
-        console.log('✅ 根级别分栏列选中状态匹配:', {
-          selectedPath,
-          currentPath: path,
-          selectedColumnIndex,
-        });
       }
 
       // 检查表单内分栏列选中 (路径长度为8)
@@ -2361,36 +1990,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         selectedPath[5] === path[5] // 分栏组件在表单内的索引
       ) {
         selectedColumnIndex = selectedPath[7] as number;
-        console.log('✅ 表单内分栏列选中状态匹配:', {
-          selectedPath,
-          currentPath: path,
-          selectedColumnIndex,
-        });
-      }
-
-      // 调试信息：输出当前路径和选中路径的详细信息
-      if (selectedPath && selectedPath.length >= 6) {
-        console.log('🔍 分栏组件路径匹配检查:', {
-          selectedPath,
-          currentPath: path,
-          pathLength: selectedPath.length,
-          isRootLevel: selectedPath.length === 6,
-          isFormLevel: selectedPath.length === 8,
-          selectedPathIndices: {
-            dsl: selectedPath[0],
-            body: selectedPath[1],
-            elements: selectedPath[2],
-            componentIndex: selectedPath[3],
-            columns: selectedPath[4],
-            columnIndex: selectedPath[5],
-          },
-          currentPathIndices: {
-            dsl: path[0],
-            body: path[1],
-            elements: path[2],
-            componentIndex: path[3],
-          },
-        });
       }
 
       // 更精确的路径匹配检查 - 根级别分栏列
@@ -2405,13 +2004,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
       if (isExactRootPathMatch) {
         const exactSelectedColumnIndex = selectedPath[5] as number;
-        console.log('🎯 根级别精确路径匹配成功:', {
-          selectedPath,
-          currentPath: path,
-          exactSelectedColumnIndex,
-          selectedColumnIndex,
-          willUpdate: exactSelectedColumnIndex !== selectedColumnIndex,
-        });
+
         selectedColumnIndex = exactSelectedColumnIndex;
       }
 
@@ -2429,13 +2022,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
       if (isExactFormPathMatch) {
         const exactSelectedColumnIndex = selectedPath[7] as number;
-        console.log('🎯 表单内精确路径匹配成功:', {
-          selectedPath,
-          currentPath: path,
-          exactSelectedColumnIndex,
-          selectedColumnIndex,
-          willUpdate: exactSelectedColumnIndex !== selectedColumnIndex,
-        });
+
         selectedColumnIndex = exactSelectedColumnIndex;
       }
 
@@ -2488,26 +2075,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               const columnPath = [...path, 'columns', columnIndex, 'elements'];
               const columnSelectionPath = [...path, 'columns', columnIndex];
               const isColumnSelected = selectedColumnIndex === columnIndex;
-
-              // 调试信息：检查分栏列的选中状态
-              if (selectedPath && selectedPath.length >= 6) {
-                console.log('🔍 分栏列选中状态检查:', {
-                  columnIndex,
-                  selectedColumnIndex,
-                  isColumnSelected,
-                  selectedPath,
-                  columnSelectionPath,
-                  pathMatch:
-                    JSON.stringify(selectedPath) ===
-                    JSON.stringify(columnSelectionPath),
-                  exactMatch:
-                    selectedPath.length === columnSelectionPath.length &&
-                    selectedPath.every(
-                      (segment, index) =>
-                        segment === columnSelectionPath[index],
-                    ),
-                });
-              }
 
               // 计算列宽比例
               const columnFlex = column.style?.flex || 1;
@@ -2643,7 +2210,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                         style={{
                           display: 'flex',
                           flexWrap: 'wrap',
-                          // gap: '8px',
                           alignItems: 'flex-start',
                         }}
                       >
@@ -2689,7 +2255,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
     // 所有其他组件类型的渲染逻辑保持不变...
     case 'plain_text': {
-      // 从 style 对象中读取样式属性，如果没有则从根属性读取
       const fontSize = comp.style?.fontSize || comp.fontSize || 14;
       const fontWeight = comp.style?.fontWeight || comp.fontWeight || 'normal';
       const textAlign = comp.style?.textAlign || comp.textAlign || 'left';
@@ -2704,7 +2269,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         lineHeight: 1.5,
         backgroundColor: '#fff',
         borderRadius: '4px',
-        // 添加最大行数限制
         display: '-webkit-box',
         WebkitLineClamp: numberOfLines,
         WebkitBoxOrient: 'vertical',
@@ -2713,7 +2277,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         wordBreak: 'break-word',
         whiteSpace: 'normal',
         minHeight: '25px',
-        // maxHeight: `${numberOfLines * 1.5 * fontSize}px`,
       };
 
       const mergedStyles = mergeStyles(component, defaultStyles);
@@ -2723,30 +2286,14 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         e.stopPropagation();
         e.preventDefault();
 
-        // console.log('📝 文本组件被点击:', {
-        //   componentId: comp.id,
-        //   componentTag: comp.tag,
-        //   path,
-        // });
-
-        // console.log('📝 检查 onSelect 回调:', {
-        //   onSelectExists: !!onSelect,
-        //   onSelectType: typeof onSelect,
-        // });
-
         // 处理组件选中
         if (onSelect) {
-          // console.log('📝 调用 onSelect 回调:', {
-          //   component,
-          //   path,
-          // });
           onSelect(component, path);
         } else {
           console.log('❌ onSelect 回调不存在');
         }
 
         if (onCanvasFocus) {
-          console.log('📝 调用 onCanvasFocus 回调');
           onCanvasFocus();
         } else {
           console.log('❌ onCanvasFocus 回调不存在');
@@ -2755,16 +2302,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
       // 检查当前组件是否被选中
       const isCurrentSelected = isSamePath(selectedPath || null, path);
-
-      // console.log('📝 文本组件选中状态检查:', {
-      //   componentId: comp.id,
-      //   componentTag: comp.tag,
-      //   path,
-      //   selectedPath,
-      //   isCurrentSelected,
-      //   isPreview,
-      // });
-
       // 选中状态样式
       const selectedStyles: React.CSSProperties = {
         border:
@@ -2778,42 +2315,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             ? '0 0 8px rgba(24, 144, 255, 0.3)'
             : 'none',
       };
-
-      // 处理变量替换
-      console.log('🔍 文本组件变量替换检查:', {
-        componentId: comp.id,
-        originalContent: comp.content || '文本内容',
-        userEditedContent: textComponentStateManager.getUserEditedContent(
-          comp.id,
-        ),
-        boundVariableName: textComponentStateManager.getBoundVariableName(
-          comp.id,
-        ),
-        variablesCount: variables.length,
-        variables: variables,
-        hasVariables: variables.length > 0,
-        variablesKeys: variables
-          .map((v) => {
-            if (typeof v === 'object' && v !== null) {
-              return Object.keys(v as Record<string, any>);
-            }
-            return [];
-          })
-          .flat(),
-        cacheStats: variableCacheManager.getCacheStats(),
-        component: component,
-        comp: comp,
-        componentContent: component.content,
-        compContent: comp.content,
-        componentBoundVariable: textComponentStateManager.getBoundVariableName(
-          comp.id,
-        ),
-        compBoundVariable: textComponentStateManager.getBoundVariableName(
-          comp.id,
-        ),
-        componentFull: component,
-        compFull: comp,
-      });
 
       // 确定要显示的内容
       let displayContent: string;
@@ -2829,13 +2330,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
         if (variableValue !== undefined) {
           displayContent = String(variableValue);
-
-          console.log('✅ 文本组件绑定变量显示 (从缓存):', {
-            componentId: comp.id,
-            boundVariableName: boundVariableName,
-            variableValue: variableValue,
-            displayContent: displayContent,
-          });
         } else {
           // 如果缓存中没有，尝试从传入的变量列表中查找
           const boundVariable = variables.find((variable) => {
@@ -2852,13 +2346,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               keys[0]
             ];
             displayContent = String(variableValue);
-
-            console.log('✅ 文本组件绑定变量显示 (从变量列表):', {
-              componentId: comp.id,
-              boundVariableName: boundVariableName,
-              variableValue: variableValue,
-              displayContent: displayContent,
-            });
           } else {
             // 如果找不到变量值，显示用户编辑的内容或默认内容
             const userEditedContent =
@@ -2868,13 +2355,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             } else {
               displayContent = comp.content || '文本内容';
             }
-
-            console.log('⚠️ 文本组件绑定变量未找到，显示用户编辑内容:', {
-              componentId: comp.id,
-              boundVariableName: boundVariableName,
-              userEditedContent: userEditedContent,
-              displayContent: displayContent,
-            });
           }
         }
       } else {
@@ -2890,24 +2370,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             variables,
           );
         }
-
-        console.log('✅ 文本组件显示用户编辑内容:', {
-          componentId: comp.id,
-          userEditedContent: userEditedContent,
-          displayContent: displayContent,
-          boundVariableName: boundVariableName,
-        });
       }
-
-      console.log('✅ 文本组件最终显示内容:', {
-        componentId: comp.id,
-        originalContent: comp.content || '文本内容',
-        userEditedContent: textComponentStateManager.getUserEditedContent(
-          comp.id,
-        ),
-        displayContent: displayContent,
-        boundVariableName: boundVariableName,
-      });
 
       const textContent = (
         <div
@@ -2945,22 +2408,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       const isCurrentSelected = isSamePath(selectedPath || null, path);
       const comp = component as any;
 
-      console.log('🔍 富文本组件变量替换检查:', {
-        componentId: comp.id,
-        originalContent: comp.content,
-        userEditedContent: textComponentStateManager.getUserEditedContent(
-          comp.id,
-        ),
-        boundVariableName: textComponentStateManager.getBoundVariableName(
-          comp.id,
-        ),
-        variablesCount: variables.length,
-        variables: variables,
-        hasVariables: variables.length > 0,
-        component: component,
-        comp: comp,
-      });
-
       // 确定要显示的内容
       let displayContent: any;
 
@@ -2975,13 +2422,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
         if (variableValue !== undefined) {
           displayContent = variableValue;
-
-          console.log('✅ 富文本组件绑定变量显示 (从缓存):', {
-            componentId: comp.id,
-            boundVariableName: boundVariableName,
-            variableValue: variableValue,
-            displayContent: displayContent,
-          });
         } else {
           // 如果缓存中没有，尝试从传入的变量列表中查找
           const boundVariable = variables.find((variable) => {
@@ -2997,13 +2437,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               boundVariableName
             ];
             displayContent = variableValue;
-
-            console.log('✅ 富文本组件绑定变量显示 (从变量列表):', {
-              componentId: comp.id,
-              boundVariableName: boundVariableName,
-              variableValue: variableValue,
-              displayContent: displayContent,
-            });
           } else {
             // 如果找不到变量值，显示占位符
             displayContent = comp.content || {
@@ -3045,24 +2478,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             ],
           };
         }
-
-        console.log('✅ 富文本组件显示用户编辑内容:', {
-          componentId: comp.id,
-          userEditedContent: userEditedContent,
-          displayContent: displayContent,
-          boundVariableName: boundVariableName,
-        });
       }
-
-      console.log('✅ 富文本组件最终显示内容:', {
-        componentId: comp.id,
-        originalContent: comp.content,
-        userEditedContent: textComponentStateManager.getUserEditedContent(
-          comp.id,
-        ),
-        displayContent: displayContent,
-        boundVariableName: boundVariableName,
-      });
 
       // 处理点击事件
       const handleRichTextClick = (e: React.MouseEvent) => {
@@ -3149,7 +2565,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             border: '2px solid #1890ff',
             borderRadius: '4px',
             backgroundColor: 'rgba(24, 144, 255, 0.05)',
-            // boxShadow: '0 0 0 1px rgba(24, 144, 255, 0.2)',
           }
         : {
             border: '2px solid transparent',
@@ -3158,8 +2573,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       const hrContent = (
         <div
           style={{
-            // margin: '12px 0',
-            padding: '8px 0', // 扩大可选范围
+            padding: '8px 0',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
             ...selectedStyles,
@@ -3184,7 +2598,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               margin: '0',
               borderColor: isCurrentSelected ? '#1890ff' : '#d9d9d9',
               borderWidth: '1px',
-              borderStyle: borderStyle, // 应用动态边框样式
+              borderStyle: borderStyle,
               transition: 'all 0.2s ease',
             }}
           />
@@ -3213,27 +2627,8 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
     case 'img': {
       // 检查当前组件是否被选中
       const isCurrentSelected = isSamePath(selectedPath || null, path);
-
       // 获取图片URL，支持变量绑定
       const getImageUrl = () => {
-        console.log('🖼️ 图片组件获取URL:', {
-          componentId: comp.id,
-          img_url: comp.img_url,
-          variable_name: comp.variable_name,
-          variablesCount: variables.length,
-          variables: variables.map((v, index) => ({
-            index,
-            variable: v,
-            keys: typeof v === 'object' && v !== null ? Object.keys(v) : [],
-            firstKey:
-              typeof v === 'object' && v !== null ? Object.keys(v)[0] : null,
-            firstValue:
-              typeof v === 'object' && v !== null && Object.keys(v).length > 0
-                ? v[Object.keys(v)[0]]
-                : null,
-          })),
-        });
-
         let finalUrl;
         let variableName;
 
@@ -3242,14 +2637,12 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           const variableMatch = comp.img_url.match(/\$\{([^}]+)\}/);
           if (variableMatch && variableMatch[1]) {
             variableName = variableMatch[1];
-            console.log('🔍 从img_url提取变量名:', variableName);
           }
         }
 
         // 2. 备用：从历史数据的 variable_name 属性获取（兼容性）
         if (!variableName && comp.variable_name) {
           variableName = comp.variable_name;
-          console.log('🔍 使用variable_name（兼容模式）:', variableName);
         }
 
         // 3. 如果找到变量名，查找对应的变量
@@ -3262,48 +2655,32 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             return false;
           });
 
-          console.log('🔍 找到变量:', { variableName, variable });
-
           if (variable) {
             const variableValue = (variable as Record<string, any>)[
               variableName
             ];
 
-            console.log('🔍 变量值解析:', {
-              variableName,
-              variableValue,
-              valueType: typeof variableValue,
-            });
-
             // 解析变量值获取图片URL
             if (typeof variableValue === 'string') {
               // 新的字符串格式图片变量
-              console.log('✅ 找到图片URL (字符串):', variableValue);
               finalUrl = variableValue;
-              console.log('🎯 即将返回URL:', finalUrl);
               return finalUrl;
             } else if (
               typeof variableValue === 'object' &&
               variableValue !== null
             ) {
               if (variableValue.img_url) {
-                console.log('✅ 找到图片URL (对象):', variableValue.img_url);
                 finalUrl = variableValue.img_url;
-                console.log('🎯 即将返回URL:', finalUrl);
                 return finalUrl;
               } else if (
                 Array.isArray(variableValue) &&
                 variableValue.length > 0 &&
                 variableValue[0].img_url
               ) {
-                console.log('✅ 找到图片URL (数组):', variableValue[0].img_url);
                 finalUrl = variableValue[0].img_url;
-                console.log('🎯 即将返回URL:', finalUrl);
                 return finalUrl;
               }
             }
-
-            console.log('⚠️ 变量值中没有找到有效的img_url');
           } else {
             console.log('❌ 没有找到对应的变量:', variableName);
           }
@@ -3313,10 +2690,8 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         // 如果img_url是变量占位符格式，则返回默认图片
         if (comp.img_url && comp.img_url.includes('${')) {
           finalUrl = '/demo.png';
-          console.log('🔙 变量解析失败，返回默认图片URL:', finalUrl);
         } else {
           finalUrl = comp.img_url || '/demo.png';
-          console.log('🔙 返回原始图片URL:', finalUrl);
         }
         return finalUrl;
       };
@@ -3379,7 +2754,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           <img
             src={(() => {
               const url = getImageUrl();
-              console.log('🖼️ 图片组件渲染时获取的URL:', url);
               return url;
             })()}
             alt="图片"
@@ -3390,13 +2764,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             }}
             onLoad={(e) => {
               const img = e.target as HTMLImageElement;
-              console.log('✅ 图片加载成功:', {
-                componentId: comp.id,
-                src: img.src,
-                naturalWidth: img.naturalWidth,
-                naturalHeight: img.naturalHeight,
-              });
-
               // 加载成功时移除错误样式
               img.style.backgroundColor = '';
               img.style.border = '';
@@ -3418,19 +2785,8 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               const isVariableBound =
                 comp.img_url && comp.img_url.includes('${');
 
-              console.log('❌ 图片加载失败:', {
-                componentId: comp.id,
-                originalSrc: img.src,
-                isVariableBound,
-                error: e,
-                crossOrigin: img.crossOrigin,
-                networkState: navigator.onLine ? 'online' : 'offline',
-              });
-
               // 如果是变量绑定的图片，显示图裂状态，不再回退到demo.png
               if (isVariableBound) {
-                console.log('🖼️ 变量绑定图片加载失败，显示图裂状态');
-
                 // 设置图裂样式
                 img.style.backgroundColor = '#fafafa';
                 img.style.border = '2px dashed #d9d9d9';
@@ -3479,11 +2835,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                   const retrySrc = originalSrc.includes('?')
                     ? `${originalSrc}&retry=1&t=${Date.now()}`
                     : `${originalSrc}?retry=1&t=${Date.now()}`;
-                  console.log('🔄 尝试重新加载图片:', retrySrc);
                   img.src = retrySrc;
                 } else {
                   // 重试失败，使用备用图片
-                  console.log('🔙 重试失败，使用备用图片');
                   img.src = '/demo.png';
                 }
               }
@@ -3573,26 +2927,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                 if (variableMatch && variableMatch[1]) {
                   const variableName = variableMatch[1];
 
-                  console.log('🔍 ComponentRendererCore - 查找变量:', {
-                    variableName,
-                    variables: variables,
-                    variablesType: Array.isArray(variables)
-                      ? 'array'
-                      : typeof variables,
-                    variablesDetailed: variables.map(
-                      (v: any, index: number) => ({
-                        index,
-                        type: typeof v,
-                        isObject: typeof v === 'object' && v !== null,
-                        keys:
-                          typeof v === 'object' && v !== null
-                            ? Object.keys(v)
-                            : [],
-                        value: v,
-                      }),
-                    ),
-                  });
-
                   // 支持两种变量格式：
                   // 1. VariableItem格式：{变量名: 值}
                   // 2. Variable格式：{name: 变量名, value: 值, type: 类型}
@@ -3630,20 +2964,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                       variableValue = (variable as any)[variableName];
                     }
 
-                    console.log(
-                      '✅ ComponentRendererCore - 输入框占位文本解析变量成功:',
-                      {
-                        componentId: comp.id,
-                        isPreview,
-                        variableName,
-                        variableValue,
-                        placeholderContent,
-                        resolvedValue: String(variableValue),
-                        variableFormat: (variable as any).name
-                          ? 'Variable'
-                          : 'VariableItem',
-                      },
-                    );
                     return String(variableValue);
                   } else {
                     console.log('❌ ComponentRendererCore - 变量未找到:', {
@@ -3663,12 +2983,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                   }
                 }
               }
-
-              console.log('🔍 ComponentRendererCore - 返回原始占位文本:', {
-                componentId: comp.id,
-                isPreview,
-                placeholderContent,
-              });
 
               return placeholderContent;
             })()}
@@ -3710,20 +3024,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                       variableValue = (variable as any)[variableName];
                     }
 
-                    console.log(
-                      '✅ ComponentRendererCore - 输入框默认文本解析变量成功:',
-                      {
-                        componentId: comp.id,
-                        isPreview,
-                        variableName,
-                        variableValue,
-                        defaultContent,
-                        resolvedValue: String(variableValue),
-                        variableFormat: (variable as any).name
-                          ? 'Variable'
-                          : 'VariableItem',
-                      },
-                    );
                     return String(variableValue);
                   }
                 }
@@ -3767,8 +3067,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
     case 'button': {
       // 检查当前组件是否被选中
       const isCurrentSelected = isSamePath(selectedPath || null, path);
-      // const buttonColor = (comp as any).style?.color || '#fff';
-
       // 获取按钮颜色样式
       const getButtonStyleByColor = (colorTheme?: string) => {
         switch (colorTheme) {
@@ -3857,11 +3155,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
           const variableMatch = comp.options.match(/\$\{([^}]+)\}/);
           if (variableMatch && variableMatch[1]) {
             const variableName = variableMatch[1];
-            console.log('🔍 下拉单选组件解析变量:', {
-              componentId: comp.id,
-              variableName,
-              variablesCount: variables?.length || 0,
-            });
 
             // 查找变量
             const variable = variables?.find((v: any) => {
@@ -3886,12 +3179,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                 // VariableItem格式：{variableName: value}
                 variableValue = variable[variableName];
               }
-
-              console.log('✅ 找到下拉单选变量值:', {
-                variableName,
-                variableValue,
-                valueType: typeof variableValue,
-              });
 
               // 如果变量值是数组，直接使用
               if (Array.isArray(variableValue)) {
@@ -3962,13 +3249,11 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       const selectContent = (
         <div
           style={{
-            // marginBottom: '12px',
             border:
               isCurrentSelected && !isPreview
                 ? '2px solid #1890ff'
                 : '2px solid transparent',
             borderRadius: '6px',
-            // padding: '8px',
             backgroundColor:
               isCurrentSelected && !isPreview
                 ? 'rgba(24, 144, 255, 0.05)'
@@ -3986,8 +3271,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               width: '250px',
               fontSize: '14px',
             }}
-            // 画布中只允许下拉查看，不允许选中
-            value={undefined} // 始终保持空值，不显示任何选中状态
+            value={undefined}
             onChange={() => {
               // 空的onChange处理，不允许选中任何选项
             }}
@@ -4007,17 +3291,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                   option.text.content
                 ) {
                   const textContent = option.text.content;
-
-                  console.log('🔍 画布选项显示调试:', {
-                    textContent,
-                    textContentType: typeof textContent,
-                    variablesCount: variables.length,
-                    variables: variables.map((v: any) => ({
-                      name: v.name,
-                      keys: Object.keys(v),
-                      data: v,
-                    })),
-                  });
 
                   // 智能显示逻辑：根据模式显示不同的值
                   if (
@@ -4239,13 +3512,11 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
       const multiSelectContent = (
         <div
           style={{
-            // marginBottom: '12px',
             border:
               isCurrentSelected && !isPreview
                 ? '2px solid #1890ff'
                 : '2px solid transparent',
             borderRadius: '6px',
-            // padding: '8px',
             backgroundColor:
               isCurrentSelected && !isPreview
                 ? 'rgba(24, 144, 255, 0.05)'
@@ -4264,17 +3535,12 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               width: '250px',
               fontSize: '14px',
             }}
-            // 画布中只允许下拉查看，不允许选中
-            value={[]} // 始终保持空值，不显示任何选中状态
-            onChange={() => {
-              // 空的onChange处理，不允许选中任何选项
-            }}
+            value={[]}
+            onChange={() => {}}
             onSelect={() => {
-              // 阻止选中操作
               return false;
             }}
             onDeselect={() => {
-              // 阻止取消选中操作
               return false;
             }}
           >
@@ -4299,38 +3565,24 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
               // 解析变量值以显示实际内容
               if (displayText && displayText.includes('${')) {
-                console.log('🎨 画布变量解析开始:', { displayText });
                 const variableMatch = displayText.match(/\$\{([^}]+)\}/);
                 if (variableMatch && variableMatch[1]) {
                   const variableName = variableMatch[1];
-                  console.log('🎨 画布提取变量名:', variableName);
-                  console.log('🎨 画布所有变量:', variables);
 
                   // 查找变量
                   const variable = variables.find((v: any) => {
                     if (typeof v === 'object' && v !== null) {
                       const keys = Object.keys(v as Record<string, any>);
-                      console.log('🎨 画布检查变量:', {
-                        v,
-                        keys,
-                        variableName,
-                      });
                       return keys.length > 0 && keys[0] === variableName;
                     }
                     return false;
                   });
 
-                  console.log('🎨 画布找到变量:', variable);
-
                   if (variable && typeof variable === 'object') {
                     const variableValue = (variable as any)[variableName];
-                    console.log('🎨 画布变量值:', {
-                      variableName,
-                      variableValue,
-                    });
+
                     if (variableValue !== undefined && variableValue !== null) {
                       displayText = String(variableValue);
-                      console.log('🎨 画布最终显示:', displayText);
                     } else {
                       // 如果找不到变量值，显示变量名（不带${}）
                       displayText = variableName;
@@ -4380,22 +3632,11 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
 
       // 解析多图混排的图片列表（支持变量绑定）
       const getImageList = () => {
-        console.log('🖼️ 多图混排获取图片列表:', {
-          componentId: comp.id,
-          img_list: comp.img_list,
-          img_list_type: typeof comp.img_list,
-          isString: typeof comp.img_list === 'string',
-          includesVariable:
-            typeof comp.img_list === 'string' && comp.img_list.includes('${'),
-          variablesCount: variables.length,
-        });
-
         // 如果img_list是变量占位符格式，解析变量
         if (typeof comp.img_list === 'string' && comp.img_list.includes('${')) {
           const variableMatch = comp.img_list.match(/\$\{([^}]+)\}/);
           if (variableMatch && variableMatch[1]) {
             const variableName = variableMatch[1];
-            console.log('🔍 从img_list提取变量名:', variableName);
 
             // 查找对应的变量
             const variable = variables.find((v) => {
@@ -4406,22 +3647,13 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
               return false;
             });
 
-            console.log('🔍 找到变量:', { variableName, variable });
-
             if (variable) {
               const variableValue = (variable as Record<string, any>)[
                 variableName
               ];
-              console.log('🔍 变量值解析:', {
-                variableName,
-                variableValue,
-                valueType: typeof variableValue,
-                isArray: Array.isArray(variableValue),
-              });
 
               // 解析变量值获取图片数组
               if (Array.isArray(variableValue) && variableValue.length > 0) {
-                console.log('✅ 找到图片数组:', variableValue);
                 return variableValue;
               } else {
                 console.log('❌ 变量值不是有效的图片数组');
@@ -4431,19 +3663,14 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             }
           }
 
-          // 变量解析失败，返回空数组或默认图片
-          console.log('🔙 变量解析失败，返回默认图片数组');
           return [];
         }
 
         // 如果img_list是普通数组，直接返回
         if (Array.isArray(comp.img_list)) {
-          console.log('🔙 返回原始图片数组:', comp.img_list);
           return comp.img_list;
         }
 
-        // 其他情况返回空数组
-        console.log('🔙 返回空数组');
         return [];
       };
 
@@ -4533,21 +3760,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
         const actualImages = resolvedImageList || [];
         const completeList = [];
 
-        console.log('🎯 生成完整图片列表:', {
-          componentId: comp.id,
-          combinationMode: comp.combination_mode,
-          layoutType: comp.layoutType,
-          userChosenLayout,
-          requiredCount,
-          actualImageCount: actualImages.length,
-          needsPlaceholders: actualImages.length < requiredCount,
-          debugInfo: {
-            hasUserChoice: !!userChosenLayout,
-            hasLayoutType: !!comp.layoutType,
-            fallbackToCombinationMode: !userChosenLayout && !comp.layoutType,
-          },
-        });
-
         // 添加实际图片
         for (let i = 0; i < requiredCount; i++) {
           if (i < actualImages.length && actualImages[i]) {
@@ -4581,9 +3793,9 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
                 ? '0 0 8px rgba(24, 144, 255, 0.3)'
                 : 'none',
             transition: 'all 0.2s ease',
-            width: '100%', // 确保宽度与父容器一致
-            maxWidth: '100%', // 限制最大宽度
-            overflow: 'hidden', // 防止内容溢出
+            width: '100%',
+            maxWidth: '100%',
+            overflow: 'hidden',
           }}
         >
           <div
@@ -4863,7 +4075,6 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = ({
             backgroundColor: themeStyles.backgroundColor,
             border: `1px solid ${themeStyles.borderColor}`,
             borderRadius: '4px',
-            // textAlign: 'center',
           }}
         >
           <h1

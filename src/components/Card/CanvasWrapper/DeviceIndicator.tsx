@@ -1,11 +1,5 @@
-// 画布上的子组件(设备提示、组件数量)
-
-import { Typography } from 'antd';
 import React from 'react';
-import { DEVICE_SIZES } from './card-designer-constants';
-
-const { Text } = Typography;
-
+import { DEVICE_SIZES } from '../constants';
 // 设备提示组件
 export const DeviceIndicator: React.FC<{
   device: keyof typeof DEVICE_SIZES;
@@ -35,33 +29,6 @@ export const DeviceIndicator: React.FC<{
       </span>
       {deviceConfig.name}
       {canvasWidth !== '100%' && ` (${canvasWidth})`}
-    </div>
-  );
-};
-
-// 画布标题组件
-export const CanvasHeader: React.FC<{
-  elementsCount: number;
-}> = ({ elementsCount }) => {
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        top: '0',
-        left: '0',
-        right: '0',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '0 8px',
-      }}
-    >
-      <Text type="secondary" style={{ fontSize: '12px' }}>
-        设计画布
-      </Text>
-      <Text type="secondary" style={{ fontSize: '12px' }}>
-        组件数量: {elementsCount}
-      </Text>
     </div>
   );
 };

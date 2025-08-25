@@ -2,11 +2,7 @@
 
 import { message } from 'antd';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ComponentType,
-  DesignData,
-  Variable,
-} from './card-designer-types-updated';
+import { ComponentType, DesignData, Variable } from '../type';
 import {
   convertToTargetFormat,
   ensureComponentIds,
@@ -15,7 +11,7 @@ import {
   migrateCardLink,
   migrateTitleStyle,
   normalizeCombinationModes,
-} from './card-designer-utils';
+} from '../utils';
 
 // 工具函数：根据路径更新组件 - 修复版本，防止嵌套错误
 const updateComponentByPath = (
@@ -24,14 +20,6 @@ const updateComponentByPath = (
   updatedComponent: ComponentType,
 ): DesignData => {
   const newData = JSON.parse(JSON.stringify(data));
-
-  console.log('🔧 开始路径更新:', {
-    path,
-    pathLength: path.length,
-    componentId: updatedComponent.id,
-    componentTag: updatedComponent.tag,
-    hasStyle: !!(updatedComponent as any).style,
-  });
 
   // 验证路径格式
   if (
@@ -48,14 +36,6 @@ const updateComponentByPath = (
     // 根级组件: ['dsl', 'body', 'elements', index]
     const index = path[3] as number;
     if (index >= 0 && index < newData.dsl.body.elements.length) {
-      const oldComponent = newData.dsl.body.elements[index];
-      console.log('📝 更新根级组件:', {
-        index,
-        oldId: oldComponent?.id,
-        oldTag: oldComponent?.tag,
-        newId: updatedComponent.id,
-        newTag: updatedComponent.tag,
-      });
       newData.dsl.body.elements[index] = updatedComponent;
     } else {
       console.error('❌ 根级组件索引无效:', index);
@@ -72,15 +52,6 @@ const updateComponentByPath = (
         const formElements = (formComponent as any).elements || [];
         if (componentIndex >= 0 && componentIndex < formElements.length) {
           const oldComponent = formElements[componentIndex];
-          console.log('📋 更新表单内组件:', {
-            formIndex,
-            componentIndex,
-            formTag: formComponent.tag,
-            oldId: oldComponent?.id,
-            oldTag: oldComponent?.tag,
-            newId: updatedComponent.id,
-            newTag: updatedComponent.tag,
-          });
 
           // 确保只更新组件本身，不影响表单结构
           // 验证更新的组件不是表单组件，防止嵌套
@@ -127,16 +98,6 @@ const updateComponentByPath = (
           if (column && column.elements) {
             const columnElements = column.elements;
             if (componentIndex >= 0 && componentIndex < columnElements.length) {
-              const oldComponent = columnElements[componentIndex];
-              console.log('📐 更新分栏内组件:', {
-                columnSetIndex,
-                columnIndex,
-                componentIndex,
-                oldId: oldComponent?.id,
-                oldTag: oldComponent?.tag,
-                newId: updatedComponent.id,
-                newTag: updatedComponent.tag,
-              });
               column.elements[componentIndex] = updatedComponent;
             } else {
               console.error('❌ 分栏内组件索引无效:', componentIndex);
@@ -187,12 +148,6 @@ const updateComponentByPath = (
     console.error('❌ 数据结构验证失败，返回原数据');
     return data;
   }
-
-  console.log('✅ 组件更新完成:', {
-    path,
-    componentId: updatedComponent.id,
-    componentTag: updatedComponent.tag,
-  });
 
   return newData;
 };
@@ -321,10 +276,6 @@ export const useComponentSelection = () => {
     setSelectedComponent(null);
     setSelectedPath(null);
   }, []);
-
-  // 监听选择状态变化
-  // useEffect(() => {
-  // }, [selectedComponent, selectedPath]);
 
   // 组件卸载时清理
   useEffect(() => {
@@ -609,13 +560,6 @@ export const useConfigManagement = () => {
         const jsonString = e.target?.result as string;
         const parsed = JSON.parse(jsonString);
 
-        console.log('🔍 原始导入数据检查:', {
-          parsed,
-          hasDsl: !!parsed.dsl,
-          hasHeader: !!(parsed.dsl && parsed.dsl.header),
-          headerContent: parsed.dsl?.header,
-        });
-
         // 检查是否是新格式的完整卡片数据
         if (
           parsed &&
@@ -623,8 +567,6 @@ export const useConfigManagement = () => {
           parsed.dsl.body &&
           Array.isArray(parsed.dsl.body.elements)
         ) {
-          console.log('✅ 检测到新格式完整卡片数据，直接使用');
-
           // 创建新的卡片数据，保留原始的header信息
           const newCardData: any = {
             id: Date.now().toString(36) + Math.random().toString(36).substr(2),
@@ -663,34 +605,15 @@ export const useConfigManagement = () => {
             console.log('❌ 原始数据无header，不创建header');
           }
 
-          console.log('🔍 导入前元素检查:', {
-            elementsCount: newCardData.dsl.body.elements.length,
-            sampleElement: newCardData.dsl.body.elements[0],
-            hasIds: newCardData.dsl.body.elements.map((el: any) => ({
-              tag: el.tag,
-              hasId: !!el.id,
-            })),
-          });
-
           // 确保所有组件都有ID
           newCardData.dsl.body.elements = ensureComponentIds(
             newCardData.dsl.body.elements,
           );
 
-          console.log('✅ ID检查完成:', {
-            elementsCount: newCardData.dsl.body.elements.length,
-            sampleElement: newCardData.dsl.body.elements[0],
-            allHaveIds: newCardData.dsl.body.elements.every(
-              (el: any) => !!el.id,
-            ),
-          });
-
           // 处理多图混排组件的combination_mode
           newCardData.dsl.body.elements = normalizeCombinationModes(
             newCardData.dsl.body.elements,
           );
-
-          console.log('✅ 新格式数据处理完成:', newCardData);
 
           // 进行数据迁移
           const migratedData = migrateTitleStyle(migrateCardLink(newCardData));
@@ -710,15 +633,6 @@ export const useConfigManagement = () => {
             jsonAny.title ||
             jsonAny.subtitle ||
             (jsonAny.dsl && jsonAny.dsl.header);
-
-          console.log('🔍 旧格式数据header检查:', {
-            hasHeaderData,
-            hasHeader: !!jsonAny.header,
-            hasTitle: !!jsonAny.title,
-            hasSubtitle: !!jsonAny.subtitle,
-            hasDslHeader: !!(jsonAny.dsl && jsonAny.dsl.header),
-            originalData: jsonData,
-          });
 
           // 将旧格式数据转换为新格式的卡片数据
           const newCardData: any = {
@@ -752,7 +666,6 @@ export const useConfigManagement = () => {
 
           // 只有当原始数据包含header信息时才创建header
           if (hasHeaderData) {
-            console.log('✅ 检测到旧格式header数据，创建header对象');
             newCardData.dsl.header = {
               style: 'blue', // 直接存储主题样式字符串
               title: {
@@ -771,11 +684,6 @@ export const useConfigManagement = () => {
           } else {
             console.log('❌ 未检测到旧格式header数据，不创建header对象');
           }
-
-          console.log('✅ 旧格式数据转换完成:', {
-            originalFormat: jsonData,
-            newCardFormat: newCardData,
-          });
 
           // 进行数据迁移
           const migratedData = migrateTitleStyle(migrateCardLink(newCardData));

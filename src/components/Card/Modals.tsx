@@ -8,10 +8,9 @@ import {
 } from '@ant-design/icons';
 import { Button, Modal, Space, Typography, Upload, message } from 'antd';
 import React from 'react';
-import ComponentRenderer from './card-designer-components';
-import { DEVICE_SIZES, Variable } from './card-designer-constants';
-import { generatePreviewHTML } from './card-designer-utils';
-import ErrorBoundary from './ErrorBoundary';
+import ComponentRenderer from './CanvasWrapper/Component';
+import ErrorBoundary from './CanvasWrapper/ErrorBoundary';
+import { DEVICE_SIZES, Variable } from './constants';
 
 const { Text } = Typography;
 
@@ -30,7 +29,7 @@ interface ModalsProps {
   // 预览模态框
   previewVisible: boolean;
   setPreviewVisible: (visible: boolean) => void;
-  data: any; // 更新为支持新的卡片数据结构
+  data: any;
   device: keyof typeof DEVICE_SIZES;
   variables: Variable[];
   historyLength: number;
@@ -52,8 +51,6 @@ const Modals: React.FC<ModalsProps> = ({
   data,
   device,
   variables,
-  historyLength,
-  canvasFocused,
   onClearCanvas,
   onImportConfig,
 }) => {
@@ -79,47 +76,39 @@ const Modals: React.FC<ModalsProps> = ({
   };
 
   // 导出HTML预览
-  const exportHTMLPreview = () => {
-    try {
-      // 将变量数据合并到data中
-      const dataWithVariables = {
-        ...data,
-        variables: variables.reduce((acc: any, variable: any) => {
-          if (typeof variable === 'object' && variable !== null) {
-            const keys = Object.keys(variable);
-            keys.forEach((key) => {
-              if (!key.startsWith('__')) {
-                acc[key] = variable[key];
-              }
-            });
-          }
-          return acc;
-        }, {}),
-      };
-
-      console.log('🔍 导出HTML预览 - 数据结构:', {
-        originalData: data,
-        variables: variables,
-        mergedData: dataWithVariables,
-        variablesObject: dataWithVariables.variables,
-      });
-
-      const html = generatePreviewHTML(dataWithVariables);
-      const blob = new Blob([html], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `card-preview-${
-        new Date().toISOString().split('T')[0]
-      }.html`;
-      a.click();
-      URL.revokeObjectURL(url);
-      message.success('预览HTML已导出');
-    } catch (error) {
-      message.error('导出HTML失败');
-      console.error('Export HTML error:', error);
-    }
-  };
+  // const exportHTMLPreview = () => {
+  //   try {
+  //     // 将变量数据合并到data中
+  //     const dataWithVariables = {
+  //       ...data,
+  //       variables: variables.reduce((acc: any, variable: any) => {
+  //         if (typeof variable === 'object' && variable !== null) {
+  //           const keys = Object.keys(variable);
+  //           keys.forEach((key) => {
+  //             if (!key.startsWith('__')) {
+  //               acc[key] = variable[key];
+  //             }
+  //           });
+  //         }
+  //         return acc;
+  //       }, {}),
+  //     };
+  //     const html = generatePreviewHTML(dataWithVariables);
+  //     const blob = new Blob([html], { type: 'text/html' });
+  //     const url = URL.createObjectURL(blob);
+  //     const a = document.createElement('a');
+  //     a.href = url;
+  //     a.download = `card-preview-${
+  //       new Date().toISOString().split('T')[0]
+  //     }.html`;
+  //     a.click();
+  //     URL.revokeObjectURL(url);
+  //     message.success('预览HTML已导出');
+  //   } catch (error) {
+  //     message.error('导出HTML失败');
+  //     console.error('Export HTML error:', error);
+  //   }
+  // };
 
   return (
     <>
@@ -129,7 +118,6 @@ const Modals: React.FC<ModalsProps> = ({
           <Space>
             <CodeOutlined />
             导出配置
-            <Text type="secondary">(目标数据结构)</Text>
           </Space>
         }
         open={exportModalVisible}
@@ -242,74 +230,6 @@ const Modals: React.FC<ModalsProps> = ({
               </div>
             </div>
           </Upload>
-
-          {/* 支持的文件格式说明 */}
-          <div
-            style={{
-              marginTop: '20px',
-              padding: '12px',
-              backgroundColor: '#f6ffed',
-              border: '1px solid #b7eb8f',
-              borderRadius: '4px',
-              textAlign: 'left',
-            }}
-          >
-            <h4 style={{ margin: '0 0 8px 0', color: '#389e0d' }}>
-              📁 支持的文件格式
-            </h4>
-            <div style={{ fontSize: '12px', color: '#52c41a' }}>
-              <p style={{ margin: '4px 0' }}>• 标准JSON配置文件（.json）</p>
-              <p style={{ margin: '4px 0' }}>
-                • 包含direction、vertical_spacing、elements字段
-              </p>
-              <p style={{ margin: '4px 0' }}>
-                • 支持表单容器和分栏组件的嵌套结构
-              </p>
-              <p style={{ margin: '4px 0' }}>
-                • 自动验证数据格式并转换为内部结构
-              </p>
-            </div>
-          </div>
-
-          {/* 示例配置说明 */}
-          <div
-            style={{
-              marginTop: '16px',
-              padding: '12px',
-              backgroundColor: '#e6f7ff',
-              border: '1px solid #91d5ff',
-              borderRadius: '4px',
-              textAlign: 'left',
-            }}
-          >
-            <h4 style={{ margin: '0 0 8px 0', color: '#0958d9' }}>
-              📝 配置文件示例结构
-            </h4>
-            <pre
-              style={{
-                fontSize: '11px',
-                color: '#1d4ed8',
-                margin: '8px 0 0 0',
-                backgroundColor: '#f8fafc',
-                padding: '8px',
-                borderRadius: '4px',
-                overflow: 'auto',
-                maxHeight: '120px',
-              }}
-            >
-              {`{
-  "direction": "vertical",
-  "vertical_spacing": 5,
-  "elements": [
-    {
-      "tag": "form",
-      "name": "示例表单",
-      "elements": [...]
-    }
-  ]
-}`}
-            </pre>
-          </div>
         </div>
       </Modal>
 
@@ -328,9 +248,6 @@ const Modals: React.FC<ModalsProps> = ({
           device === 'desktop' ? '90%' : device === 'tablet' ? '800px' : '420px'
         }
         footer={[
-          <Button key="export" onClick={exportHTMLPreview}>
-            导出HTML
-          </Button>,
           <Button key="close" onClick={() => setPreviewVisible(false)}>
             关闭
           </Button>,
@@ -460,7 +377,6 @@ const Modals: React.FC<ModalsProps> = ({
 
               // 1. 如果有有效的header数据，先添加title组件
               if (hasValidHeader) {
-                // console.log('✅ 预览模式: 添加title组件到渲染列表');
                 componentsToRender.push({
                   id: 'preview-title',
                   tag: 'title',
@@ -543,81 +459,6 @@ const Modals: React.FC<ModalsProps> = ({
                 );
               }
             })()}
-          </div>
-
-          {/* 配置信息面板 */}
-          <div
-            style={{
-              marginTop: '16px',
-              padding: '12px',
-              backgroundColor: '#fff',
-              borderRadius: '6px',
-              border: '1px solid #e8e8e8',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            }}
-          >
-            <Text strong style={{ fontSize: '12px', color: '#333' }}>
-              📊 配置信息
-            </Text>
-            <div
-              style={{
-                marginTop: '8px',
-                fontSize: '12px',
-                color: '#666',
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-                gap: '8px',
-              }}
-            >
-              <div>
-                <strong>组件数量:</strong>{' '}
-                <span style={{ color: '#52c41a' }}>
-                  {data?.elements?.length}
-                </span>
-              </div>
-              <div>
-                <strong>变量数量:</strong>{' '}
-                <span style={{ color: '#1890ff' }}>{variables.length}</span>
-              </div>
-              <div>
-                <strong>历史记录:</strong>{' '}
-                <span style={{ color: '#722ed1' }}>{historyLength} 条</span>
-              </div>
-              <div>
-                <strong>当前设备:</strong>{' '}
-                <span style={{ color: '#fa8c16' }}>
-                  {DEVICE_SIZES[device].name}
-                </span>
-              </div>
-              <div>
-                <strong>画布焦点:</strong>{' '}
-                <span style={{ color: canvasFocused ? '#52c41a' : '#999' }}>
-                  {canvasFocused ? '已聚焦' : '未聚焦'}
-                </span>
-              </div>
-              <div>
-                <strong>数据大小:</strong>{' '}
-                <span style={{ color: '#13c2c2' }}>
-                  {(JSON.stringify(data).length / 1024).toFixed(2)} KB
-                </span>
-              </div>
-            </div>
-
-            {/* 操作提示 */}
-            <div
-              style={{
-                marginTop: '12px',
-                padding: '8px',
-                backgroundColor: '#f0f9ff',
-                border: '1px solid #bae6fd',
-                borderRadius: '4px',
-                fontSize: '11px',
-                color: '#0369a1',
-              }}
-            >
-              <strong>💡 提示：</strong>
-              预览模式下组件不可交互，可导出为HTML文件在浏览器中独立查看
-            </div>
           </div>
         </div>
       </Modal>

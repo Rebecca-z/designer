@@ -1,10 +1,6 @@
 // PropertyPanel 相关类型定义
 
-import {
-  CardDesignData,
-  ComponentType,
-  Variable,
-} from '../../card-designer-types-updated';
+import { CardDesignData, ComponentType, Variable } from '../../type';
 
 // 事件管理相关类型定义
 export interface EventAction {

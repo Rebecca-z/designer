@@ -4,10 +4,7 @@ import { BarsOutlined, PlusOutlined } from '@ant-design/icons';
 import { Tabs, Typography } from 'antd';
 import React from 'react';
 import { useDrag } from 'react-dnd';
-import {
-  COMPONENT_CATEGORIES,
-  COMPONENT_TYPES,
-} from '../../card-designer-constants';
+import { COMPONENT_CATEGORIES, COMPONENT_TYPES } from '../../constants';
 import OutlineTree from '../OutlineTree';
 import { ComponentPanelProps, DraggableComponentProps } from '../types';
 
