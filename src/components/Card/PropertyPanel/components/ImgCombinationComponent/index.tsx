@@ -9,33 +9,11 @@ import { ComponentContent, PropertyPanel, SettingSection } from '../common';
 import ComponentNameInput from '../common/ComponentNameInput';
 import { useComponentName } from '../hooks/useComponentName';
 import { ImgCombinationComponentProps } from '../types';
+import styles from './index.less';
 
 const { Text } = Typography;
 
 const DEFAULT_IMAGE_URL = 'demo.png';
-
-// 样式常量
-const STYLES = {
-  layoutGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: '6px',
-    marginBottom: '8px',
-  },
-  layoutItem: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '4px',
-    cursor: 'pointer',
-  },
-  inputCompact: {
-    width: '100%',
-  },
-  uploadButton: {
-    borderRadius: '0 6px 6px 0',
-  },
-} as const;
 
 // 布局图标组件
 const LayoutIcon: React.FC<{
@@ -51,16 +29,8 @@ const LayoutIcon: React.FC<{
   isSelected?: boolean;
 }> = ({ type, isSelected = false }) => {
   const iconStyle: React.CSSProperties = {
-    width: '50px',
-    height: '32px',
     border: `2px solid ${isSelected ? '#1890ff' : '#d9d9d9'}`,
-    borderRadius: '4px',
-    display: 'flex',
-    padding: '3px',
-    gap: '1px',
     backgroundColor: isSelected ? '#f0f8ff' : '#fafafa',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
   };
 
   const cellStyle: React.CSSProperties = {
@@ -71,7 +41,7 @@ const LayoutIcon: React.FC<{
   switch (type) {
     case 'double': // 左小右大
       return (
-        <div style={iconStyle}>
+        <div className={styles.iconLayout} style={iconStyle}>
           <div style={{ ...cellStyle, width: '40%', height: '100%' }} />
           <div style={{ ...cellStyle, width: '60%', height: '100%' }} />
         </div>
@@ -79,7 +49,7 @@ const LayoutIcon: React.FC<{
 
     case 'triple': // 左1右2
       return (
-        <div style={iconStyle}>
+        <div className={styles.iconLayout} style={iconStyle}>
           <div style={{ ...cellStyle, width: '50%', height: '100%' }} />
           <div
             style={{
@@ -97,7 +67,7 @@ const LayoutIcon: React.FC<{
 
     case 'bisect_2': // 双列一行 (2图)
       return (
-        <div style={iconStyle}>
+        <div className={styles.iconLayout} style={iconStyle}>
           <div style={{ ...cellStyle, width: '49%', height: '100%' }} />
           <div style={{ ...cellStyle, width: '50%', height: '100%' }} />
         </div>
@@ -105,7 +75,10 @@ const LayoutIcon: React.FC<{
 
     case 'bisect_4': // 双列两行 (4图)
       return (
-        <div style={{ ...iconStyle, flexDirection: 'column', gap: '1px' }}>
+        <div
+          className={styles.iconLayout}
+          style={{ ...iconStyle, flexDirection: 'column', gap: '1px' }}
+        >
           <div
             style={{
               display: 'flex',
@@ -133,7 +106,10 @@ const LayoutIcon: React.FC<{
 
     case 'bisect_6': // 双列三行 (6图)
       return (
-        <div style={{ ...iconStyle, flexDirection: 'column', gap: '1px' }}>
+        <div
+          className={styles.iconLayout}
+          style={{ ...iconStyle, flexDirection: 'column', gap: '1px' }}
+        >
           <div
             style={{
               display: 'flex',
@@ -172,7 +148,7 @@ const LayoutIcon: React.FC<{
 
     case 'trisect_3': // 三列一行 (3图)
       return (
-        <div style={iconStyle}>
+        <div className={styles.iconLayout} style={iconStyle}>
           <div
             style={{
               ...cellStyle,
@@ -199,7 +175,10 @@ const LayoutIcon: React.FC<{
 
     case 'trisect_6': // 三列两行 (6图)
       return (
-        <div style={{ ...iconStyle, flexDirection: 'column', gap: '1px' }}>
+        <div
+          className={styles.iconLayout}
+          style={{ ...iconStyle, flexDirection: 'column', gap: '1px' }}
+        >
           <div
             style={{
               display: 'flex',
@@ -229,7 +208,10 @@ const LayoutIcon: React.FC<{
 
     case 'trisect_9': // 三列三行 (9图)
       return (
-        <div style={{ ...iconStyle, flexDirection: 'column', gap: '1px' }}>
+        <div
+          className={styles.iconLayout}
+          style={{ ...iconStyle, flexDirection: 'column', gap: '1px' }}
+        >
           <div
             style={{
               display: 'flex',
@@ -270,7 +252,7 @@ const LayoutIcon: React.FC<{
       );
 
     default:
-      return <div style={iconStyle} />;
+      return <div className={styles.iconLayout} style={iconStyle} />;
   }
 };
 
@@ -519,10 +501,6 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
               ...prev,
               [selectedComponent.id]: variableName,
             }));
-            console.log('🔗 记住多图混排变量绑定:', {
-              componentId: selectedComponent.id,
-              variableName,
-            });
           }
         }
       }
@@ -581,17 +559,6 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
         // 更新组件数据
         const updatedComponent = { ...selectedComponent };
         (updatedComponent as any).img_list = newImageList;
-
-        console.log('🔄 useEffect-多图混排-调整图片数量:', {
-          componentId: selectedComponent.id,
-          combinationMode: currentCombinationMode,
-          currentLayoutType,
-          requiredImageCount,
-          oldListLength: currentImageList.length,
-          newImageList,
-          trigger: 'useEffect',
-          note: '切换布局时使用默认图片，不保留缓存',
-        });
 
         // 延迟更新避免状态冲突
         setTimeout(() => {
@@ -699,8 +666,8 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
             );
 
             return (
-              <div>
-                <div style={STYLES.layoutGrid}>
+              <div className={styles.layoutSettings}>
+                <div className={styles.layoutGrid}>
                   {availableLayouts.map((layout) => (
                     <div
                       key={layout.key}
@@ -765,7 +732,7 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                           forceUpdate();
                         }, 50);
                       }}
-                      style={STYLES.layoutItem}
+                      className={styles.layoutItem}
                     >
                       <LayoutIcon
                         type={layout.type}
@@ -930,7 +897,7 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                     >
                       图片 {index + 1}
                     </Text>
-                    <Space.Compact style={STYLES.inputCompact}>
+                    <Space.Compact style={{ width: '100%' }}>
                       <Input
                         value={image.img_url || ''}
                         onChange={(e) => {
@@ -971,7 +938,7 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                           );
                           handleValueChange('img_list', newImageList);
                         }}
-                        style={STYLES.uploadButton}
+                        style={{ borderRadius: '0 6px 6px 0' }}
                         buttonProps={{
                           type: 'primary',
                           children: '上传',

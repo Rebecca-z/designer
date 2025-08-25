@@ -24,34 +24,9 @@ import {
 import { useComponentName } from '../hooks/useComponentName';
 import { SelectComponentProps } from '../types';
 
+import { CONTENT_MODES, DEFAULT_OPTIONS } from './constans';
+
 const { Text } = Typography;
-
-interface OptionItem {
-  text: {
-    content: string;
-    i18n_content: {
-      'en-US': string;
-    };
-  };
-  value: string;
-}
-
-// 常量定义
-const DEFAULT_OPTIONS: OptionItem[] = [
-  {
-    text: { content: '选项1', i18n_content: { 'en-US': 'Option 1' } },
-    value: 'option1',
-  },
-  {
-    text: { content: '选项2', i18n_content: { 'en-US': 'Option 2' } },
-    value: 'option2',
-  },
-] as const;
-
-const CONTENT_MODES = [
-  { label: '指定', value: 'specify' },
-  { label: '绑定变量', value: 'variable' },
-] as const;
 
 const SelectComponent: React.FC<SelectComponentProps> = React.memo(
   ({
@@ -64,9 +39,7 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
     setSelectOptionsMode,
     lastBoundVariables,
     setLastBoundVariables,
-    // onUpdateComponent: _,
     handleValueChange,
-    // getFilteredVariables,
     getVariableDisplayName,
     getVariableKeys,
     handleAddVariableFromComponent,
@@ -165,12 +138,6 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
         setSavedSpecifyOptions(currentOptions);
       }
     }, [selectedComponent.id, selectOptionsMode]);
-
-    console.log('📝 渲染下拉单选组件编辑界面:', {
-      componentId: selectedComponent.id,
-      topLevelTab,
-      variablesCount: variables.length,
-    });
 
     // 处理选项编辑
     const handleEditOption = (index: number) => {
@@ -335,12 +302,6 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
               selectedComponent.id,
               optionsForStateManager,
             );
-
-            console.log('📝 保存选项到状态管理器:', {
-              componentId: selectedComponent.id,
-              optionsForStateManager,
-              timestamp: new Date().toISOString(),
-            });
           }
         }
         setOptionPopoverVisible(false);
@@ -574,27 +535,12 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
 
                     // 如果清除了变量，自动切换到指定模式并恢复之前的内容
                     if (!value) {
-                      console.log('🔄 变量清除 - 选项文本:', {
-                        componentId: selectedComponent.id,
-                        editingOptionIndex,
-                        step: '开始清除变量',
-                        timestamp: new Date().toISOString(),
-                      });
-
                       setOptionTextMode('specify');
                       const userEditedContent =
                         optionEditStateManager.getUserEditedTextContent(
                           selectedComponent.id,
                           editingOptionIndex,
                         );
-
-                      console.log('🔄 变量清除 - 获取用户编辑内容:', {
-                        componentId: selectedComponent.id,
-                        editingOptionIndex,
-                        userEditedContent,
-                        hasContent: !!userEditedContent,
-                        timestamp: new Date().toISOString(),
-                      });
 
                       optionForm.setFieldsValue({
                         textContent: userEditedContent || '',
@@ -606,7 +552,6 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
                           ...((selectedComponent as any).options || []),
                         ];
                         if (newOptions[editingOptionIndex]) {
-                          const oldOption = newOptions[editingOptionIndex];
                           newOptions[editingOptionIndex] = {
                             ...newOptions[editingOptionIndex],
                             text: {
@@ -617,28 +562,8 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
                             },
                           };
 
-                          console.log('🔄 变量清除 - 保存到组件数据:', {
-                            componentId: selectedComponent.id,
-                            editingOptionIndex,
-                            oldOption,
-                            newOption: newOptions[editingOptionIndex],
-                            userEditedContent,
-                            timestamp: new Date().toISOString(),
-                          });
-
                           handleValueChange('options', newOptions);
                         }
-                      } else {
-                        console.log('⚠️ 变量清除 - 未保存到组件数据:', {
-                          componentId: selectedComponent.id,
-                          editingOptionIndex,
-                          userEditedContent,
-                          hasUserEditedContent: !!userEditedContent,
-                          reason: !userEditedContent
-                            ? '无用户编辑内容'
-                            : '编辑索引为空',
-                          timestamp: new Date().toISOString(),
-                        });
                       }
                     }
 
@@ -872,15 +797,6 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
                     // 只有在表单中才更新 required 字段到全局数据
                     if (isNestedInForm) {
                       handleValueChange('required', checked);
-                      console.log('✅ 下拉单选-更新 required 字段:', {
-                        checked,
-                        isNestedInForm,
-                      });
-                    } else {
-                      console.log(
-                        '⚠️ 下拉单选-跳过更新 required 字段：组件不在表单中',
-                        { checked, isNestedInForm },
-                      );
                     }
                   }}
                 />
@@ -903,7 +819,6 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
                     Array.isArray(currentOptions)
                   ) {
                     // 从指定模式切换出去时，保存当前的选项内容
-                    console.log('💾 保存指定模式选项:', currentOptions);
                     setSavedSpecifyOptions(currentOptions);
                   }
 
@@ -927,11 +842,6 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
                     } else if (newMode === 'specify') {
                       // 切换到指定模式，恢复之前保存的选项内容
                       if (typeof currentOptions === 'string') {
-                        // 如果当前是变量绑定格式，恢复保存的指定模式选项
-                        console.log(
-                          '🔄 恢复指定模式选项:',
-                          savedSpecifyOptions,
-                        );
                         handleValueChange('options', savedSpecifyOptions);
                       }
                     }
@@ -1114,52 +1024,38 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
                           }));
                           handleValueChange('options', `\${${value}}`);
                         } else {
-                          // 解绑变量，恢复指定模式的选项
+                          // 清空变量绑定，但保持在变量模式
                           selectComponentStateManager.setBoundVariableName(
                             selectedComponent.id,
                             undefined,
                           );
 
-                          // 恢复指定模式的选项
-                          let optionsToRestore: any[] = [];
-                          const userEditedOptions =
-                            selectComponentStateManager.getUserEditedOptions(
-                              selectedComponent.id,
-                            );
-
-                          if (
-                            userEditedOptions &&
-                            userEditedOptions.length > 0
-                          ) {
-                            // 使用用户编辑过的选项
-                            optionsToRestore = userEditedOptions.map((opt) => ({
-                              value: opt.value,
-                              text: {
-                                content: opt.label,
-                                i18n_content: { 'en-US': opt.label },
-                              },
-                            }));
-                          } else if (savedSpecifyOptions.length > 0) {
-                            // 使用组件内保存的指定选项
-                            optionsToRestore = savedSpecifyOptions;
-                          } else {
-                            // 使用默认选项
-                            optionsToRestore = DEFAULT_OPTIONS;
-                          }
-
-                          console.log('🔄 选择恢复的选项:', {
-                            componentId: selectedComponent.id,
-                            optionsToRestore,
-                            source:
-                              userEditedOptions?.length > 0
-                                ? 'stateManager'
-                                : savedSpecifyOptions.length > 0
-                                ? 'savedState'
-                                : 'default',
-                            timestamp: new Date().toISOString(),
+                          // 清除lastBoundVariables中的记录
+                          setLastBoundVariables((prev) => {
+                            const newState = { ...prev };
+                            delete newState[selectedComponent.id];
+                            return newState;
                           });
 
-                          handleValueChange('options', optionsToRestore);
+                          // 保持在变量模式，不切换Segmented
+                          // 清空变量绑定后，恢复默认选项以便预览
+                          const defaultOptions = [
+                            {
+                              text: {
+                                content: '选项1',
+                                i18n_content: { 'en-US': 'Option 1' },
+                              },
+                              value: 'option1',
+                            },
+                            {
+                              text: {
+                                content: '选项2',
+                                i18n_content: { 'en-US': 'Option 2' },
+                              },
+                              value: 'option2',
+                            },
+                          ];
+                          handleValueChange('options', defaultOptions);
                         }
                       }
                     }}

@@ -8,41 +8,10 @@ import { ComponentContent, PropertyPanel, SettingSection } from '../common';
 import ComponentNameInput from '../common/ComponentNameInput';
 import { useComponentName } from '../hooks/useComponentName';
 import { ImageComponentProps } from '../types';
+import { CONTENT_MODES, CROP_MODES } from './constans';
+import type { ImageData } from './type';
 
 const { Option } = Select;
-
-// 类型定义
-interface ImageData {
-  img_url?: string;
-  i18n_img_url?: {
-    'en-US': string;
-  };
-  style?: {
-    crop_mode?: 'default' | 'top' | 'center';
-  };
-}
-
-// 常量定义
-const CROP_MODES = [
-  { value: 'default', label: '完整展示' },
-  { value: 'top', label: '顶部裁剪' },
-  { value: 'center', label: '居中裁剪' },
-] as const;
-
-const CONTENT_MODES = [
-  { label: '指定', value: 'specify' },
-  { label: '绑定变量', value: 'variable' },
-] as const;
-
-// 样式常量（保留必要的样式）
-const STYLES = {
-  inputCompact: {
-    width: '100%',
-  },
-  uploadButton: {
-    borderRadius: '0 6px 6px 0',
-  },
-} as const;
 
 const ImageComponent: React.FC<ImageComponentProps> = ({
   selectedComponent,
@@ -245,7 +214,7 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
 
           {imageContentMode === 'specify' && (
             <div>
-              <Space.Compact style={STYLES.inputCompact}>
+              <Space.Compact style={{ width: '100%' }}>
                 <Input
                   value={imageInfo.userEditedUrl}
                   onChange={(e) => handleImageUrlChange(e.target.value)}
@@ -254,7 +223,7 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
                 />
                 <ImageUpload
                   onUploadSuccess={handleImageUrlChange}
-                  style={STYLES.uploadButton}
+                  style={{ borderRadius: '0 6px 6px 0' }}
                   buttonProps={{
                     type: 'primary',
                     children: '上传',
@@ -278,7 +247,7 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
                 onAddVariable={() => handleAddVariableFromComponent('img')}
                 placeholder="请选择图片变量"
                 label="绑定变量"
-                addVariableText="+新建图片变量"
+                addVariableText="新建图片变量"
               />
             </div>
           )}

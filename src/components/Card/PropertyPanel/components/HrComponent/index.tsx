@@ -5,36 +5,10 @@ import { ComponentContent, PropertyPanel, SettingSection } from '../common';
 import ComponentNameInput from '../common/ComponentNameInput';
 import { useComponentName } from '../hooks/useComponentName';
 import { BaseComponentProps } from '../types';
+import { BORDER_STYLES } from './constans';
+import type { HrData } from './type';
 
 const { Option } = Select;
-
-// 类型定义
-interface HrStyle {
-  borderStyle?: 'solid' | 'dashed' | 'dotted';
-}
-
-interface HrData {
-  style?: HrStyle;
-}
-
-// 常量定义
-const BORDER_STYLES = [
-  {
-    value: 'solid',
-    label: '实线 (solid)',
-    preview: { borderTop: '2px solid #666' },
-  },
-  {
-    value: 'dashed',
-    label: '虚线 (dashed)',
-    preview: { borderTop: '2px dashed #666' },
-  },
-  {
-    value: 'dotted',
-    label: '点线 (dotted)',
-    preview: { borderTop: '2px dotted #666' },
-  },
-] as const;
 
 // 样式常量（保留必要的样式）
 const STYLES = {

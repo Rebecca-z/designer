@@ -3,12 +3,7 @@ import { Form, Input } from 'antd';
 import React, { useCallback, useMemo } from 'react';
 import { ComponentContent, PropertyPanel, SettingSection } from '../common';
 import { BaseComponentProps } from '../types';
-
-// 类型定义
-interface FormData {
-  name?: string;
-  elements?: any[];
-}
+import type { FormData } from './type';
 
 const FormComponent: React.FC<BaseComponentProps> = ({
   selectedComponent,

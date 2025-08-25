@@ -1,10 +1,6 @@
 // RichTextComponent 编辑界面 - 专门处理富文本组件
 import { Form, Segmented } from 'antd';
 import React, { useCallback, useEffect, useMemo } from 'react';
-import {
-  ComponentType,
-  VariableItem,
-} from '../../../card-designer-types-updated';
 import RichTextEditor from '../../../RichTextEditor/RichTextEditor';
 import { textComponentStateManager } from '../../../Variable/utils/index';
 import VariableBinding from '../../../Variable/VariableList';
@@ -15,44 +11,7 @@ import {
   SettingSection,
 } from '../common';
 import { useComponentName } from '../hooks/useComponentName';
-
-// 类型定义
-interface RichTextData {
-  text?: {
-    content?: string;
-    i18n_content?: {
-      'en-US': string;
-    };
-  };
-}
-
-export interface RichTextComponentProps {
-  selectedComponent: ComponentType;
-  selectedPath: (string | number)[] | null;
-  variables: VariableItem[];
-  topLevelTab: string;
-  setTopLevelTab: (tab: string) => void;
-  textContentMode: 'specify' | 'variable';
-  setTextContentMode: (mode: 'specify' | 'variable') => void;
-  lastBoundVariables: Record<string, string>;
-  setLastBoundVariables: React.Dispatch<
-    React.SetStateAction<Record<string, string>>
-  >;
-  initializedComponents: Set<string>;
-  onUpdateComponent: (component: ComponentType) => void;
-  handleValueChange: (field: string, value: any) => void;
-  getFilteredVariables: (componentType: string) => VariableItem[];
-  getVariableDisplayName: (variable: VariableItem) => string;
-  getVariableKeys: (variable: any) => string[];
-  handleAddVariableFromComponent: (componentType: string) => void;
-  isVariableModalVisible: boolean;
-  handleVariableModalOk: (variable: any) => void;
-  handleVariableModalCancel: () => void;
-  editingVariable: any;
-  isVariableModalFromVariablesTab: boolean;
-  modalComponentType?: string;
-  VariableManagementPanel: React.ComponentType;
-}
+import type { RichTextComponentProps, RichTextData } from './type';
 
 const RichTextComponent: React.FC<RichTextComponentProps> = ({
   selectedComponent,
@@ -105,25 +64,6 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
     };
   }, []);
 
-  // 初始化变量绑定状态 - 从组件数据中检测现有的变量占位符
-  useEffect(() => {
-    const component = selectedComponent as any as RichTextData;
-    const textContent = component.text?.content || '';
-
-    if (textContent.startsWith('${') && textContent.endsWith('}')) {
-      const variableName = textContent.slice(2, -1);
-      const currentBinding = textComponentStateManager.getBoundVariableName(
-        selectedComponent.id,
-      );
-      if (currentBinding !== variableName) {
-        textComponentStateManager.setBoundVariableName(
-          selectedComponent.id,
-          variableName,
-        );
-      }
-    }
-  }, [selectedComponent.id, selectedComponent]);
-
   // 获取绑定的变量名 - 使用useCallback优化
   const getBoundVariableName = useCallback(() => {
     const boundVariableName =
@@ -131,20 +71,6 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
       '';
     return boundVariableName;
   }, [selectedComponent.id]);
-
-  // 计算变量绑定值 - 使用useMemo优化
-  const variableBindingValue = useMemo(() => {
-    // 在绑定变量模式下，优先显示记住的变量
-    const rememberedVariable = selectedComponent
-      ? lastBoundVariables[selectedComponent.id]
-      : undefined;
-    const currentBoundVariable = getBoundVariableName();
-
-    // 如果有记住的变量，使用记住的变量；否则使用当前绑定的变量
-    const displayValue = rememberedVariable || currentBoundVariable;
-
-    return displayValue;
-  }, [selectedComponent, lastBoundVariables, getBoundVariableName]);
 
   // 获取富文本内容 - 根据当前模式显示不同内容
   const getRichTextContent = () => {
@@ -223,6 +149,39 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
 
     return getDefaultRichTextContent();
   };
+
+  // 初始化变量绑定状态 - 从组件数据中检测现有的变量占位符
+  useEffect(() => {
+    const component = selectedComponent as any as RichTextData;
+    const textContent = component.text?.content || '';
+
+    if (textContent.startsWith('${') && textContent.endsWith('}')) {
+      const variableName = textContent.slice(2, -1);
+      const currentBinding = textComponentStateManager.getBoundVariableName(
+        selectedComponent.id,
+      );
+      if (currentBinding !== variableName) {
+        textComponentStateManager.setBoundVariableName(
+          selectedComponent.id,
+          variableName,
+        );
+      }
+    }
+  }, [selectedComponent.id, selectedComponent]);
+
+  // 计算变量绑定值 - 使用useMemo优化
+  const variableBindingValue = useMemo(() => {
+    // 在绑定变量模式下，优先显示记住的变量
+    const rememberedVariable = selectedComponent
+      ? lastBoundVariables[selectedComponent.id]
+      : undefined;
+    const currentBoundVariable = getBoundVariableName();
+
+    // 如果有记住的变量，使用记住的变量；否则使用当前绑定的变量
+    const displayValue = rememberedVariable || currentBoundVariable;
+
+    return displayValue;
+  }, [selectedComponent, lastBoundVariables, getBoundVariableName]);
 
   // 更新富文本内容 - 保存用户编辑的内容
   const updateRichTextContent = (value: any) => {
@@ -461,7 +420,7 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
                   }
                   placeholder="请选择要绑定的变量"
                   label="绑定变量"
-                  addVariableText="+新建变量"
+                  addVariableText="新建变量"
                 />
               </div>
             )}

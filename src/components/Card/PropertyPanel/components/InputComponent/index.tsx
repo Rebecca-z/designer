@@ -7,29 +7,8 @@ import { ComponentContent, PropertyPanel, SettingSection } from '../common';
 import ComponentNameInput from '../common/ComponentNameInput';
 import { useComponentName } from '../hooks/useComponentName';
 import { InputComponentProps } from '../types';
-
-// 类型定义
-interface InputData {
-  required?: boolean;
-  placeholder?: {
-    content?: string;
-    i18n_content?: {
-      'en-US': string;
-    };
-  };
-  default_value?: {
-    content?: string;
-    i18n_content?: {
-      content: string;
-    };
-  };
-}
-
-// 常量定义
-const CONTENT_MODES = [
-  { label: '指定', value: 'specify' },
-  { label: '绑定变量', value: 'variable' },
-] as const;
+import { CONTENT_MODES } from './constans';
+import type { InputData } from './type';
 
 const InputComponent: React.FC<InputComponentProps> = ({
   selectedComponent,
@@ -394,15 +373,6 @@ const InputComponent: React.FC<InputComponentProps> = ({
               // 只有在表单中才更新 required 字段到全局数据
               if (isNestedInForm) {
                 handleValueChange('required', checked);
-                console.log('✅ 更新 required 字段:', {
-                  checked,
-                  isNestedInForm,
-                });
-              } else {
-                console.log('⚠️ 跳过更新 required 字段：组件不在表单中', {
-                  checked,
-                  isNestedInForm,
-                });
               }
             }}
           />
@@ -498,7 +468,7 @@ const InputComponent: React.FC<InputComponentProps> = ({
               onAddVariable={() => handleAddVariableFromComponent('input')}
               placeholder="请选择默认值变量"
               label="绑定变量"
-              addVariableText="+新建变量"
+              addVariableText="新建变量"
             />
           )}
         </Form.Item>

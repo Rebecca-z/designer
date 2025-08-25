@@ -53,10 +53,8 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
       case 'rich_text':
         return ['richtext'];
       case 'img':
-        console.log('✅ 图片组件，只返回图片类型');
         return ['image']; // 图片组件只支持图片类型，不支持图片数组
       case 'img_combination':
-        console.log('✅ 多图混排组件，返回图片数组类型');
         return ['imageArray']; // 多图混排只支持图片数组类型
       case 'input':
         return ['text', 'number'];
@@ -330,12 +328,6 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
             // 富文本变量的值应该保存为JSON对象
             actualMockData = JSON.parse(jsonData);
             internalType = 'object';
-            console.log('🎨 富文本变量保存为JSON对象:', {
-              variableName: values.name,
-              jsonData,
-              parsedData: actualMockData,
-              timestamp: new Date().toISOString(),
-            });
           } catch (error) {
             console.error('富文本JSON解析失败:', error);
             actualMockData = jsonData; // 降级为字符串
@@ -363,15 +355,6 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         description: values.description || '',
       };
 
-      console.log('🔧 AddVariableModal 创建变量:', {
-        variable,
-        formValues: values,
-        actualMockData,
-        internalType,
-        timestamp: new Date().toISOString(),
-      });
-
-      console.log('🔧 AddVariableModal 调用 onOk 回调');
       onOk(variable);
       form.resetFields();
       setJsonData('');
@@ -401,7 +384,6 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
     if (jsonError) {
       setJsonError('');
     }
-    console.log('📝 JSON数据变化:', newData);
   };
 
   // 处理富文本编辑器数据变化
@@ -415,7 +397,6 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
       if (currentMockData !== jsonString) {
         form.setFieldsValue({ mockData: jsonString });
       }
-      console.log('📝 富文本数据变化:', jsonString);
     },
     [form],
   );
@@ -555,17 +536,6 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
   // 当弹窗打开时重置表单或回显编辑数据
   useEffect(() => {
     if (visible && !isUserEditing) {
-      // 只在用户未编辑时执行
-      console.log('🔍 弹窗打开，状态信息:', {
-        editingVariable,
-        defaultType,
-        availableTypes,
-        componentType,
-        currentSelectedType: selectedType,
-        isFirstOpen,
-        isUserEditing,
-      });
-
       if (editingVariable) {
         // 编辑模式：回显数据
         const formType = mapVariableTypeToFormType(editingVariable.type);
@@ -581,23 +551,9 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         ) {
           // JSON类型（富文本、数组、图片数组）：对象转字符串
           mockDataValue = JSON.stringify(editingVariable.value, null, 2);
-          console.log('📋 JSON类型变量表单数据处理:', {
-            variableName: editingVariable.name,
-            formType,
-            originalValue: editingVariable.value,
-            convertedValue: mockDataValue,
-            timestamp: new Date().toISOString(),
-          });
         } else if (formType === 'number') {
           // 整数类型：确保是数值类型
           mockDataValue = Number(editingVariable.value);
-          console.log('🔢 整数变量回显数据处理:', {
-            variableName: editingVariable.name,
-            originalValue: editingVariable.value,
-            convertedValue: mockDataValue,
-            valueType: typeof mockDataValue,
-            timestamp: new Date().toISOString(),
-          });
         } else {
           // 其他类型：保持原值
           mockDataValue = editingVariable.value;
@@ -622,24 +578,11 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
             // 如果变量的值是JSON对象，需要序列化为字符串
             const jsonString = JSON.stringify(editingVariable.value, null, 2);
             setJsonData(jsonString);
-            console.log('📋 JSON类型变量回显，对象转字符串:', {
-              variableName: editingVariable.name,
-              formType,
-              originalValue: editingVariable.value,
-              jsonString,
-              timestamp: new Date().toISOString(),
-            });
           } else {
             // 其他类型或者变量的值已经是字符串格式
             setJsonData(editingVariable.value);
           }
         }
-
-        console.log('🔄 回显编辑数据:', {
-          editingVariable,
-          formType,
-          mockData: editingVariable.value,
-        });
       } else {
         // 新增模式：智能选择类型
         let typeToUse = defaultType;
@@ -651,14 +594,11 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
           selectedType === 'richtext'
         ) {
           typeToUse = 'richtext';
-          console.log('✅ 富文本组件保持用户选择的富文本类型:', selectedType);
         } else if (isFirstOpen) {
-          console.log('🔄 首次打开，使用默认类型:', defaultType);
           setIsFirstOpen(false); // 标记不再是首次打开
         } else {
           // 保持用户已选择的类型（适用于其他情况）
           typeToUse = selectedType;
-          console.log('✅ 保持用户已选择的类型:', selectedType);
         }
 
         form.resetFields();
@@ -674,15 +614,6 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         }, 0);
 
         setJsonData(defaultData);
-
-        console.log('➕ 新增表单处理:', {
-          initialType,
-          defaultType,
-          availableTypes,
-          isFirstOpen,
-          selectedType,
-          typeToUse,
-        });
       }
     }
   }, [
@@ -716,28 +647,6 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
       });
     }
   }, [selectedType, visible, editingVariable, form]);
-
-  // 调试日志：Modal渲染状态
-  console.log('🔍 AddVariableModal 渲染状态:', {
-    visible,
-    editingVariable: editingVariable?.name,
-    title: editingVariable ? '编辑变量' : '添加变量',
-    timestamp: new Date().toISOString(),
-    componentType,
-    zIndex: 1000,
-    containerTarget: 'document.body',
-    modalId: `modal-${Math.random().toString(36).substr(2, 9)}`, // 添加唯一ID
-  });
-
-  // 详细的弹窗状态日志
-  console.log('🔍 AddVariableModal 状态更新:', {
-    visible,
-    editingVariable: editingVariable?.name || 'null',
-    isEditing: !!editingVariable,
-    componentType,
-    title: editingVariable ? '编辑变量' : '添加变量',
-    timestamp: new Date().toISOString(),
-  });
 
   return (
     <Modal

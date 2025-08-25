@@ -23,35 +23,9 @@ import {
 } from '../common';
 import { useComponentName } from '../hooks/useComponentName';
 import { MultiSelectComponentProps } from '../types';
+import { CONTENT_MODES, DEFAULT_OPTIONS } from './constans';
 
 const { Text } = Typography;
-
-interface OptionItem {
-  text: {
-    content: string;
-    i18n_content: {
-      'en-US': string;
-    };
-  };
-  value: string;
-}
-
-// 常量定义
-const DEFAULT_OPTIONS: OptionItem[] = [
-  {
-    text: { content: '选项1', i18n_content: { 'en-US': 'Option 1' } },
-    value: 'option1',
-  },
-  {
-    text: { content: '选项2', i18n_content: { 'en-US': 'Option 2' } },
-    value: 'option2',
-  },
-] as const;
-
-const CONTENT_MODES = [
-  { label: '指定', value: 'specify' },
-  { label: '绑定变量', value: 'variable' },
-] as const;
 
 const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
   ({
@@ -76,12 +50,35 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
     modalComponentType,
     VariableManagementPanel,
   }) => {
+    const [form] = Form.useForm();
+
     // 使用通用的组件名称编辑Hook
     const { componentNameInfo, handleNameChange } = useComponentName({
       selectedComponent,
       prefix: 'MultiSelectStatic_',
       handleValueChange,
     });
+
+    const [optionPopoverVisible, setOptionPopoverVisible] = useState(false);
+    const [editingOptionIndex, setEditingOptionIndex] = useState<number | null>(
+      null,
+    );
+    const [optionForm] = Form.useForm();
+    const [optionTextMode, setOptionTextMode] = useState<
+      'specify' | 'variable'
+    >('specify');
+    const [optionValueMode, setOptionValueMode] = useState<
+      'specify' | 'variable'
+    >('specify');
+    const [refreshKey, setRefreshKeyInternal] = useState(0);
+    const [popoverRefreshKey, setPopoverRefreshKey] = useState(0); // 专门用于popover内部刷新
+    const [isAddingVariable, setIsAddingVariable] = useState(false);
+    const [forcePopoverOpen, setForcePopoverOpen] = useState(false);
+    const isVariableOperatingRef = useRef(false);
+
+    // 记住指定模式下的选项内容
+    const [savedSpecifyOptions, setSavedSpecifyOptions] =
+      useState<any[]>(DEFAULT_OPTIONS);
 
     // 检查组件是否嵌套在表单中
     const isNestedInForm = useMemo(() => {
@@ -113,27 +110,6 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
 
       return false;
     }, [selectedPath]);
-    const [form] = Form.useForm();
-    const [optionPopoverVisible, setOptionPopoverVisible] = useState(false);
-    const [editingOptionIndex, setEditingOptionIndex] = useState<number | null>(
-      null,
-    );
-    const [optionForm] = Form.useForm();
-    const [optionTextMode, setOptionTextMode] = useState<
-      'specify' | 'variable'
-    >('specify');
-    const [optionValueMode, setOptionValueMode] = useState<
-      'specify' | 'variable'
-    >('specify');
-    const [refreshKey, setRefreshKeyInternal] = useState(0);
-    const [popoverRefreshKey, setPopoverRefreshKey] = useState(0); // 专门用于popover内部刷新
-    const [isAddingVariable, setIsAddingVariable] = useState(false);
-    const [forcePopoverOpen, setForcePopoverOpen] = useState(false);
-    const isVariableOperatingRef = useRef(false);
-
-    // 记住指定模式下的选项内容
-    const [savedSpecifyOptions, setSavedSpecifyOptions] =
-      useState<any[]>(DEFAULT_OPTIONS);
 
     // 受保护的setRefreshKey函数
     const setRefreshKey = (updater: (prev: number) => number) => {
@@ -327,12 +303,6 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
               selectedComponent.id,
               optionsForStateManager,
             );
-
-            console.log('📝 保存选项到状态管理器 (多选):', {
-              componentId: selectedComponent.id,
-              optionsForStateManager,
-              timestamp: new Date().toISOString(),
-            });
           }
         }
         setOptionPopoverVisible(false);
@@ -827,15 +797,6 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
                     // 只有在表单中才更新 required 字段到全局数据
                     if (isNestedInForm) {
                       handleValueChange('required', checked);
-                      console.log('✅ 下拉多选-更新 required 字段:', {
-                        checked,
-                        isNestedInForm,
-                      });
-                    } else {
-                      console.log(
-                        '⚠️ 下拉多选-跳过更新 required 字段：组件不在表单中',
-                        { checked, isNestedInForm },
-                      );
                     }
                   }}
                 />
@@ -858,7 +819,6 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
                     Array.isArray(currentOptions)
                   ) {
                     // 从指定模式切换出去时，保存当前的选项内容
-                    console.log('💾 保存指定模式选项:', currentOptions);
                     setSavedSpecifyOptions(currentOptions);
                   }
 
@@ -883,19 +843,13 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
                       // 切换到指定模式，恢复之前保存的选项内容
                       if (typeof currentOptions === 'string') {
                         // 如果当前是变量绑定格式，恢复保存的指定模式选项
-                        console.log(
-                          '🔄 恢复指定模式选项:',
-                          savedSpecifyOptions,
-                        );
+
                         handleValueChange('options', savedSpecifyOptions);
                       }
                     }
                   }
                 }}
-                options={[
-                  { label: '指定', value: 'specify' },
-                  { label: '绑定变量', value: 'variable' },
-                ]}
+                options={[...CONTENT_MODES]}
               />
 
               {multiSelectOptionsMode === 'specify' && (
@@ -1069,52 +1023,38 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
                           }));
                           handleValueChange('options', `\${${value}}`);
                         } else {
-                          // 解绑变量，恢复指定模式的选项
+                          // 清空变量绑定，但保持在变量模式
                           multiSelectComponentStateManager.setBoundVariableName(
                             selectedComponent.id,
                             '',
                           );
 
-                          // 恢复指定模式的选项
-                          let optionsToRestore: any[] = [];
-                          const userEditedOptions =
-                            multiSelectComponentStateManager.getUserEditedOptions(
-                              selectedComponent.id,
-                            );
-
-                          if (
-                            userEditedOptions &&
-                            userEditedOptions.length > 0
-                          ) {
-                            // 使用用户编辑过的选项
-                            optionsToRestore = userEditedOptions.map((opt) => ({
-                              value: opt.value,
-                              text: {
-                                content: opt.label,
-                                i18n_content: { 'en-US': opt.label },
-                              },
-                            }));
-                          } else if (savedSpecifyOptions.length > 0) {
-                            // 使用组件内保存的指定选项
-                            optionsToRestore = savedSpecifyOptions;
-                          } else {
-                            // 使用默认选项
-                            optionsToRestore = DEFAULT_OPTIONS;
-                          }
-
-                          console.log('🔄 选择恢复的选项:', {
-                            componentId: selectedComponent.id,
-                            optionsToRestore,
-                            source:
-                              userEditedOptions?.length > 0
-                                ? 'stateManager'
-                                : savedSpecifyOptions.length > 0
-                                ? 'savedState'
-                                : 'default',
-                            timestamp: new Date().toISOString(),
+                          // 清除lastBoundVariables中的记录
+                          setLastBoundVariables((prev) => {
+                            const newState = { ...prev };
+                            delete newState[selectedComponent.id];
+                            return newState;
                           });
 
-                          handleValueChange('options', optionsToRestore);
+                          // 保持在变量模式，不切换Segmented
+                          // 清空变量绑定后，恢复默认选项以便预览
+                          const defaultOptions = [
+                            {
+                              text: {
+                                content: '选项1',
+                                i18n_content: { 'en-US': 'Option 1' },
+                              },
+                              value: 'option1',
+                            },
+                            {
+                              text: {
+                                content: '选项2',
+                                i18n_content: { 'en-US': 'Option 2' },
+                              },
+                              value: 'option2',
+                            },
+                          ];
+                          handleValueChange('options', defaultOptions);
                         }
                       }
                     }}

@@ -2,51 +2,8 @@
 import { Form, Input, InputNumber } from 'antd';
 import React, { useCallback, useMemo } from 'react';
 import { ComponentContent, PropertyPanel, SettingSection } from '../common';
-
-// 类型定义
-interface MultiUrl {
-  url?: string;
-  android_url?: string;
-  ios_url?: string;
-  pc_url?: string;
-}
-
-interface CardData {
-  dsl?: {
-    card_link?: {
-      multi_url?: MultiUrl;
-    };
-  };
-}
-
-export interface CardRootComponentProps {
-  cardVerticalSpacing: number;
-  onUpdateCard: (updates: any) => void;
-  cardData?: CardData;
-  handleValueChange: (field: string, value: any) => void;
-  topLevelTab: string;
-  setTopLevelTab: (tab: string) => void;
-  VariableManagementPanel: React.ComponentType;
-}
-
-// 常量定义
-const URL_FIELDS = [
-  { key: 'url', label: 'URL', placeholder: '请输入URL' },
-  {
-    key: 'android_url',
-    label: 'Android URL',
-    placeholder: '请输入Android URL',
-  },
-  { key: 'ios_url', label: 'iOS URL', placeholder: '请输入iOS URL' },
-  { key: 'pc_url', label: 'PC URL', placeholder: '请输入PC URL' },
-] as const;
-
-const VERTICAL_SPACING_CONFIG = {
-  min: 0,
-  max: 100,
-  step: 1,
-  defaultValue: 8,
-} as const;
+import { URL_FIELDS, VERTICAL_SPACING_CONFIG } from './constans';
+import type { CardRootComponentProps, MultiUrl } from './type';
 
 const CardRootComponent: React.FC<CardRootComponentProps> = ({
   cardVerticalSpacing,
@@ -56,6 +13,12 @@ const CardRootComponent: React.FC<CardRootComponentProps> = ({
   topLevelTab,
   setTopLevelTab,
   VariableManagementPanel,
+  isVariableModalVisible,
+  handleVariableModalOk,
+  handleVariableModalCancel,
+  editingVariable,
+  isVariableModalFromVariablesTab,
+  modalComponentType,
 }) => {
   const [form] = Form.useForm();
 
@@ -93,7 +56,7 @@ const CardRootComponent: React.FC<CardRootComponentProps> = ({
   const componentContent = useMemo(
     () => (
       <>
-        <SettingSection title="⚙️ 卡片属性123" form={form}>
+        <SettingSection title="⚙️ 卡片属性" form={form}>
           <Form.Item label="垂直间距">
             <InputNumber
               value={
@@ -165,6 +128,12 @@ const CardRootComponent: React.FC<CardRootComponentProps> = ({
       eventContent={eventContent}
       showEventTab={true}
       variableManagementComponent={<VariableManagementPanel />}
+      isVariableModalVisible={isVariableModalVisible}
+      handleVariableModalOk={handleVariableModalOk}
+      handleVariableModalCancel={handleVariableModalCancel}
+      editingVariable={editingVariable}
+      isVariableModalFromVariablesTab={isVariableModalFromVariablesTab}
+      modalComponentType={modalComponentType}
     />
   );
 };

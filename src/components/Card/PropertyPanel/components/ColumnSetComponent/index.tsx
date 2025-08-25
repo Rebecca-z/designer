@@ -3,30 +3,8 @@ import { Form, InputNumber } from 'antd';
 import React, { useCallback, useMemo } from 'react';
 import { ComponentContent, PropertyPanel, SettingSection } from '../common';
 import { BaseComponentProps } from '../types';
-
-// 类型定义
-interface ColumnItem {
-  tag: string;
-  style: {
-    flex: number;
-  };
-  elements: any[];
-}
-
-interface ColumnSetData {
-  columns?: ColumnItem[];
-}
-
-// 常量定义
-const COLUMN_CONFIG = {
-  min: 1,
-  max: 6,
-  defaultCount: 3,
-  flexMin: 1,
-  flexMax: 5,
-  flexStep: 1,
-  defaultFlex: 1,
-} as const;
+import { COLUMN_CONFIG } from './constans';
+import type { ColumnItem, ColumnSetData } from './type';
 
 const ColumnSetComponent: React.FC<BaseComponentProps> = ({
   selectedComponent,

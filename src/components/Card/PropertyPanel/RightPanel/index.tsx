@@ -1,19 +1,13 @@
 // 右侧属性面板 - 优化版本
 
-import {
-  BgColorsOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  PlusOutlined,
-  SettingOutlined,
-} from '@ant-design/icons';
-import { Button, Card, Tabs, Typography } from 'antd';
+import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
+import { Button, Card, Typography } from 'antd';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ComponentType as ImportedComponentType,
   Variable,
 } from '../../card-designer-types-updated';
-import AddVariableModal from '../../Variable/AddVariableModal';
+
 import {
   ButtonComponent,
   CardRootComponent,
@@ -30,6 +24,10 @@ import {
   TextComponent,
   TitleComponent,
 } from '../components';
+import {
+  PropertyPanel as CommonPropertyPanel,
+  ComponentContent,
+} from '../components/common';
 import { getComponentRealPath, getVariableKeys } from '../utils';
 
 const { Text } = Typography;
@@ -90,7 +88,7 @@ const PANEL_STYLES = {
     borderBottom: '1px solid #d9d9d9',
   },
   emptyState: {
-    padding: '40px 20px',
+    padding: '20px',
     textAlign: 'center' as const,
     color: '#999',
   },
@@ -136,29 +134,10 @@ const useComponentSelection = (
 
   // Tab自动切换逻辑
   useEffect(() => {
-    console.log('🔄 Tab自动切换逻辑执行:', {
-      hasSelectedComponent: !!selectedComponent,
-      componentId: selectedComponent?.id,
-      componentTag: selectedComponent?.tag,
-      selectedPath,
-      lastSelectedComponentId,
-      currentTab: topLevelTab,
-    });
-
     if (selectedComponent) {
       const isNewComponent = selectedComponent.id !== lastSelectedComponentId;
 
       if (!isCardRoot && isNewComponent) {
-        console.log('🎯 检测到新组件选中，自动切换到组件属性Tab:', {
-          componentId: selectedComponent.id,
-          componentTag: selectedComponent.tag,
-          selectedPath,
-          currentTab: topLevelTab,
-          lastSelectedComponentId,
-          isNewComponent,
-          isCardRoot,
-          timestamp: new Date().toISOString(),
-        });
         setTopLevelTab('component');
       }
 
@@ -346,10 +325,6 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
             value === 'reset' &&
             selectedComponent.tag === 'button'
           ) {
-            console.log('🔧 设置重置按钮，清除behaviors字段:', {
-              componentId: selectedComponent.id,
-              formActionType: value,
-            });
             // 删除behaviors字段
             delete (updatedComponent as any).behaviors;
           }
@@ -372,12 +347,6 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
   // 统一的变量创建处理函数
   const handleAddVariableFromComponent = useCallback(
     (componentType: string) => {
-      console.log('🔧 handleAddVariableFromComponent 被调用:', {
-        componentType,
-        currentModalVisible: isVariableModalVisible,
-        timestamp: new Date().toISOString(),
-      });
-
       setIsVariableModalFromVariablesTab(false);
       setModalComponentType(componentType);
       setEditingVariable(undefined);
@@ -406,49 +375,13 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
   // 获取过滤后的变量列表
   const getFilteredVariables = useCallback(
     (componentType?: string) => {
-      console.log('🔍 getFilteredVariables 调用:', {
-        componentType,
-        totalVariables: variables.length,
-        variables: variables.map((v) => ({
-          name: v.name,
-          type: v.type,
-          originalType: v.originalType,
-          resolvedType: v.originalType || v.type || 'string',
-        })),
-        timestamp: new Date().toISOString(),
-      });
-
       if (!componentType) return variables;
       const allowedTypes = VARIABLE_TYPE_MAPPING[componentType] || [];
-
-      console.log('🎯 变量类型过滤:', {
-        componentType,
-        allowedTypes,
-        mapping: VARIABLE_TYPE_MAPPING[componentType],
-      });
-
       const filteredVariables = variables.filter((variable) => {
         const variableType = variable.originalType || variable.type || 'string';
         const isAllowed = allowedTypes.includes(variableType);
-
-        console.log('🔍 变量过滤检查:', {
-          variableName: variable.name,
-          originalType: variable.originalType,
-          type: variable.type,
-          resolvedType: variableType,
-          isAllowed,
-          allowedTypes,
-        });
-
         return isAllowed;
       });
-
-      console.log('✅ 过滤结果:', {
-        componentType,
-        filteredCount: filteredVariables.length,
-        filteredVariables: filteredVariables.map((v) => v.name),
-      });
-
       return filteredVariables;
     },
     [variables, VARIABLE_TYPE_MAPPING],
@@ -480,29 +413,12 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
   // 变量模态框确认处理
   const handleVariableModalOk = useCallback(
     (variable: VariableItem) => {
-      console.log('🔧 RightPanel handleVariableModalOk 接收到变量:', {
-        variable,
-        editingVariable,
-        editingVariableIndex,
-        currentVariablesCount: variables.length,
-        timestamp: new Date().toISOString(),
-      });
-
       if (editingVariable !== null && editingVariable !== undefined) {
         const newVariables = [...variables];
         newVariables[editingVariableIndex] = variable;
-        console.log('🔧 RightPanel 更新现有变量:', {
-          editingVariableIndex,
-          newVariables,
-        });
         onUpdateVariables(newVariables);
       } else {
         const newVariables = [...variables, variable];
-        console.log('🔧 RightPanel 添加新变量:', {
-          oldVariablesCount: variables.length,
-          newVariablesCount: newVariables.length,
-          newVariables,
-        });
         onUpdateVariables(newVariables);
       }
       setIsVariableModalVisible(false);
@@ -529,7 +445,6 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
       e.stopPropagation();
       e.preventDefault();
     }
-    console.log('🔧 点击新建变量按钮');
     setEditingVariable(undefined);
     setEditingVariableIndex(-1);
     setIsVariableModalFromVariablesTab(true);
@@ -569,7 +484,7 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
   // 创建变量管理面板组件
   const VariableManagementPanel = useCallback(
     () => (
-      <div style={{ padding: '16px' }}>
+      <div>
         <div
           style={{
             background: '#fff',
@@ -743,6 +658,12 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
           cardData={cardData}
           handleValueChange={handleValueChange}
           VariableManagementPanel={VariableManagementPanel}
+          isVariableModalVisible={isVariableModalVisible}
+          handleVariableModalOk={handleVariableModalOk}
+          handleVariableModalCancel={handleVariableModalCancel}
+          editingVariable={editingVariable}
+          isVariableModalFromVariablesTab={isVariableModalFromVariablesTab}
+          modalComponentType={modalComponentType}
         />
       );
     }
@@ -892,60 +813,39 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
     setMultiSelectOptionsMode,
   ]);
 
+  // 默认组件内容 - 必须在条件语句之前定义
+  const defaultComponentContent = useMemo(
+    () => (
+      <div style={PANEL_STYLES.emptyState}>
+        <Text>请选择一个组件来编辑其属性</Text>
+      </div>
+    ),
+    [],
+  );
+
   // 渲染组件编辑器
   const componentEditor = renderComponentEditor();
   if (componentEditor) {
     return componentEditor;
   }
 
-  // 如果没有匹配的组件编辑器，显示默认界面
   return (
-    <div style={PANEL_STYLES.container}>
-      <Tabs
-        activeKey={topLevelTab}
-        onChange={handleTabChange}
-        style={{ height: '100%' }}
-        tabBarStyle={PANEL_STYLES.tabBarStyle}
-        size="small"
-        items={[
-          {
-            key: 'component',
-            label: (
-              <span
-                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                <SettingOutlined />
-                组件属性
-              </span>
-            ),
-            children: (
-              <div style={PANEL_STYLES.emptyState}>
-                <Text>请选择一个组件来编辑其属性</Text>
-              </div>
-            ),
-          },
-          {
-            key: 'variables',
-            label: (
-              <span
-                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                <BgColorsOutlined />
-                变量
-              </span>
-            ),
-            children: <VariableManagementPanel />,
-          },
-        ]}
-      />
-
-      <AddVariableModal
-        visible={isVariableModalVisible}
-        onOk={handleVariableModalOk}
-        onCancel={handleVariableModalCancel}
-        editingVariable={editingVariable}
-        componentType={modalComponentType}
-      />
-    </div>
+    <CommonPropertyPanel
+      activeTab={topLevelTab}
+      onTabChange={handleTabChange}
+      componentContent={
+        <ComponentContent componentName="属性面板">
+          {defaultComponentContent}
+        </ComponentContent>
+      }
+      showEventTab={false}
+      variableManagementComponent={<VariableManagementPanel />}
+      isVariableModalVisible={isVariableModalVisible}
+      handleVariableModalOk={handleVariableModalOk}
+      handleVariableModalCancel={handleVariableModalCancel}
+      editingVariable={editingVariable}
+      isVariableModalFromVariablesTab={isVariableModalFromVariablesTab}
+      modalComponentType={modalComponentType}
+    />
   );
 };

@@ -79,7 +79,7 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
     return false;
   }, [selectedPath, selectedComponent.id, selectedComponent.tag]);
 
-  // 获取按钮名称信息 - 使用useMemo优化
+  // 获取按钮名称信息
   const buttonNameInfo = useMemo(() => {
     const fullName = (selectedComponent as any).name || 'Button_';
     // 提取各种前缀后面的内容，优先处理Button_前缀
@@ -169,10 +169,8 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
       actionText: '请选择动作',
       behavior: null, // 初始化为null，表示尚未配置
     };
-    console.log('🔧 创建新事件:', newEvent);
     setEvents((prev) => {
       const updatedEvents = [...prev, newEvent];
-      console.log('🔧 更新后的事件列表:', updatedEvents);
       return updatedEvents;
     });
   }, []);
@@ -263,7 +261,7 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
 
       behaviorObject = {
         type: 'callback',
-        callback: callbackParams, // 直接使用参数对象，不包含action、params、paramType
+        callback: callbackParams,
       };
       actionText = `请求回调: ${paramString}`;
     }

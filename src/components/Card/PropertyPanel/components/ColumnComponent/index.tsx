@@ -3,8 +3,6 @@ import React from 'react';
 import { ComponentContent, PropertyPanel } from '../common';
 import { BaseComponentProps } from '../types';
 
-// 样式常量（保留必要的样式）
-
 const ColumnComponent: React.FC<BaseComponentProps> = ({
   selectedComponent,
   topLevelTab,
