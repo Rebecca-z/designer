@@ -1,5 +1,6 @@
 // 统一导出所有组件编辑界面
 export { default as ButtonComponent } from './ButtonComponent';
+export { default as CardRootComponent } from './CardRootComponent';
 export { default as ColumnComponent } from './ColumnComponent';
 export { default as ColumnSetComponent } from './ColumnSetComponent';
 export { default as FormComponent } from './FormComponent';

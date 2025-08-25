@@ -1,11 +1,5 @@
 // SelectComponent 编辑界面 - 下拉单选组件
-import {
-  BgColorsOutlined,
-  CloseOutlined,
-  DeleteOutlined,
-  PlusOutlined,
-  SettingOutlined,
-} from '@ant-design/icons';
+import { CloseOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import {
   Button,
   Form,
@@ -13,17 +7,20 @@ import {
   Popover,
   Segmented,
   Switch,
-  Tabs,
   Typography,
 } from 'antd';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import AddVariableModal from '../../../Variable/AddVariableModal';
 import VariableBinding from '../../../Variable/VariableList';
 import {
   optionEditStateManager,
   selectComponentStateManager,
 } from '../../../Variable/utils/index';
-import ComponentNameInput from '../common/ComponentNameInput';
+import {
+  ComponentContent,
+  ComponentNameInput,
+  PropertyPanel,
+  SettingSection,
+} from '../common';
 import { useComponentName } from '../hooks/useComponentName';
 import { SelectComponentProps } from '../types';
 
@@ -55,56 +52,6 @@ const CONTENT_MODES = [
   { label: '指定', value: 'specify' },
   { label: '绑定变量', value: 'variable' },
 ] as const;
-
-// 样式常量
-const STYLES = {
-  container: {
-    width: '300px',
-    height: 'calc(100vh - 60px)',
-    backgroundColor: '#fafafa',
-    borderLeft: '1px solid #d9d9d9',
-    padding: '16px',
-    overflow: 'auto',
-  },
-  tabBarStyle: {
-    padding: '0 16px',
-    backgroundColor: '#fff',
-    margin: 0,
-    borderBottom: '1px solid #d9d9d9',
-  },
-  contentPadding: { padding: '16px' },
-  infoBox: {
-    marginBottom: '16px',
-    padding: '12px',
-    backgroundColor: '#f6ffed',
-    border: '1px solid #b7eb8f',
-    borderRadius: '6px',
-  },
-  section: {
-    marginBottom: '16px',
-    background: '#fff',
-    borderRadius: 6,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-    padding: 16,
-  },
-  sectionTitle: {
-    fontWeight: 600,
-    marginBottom: 8,
-    fontSize: 15,
-  },
-  optionItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    marginBottom: '8px',
-    padding: '8px',
-    backgroundColor: '#f9f9f9',
-    borderRadius: '4px',
-  },
-  popoverContent: {
-    width: '300px',
-  },
-} as const;
 
 const SelectComponent: React.FC<SelectComponentProps> = React.memo(
   ({
@@ -903,510 +850,384 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
       </div>
     );
 
-    return (
-      <div style={STYLES.container}>
-        <AddVariableModal
-          visible={isVariableModalVisible}
-          onOk={handleVariableModalOk}
-          onCancel={handleVariableModalCancel}
-          editingVariable={editingVariable}
-          componentType={
-            isVariableModalFromVariablesTab
-              ? undefined
-              : modalComponentType || selectedComponent?.tag
-          }
-        />
+    // 组件属性内容
+    const componentContent = useMemo(
+      () => (
+        <>
+          <SettingSection title="🏷️ 组件设置" form={form}>
+            <ComponentNameInput
+              prefix="SelectStatic_"
+              suffix={componentNameInfo.suffix}
+              onChange={handleNameChange}
+            />
+          </SettingSection>
 
-        <Tabs
-          activeKey={topLevelTab}
-          onChange={setTopLevelTab}
-          style={{ height: '100%' }}
-          tabBarStyle={STYLES.tabBarStyle}
-          size="small"
-          items={[
-            {
-              key: 'component',
-              label: (
-                <span
-                  style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+          {/* 基础设置 - 只有在表单中才显示 */}
+          {isNestedInForm && (
+            <SettingSection title="⚙️ 基础设置" form={form}>
+              <Form.Item label="必填">
+                <Switch
+                  checked={(selectedComponent as any).required || false}
+                  onChange={(checked) => {
+                    // 只有在表单中才更新 required 字段到全局数据
+                    if (isNestedInForm) {
+                      handleValueChange('required', checked);
+                      console.log('✅ 下拉单选-更新 required 字段:', {
+                        checked,
+                        isNestedInForm,
+                      });
+                    } else {
+                      console.log(
+                        '⚠️ 下拉单选-跳过更新 required 字段：组件不在表单中',
+                        { checked, isNestedInForm },
+                      );
+                    }
+                  }}
+                />
+              </Form.Item>
+            </SettingSection>
+          )}
+
+          <SettingSection title="📋 选项设置" form={form}>
+            <Form.Item label="选项来源">
+              <Segmented
+                value={selectOptionsMode}
+                style={{ marginBottom: 16 }}
+                onChange={(value) => {
+                  const newMode = value as 'specify' | 'variable';
+                  const currentOptions = (selectedComponent as any).options;
+
+                  // 在切换模式前，保存当前模式的内容
+                  if (
+                    selectOptionsMode === 'specify' &&
+                    Array.isArray(currentOptions)
+                  ) {
+                    // 从指定模式切换出去时，保存当前的选项内容
+                    console.log('💾 保存指定模式选项:', currentOptions);
+                    setSavedSpecifyOptions(currentOptions);
+                  }
+
+                  setSelectOptionsMode(newMode);
+
+                  // 处理模式切换时的数据转换
+                  if (selectedComponent) {
+                    if (newMode === 'variable') {
+                      // 切换到绑定变量模式，检查是否有已绑定的变量
+                      const boundVariable =
+                        selectComponentStateManager.getBoundVariableName(
+                          selectedComponent.id,
+                        );
+                      const rememberedVariable =
+                        lastBoundVariables[selectedComponent.id];
+                      const variableName = boundVariable || rememberedVariable;
+
+                      if (variableName) {
+                        handleValueChange('options', `\${${variableName}}`);
+                      }
+                    } else if (newMode === 'specify') {
+                      // 切换到指定模式，恢复之前保存的选项内容
+                      if (typeof currentOptions === 'string') {
+                        // 如果当前是变量绑定格式，恢复保存的指定模式选项
+                        console.log(
+                          '🔄 恢复指定模式选项:',
+                          savedSpecifyOptions,
+                        );
+                        handleValueChange('options', savedSpecifyOptions);
+                      }
+                    }
+                  }
+                }}
+                options={[
+                  { label: '指定', value: 'specify' },
+                  { label: '绑定变量', value: 'variable' },
+                ]}
+              />
+
+              {selectOptionsMode === 'specify' && (
+                <div
+                  key={`option-list-${refreshKey}`}
+                  style={{ marginBottom: 16 }}
                 >
-                  <SettingOutlined />
-                  组件属性
-                </span>
-              ),
-              children: (
-                <div style={{ padding: '16px' }}>
-                  <div
-                    style={{
-                      marginBottom: '16px',
-                      padding: '12px',
-                      backgroundColor: '#f0f9ff',
-                      border: '1px solid #bae6fd',
-                      borderRadius: '6px',
-                    }}
-                  >
-                    <Text style={{ fontSize: '12px', color: '#0369a1' }}>
-                      🎯 当前选中：下拉单选组件
-                    </Text>
-                  </div>
-
-                  {/* 组件设置 - 始终显示 */}
-                  <div
-                    style={{
-                      marginBottom: '16px',
-                      background: '#fff',
-                      borderRadius: 6,
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-                      padding: 16,
-                    }}
-                  >
+                  <Text strong style={{ marginBottom: 8, display: 'block' }}>
+                    选项列表
+                  </Text>
+                  {getSafeOptionsArray().map((option: any, index: number) => (
                     <div
+                      key={`option-${index}-${refreshKey}`}
                       style={{
-                        fontWeight: 600,
                         marginBottom: 8,
-                        fontSize: 15,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
                       }}
                     >
-                      🏷️ 组件设置
-                    </div>
-                    <Form form={form} layout="vertical">
-                      <ComponentNameInput
-                        prefix="SelectStatic_"
-                        suffix={componentNameInfo.suffix}
-                        onChange={handleNameChange}
-                      />
-                    </Form>
-                  </div>
+                      <Popover
+                        content={getPopoverContent()}
+                        title={null}
+                        trigger="click"
+                        open={
+                          (optionPopoverVisible || forcePopoverOpen) &&
+                          editingOptionIndex === index
+                        }
+                        onOpenChange={(visible) => {
+                          // 如果正在进行变量操作，完全忽略onOpenChange事件
+                          if (isVariableModalVisible || isAddingVariable) {
+                            return;
+                          }
 
-                  {/* 基础设置 - 只有在表单中才显示 */}
-                  {isNestedInForm && (
-                    <div
-                      style={{
-                        marginBottom: '16px',
-                        background: '#fff',
-                        borderRadius: 6,
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-                        padding: 16,
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontWeight: 600,
-                          marginBottom: 8,
-                          fontSize: 15,
+                          if (visible) {
+                            handleEditOption(index);
+                          } else {
+                            handleCancelOptionEdit();
+                          }
+                        }}
+                        placement="rightTop"
+                        overlayStyle={{
+                          zIndex:
+                            isVariableModalVisible || isAddingVariable
+                              ? 999
+                              : 1050,
                         }}
                       >
-                        ⚙️ 基础设置
-                      </div>
-                      <Form form={form} layout="vertical">
-                        <Form.Item label="必填">
-                          <Switch
-                            checked={
-                              (selectedComponent as any).required || false
-                            }
-                            onChange={(checked) => {
-                              // 只有在表单中才更新 required 字段到全局数据
-                              if (isNestedInForm) {
-                                handleValueChange('required', checked);
-                                console.log('✅ 下拉单选-更新 required 字段:', {
-                                  checked,
-                                  isNestedInForm,
-                                });
-                              } else {
-                                console.log(
-                                  '⚠️ 下拉单选-跳过更新 required 字段：组件不在表单中',
-                                  { checked, isNestedInForm },
-                                );
-                              }
-                            }}
-                          />
-                        </Form.Item>
-                      </Form>
-                    </div>
-                  )}
+                        <Button
+                          style={{
+                            flex: 1,
+                            textAlign: 'left',
+                            justifyContent: 'flex-start',
+                          }}
+                        >
+                          {(() => {
+                            const textContent =
+                              option.text?.content ||
+                              option.label ||
+                              `选项${index + 1}`;
+                            // 解析变量值以显示实际内容
+                            const resolvedValue =
+                              resolveVariableValue(textContent);
+                            return resolvedValue;
+                          })()}
+                        </Button>
+                      </Popover>
+                      <Button
+                        type="text"
+                        size="small"
+                        danger
+                        icon={<DeleteOutlined />}
+                        onClick={() => {
+                          const newOptions = [
+                            ...(selectedComponent as any).options,
+                          ];
+                          newOptions.splice(index, 1);
+                          handleValueChange('options', newOptions);
 
-                  {/* 选项设置 */}
-                  <div
-                    style={{
-                      background: '#fff',
-                      borderRadius: 6,
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-                      padding: 16,
+                          // 如果当前是指定模式，更新保存的选项内容
+                          if (selectOptionsMode === 'specify') {
+                            setSavedSpecifyOptions(newOptions);
+
+                            // 同时保存到 selectComponentStateManager
+                            const optionsForStateManager = newOptions.map(
+                              (option) => ({
+                                label: option.text?.content || '',
+                                value: option.value || '',
+                              }),
+                            );
+                            selectComponentStateManager.setUserEditedOptions(
+                              selectedComponent.id,
+                              optionsForStateManager,
+                            );
+                          }
+                        }}
+                      />
+                    </div>
+                  ))}
+                  <Button
+                    type="dashed"
+                    block
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      const newOptions = [
+                        ...((selectedComponent as any).options || []),
+                      ];
+                      const newIndex = newOptions.length + 1;
+                      newOptions.push({
+                        value: `option${newIndex}`,
+                        text: {
+                          content: `选项${newIndex}`,
+                          i18n_content: {
+                            'en-US': `Option${newIndex}`,
+                          },
+                        },
+                      });
+                      handleValueChange('options', newOptions);
+
+                      // 如果当前是指定模式，更新保存的选项内容
+                      if (selectOptionsMode === 'specify') {
+                        setSavedSpecifyOptions(newOptions);
+
+                        // 同时保存到 selectComponentStateManager
+                        const optionsForStateManager = newOptions.map(
+                          (option) => ({
+                            label: option.text?.content || '',
+                            value: option.value || '',
+                          }),
+                        );
+                        selectComponentStateManager.setUserEditedOptions(
+                          selectedComponent.id,
+                          optionsForStateManager,
+                        );
+                      }
                     }}
                   >
-                    <div
-                      style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}
-                    >
-                      📋 选项设置
-                    </div>
-                    <Form form={form} layout="vertical">
-                      <Form.Item label="选项来源">
-                        <Segmented
-                          value={selectOptionsMode}
-                          style={{ marginBottom: 16 }}
-                          onChange={(value) => {
-                            const newMode = value as 'specify' | 'variable';
-                            const currentOptions = (selectedComponent as any)
-                              .options;
-
-                            // 在切换模式前，保存当前模式的内容
-                            if (
-                              selectOptionsMode === 'specify' &&
-                              Array.isArray(currentOptions)
-                            ) {
-                              // 从指定模式切换出去时，保存当前的选项内容
-                              console.log(
-                                '💾 保存指定模式选项:',
-                                currentOptions,
-                              );
-                              setSavedSpecifyOptions(currentOptions);
-                            }
-
-                            setSelectOptionsMode(newMode);
-
-                            // 处理模式切换时的数据转换
-                            if (selectedComponent) {
-                              if (newMode === 'variable') {
-                                // 切换到绑定变量模式，检查是否有已绑定的变量
-                                const boundVariable =
-                                  selectComponentStateManager.getBoundVariableName(
-                                    selectedComponent.id,
-                                  );
-                                const rememberedVariable =
-                                  lastBoundVariables[selectedComponent.id];
-                                const variableName =
-                                  boundVariable || rememberedVariable;
-
-                                if (variableName) {
-                                  handleValueChange(
-                                    'options',
-                                    `\${${variableName}}`,
-                                  );
-                                }
-                              } else if (newMode === 'specify') {
-                                // 切换到指定模式，恢复之前保存的选项内容
-                                if (typeof currentOptions === 'string') {
-                                  // 如果当前是变量绑定格式，恢复保存的指定模式选项
-                                  console.log(
-                                    '🔄 恢复指定模式选项:',
-                                    savedSpecifyOptions,
-                                  );
-                                  handleValueChange(
-                                    'options',
-                                    savedSpecifyOptions,
-                                  );
-                                }
-                              }
-                            }
-                          }}
-                          options={[
-                            { label: '指定', value: 'specify' },
-                            { label: '绑定变量', value: 'variable' },
-                          ]}
-                        />
-
-                        {selectOptionsMode === 'specify' && (
-                          <div
-                            key={`option-list-${refreshKey}`}
-                            style={{ marginBottom: 16 }}
-                          >
-                            <Text
-                              strong
-                              style={{ marginBottom: 8, display: 'block' }}
-                            >
-                              选项列表
-                            </Text>
-                            {getSafeOptionsArray().map(
-                              (option: any, index: number) => (
-                                <div
-                                  key={`option-${index}-${refreshKey}`}
-                                  style={{
-                                    marginBottom: 8,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                  }}
-                                >
-                                  <Popover
-                                    content={getPopoverContent()}
-                                    title={null}
-                                    trigger="click"
-                                    open={
-                                      (optionPopoverVisible ||
-                                        forcePopoverOpen) &&
-                                      editingOptionIndex === index
-                                    }
-                                    onOpenChange={(visible) => {
-                                      // 如果正在进行变量操作，完全忽略onOpenChange事件
-                                      if (
-                                        isVariableModalVisible ||
-                                        isAddingVariable
-                                      ) {
-                                        return;
-                                      }
-
-                                      if (visible) {
-                                        handleEditOption(index);
-                                      } else {
-                                        handleCancelOptionEdit();
-                                      }
-                                    }}
-                                    placement="rightTop"
-                                    overlayStyle={{
-                                      zIndex:
-                                        isVariableModalVisible ||
-                                        isAddingVariable
-                                          ? 999
-                                          : 1050,
-                                    }}
-                                  >
-                                    <Button
-                                      style={{
-                                        flex: 1,
-                                        textAlign: 'left',
-                                        justifyContent: 'flex-start',
-                                      }}
-                                    >
-                                      {(() => {
-                                        const textContent =
-                                          option.text?.content ||
-                                          option.label ||
-                                          `选项${index + 1}`;
-                                        // 解析变量值以显示实际内容
-                                        const resolvedValue =
-                                          resolveVariableValue(textContent);
-                                        return resolvedValue;
-                                      })()}
-                                    </Button>
-                                  </Popover>
-                                  <Button
-                                    type="text"
-                                    size="small"
-                                    danger
-                                    icon={<DeleteOutlined />}
-                                    onClick={() => {
-                                      const newOptions = [
-                                        ...(selectedComponent as any).options,
-                                      ];
-                                      newOptions.splice(index, 1);
-                                      handleValueChange('options', newOptions);
-
-                                      // 如果当前是指定模式，更新保存的选项内容
-                                      if (selectOptionsMode === 'specify') {
-                                        setSavedSpecifyOptions(newOptions);
-
-                                        // 同时保存到 selectComponentStateManager
-                                        const optionsForStateManager =
-                                          newOptions.map((option) => ({
-                                            label: option.text?.content || '',
-                                            value: option.value || '',
-                                          }));
-                                        selectComponentStateManager.setUserEditedOptions(
-                                          selectedComponent.id,
-                                          optionsForStateManager,
-                                        );
-                                      }
-                                    }}
-                                  />
-                                </div>
-                              ),
-                            )}
-                            <Button
-                              type="dashed"
-                              block
-                              icon={<PlusOutlined />}
-                              onClick={() => {
-                                const newOptions = [
-                                  ...((selectedComponent as any).options || []),
-                                ];
-                                const newIndex = newOptions.length + 1;
-                                newOptions.push({
-                                  value: `option${newIndex}`,
-                                  text: {
-                                    content: `选项${newIndex}`,
-                                    i18n_content: {
-                                      'en-US': `Option${newIndex}`,
-                                    },
-                                  },
-                                });
-                                handleValueChange('options', newOptions);
-
-                                // 如果当前是指定模式，更新保存的选项内容
-                                if (selectOptionsMode === 'specify') {
-                                  setSavedSpecifyOptions(newOptions);
-
-                                  // 同时保存到 selectComponentStateManager
-                                  const optionsForStateManager = newOptions.map(
-                                    (option) => ({
-                                      label: option.text?.content || '',
-                                      value: option.value || '',
-                                    }),
-                                  );
-                                  selectComponentStateManager.setUserEditedOptions(
-                                    selectedComponent.id,
-                                    optionsForStateManager,
-                                  );
-                                }
-                              }}
-                            >
-                              添加选项
-                            </Button>
-                          </div>
-                        )}
-
-                        {selectOptionsMode === 'variable' && (
-                          <div>
-                            <VariableBinding
-                              componentType="select_static"
-                              variables={getOptionArrayVariables()}
-                              getFilteredVariables={() =>
-                                getOptionArrayVariables()
-                              }
-                              value={(() => {
-                                const rememberedVariable = selectedComponent
-                                  ? lastBoundVariables[selectedComponent.id]
-                                  : undefined;
-                                const currentBoundVariable =
-                                  selectComponentStateManager.getBoundVariableName(
-                                    selectedComponent.id,
-                                  );
-                                return (
-                                  rememberedVariable || currentBoundVariable
-                                );
-                              })()}
-                              onChange={(value: string | undefined) => {
-                                // 处理变量绑定逻辑
-                                if (selectedComponent) {
-                                  if (value) {
-                                    // 设置状态管理
-                                    setLastBoundVariables((prev) => ({
-                                      ...prev,
-                                      [selectedComponent.id]: value,
-                                    }));
-                                    selectComponentStateManager.setBoundVariableName(
-                                      selectedComponent.id,
-                                      value,
-                                    );
-
-                                    handleValueChange(
-                                      'options',
-                                      `\${${value}}`,
-                                    );
-                                  } else {
-                                    // 清除绑定
-                                    setLastBoundVariables((prev) => {
-                                      const newState = { ...prev };
-                                      delete newState[selectedComponent.id];
-                                      return newState;
-                                    });
-                                    selectComponentStateManager.setBoundVariableName(
-                                      selectedComponent.id,
-                                      '',
-                                    );
-
-                                    console.log('🔄 清除选项列表变量绑定:', {
-                                      componentId: selectedComponent.id,
-                                      savedSpecifyOptions,
-                                      useDefault:
-                                        savedSpecifyOptions.length === 0,
-                                      timestamp: new Date().toISOString(),
-                                    });
-
-                                    // 尝试从状态管理器恢复用户编辑的选项内容
-                                    const userEditedOptions =
-                                      selectComponentStateManager.getUserEditedOptions(
-                                        selectedComponent.id,
-                                      );
-                                    console.log(
-                                      '🔄 从状态管理器获取用户编辑选项:',
-                                      {
-                                        componentId: selectedComponent.id,
-                                        userEditedOptions,
-                                        hasUserOptions:
-                                          !!userEditedOptions &&
-                                          userEditedOptions.length > 0,
-                                        timestamp: new Date().toISOString(),
-                                      },
-                                    );
-
-                                    let optionsToRestore;
-                                    if (
-                                      userEditedOptions &&
-                                      userEditedOptions.length > 0
-                                    ) {
-                                      // 使用状态管理器中保存的用户编辑选项
-                                      optionsToRestore = userEditedOptions.map(
-                                        (option) => ({
-                                          text: {
-                                            content: option.label,
-                                            i18n_content: {
-                                              'en-US': option.label,
-                                            },
-                                          },
-                                          value: option.value,
-                                        }),
-                                      );
-                                    } else if (savedSpecifyOptions.length > 0) {
-                                      // 使用组件内保存的指定选项
-                                      optionsToRestore = savedSpecifyOptions;
-                                    } else {
-                                      // 使用默认选项
-                                      optionsToRestore = DEFAULT_OPTIONS;
-                                    }
-
-                                    console.log('🔄 选择恢复的选项:', {
-                                      componentId: selectedComponent.id,
-                                      optionsToRestore,
-                                      source:
-                                        userEditedOptions?.length > 0
-                                          ? 'stateManager'
-                                          : savedSpecifyOptions.length > 0
-                                          ? 'savedState'
-                                          : 'default',
-                                      timestamp: new Date().toISOString(),
-                                    });
-
-                                    handleValueChange(
-                                      'options',
-                                      optionsToRestore,
-                                    );
-                                  }
-                                }
-                              }}
-                              getVariableDisplayName={getVariableDisplayName}
-                              getVariableKeys={getVariableKeys}
-                              onAddVariable={() =>
-                                handleAddVariableFromComponent(
-                                  'select_static_array',
-                                )
-                              }
-                              placeholder="请选择选项变量"
-                              label="绑定变量"
-                              addVariableText="新建变量"
-                            />
-                          </div>
-                        )}
-                      </Form.Item>
-                    </Form>
-                  </div>
+                    添加选项
+                  </Button>
                 </div>
-              ),
-            },
-            {
-              key: 'variables',
-              label: (
-                <span
-                  style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-                >
-                  <BgColorsOutlined />
-                  变量
-                </span>
-              ),
-              children: <VariableManagementPanel />,
-            },
-          ]}
-        />
-      </div>
+              )}
+
+              {selectOptionsMode === 'variable' && (
+                <div>
+                  <VariableBinding
+                    componentType="select_static"
+                    variables={getOptionArrayVariables()}
+                    getFilteredVariables={() => getOptionArrayVariables()}
+                    value={(() => {
+                      const rememberedVariable = selectedComponent
+                        ? lastBoundVariables[selectedComponent.id]
+                        : undefined;
+                      const currentBoundVariable =
+                        selectComponentStateManager.getBoundVariableName(
+                          selectedComponent.id,
+                        );
+                      return rememberedVariable || currentBoundVariable;
+                    })()}
+                    onChange={(value: string | undefined) => {
+                      // 处理变量绑定逻辑
+                      if (selectedComponent) {
+                        if (value) {
+                          // 绑定变量
+                          selectComponentStateManager.setBoundVariableName(
+                            selectedComponent.id,
+                            value,
+                          );
+                          setLastBoundVariables((prev) => ({
+                            ...prev,
+                            [selectedComponent.id]: value,
+                          }));
+                          handleValueChange('options', `\${${value}}`);
+                        } else {
+                          // 解绑变量，恢复指定模式的选项
+                          selectComponentStateManager.setBoundVariableName(
+                            selectedComponent.id,
+                            undefined,
+                          );
+
+                          // 恢复指定模式的选项
+                          let optionsToRestore: any[] = [];
+                          const userEditedOptions =
+                            selectComponentStateManager.getUserEditedOptions(
+                              selectedComponent.id,
+                            );
+
+                          if (
+                            userEditedOptions &&
+                            userEditedOptions.length > 0
+                          ) {
+                            // 使用用户编辑过的选项
+                            optionsToRestore = userEditedOptions.map((opt) => ({
+                              value: opt.value,
+                              text: {
+                                content: opt.label,
+                                i18n_content: { 'en-US': opt.label },
+                              },
+                            }));
+                          } else if (savedSpecifyOptions.length > 0) {
+                            // 使用组件内保存的指定选项
+                            optionsToRestore = savedSpecifyOptions;
+                          } else {
+                            // 使用默认选项
+                            optionsToRestore = DEFAULT_OPTIONS;
+                          }
+
+                          console.log('🔄 选择恢复的选项:', {
+                            componentId: selectedComponent.id,
+                            optionsToRestore,
+                            source:
+                              userEditedOptions?.length > 0
+                                ? 'stateManager'
+                                : savedSpecifyOptions.length > 0
+                                ? 'savedState'
+                                : 'default',
+                            timestamp: new Date().toISOString(),
+                          });
+
+                          handleValueChange('options', optionsToRestore);
+                        }
+                      }
+                    }}
+                    getVariableDisplayName={getVariableDisplayName}
+                    getVariableKeys={getVariableKeys}
+                    onAddVariable={() =>
+                      handleAddVariableFromComponent('select_static_array')
+                    }
+                    placeholder="请选择选项变量"
+                    label="绑定变量"
+                    addVariableText="新建变量"
+                  />
+                </div>
+              )}
+            </Form.Item>
+          </SettingSection>
+        </>
+      ),
+      [
+        form,
+        componentNameInfo.suffix,
+        handleNameChange,
+        selectedComponent,
+        handleValueChange,
+        isNestedInForm,
+        selectOptionsMode,
+        setSelectOptionsMode,
+        savedSpecifyOptions,
+        setSavedSpecifyOptions,
+        lastBoundVariables,
+        setLastBoundVariables,
+        refreshKey,
+        getSafeOptionsArray,
+        getPopoverContent,
+        optionPopoverVisible,
+        forcePopoverOpen,
+        editingOptionIndex,
+        isVariableModalVisible,
+        isAddingVariable,
+        handleEditOption,
+        handleCancelOptionEdit,
+        resolveVariableValue,
+        getOptionArrayVariables,
+        getVariableDisplayName,
+        getVariableKeys,
+        handleAddVariableFromComponent,
+      ],
+    );
+
+    return (
+      <PropertyPanel
+        activeTab={topLevelTab}
+        onTabChange={setTopLevelTab}
+        componentContent={
+          <ComponentContent componentName="下拉单选组件">
+            {componentContent}
+          </ComponentContent>
+        }
+        showEventTab={true}
+        variableManagementComponent={<VariableManagementPanel />}
+        isVariableModalVisible={isVariableModalVisible}
+        handleVariableModalOk={handleVariableModalOk || (() => {})}
+        handleVariableModalCancel={handleVariableModalCancel || (() => {})}
+        editingVariable={editingVariable}
+        isVariableModalFromVariablesTab={isVariableModalFromVariablesTab}
+        modalComponentType={modalComponentType}
+        selectedComponentTag={selectedComponent?.tag}
+      />
     );
   },
 );

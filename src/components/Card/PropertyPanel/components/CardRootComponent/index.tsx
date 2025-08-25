@@ -1,9 +1,7 @@
 // CardRootComponent - 卡片根节点属性配置组件
-import { LinkOutlined, SettingOutlined } from '@ant-design/icons';
-import { Form, Input, InputNumber, Tabs, Typography } from 'antd';
-import React, { useCallback, useMemo, useState } from 'react';
-
-const { Text } = Typography;
+import { Form, Input, InputNumber } from 'antd';
+import React, { useCallback, useMemo } from 'react';
+import { ComponentContent, PropertyPanel, SettingSection } from '../common';
 
 // 类型定义
 interface MultiUrl {
@@ -26,6 +24,9 @@ export interface CardRootComponentProps {
   onUpdateCard: (updates: any) => void;
   cardData?: CardData;
   handleValueChange: (field: string, value: any) => void;
+  topLevelTab: string;
+  setTopLevelTab: (tab: string) => void;
+  VariableManagementPanel: React.ComponentType;
 }
 
 // 常量定义
@@ -47,43 +48,16 @@ const VERTICAL_SPACING_CONFIG = {
   defaultValue: 8,
 } as const;
 
-// 样式常量
-const STYLES = {
-  infoBox: {
-    marginBottom: '16px',
-    padding: '12px',
-    backgroundColor: '#f0f9ff',
-    border: '1px solid #bae6fd',
-    borderRadius: '6px',
-  },
-  section: {
-    background: '#fff',
-    borderRadius: 6,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-    padding: 16,
-  },
-  sectionTitle: {
-    fontWeight: 600,
-    marginBottom: 8,
-    fontSize: 15,
-  },
-  label: {
-    display: 'block',
-    marginBottom: '8px',
-    fontWeight: 500,
-    color: '#333',
-  },
-} as const;
-
 const CardRootComponent: React.FC<CardRootComponentProps> = ({
   cardVerticalSpacing,
   onUpdateCard,
   cardData,
   handleValueChange,
+  topLevelTab,
+  setTopLevelTab,
+  VariableManagementPanel,
 }) => {
-  const [activeTab, setActiveTab] = useState<'properties' | 'events'>(
-    'properties',
-  );
+  const [form] = Form.useForm();
 
   // 获取当前的card_link数据 - 使用useMemo优化
   const cardLink = useMemo(
@@ -115,90 +89,83 @@ const CardRootComponent: React.FC<CardRootComponentProps> = ({
     [onUpdateCard],
   );
 
-  // 渲染属性Tab内容 - 使用useMemo优化
-  const propertiesTabContent = useMemo(
+  // 组件属性内容
+  const componentContent = useMemo(
     () => (
-      <div style={STYLES.section}>
-        <div style={STYLES.sectionTitle}>⚙️ 卡片属性</div>
-        <div style={{ marginBottom: '16px' }}>
-          <label style={STYLES.label}>垂直间距</label>
-          <InputNumber
-            value={cardVerticalSpacing || VERTICAL_SPACING_CONFIG.defaultValue}
-            onChange={handleVerticalSpacingChange}
-            min={VERTICAL_SPACING_CONFIG.min}
-            max={VERTICAL_SPACING_CONFIG.max}
-            step={VERTICAL_SPACING_CONFIG.step}
-            style={{ width: '100%' }}
-            addonAfter="px"
-            placeholder="设置垂直间距"
-          />
-        </div>
-      </div>
+      <>
+        <SettingSection title="⚙️ 卡片属性123" form={form}>
+          <Form.Item label="垂直间距">
+            <InputNumber
+              value={
+                cardVerticalSpacing || VERTICAL_SPACING_CONFIG.defaultValue
+              }
+              onChange={handleVerticalSpacingChange}
+              min={VERTICAL_SPACING_CONFIG.min}
+              max={VERTICAL_SPACING_CONFIG.max}
+              step={VERTICAL_SPACING_CONFIG.step}
+              style={{ width: '100%' }}
+              addonAfter="px"
+              placeholder="设置垂直间距"
+            />
+          </Form.Item>
+        </SettingSection>
+      </>
     ),
-    [cardVerticalSpacing, handleVerticalSpacingChange],
+    [form, cardVerticalSpacing, handleVerticalSpacingChange],
   );
 
-  // 渲染事件Tab内容 - 使用useMemo优化
-  const eventsTabContent = useMemo(
+  // 事件内容
+  const eventContent = useMemo(
     () => (
-      <div style={STYLES.section}>
-        <div style={STYLES.sectionTitle}>🔗 卡片链接配置</div>
-        <Form layout="vertical">
-          {URL_FIELDS.map(({ key, label, placeholder }) => (
-            <Form.Item key={key} label={label}>
-              <Input
-                value={cardLink[key as keyof MultiUrl] || ''}
-                onChange={(e) => handleUrlChange(key, e.target.value)}
-                placeholder={placeholder}
-                style={{ width: '100%' }}
-              />
-            </Form.Item>
-          ))}
-        </Form>
+      <div style={{ padding: '16px' }}>
+        <div
+          style={{
+            background: '#fff',
+            borderRadius: 6,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              fontWeight: 600,
+              marginBottom: 8,
+              fontSize: 15,
+            }}
+          >
+            🔗 卡片链接配置
+          </div>
+          <Form layout="vertical">
+            {URL_FIELDS.map(({ key, label, placeholder }) => (
+              <Form.Item key={key} label={label}>
+                <Input
+                  value={cardLink[key as keyof MultiUrl] || ''}
+                  onChange={(e) => handleUrlChange(key, e.target.value)}
+                  placeholder={placeholder}
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
+            ))}
+          </Form>
+        </div>
       </div>
     ),
     [cardLink, handleUrlChange],
   );
 
   return (
-    <div>
-      <div style={STYLES.infoBox}>
-        <Text style={{ fontSize: '12px', color: '#0369a1' }}>
-          🎯 当前选中：卡片
-        </Text>
-      </div>
-
-      <Tabs
-        activeKey={activeTab}
-        onChange={(key) => setActiveTab(key as 'properties' | 'events')}
-        items={[
-          {
-            key: 'properties',
-            label: (
-              <span
-                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                <SettingOutlined />
-                属性
-              </span>
-            ),
-            children: propertiesTabContent,
-          },
-          {
-            key: 'events',
-            label: (
-              <span
-                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                <LinkOutlined />
-                事件
-              </span>
-            ),
-            children: eventsTabContent,
-          },
-        ]}
-      />
-    </div>
+    <PropertyPanel
+      activeTab={topLevelTab}
+      onTabChange={setTopLevelTab}
+      componentContent={
+        <ComponentContent componentName="卡片">
+          {componentContent}
+        </ComponentContent>
+      }
+      eventContent={eventContent}
+      showEventTab={true}
+      variableManagementComponent={<VariableManagementPanel />}
+    />
   );
 };
 

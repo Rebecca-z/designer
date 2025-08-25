@@ -1,14 +1,13 @@
-import {
-  BgColorsOutlined,
-  FileTextOutlined,
-  SettingOutlined,
-} from '@ant-design/icons';
-import { Form, Input, Select, Tabs, Typography } from 'antd';
+import { Form, Input, Select } from 'antd';
 import React, { useCallback, useMemo } from 'react';
-import AddVariableModal from '../../../Variable/AddVariableModal';
+import {
+  ComponentContent,
+  ComponentNameInput,
+  PropertyPanel,
+  SettingSection,
+} from '../common';
 import { BaseComponentProps } from '../types';
 
-const { Text } = Typography;
 const { Option } = Select;
 
 // 类型定义
@@ -30,48 +29,12 @@ const THEME_COLORS = [
   { value: 'red', label: '红色 (red)', color: '#f5222d' },
 ] as const;
 
-// 样式常量
-const STYLES = {
-  container: {
-    width: '300px',
-    height: 'calc(100vh - 60px)',
-    backgroundColor: '#fafafa',
-    borderLeft: '1px solid #d9d9d9',
-    padding: '16px',
-    overflow: 'auto',
-  },
-  tabBarStyle: {
-    padding: '0 16px',
-    backgroundColor: '#fff',
-    margin: 0,
-    borderBottom: '1px solid #d9d9d9',
-  },
-  contentPadding: { padding: '16px' },
-  infoBox: {
-    marginBottom: '16px',
-    padding: '12px',
-    backgroundColor: '#f0f9ff',
-    border: '1px solid #bae6fd',
-    borderRadius: '6px',
-  },
-  sectionCard: {
-    marginBottom: '16px',
-    background: '#fff',
-    borderRadius: 6,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-    padding: 16,
-  },
-  sectionTitle: {
-    fontWeight: 600,
-    marginBottom: 8,
-    fontSize: 15,
-  },
-  colorSwatch: {
-    width: '12px',
-    height: '12px',
-    borderRadius: '2px',
-    marginRight: '8px',
-  },
+// 颜色样本样式
+const colorSwatchStyle = {
+  width: '12px',
+  height: '12px',
+  borderRadius: '2px',
+  marginRight: '8px',
 } as const;
 
 const TitleComponent: React.FC<BaseComponentProps> = ({
@@ -111,127 +74,85 @@ const TitleComponent: React.FC<BaseComponentProps> = ({
     return THEME_COLORS.map(({ value, label, color }) => (
       <Option key={value} value={value}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{ ...STYLES.colorSwatch, backgroundColor: color }} />
+          <div style={{ ...colorSwatchStyle, backgroundColor: color }} />
           {label}
         </div>
       </Option>
     ));
   }, []);
 
-  // 组件内容 - 使用useMemo优化
-  const componentTabContent = useMemo(
+  // 组件属性内容
+  const componentContent = useMemo(
     () => (
-      <div style={STYLES.contentPadding}>
-        {/* 组件类型提示 */}
-        <div style={STYLES.infoBox}>
-          <FileTextOutlined
-            style={{
-              fontSize: 20,
-              color: '#1890ff',
-              marginRight: 8,
+      <>
+        <SettingSection title="📝 内容设置" form={form}>
+          <ComponentNameInput
+            prefix="Title_"
+            suffix={selectedComponent.id}
+            onChange={(name) => {
+              // TitleComponent通常不需要名称更新，但保持接口一致性
+              console.log('Title component name changed:', name);
             }}
           />
-          <Text strong style={{ color: '#1890ff', fontSize: 16 }}>
-            🎯 当前选中：title
-          </Text>
-        </div>
 
-        {/* 标题设置 */}
-        <div style={STYLES.sectionCard}>
-          <div style={STYLES.sectionTitle}>📝 内容设置</div>
-          <Form form={form} layout="vertical">
-            <Form.Item label="主标题">
-              <Input
-                value={titleInfo.title}
-                onChange={(e) => updateTitleComponent('title', e.target.value)}
-                placeholder="请输入主标题"
-                style={{ width: '100%' }}
-              />
-            </Form.Item>
-            <Form.Item label="副标题">
-              <Input
-                value={titleInfo.subtitle}
-                onChange={(e) =>
-                  updateTitleComponent('subtitle', e.target.value)
-                }
-                placeholder="请输入副标题"
-                style={{ width: '100%' }}
-              />
-            </Form.Item>
-          </Form>
-        </div>
+          <Form.Item label="主标题">
+            <Input
+              value={titleInfo.title}
+              onChange={(e) => updateTitleComponent('title', e.target.value)}
+              placeholder="请输入主标题"
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+          <Form.Item label="副标题">
+            <Input
+              value={titleInfo.subtitle}
+              onChange={(e) => updateTitleComponent('subtitle', e.target.value)}
+              placeholder="请输入副标题"
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+        </SettingSection>
 
-        {/* 样式设置 */}
-        <div style={STYLES.sectionCard}>
-          <div style={STYLES.sectionTitle}>🎨 样式设置</div>
-          <Form form={form} layout="vertical">
-            <Form.Item label="主题颜色">
-              <Select
-                value={titleInfo.style}
-                onChange={(value) => updateTitleComponent('style', value)}
-                style={{ width: '100%' }}
-              >
-                {themeColorOptions}
-              </Select>
-            </Form.Item>
-          </Form>
-        </div>
-      </div>
+        <SettingSection title="🎨 样式设置" form={form}>
+          <Form.Item label="主题颜色">
+            <Select
+              value={titleInfo.style}
+              onChange={(value) => updateTitleComponent('style', value)}
+              style={{ width: '100%' }}
+            >
+              {themeColorOptions}
+            </Select>
+          </Form.Item>
+        </SettingSection>
+      </>
     ),
     [
+      selectedComponent.id,
       titleInfo,
       themeColorOptions,
       updateTitleComponent,
-      selectedComponent.id,
       form,
     ],
   );
 
   return (
-    <div style={STYLES.container}>
-      {/* 标题组件编辑界面的变量添加模态框 */}
-      <AddVariableModal
-        visible={isVariableModalVisible}
-        onOk={handleVariableModalOk || (() => {})}
-        onCancel={handleVariableModalCancel || (() => {})}
-        editingVariable={editingVariable}
-        componentType={modalComponentType}
-      />
-
-      <Tabs
-        activeKey={topLevelTab}
-        onChange={setTopLevelTab}
-        style={{ height: '100%' }}
-        tabBarStyle={STYLES.tabBarStyle}
-        size="small"
-        items={[
-          {
-            key: 'component',
-            label: (
-              <span
-                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                <SettingOutlined />
-                组件属性
-              </span>
-            ),
-            children: componentTabContent,
-          },
-          {
-            key: 'variables',
-            label: (
-              <span
-                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                <BgColorsOutlined />
-                变量
-              </span>
-            ),
-            children: <VariableManagementPanel />,
-          },
-        ]}
-      />
-    </div>
+    <PropertyPanel
+      activeTab={topLevelTab}
+      onTabChange={setTopLevelTab}
+      componentContent={
+        <ComponentContent componentName="标题组件">
+          {componentContent}
+        </ComponentContent>
+      }
+      showEventTab={true}
+      variableManagementComponent={<VariableManagementPanel />}
+      isVariableModalVisible={isVariableModalVisible}
+      handleVariableModalOk={handleVariableModalOk || (() => {})}
+      handleVariableModalCancel={handleVariableModalCancel || (() => {})}
+      editingVariable={editingVariable}
+      modalComponentType={modalComponentType}
+      selectedComponentTag={selectedComponent?.tag}
+    />
   );
 };
 
