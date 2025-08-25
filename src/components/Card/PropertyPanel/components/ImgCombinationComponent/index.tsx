@@ -79,28 +79,20 @@ const LayoutIcon: React.FC<{
           className={styles.iconLayout}
           style={{ ...iconStyle, flexDirection: 'column', gap: '1px' }}
         >
-          <div
-            style={{
-              display: 'flex',
-              width: '100%',
-              height: '50%',
-              gap: '1px',
-            }}
-          >
-            <div style={{ ...cellStyle, width: '50%' }} />
-            <div style={{ ...cellStyle, width: '50%' }} />
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              width: '100%',
-              height: '50%',
-              gap: '1px',
-            }}
-          >
-            <div style={{ ...cellStyle, width: '50%' }} />
-            <div style={{ ...cellStyle, width: '50%' }} />
-          </div>
+          {[1, 2].map((row) => (
+            <div
+              key={row}
+              style={{
+                display: 'flex',
+                width: '100%',
+                height: '49%',
+                gap: '1px',
+              }}
+            >
+              <div style={{ ...cellStyle, width: '50%' }} />
+              <div style={{ ...cellStyle, width: '50%' }} />
+            </div>
+          ))}
         </div>
       );
 
@@ -108,68 +100,44 @@ const LayoutIcon: React.FC<{
       return (
         <div
           className={styles.iconLayout}
-          style={{ ...iconStyle, flexDirection: 'column', gap: '1px' }}
+          style={{
+            ...iconStyle,
+            flexDirection: 'column',
+            gap: '1px',
+            justifyContent: 'space-between',
+          }}
         >
-          <div
-            style={{
-              display: 'flex',
-              width: '100%',
-              height: 'calc(31.33% - 0.67px)',
-              gap: '1px',
-            }}
-          >
-            <div style={{ ...cellStyle, width: '50%' }} />
-            <div style={{ ...cellStyle, width: '50%' }} />
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              width: '100%',
-              height: 'calc(31.33% - 0.67px)',
-              gap: '1px',
-            }}
-          >
-            <div style={{ ...cellStyle, width: '50%' }} />
-            <div style={{ ...cellStyle, width: '50%' }} />
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              width: '100%',
-              height: 'calc(31.33% - 0.67px)',
-              gap: '1px',
-            }}
-          >
-            <div style={{ ...cellStyle, width: '50%' }} />
-            <div style={{ ...cellStyle, width: '50%' }} />
-          </div>
+          {[1, 2, 3].map((row) => (
+            <div
+              key={row}
+              style={{
+                display: 'flex',
+                width: '100%',
+                height: 'calc(30.33% - 0.67px)',
+                gap: '1px',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ ...cellStyle, width: '50%' }} />
+              <div style={{ ...cellStyle, width: '50%' }} />
+            </div>
+          ))}
         </div>
       );
 
     case 'trisect_3': // 三列一行 (3图)
       return (
         <div className={styles.iconLayout} style={iconStyle}>
-          <div
-            style={{
-              ...cellStyle,
-              width: 'calc(31.33% - 0.67px)',
-              height: '100%',
-            }}
-          />
-          <div
-            style={{
-              ...cellStyle,
-              width: 'calc(31.33% - 0.67px)',
-              height: '100%',
-            }}
-          />
-          <div
-            style={{
-              ...cellStyle,
-              width: 'calc(31.33% - 0.67px)',
-              height: '100%',
-            }}
-          />
+          {[1, 2, 3].map((col) => (
+            <div
+              key={col}
+              style={{
+                ...cellStyle,
+                width: 'calc(31.33% - 0.67px)',
+                height: '100%',
+              }}
+            />
+          ))}
         </div>
       );
 
@@ -179,30 +147,22 @@ const LayoutIcon: React.FC<{
           className={styles.iconLayout}
           style={{ ...iconStyle, flexDirection: 'column', gap: '1px' }}
         >
-          <div
-            style={{
-              display: 'flex',
-              width: '100%',
-              height: '50%',
-              gap: '1px',
-            }}
-          >
-            <div style={{ ...cellStyle, width: 'calc(33.33% - 0.67px)' }} />
-            <div style={{ ...cellStyle, width: 'calc(33.33% - 0.67px)' }} />
-            <div style={{ ...cellStyle, width: 'calc(33.33% - 0.67px)' }} />
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              width: '100%',
-              height: '50%',
-              gap: '1px',
-            }}
-          >
-            <div style={{ ...cellStyle, width: 'calc(33.33% - 0.67px)' }} />
-            <div style={{ ...cellStyle, width: 'calc(33.33% - 0.67px)' }} />
-            <div style={{ ...cellStyle, width: 'calc(33.33% - 0.67px)' }} />
-          </div>
+          {[1, 2].map((row) => (
+            <div
+              key={row}
+              style={{
+                display: 'flex',
+                width: '100%',
+                height: '50%',
+                gap: '1px',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ ...cellStyle, width: 'calc(30.33% - 0.67px)' }} />
+              <div style={{ ...cellStyle, width: 'calc(30.33% - 0.67px)' }} />
+              <div style={{ ...cellStyle, width: 'calc(30.33% - 0.67px)' }} />
+            </div>
+          ))}
         </div>
       );
 
@@ -210,44 +170,29 @@ const LayoutIcon: React.FC<{
       return (
         <div
           className={styles.iconLayout}
-          style={{ ...iconStyle, flexDirection: 'column', gap: '1px' }}
+          style={{
+            ...iconStyle,
+            flexDirection: 'column',
+            gap: '1px',
+            justifyContent: 'space-between',
+          }}
         >
-          <div
-            style={{
-              display: 'flex',
-              width: '100%',
-              height: 'calc(32.33% - 0.67px)',
-              gap: '1px',
-            }}
-          >
-            <div style={{ ...cellStyle, width: 'calc(33.33% - 0.67px)' }} />
-            <div style={{ ...cellStyle, width: 'calc(33.33% - 0.67px)' }} />
-            <div style={{ ...cellStyle, width: 'calc(33.33% - 0.67px)' }} />
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              width: '100%',
-              height: 'calc(32.33% - 0.67px)',
-              gap: '1px',
-            }}
-          >
-            <div style={{ ...cellStyle, width: 'calc(33.33% - 0.67px)' }} />
-            <div style={{ ...cellStyle, width: 'calc(33.33% - 0.67px)' }} />
-            <div style={{ ...cellStyle, width: 'calc(33.33% - 0.67px)' }} />
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              width: '100%',
-              height: 'calc(32.33% - 0.67px)',
-              gap: '1px',
-            }}
-          >
-            <div style={{ ...cellStyle, width: 'calc(33.33% - 0.67px)' }} />
-            <div style={{ ...cellStyle, width: 'calc(33.33% - 0.67px)' }} />
-            <div style={{ ...cellStyle, width: 'calc(33.33% - 0.67px)' }} />
-          </div>
+          {[1, 2, 3].map((row) => (
+            <div
+              key={row}
+              style={{
+                display: 'flex',
+                width: '100%',
+                height: 'calc(32.33% - 0.67px)',
+                gap: '1px',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ ...cellStyle, width: 'calc(31.33% - 0.67px)' }} />
+              <div style={{ ...cellStyle, width: 'calc(31.33% - 0.67px)' }} />
+              <div style={{ ...cellStyle, width: 'calc(31.33% - 0.67px)' }} />
+            </div>
+          ))}
         </div>
       );
 
@@ -714,14 +659,6 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                             ...updatedComponent,
                             img_list: newImageList,
                           };
-                        } else if (multiImageContentMode === 'variable') {
-                          // 变量模式：保持变量占位符不变，只更新布局模式
-                          console.log('🔗 变量绑定模式下切换布局:', {
-                            componentId: selectedComponent.id,
-                            newCombinationMode,
-                            layoutType: layout.type,
-                            note: '变量模式下保持img_list为变量占位符',
-                          });
                         }
 
                         // 一次性调用组件更新
@@ -783,16 +720,6 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                       </Text>
                     </div>
                   ))}
-                </div>
-
-                <div style={{ marginTop: '8px' }}>
-                  <Text type="secondary" style={{ fontSize: '12px' }}>
-                    当前图片数量：{imageCount} 张
-                  </Text>
-                  <br />
-                  <Text type="secondary" style={{ fontSize: '11px' }}>
-                    当前模式：{currentCombinationMode} ({currentLayoutType})
-                  </Text>
                 </div>
               </div>
             );

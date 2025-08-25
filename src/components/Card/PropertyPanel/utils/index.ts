@@ -328,49 +328,6 @@ export const getComponentRealPath = (
   return { component: null, realPath: null };
 };
 
-// 存储组合模式转换
-export const getStorageCombinationMode = (mode: string): string => {
-  if (mode.startsWith('bisect_')) {
-    return 'bisect';
-  }
-  if (mode.startsWith('trisect_')) {
-    return 'trisect';
-  }
-  return mode;
-};
-
-// 显示组合模式转换
-export const getDisplayCombinationMode = (
-  storageMode: string,
-  imageCount: number,
-): string => {
-  if (storageMode === 'bisect') {
-    switch (imageCount) {
-      case 2:
-        return 'bisect_2';
-      case 4:
-        return 'bisect_4';
-      case 6:
-        return 'bisect_6';
-      default:
-        return 'bisect_2'; // 默认双列2图
-    }
-  }
-  if (storageMode === 'trisect') {
-    switch (imageCount) {
-      case 3:
-        return 'trisect_3';
-      case 6:
-        return 'trisect_6';
-      case 9:
-        return 'trisect_9';
-      default:
-        return 'trisect_3'; // 默认三列3图
-    }
-  }
-  return storageMode;
-};
-
 // 获取变量对象的实际变量名（过滤掉内部属性）
 export const getVariableKeys = (variable: any): string[] => {
   if (typeof variable === 'object' && variable !== null) {

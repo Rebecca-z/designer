@@ -333,9 +333,6 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
           if (key === 'behaviors' && value === undefined) {
             delete (updatedComponent as any).behaviors;
           }
-
-          // 特殊处理：当按钮从重置类型切换到其他类型时，不自动初始化behaviors数组
-          // behaviors字段只在实际需要时创建
         }
 
         onUpdateComponent(updatedComponent);

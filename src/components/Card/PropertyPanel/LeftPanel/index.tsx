@@ -140,7 +140,6 @@ const ComponentLibrary: React.FC = () => {
 export const ComponentPanel: React.FC<ComponentPanelProps> = ({
   cardData,
   selectedPath,
-  // onSelect: _,
   onOutlineHover,
   onOutlineSelect,
 }) => {

@@ -14,18 +14,6 @@ const OutlineTree: React.FC<OutlineTreeProps> = ({
   onOutlineHover,
   onOutlineSelect,
 }) => {
-  // 添加详细的调试日志
-  console.log('🌲 OutlineTree 渲染:', {
-    data,
-    hasData: !!data,
-    hasDsl: !!data?.dsl,
-    hasBody: !!data?.dsl?.body,
-    hasElements: !!data?.dsl?.body?.elements,
-    elementsLength: data?.dsl?.body?.elements?.length || 0,
-    selectedPath,
-    timestamp: new Date().toISOString(),
-  });
-
   // 构建树形数据 - 正确反映卡片数据结构
   const treeData = useMemo(() => {
     // 添加空值检查，防止访问 undefined 的属性
@@ -115,21 +103,6 @@ const OutlineTree: React.FC<OutlineTreeProps> = ({
     // 创建节点数组
     const nodes: any[] = [];
 
-    console.log('🔧 OutlineTree 构建树形数据:', {
-      elementsCount: data.dsl.body.elements.length,
-      elements: data.dsl.body.elements.map((el, idx) => ({
-        index: idx,
-        id: el.id,
-        tag: el.tag,
-      })),
-      hasHeader: !!(
-        data.dsl?.header &&
-        (data.dsl.header.title?.content || data.dsl.header.subtitle?.content)
-      ),
-      headerData: data.dsl?.header,
-      fullData: data,
-    });
-
     // 如果存在标题数据，添加标题节点
     if (
       data.dsl?.header &&
@@ -154,7 +127,6 @@ const OutlineTree: React.FC<OutlineTreeProps> = ({
         },
       };
       nodes.push(titleNode);
-      console.log('✅ 添加标题节点到大纲树');
     }
 
     // 创建卡片节点作为一级节点
@@ -176,16 +148,6 @@ const OutlineTree: React.FC<OutlineTreeProps> = ({
       ),
     };
     nodes.push(cardNode);
-
-    console.log('✅ 大纲树构建完成:', {
-      nodesCount: nodes.length,
-      cardNodeChildrenCount: cardNode.children.length,
-      nodes: nodes.map((node) => ({
-        key: node.key,
-        hasChildren: node.children?.length > 0,
-        childrenCount: node.children?.length || 0,
-      })),
-    });
 
     return nodes;
   }, [data]);
@@ -216,14 +178,6 @@ const OutlineTree: React.FC<OutlineTreeProps> = ({
   }
 
   const handleSelect = (selectedKeys: React.Key[], info: any) => {
-    console.log('🎯 OutlineTree 选择事件:', {
-      selectedKeys,
-      nodePath: info.node?.path,
-      nodeComponent: info.node?.component,
-      nodeKey: info.node?.key,
-      nodeTitle: info.node?.title,
-    });
-
     if (info.node?.path) {
       // 如果是卡片节点，传递null作为组件，路径为['dsl', 'body']
       if (
@@ -231,14 +185,10 @@ const OutlineTree: React.FC<OutlineTreeProps> = ({
         info.node.path[0] === 'dsl' &&
         info.node.path[1] === 'body'
       ) {
-        console.log('🎯 调用卡片选择: onOutlineSelect(null, ["dsl", "body"])');
         onOutlineSelect(null, info.node.path);
       } else if (info.node.component) {
-        console.log('🎯 调用组件选择: onOutlineSelect(component, path)');
         onOutlineSelect(info.node.component, info.node.path);
       } else if (info.node.path && info.node.path.length > 0) {
-        // 处理分栏列节点等没有component但有path的节点
-        console.log('🎯 调用路径选择: onOutlineSelect(null, path)');
         onOutlineSelect(null, info.node.path);
       } else {
         console.log('⚠️ 未找到有效的组件或卡片节点');
@@ -259,14 +209,6 @@ const OutlineTree: React.FC<OutlineTreeProps> = ({
   };
 
   const selectedKeys = selectedPath ? [selectedPath.join('-')] : [];
-
-  console.log('🎯 OutlineTree 选中状态:', {
-    selectedPath,
-    selectedKeys,
-    treeDataLength: treeData.length,
-    treeDataKeys: treeData.map((node) => node.key),
-    hasTreeData: treeData.length > 0,
-  });
 
   return (
     <div style={{ padding: '16px' }}>
