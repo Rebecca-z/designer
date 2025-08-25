@@ -15,7 +15,6 @@ import {
 } from './Variable/utils/index';
 
 const { Option } = Select;
-// const { Text } = Typography;
 
 interface ComponentRendererCoreProps {
   component: ComponentType;

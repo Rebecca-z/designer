@@ -1,5 +1,3 @@
-// card-designer-types-updated.ts - 更新的类型定义
-
 export interface ComponentBase {
   id: string;
   tag: string;

@@ -246,6 +246,24 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
   );
   const [editingVariableIndex, setEditingVariableIndex] = useState<number>(-1);
 
+  const getVariableType = (type: string) => {
+    const displayName =
+      type === 'text'
+        ? '文本'
+        : type === 'number'
+        ? '整数'
+        : type === 'image'
+        ? '图片'
+        : type === 'imageArray'
+        ? '图片数组'
+        : type === 'array'
+        ? '选项数组'
+        : type === 'richtext'
+        ? '富文本'
+        : type;
+    return displayName;
+  };
+
   // 处理组件值变化
   const handleValueChange = useCallback(
     (key: string, value: any) => {
@@ -525,7 +543,7 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
                       <Text strong>{getVariableDisplayName(variable)}</Text>
                       <br />
                       <Text type="secondary" style={{ fontSize: '12px' }}>
-                        {variable.type}
+                        {getVariableType(variable.type)}
                       </Text>
                     </div>
                     <div>

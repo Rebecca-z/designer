@@ -730,7 +730,6 @@ export const useConfigManagement = () => {
           const migratedData = migrateTitleStyle(migrateCardLink(parsedConfig));
           updateData(migratedData);
           setVariables(migratedData.variables || []);
-          message.success('配置已从本地存储加载');
         } else {
           // 旧格式：转换为新格式
           const jsonData = importFromJSON(config);
@@ -866,14 +865,10 @@ export const useKeyboardShortcuts = (handlers: {
               pasteComponent();
             }
             break;
-          case 's':
-            e.preventDefault();
-            saveConfig();
-            break;
-          case 'o':
-            e.preventDefault();
-            loadConfig();
-            break;
+          // case 's':
+          //   e.preventDefault();
+          //   saveConfig();
+          //   break;
         }
       }
 

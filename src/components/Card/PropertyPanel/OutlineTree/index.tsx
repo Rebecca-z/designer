@@ -213,27 +213,8 @@ const OutlineTree: React.FC<OutlineTreeProps> = ({
   return (
     <div style={{ padding: '16px' }}>
       <>
-        <div
-          style={{
-            marginBottom: '12px',
-            padding: '8px 12px',
-            backgroundColor: '#e6f7ff',
-            border: '1px solid #91d5ff',
-            borderRadius: '6px',
-          }}
-        >
-          <Text style={{ fontSize: '12px', color: '#0958d9' }}>
-            📊 卡片包含 {data?.dsl?.body?.elements?.length || 0} 个组件
-          </Text>
-        </div>
-
         {treeData.length > 0 ? (
           <>
-            <div
-              style={{ marginBottom: '8px', fontSize: '11px', color: '#666' }}
-            >
-              调试信息: 找到 {treeData.length} 个节点
-            </div>
             <Tree
               treeData={treeData}
               selectedKeys={selectedKeys}

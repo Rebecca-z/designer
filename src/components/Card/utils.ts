@@ -1,5 +1,4 @@
-// card-designer-utils.ts - 更新的工具函数文件
-
+// 工具函数
 import { ComponentType, DesignData, VariableItem } from './type';
 
 import { normalizeRichTextContent } from './RichTextEditor/RichTextUtils';
@@ -557,22 +556,13 @@ export const renderComponentToHTML = (
     case 'input': {
       // 解析占位文本变量
       const resolvePlaceholder = (placeholderContent: string) => {
-        console.log('🔍 开始解析占位文本变量:', {
-          placeholderContent,
-          hasVariables: variables.length > 0,
-          variablesCount: variables.length,
-          variables: variables,
-        });
-
         if (!placeholderContent || !placeholderContent.includes('${')) {
-          console.log('⏭️ 占位文本不包含变量，直接返回:', placeholderContent);
           return placeholderContent;
         }
 
         const variableMatch = placeholderContent.match(/\$\{([^}]+)\}/);
         if (variableMatch && variableMatch[1]) {
           const variableName = variableMatch[1];
-          console.log('🔍 找到变量名:', variableName);
 
           // 尝试多种方式查找变量
           let variableValue = null;
@@ -601,23 +591,7 @@ export const renderComponentToHTML = (
             variableValue = (variables as any)[variableName];
           }
 
-          console.log('🔍 变量查找结果:', {
-            variableName,
-            foundVariable: variable,
-            variableValue,
-            variablesType: Array.isArray(variables)
-              ? 'array'
-              : typeof variables,
-            allVariables: variables,
-          });
-
           if (variableValue !== null && variableValue !== undefined) {
-            console.log('✅ 在线预览输入框占位文本解析变量成功:', {
-              variableName,
-              variableValue,
-              placeholderContent,
-              resolvedValue: String(variableValue),
-            });
             return String(variableValue);
           } else {
             console.log('❌ 未找到对应变量，返回原始内容:', {
@@ -675,12 +649,6 @@ export const renderComponentToHTML = (
           }
 
           if (variableValue !== null && variableValue !== undefined) {
-            console.log('✅ 在线预览输入框默认值解析变量成功:', {
-              variableName,
-              variableValue,
-              defaultContent,
-              resolvedValue: String(variableValue),
-            });
             return String(variableValue);
           } else {
             console.log('❌ 默认值变量未找到:', {
@@ -777,7 +745,9 @@ export const createDefaultComponent = (type: string): ComponentType => {
         tag: 'title',
         title: '主标题',
         subtitle: '副标题',
-        style: 'blue', // 使用新的主题样式
+        style: {
+          theme: 'blue',
+        },
       } as ComponentType;
 
     case 'form':
@@ -807,7 +777,7 @@ export const createDefaultComponent = (type: string): ComponentType => {
                     },
                     form_action_type: 'submit',
                     style: {
-                      color: 'blue', // 默认蓝色
+                      color: 'blue',
                     },
                     behaviors: [],
                   },
@@ -825,12 +795,11 @@ export const createDefaultComponent = (type: string): ComponentType => {
                     },
                     form_action_type: 'reset',
                     style: {
-                      color: 'black', // 默认黑色
+                      color: 'black',
                     },
-                    // 重置按钮不包含behaviors字段
                   },
                 ],
-                style: { flex: 1 }, // 移动到style.flex字段
+                style: { flex: 1 },
               },
             ],
           },
@@ -846,17 +815,17 @@ export const createDefaultComponent = (type: string): ComponentType => {
           {
             tag: 'column',
             elements: [],
-            style: { flex: 1 }, // 移动到style.flex字段
+            style: { flex: 1 },
           },
           {
             tag: 'column',
             elements: [],
-            style: { flex: 1 }, // 移动到style.flex字段
+            style: { flex: 1 },
           },
           {
             tag: 'column',
             elements: [],
-            style: { flex: 1 }, // 移动到style.flex字段
+            style: { flex: 1 },
           },
         ],
       } as ComponentType;
@@ -955,7 +924,7 @@ export const createDefaultComponent = (type: string): ComponentType => {
       return {
         tag: 'hr',
         id: generateId(),
-        name: `Hr_${generateId()}`, // 添加name字段
+        name: `Hr_${generateId()}`,
         style: {
           borderStyle: 'solid',
         },
@@ -965,13 +934,13 @@ export const createDefaultComponent = (type: string): ComponentType => {
       return {
         id: generateId(),
         tag: 'img',
-        name: `Img_${generateId()}`, // 添加name字段
-        img_url: '/demo.png', // 使用public目录下的demo.png文件
+        name: `Img_${generateId()}`,
+        img_url: '/demo.png',
         i18n_img_url: {
           'en-US': '/demo.png',
         },
         style: {
-          crop_mode: 'default', // 默认完整展示
+          crop_mode: 'default',
         },
       } as ComponentType;
 
@@ -979,8 +948,8 @@ export const createDefaultComponent = (type: string): ComponentType => {
       return {
         id: generateId(),
         tag: 'img_combination',
-        name: `ImgCombination_${generateId()}`, // 添加name字段
-        combination_mode: 'triple', // 保持原有的triple模式，不需要简化
+        name: `ImgCombination_${generateId()}`,
+        combination_mode: 'triple',
         img_list: [
           {
             img_url: 'demo.png',
@@ -1137,10 +1106,6 @@ export const migrateCardLink = (cardData: any): any => {
       },
     };
     needsMigration = true;
-    console.log('✅ 数据迁移完成：card_link -> card_link.multi_url', {
-      oldValue: cardLink,
-      newValue: newCardLink,
-    });
   }
 
   if (needsMigration) {
@@ -1246,15 +1211,6 @@ export const migrateTitleStyle = (cardData: any): any => {
       (component: any) => component.tag === 'title',
     );
 
-    console.log('🔍 标题组件检查:', {
-      hasTitleComponent,
-      titleComponent: titleComponent
-        ? { tag: titleComponent.tag, id: titleComponent.id }
-        : null,
-      elementsCount: migratedData.dsl.body.elements.length,
-      currentHeader: migratedData.dsl.header,
-    });
-
     if (needsMigration) {
       const finalData = {
         ...migratedData,
@@ -1307,12 +1263,6 @@ export const migrateTitleStyle = (cardData: any): any => {
         delete finalData.dsl.header;
       }
 
-      console.log('✅ 迁移完成 (needsMigration=true):', {
-        finalHeader: finalData.dsl.header,
-        hasHeader: !!finalData.dsl.header,
-        elementsCount: finalData.dsl.body.elements.length,
-      });
-
       return finalData;
     }
 
@@ -1343,16 +1293,8 @@ export const migrateTitleStyle = (cardData: any): any => {
       migratedData.dsl.header &&
       Object.keys(migratedData.dsl.header).length === 0
     ) {
-      // 如果没有标题组件且header是空的，才移除header
-      console.log('🗑️ 删除空的header (no title component)');
       delete migratedData.dsl.header;
     }
-
-    console.log('✅ 迁移完成 (needsMigration=false):', {
-      finalHeader: migratedData.dsl.header,
-      hasHeader: !!migratedData.dsl.header,
-      elementsCount: migratedData.dsl.body.elements.length,
-    });
 
     return migratedData;
   }
@@ -1797,18 +1739,8 @@ export const normalizeCombinationModes = (obj: any): any => {
 
       // 如果是bisect或trisect开头的模式，需要简化存储
       if (obj.combination_mode.startsWith('bisect_')) {
-        console.log('🔄 简化bisect模式存储:', {
-          oldMode: obj.combination_mode,
-          newMode: 'bisect',
-          imageCount,
-        });
         obj.combination_mode = 'bisect';
       } else if (obj.combination_mode.startsWith('trisect_')) {
-        console.log('🔄 简化trisect模式存储:', {
-          oldMode: obj.combination_mode,
-          newMode: 'trisect',
-          imageCount,
-        });
         obj.combination_mode = 'trisect';
       }
 
@@ -2189,17 +2121,6 @@ export const generatePreviewHTML = (data: any): string => {
 
   // 获取变量数据
   const variables = data.variables || {};
-  console.log('🔍 在线预览获取变量数据:', {
-    dataStructure: {
-      hasVariables: !!data.variables,
-      hasDsl: !!data.dsl,
-      dataKeys: Object.keys(data),
-    },
-    variables,
-    variableKeys: Object.keys(variables),
-    variableCount: Object.keys(variables).length,
-    fullData: data,
-  });
 
   // 转换变量格式为VariableItem[]格式
   const variableItems: any[] = Object.keys(variables).map((variableName) => ({
@@ -2295,15 +2216,6 @@ export const generatePreviewHTML = (data: any): string => {
       </div>
     `;
   }
-
-  console.log('✅ 在线预览HTML生成:', {
-    isNewFormat,
-    hasHeader: !!headerInfo,
-    headerTheme: headerInfo?.style,
-    elementsCount: stats.totalComponents,
-    bodyContentLength: bodyContent.length,
-    headerHTMLLength: headerHTML.length,
-  });
 
   // 组合最终的body内容
   const finalBodyContent = headerHTML + (bodyContent || getEmptyContent());
@@ -2438,43 +2350,19 @@ export const replaceVariables = (
     }
   });
 
-  console.log('📋 变量映射表:', {
-    variableMap: variableMap,
-    mapKeys: Object.keys(variableMap),
-    variablesCount: variables.length,
-  });
-
   // 替换变量占位符（支持{{变量名}}和${变量名}两种格式）
   let result = text;
 
   // 替换{{变量名}}格式
   result = result.replace(/\{\{([^}]+)\}\}/g, (match, variableName) => {
     const replacement = variableMap[variableName] || match;
-    console.log('🔄 变量替换 ({{}}格式):', {
-      match: match,
-      variableName: variableName,
-      replacement: replacement,
-      found: !!variableMap[variableName],
-    });
     return replacement;
   });
 
   // 替换${变量名}格式
   result = result.replace(/\$\{([^}]+)\}/g, (match, variableName) => {
     const replacement = variableMap[variableName] || match;
-    console.log('🔄 变量替换 (${}格式):', {
-      match: match,
-      variableName: variableName,
-      replacement: replacement,
-      found: !!variableMap[variableName],
-    });
     return replacement;
-  });
-
-  console.log('✅ replaceVariables 结果:', {
-    originalText: text,
-    resultText: result,
-    changed: text !== result,
   });
 
   return result;

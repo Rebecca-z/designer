@@ -1,5 +1,3 @@
-// card-designer-toolbar-with-id.tsx - 带ID显示的工具栏组件
-
 import {
   CodeOutlined,
   CopyOutlined,
@@ -8,7 +6,6 @@ import {
   PlusOutlined,
   QuestionCircleOutlined,
   RedoOutlined,
-  SaveOutlined,
   UndoOutlined,
 } from '@ant-design/icons';
 import {
@@ -73,7 +70,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
   clipboard,
   onCopy,
   onPaste,
-  onSave,
   onImport,
   onExport,
   onPreview,
@@ -112,19 +108,10 @@ const Toolbar: React.FC<ToolbarProps> = ({
             <strong>Ctrl+Z:</strong> 撤销
           </p>
           <p>
-            <strong>Ctrl+Y:</strong> 重做
-          </p>
-          <p>
             <strong>Ctrl+C:</strong> 复制选中组件
           </p>
           <p>
             <strong>Ctrl+V:</strong> 粘贴组件
-          </p>
-          <p>
-            <strong>Ctrl+S:</strong> 保存配置
-          </p>
-          <p>
-            <strong>Ctrl+O:</strong> 加载配置
           </p>
           <p>
             <strong>Delete/Backspace:</strong> 智能删除选中组件
@@ -186,7 +173,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
             gap: '8px',
             padding: '4px 8px',
             backgroundColor: '#f0f9ff',
-            border: '1px solid #bae6fd',
             borderRadius: '4px',
             cursor: 'pointer',
           }}
@@ -196,20 +182,11 @@ const Toolbar: React.FC<ToolbarProps> = ({
             ID:
           </Text>
           <Tooltip title="点击复制卡片ID">
-            <Text
-              code
-              style={{
-                fontSize: '11px',
-                maxWidth: '80px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                cursor: 'pointer',
-              }}
-            >
+            <>
               {cardId}
-            </Text>
+              <CopyOutlined style={{ fontSize: '12px', color: '#1890ff' }} />
+            </>
           </Tooltip>
-          <CopyOutlined style={{ fontSize: '12px', color: '#1890ff' }} />
         </div>
 
         <Divider type="vertical" />
@@ -272,15 +249,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
               disabled={!clipboard}
               size="small"
             />
-          </Tooltip>
-        </Space>
-
-        <Divider type="vertical" />
-
-        {/* 文件操作 */}
-        <Space>
-          <Tooltip title="保存 (Ctrl+S)">
-            <Button icon={<SaveOutlined />} onClick={onSave} size="small" />
           </Tooltip>
         </Space>
       </Space>
