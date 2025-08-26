@@ -73,40 +73,75 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
   // 处理模式切换 - 使用useCallback优化
   const handleModeChange = useCallback(
     (value: 'specify' | 'variable') => {
-      setImageContentMode(value);
-
       const updatedComponent = { ...selectedComponent };
 
-      if (value === 'specify') {
-        // 切换到指定模式：显示用户编辑的图片
-        const userEditedUrl = imageComponentStateManager.getUserEditedUrl(
-          selectedComponent.id,
-        );
-        (updatedComponent as any).img_url = userEditedUrl || '';
-        (updatedComponent as any).i18n_img_url = {
-          'en-US': userEditedUrl || '',
-        };
-      } else {
-        // 切换到变量模式：检查是否有绑定的变量
+      // 在切换模式之前，先缓存当前模式的数据
+      if (imageContentMode === 'specify') {
+        // 从指定模式切换出去：缓存当前的图片URL
+        const currentUrl = (selectedComponent as any).img_url || '';
+        if (currentUrl && currentUrl.trim() !== '') {
+          imageComponentStateManager.setUserEditedUrl(
+            selectedComponent.id,
+            currentUrl,
+          );
+        }
+      } else if (imageContentMode === 'variable') {
+        // 从变量模式切换出去：记住当前绑定的变量
         const boundVariable = imageComponentStateManager.getBoundVariableName(
           selectedComponent.id,
         );
+        if (boundVariable) {
+          setLastBoundVariables((prev) => ({
+            ...prev,
+            [selectedComponent.id]: boundVariable,
+          }));
+        }
+      }
+
+      // 切换模式
+      setImageContentMode(value);
+
+      if (value === 'specify') {
+        // 切换到指定模式：恢复缓存的图片URL或使用默认值
+        imageComponentStateManager.setBoundVariableName(
+          selectedComponent.id,
+          undefined,
+        );
+
+        const userEditedUrl = imageComponentStateManager.getUserEditedUrl(
+          selectedComponent.id,
+        );
+        const finalUrl = userEditedUrl || 'demo.png';
+
+        (updatedComponent as any).img_url = finalUrl;
+        (updatedComponent as any).i18n_img_url = {
+          'en-US': finalUrl,
+        };
+      } else {
+        // 切换到变量模式：恢复记住的变量或清空绑定
         const rememberedVariable = lastBoundVariables[selectedComponent.id];
 
-        if (boundVariable || rememberedVariable) {
-          const variableName = boundVariable || rememberedVariable;
-          const variablePlaceholder = `\${${variableName}}`;
+        if (rememberedVariable) {
+          // 恢复记住的变量绑定
+          imageComponentStateManager.setBoundVariableName(
+            selectedComponent.id,
+            rememberedVariable,
+          );
+          const variablePlaceholder = `\${${rememberedVariable}}`;
           (updatedComponent as any).img_url = variablePlaceholder;
           (updatedComponent as any).i18n_img_url = {
             'en-US': variablePlaceholder,
           };
         } else {
-          const userEditedUrl = imageComponentStateManager.getUserEditedUrl(
+          // 没有记住的变量，清空绑定，但保持在变量模式下显示指定内容作为预览
+          imageComponentStateManager.setBoundVariableName(
             selectedComponent.id,
+            undefined,
           );
-          (updatedComponent as any).img_url = userEditedUrl || '';
+          // 设置为空字符串，让渲染器回退到指定模式内容
+          (updatedComponent as any).img_url = '';
           (updatedComponent as any).i18n_img_url = {
-            'en-US': userEditedUrl || '',
+            'en-US': '',
           };
         }
       }
@@ -115,8 +150,10 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
     },
     [
       selectedComponent,
+      imageContentMode,
       setImageContentMode,
       lastBoundVariables,
+      setLastBoundVariables,
       onUpdateComponent,
     ],
   );
@@ -124,12 +161,14 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
   // 处理图片URL变化 - 使用useCallback优化
   const handleImageUrlChange = useCallback(
     (url: string) => {
+      // 缓存用户编辑的URL
       imageComponentStateManager.setUserEditedUrl(selectedComponent.id, url);
 
       const updatedComponent = { ...selectedComponent };
-      (updatedComponent as any).img_url = url;
+      const finalUrl = url || 'demo.png';
+      (updatedComponent as any).img_url = finalUrl;
       (updatedComponent as any).i18n_img_url = {
-        'en-US': url,
+        'en-US': finalUrl,
       };
       onUpdateComponent(updatedComponent);
     },
@@ -161,33 +200,23 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
         };
         onUpdateComponent(updatedComponent);
       } else {
-        // 清除变量绑定时
-        setLastBoundVariables((prev) => {
-          const newState = { ...prev };
-          delete newState[selectedComponent.id];
-          return newState;
-        });
-
+        // 清除变量绑定时：恢复到指定模式的缓存内容
         imageComponentStateManager.setBoundVariableName(
           selectedComponent.id,
-          '',
+          undefined,
         );
 
         const updatedComponent = { ...selectedComponent };
-        if (imageContentMode === 'variable') {
-          const userEditedUrl = imageComponentStateManager.getUserEditedUrl(
-            selectedComponent.id,
-          );
-          (updatedComponent as any).img_url = userEditedUrl || '';
-          (updatedComponent as any).i18n_img_url = {
-            'en-US': userEditedUrl || '',
-          };
-        } else {
-          (updatedComponent as any).img_url = '';
-          (updatedComponent as any).i18n_img_url = {
-            'en-US': '',
-          };
-        }
+        // 恢复缓存的指定模式内容
+        const userEditedUrl = imageComponentStateManager.getUserEditedUrl(
+          selectedComponent.id,
+        );
+        const finalUrl = userEditedUrl || 'demo.png';
+
+        (updatedComponent as any).img_url = finalUrl;
+        (updatedComponent as any).i18n_img_url = {
+          'en-US': finalUrl,
+        };
 
         onUpdateComponent(updatedComponent);
       }

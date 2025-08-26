@@ -152,6 +152,12 @@ const InputComponent: React.FC<InputComponentProps> = ({
       const updatedComponent = { ...selectedComponent };
 
       if (value === 'specify') {
+        // 清除绑定的变量名
+        inputComponentStateManager.setBoundPlaceholderVariableName(
+          selectedComponent.id,
+          undefined,
+        );
+
         const userEditedPlaceholder =
           inputComponentStateManager.getUserEditedPlaceholder(
             selectedComponent.id,
@@ -188,6 +194,12 @@ const InputComponent: React.FC<InputComponentProps> = ({
       const updatedComponent = { ...selectedComponent };
 
       if (value === 'specify') {
+        // 清除绑定的变量名
+        inputComponentStateManager.setBoundDefaultValueVariableName(
+          selectedComponent.id,
+          undefined,
+        );
+
         const userEditedDefaultValue =
           inputComponentStateManager.getUserEditedDefaultValue(
             selectedComponent.id,

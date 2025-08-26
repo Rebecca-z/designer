@@ -2341,11 +2341,45 @@ export const replaceVariables = (
   const variableMap: { [key: string]: string } = {};
   variables.forEach((variable) => {
     if (typeof variable === 'object' && variable !== null) {
-      const keys = Object.keys(variable as Record<string, any>);
-      if (keys.length > 0) {
-        const variableName = keys[0];
-        const variableValue = (variable as Record<string, any>)[variableName];
-        variableMap[variableName] = String(variableValue);
+      // 处理 Variable 格式：{ name: string, value: any, type: string }
+      if ('name' in variable && 'value' in variable) {
+        const varName = (variable as any).name;
+        const varValue = (variable as any).value;
+        const varType = (variable as any).type;
+
+        // 对于图片数组类型，保持JSON格式；其他类型转为字符串
+        if (varType === 'imageArray' && Array.isArray(varValue)) {
+          variableMap[varName] = JSON.stringify(varValue);
+        } else {
+          variableMap[varName] = String(varValue);
+        }
+        console.log('🔍 处理Variable格式变量:', {
+          varName,
+          varValue,
+          varType,
+          result: variableMap[varName],
+        });
+      }
+      // 处理 VariableObject 格式：{ 变量名: 变量值 }
+      else {
+        const keys = Object.keys(variable as Record<string, any>);
+        if (keys.length > 0) {
+          const variableName = keys[0];
+          const variableValue = (variable as Record<string, any>)[variableName];
+
+          // 如果是数组，保持JSON格式；否则转为字符串
+          if (Array.isArray(variableValue)) {
+            variableMap[variableName] = JSON.stringify(variableValue);
+          } else {
+            variableMap[variableName] = String(variableValue);
+          }
+          console.log('🔍 处理VariableObject格式变量:', {
+            variableName,
+            variableValue,
+            isArray: Array.isArray(variableValue),
+            result: variableMap[variableName],
+          });
+        }
       }
     }
   });
@@ -2353,17 +2387,26 @@ export const replaceVariables = (
   // 替换变量占位符（支持{{变量名}}和${变量名}两种格式）
   let result = text;
 
+  console.log('🔍 replaceVariables 变量映射表:', {
+    text,
+    variableMap,
+    variables: variables.map((v) => ({ type: typeof v, content: v })),
+  });
+
   // 替换{{变量名}}格式
   result = result.replace(/\{\{([^}]+)\}\}/g, (match, variableName) => {
     const replacement = variableMap[variableName] || match;
+    console.log('🔍 替换{{}}格式:', { match, variableName, replacement });
     return replacement;
   });
 
   // 替换${变量名}格式
   result = result.replace(/\$\{([^}]+)\}/g, (match, variableName) => {
     const replacement = variableMap[variableName] || match;
+    console.log('🔍 替换${}格式:', { match, variableName, replacement });
     return replacement;
   });
 
+  console.log('🔍 replaceVariables 最终结果:', { input: text, output: result });
   return result;
 };

@@ -293,56 +293,84 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
               style={{ marginBottom: 16 }}
               onChange={(value) => {
                 const newMode = value as 'specify' | 'variable';
-                setTextContentMode(newMode);
 
-                // 切换模式时，立即更新DSL数据以反映到画布
                 if (selectedComponent) {
+                  // 在切换模式前，先缓存当前模式的内容
+                  if (textContentMode === 'specify') {
+                    // 从指定模式切换出去时，缓存当前的富文本内容
+                    const currentContent = getRichTextContent();
+                    textComponentStateManager.setUserEditedContent(
+                      selectedComponent.id,
+                      currentContent,
+                    );
+                  } else if (textContentMode === 'variable') {
+                    // 从变量模式切换出去时，记住当前绑定的变量
+                    const currentBoundVariable =
+                      textComponentStateManager.getBoundVariableName(
+                        selectedComponent.id,
+                      );
+                    if (currentBoundVariable) {
+                      setLastBoundVariables((prev) => ({
+                        ...prev,
+                        [selectedComponent.id]: currentBoundVariable,
+                      }));
+                    }
+                  }
+
+                  // 切换模式
+                  setTextContentMode(newMode);
+
                   const updatedComponent = { ...selectedComponent };
 
                   if (newMode === 'specify') {
-                    // 切换到指定模式：使用用户编辑的内容，并清除变量绑定
-                    const userEditedContent =
+                    // 切换到指定模式：恢复之前缓存的内容
+                    const cachedContent =
                       textComponentStateManager.getUserEditedContent(
                         selectedComponent.id,
                       );
 
-                    if (userEditedContent !== undefined) {
-                      (updatedComponent as any).content = userEditedContent;
-                      // 富文本组件：同步更新 i18n_content
-                      (updatedComponent as any).i18n_content = {
-                        'en-US': userEditedContent,
-                      };
-                    }
+                    const contentToUse =
+                      cachedContent !== undefined
+                        ? cachedContent
+                        : (selectedComponent as any).content ||
+                          '<p>富文本内容</p>';
 
-                    // 清除变量绑定状态，确保画布不再显示变量内容
+                    (updatedComponent as any).content = contentToUse;
+                    (updatedComponent as any).i18n_content = {
+                      'en-US': contentToUse,
+                    };
+
+                    // 清除变量绑定
                     textComponentStateManager.setBoundVariableName(
                       selectedComponent.id,
-                      '',
+                      undefined,
                     );
                   } else if (newMode === 'variable') {
-                    // 切换到绑定变量模式：使用变量占位符
-                    const boundVariableName = getBoundVariableName();
+                    // 切换到绑定变量模式：恢复之前记住的变量
                     const rememberedVariable =
                       lastBoundVariables[selectedComponent.id];
-                    const variableName =
-                      rememberedVariable || boundVariableName;
 
-                    if (variableName) {
-                      const variablePlaceholder = `\${${variableName}}`;
+                    if (rememberedVariable) {
+                      // 恢复之前绑定的变量
+                      const variablePlaceholder = `\${${rememberedVariable}}`;
                       (updatedComponent as any).content = variablePlaceholder;
                       (updatedComponent as any).i18n_content = {
                         'en-US': variablePlaceholder,
                       };
 
-                      // 设置变量绑定状态，确保画布显示变量内容
                       textComponentStateManager.setBoundVariableName(
                         selectedComponent.id,
-                        variableName,
+                        rememberedVariable,
+                      );
+                    } else {
+                      // 没有记住的变量，清除绑定
+                      textComponentStateManager.setBoundVariableName(
+                        selectedComponent.id,
+                        undefined,
                       );
                     }
                   }
 
-                  // 立即更新组件，触发画布重新渲染
                   onUpdateComponent(updatedComponent);
                 }
               }}
@@ -397,19 +425,31 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
                         };
                         onUpdateComponent(updatedComponent);
                       } else {
-                        // 清除绑定时，恢复用户编辑的内容
-                        const userEditedContent =
+                        // 清除变量：回到指定模式，显示缓存的内容
+                        textComponentStateManager.setBoundVariableName(
+                          selectedComponent.id,
+                          undefined,
+                        );
+
+                        // 获取缓存的指定模式内容
+                        const cachedContent =
                           textComponentStateManager.getUserEditedContent(
                             selectedComponent.id,
                           );
-                        if (userEditedContent !== undefined) {
-                          const updatedComponent = { ...selectedComponent };
-                          (updatedComponent as any).content = userEditedContent;
-                          (updatedComponent as any).i18n_content = {
-                            'en-US': userEditedContent,
-                          };
-                          onUpdateComponent(updatedComponent);
-                        }
+
+                        const contentToUse =
+                          cachedContent !== undefined
+                            ? cachedContent
+                            : (selectedComponent as any).content ||
+                              '<p>富文本内容</p>';
+
+                        const updatedComponent = { ...selectedComponent };
+                        (updatedComponent as any).content = contentToUse;
+                        (updatedComponent as any).i18n_content = {
+                          'en-US': contentToUse,
+                        };
+
+                        onUpdateComponent(updatedComponent);
                       }
                     }
                   }}

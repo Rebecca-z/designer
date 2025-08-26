@@ -96,7 +96,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         borderRadius: '8px',
         width: '100%',
         margin: '0 auto',
-        // 修复：确保容器能够正确显示内边距
         boxSizing: 'border-box',
         justifyContent: 'center',
       }}

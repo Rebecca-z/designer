@@ -13,7 +13,7 @@ import styles from './index.less';
 
 const { Text } = Typography;
 
-const DEFAULT_IMAGE_URL = 'demo.png';
+// const DEFAULT_IMAGE_URL = 'demo.png';
 
 // 布局图标组件
 const LayoutIcon: React.FC<{
@@ -340,6 +340,11 @@ class LayoutChoiceManager {
 
 const layoutChoiceManager = LayoutChoiceManager.getInstance();
 
+// 将layoutChoiceManager暴露到全局，供MediaRenderer使用
+if (typeof window !== 'undefined') {
+  (window as any).layoutChoiceManager = layoutChoiceManager;
+}
+
 // 导出函数供渲染器使用
 export const getComponentLayoutChoice = (
   componentId: string,
@@ -452,71 +457,7 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
     }
   }, [selectedComponent]);
 
-  // 监听布局模式变化，自动调整图片数量（仅在指定模式下）
-  useEffect(() => {
-    if (
-      selectedComponent &&
-      selectedComponent.tag === 'img_combination' &&
-      multiImageContentMode === 'specify'
-    ) {
-      // 获取最新组件数据
-      const latestComponent = getLatestSelectedComponent();
-
-      // 安全检查：确保获取到了有效的组件数据
-      if (!latestComponent) {
-        console.warn('⚠️ useEffect中无法获取最新组件数据，跳过处理');
-        return;
-      }
-
-      const currentCombinationMode =
-        (latestComponent as any).combination_mode || 'double';
-
-      const currentImageList = Array.isArray(
-        (selectedComponent as any).img_list,
-      )
-        ? (selectedComponent as any).img_list
-        : [];
-
-      // 根据 combination_mode 和图片数量推断当前布局类型（不再使用保存的layoutType）
-      const currentLayoutType = getLayoutTypeFromModeAndCount(
-        currentCombinationMode,
-        currentImageList.length,
-      );
-      const requiredImageCount = getImageCountForLayout(currentLayoutType);
-
-      // 只有当图片数量不匹配时才调整
-      if (currentImageList.length !== requiredImageCount) {
-        // 切换布局时不保留之前的图片，统一使用默认值 demo.png
-        const newImageList = [];
-        for (let i = 0; i < requiredImageCount; i++) {
-          newImageList.push({
-            img_url: 'demo.png',
-            i18n_img_url: { 'en-US': 'demo.png' },
-          });
-        }
-
-        // 保存到状态管理器
-        multiImageComponentStateManager.setUserEditedImageList(
-          selectedComponent.id,
-          newImageList,
-        );
-
-        // 更新组件数据
-        const updatedComponent = { ...selectedComponent };
-        (updatedComponent as any).img_list = newImageList;
-
-        // 延迟更新避免状态冲突
-        setTimeout(() => {
-          onUpdateComponent(updatedComponent);
-        }, 0);
-      }
-    }
-  }, [
-    selectedComponent?.id,
-    (selectedComponent as any)?.combination_mode,
-    (selectedComponent as any)?.layoutType,
-    multiImageContentMode,
-  ]);
+  // 注释：移除了自动调整图片数量的逻辑，现在由用户自由控制图片数量
 
   // 渲染组件设置内容
   const componentSettingsContent = React.useMemo(
@@ -634,26 +575,74 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                         let updatedComponent = {
                           ...latestComponent,
                           combination_mode: newCombinationMode,
+                          // 不再保存layoutType字段，改为通过图片数量推断
                         };
 
                         // 根据当前模式处理图片列表
                         if (multiImageContentMode === 'specify') {
-                          // 指定模式：清除缓存并创建匹配布局的图片列表
-                          multiImageComponentStateManager.setUserEditedImageList(
-                            selectedComponent.id,
-                            [], // 清空缓存
+                          // 指定模式：调整图片列表数量来匹配布局要求，并填充空缺位置
+                          const currentImageList = Array.isArray(
+                            (latestComponent as any).img_list,
+                          )
+                            ? (latestComponent as any).img_list
+                            : [];
+
+                          console.log(
+                            `🔄 布局切换 - 从 ${currentImageList.length} 张调整到 ${requiredImageCount} 张`,
                           );
 
-                          // 创建匹配布局的图片列表
+                          // 创建匹配布局要求数量的图片列表
                           const newImageList = [];
                           for (let i = 0; i < requiredImageCount; i++) {
-                            newImageList.push({
-                              img_url: DEFAULT_IMAGE_URL,
-                              i18n_img_url: {
-                                'en-US': DEFAULT_IMAGE_URL,
-                              },
-                            });
+                            if (
+                              i < currentImageList.length &&
+                              currentImageList[i]
+                            ) {
+                              // 检查现有图片是否有效
+                              const existingImg = currentImageList[i];
+                              const hasValidUrl =
+                                existingImg.img_url &&
+                                existingImg.img_url.trim() !== '';
+
+                              if (hasValidUrl) {
+                                // 保留有效的现有图片
+                                newImageList.push(existingImg);
+                                console.log(
+                                  `📸 保留图片 ${i + 1}:`,
+                                  existingImg.img_url,
+                                );
+                              } else {
+                                // 替换无效图片为默认图片
+                                const defaultImg = {
+                                  img_url: 'demo.png',
+                                  i18n_img_url: { 'en-US': 'demo.png' },
+                                };
+                                newImageList.push(defaultImg);
+                                console.log(
+                                  `🔄 替换空图片 ${i + 1} 为默认图片`,
+                                );
+                              }
+                            } else {
+                              // 添加新的默认图片
+                              const defaultImg = {
+                                img_url: 'demo.png',
+                                i18n_img_url: { 'en-US': 'demo.png' },
+                              };
+                              newImageList.push(defaultImg);
+                              console.log(`➕ 新增图片 ${i + 1} 为默认图片`);
+                            }
                           }
+
+                          console.log(
+                            `✅ 布局切换完成 - 新图片列表:`,
+                            newImageList,
+                          );
+
+                          // 保存到状态管理器
+                          multiImageComponentStateManager.setUserEditedImageList(
+                            selectedComponent.id,
+                            newImageList,
+                          );
 
                           updatedComponent = {
                             ...updatedComponent,
@@ -759,9 +748,25 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                   multiImageComponentStateManager.getUserEditedImageList(
                     selectedComponent.id,
                   );
+
+                // 如果有缓存的图片列表，恢复它；否则显示空数组
                 (updatedComponent as any).img_list = userEditedImageList || [];
               } else {
-                // 切换到变量模式：检查是否有绑定的变量
+                // 切换到变量模式：先保存当前的指定图片列表，然后检查是否有绑定的变量
+                const currentImageList = Array.isArray(
+                  (selectedComponent as any).img_list,
+                )
+                  ? (selectedComponent as any).img_list
+                  : [];
+
+                // 保存当前图片列表到状态管理器（缓存策略）
+                if (currentImageList.length > 0) {
+                  multiImageComponentStateManager.setUserEditedImageList(
+                    selectedComponent.id,
+                    currentImageList,
+                  );
+                }
+
                 const boundVariable =
                   multiImageComponentStateManager.getBoundVariableName(
                     selectedComponent.id,
@@ -774,18 +779,8 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                   const variableName = boundVariable || rememberedVariable;
                   (updatedComponent as any).img_list = `\${${variableName}}`;
                 } else {
-                  // 如果没有绑定变量，保持当前指定的图片列表
-                  const currentImageList = Array.isArray(
-                    (selectedComponent as any).img_list,
-                  )
-                    ? (selectedComponent as any).img_list
-                    : [];
-
-                  // 保存当前图片列表到状态管理器
-                  multiImageComponentStateManager.setUserEditedImageList(
-                    selectedComponent.id,
-                    currentImageList,
-                  );
+                  // 如果没有绑定变量，显示当前的图片列表作为预览
+                  (updatedComponent as any).img_list = currentImageList;
                 }
               }
 
@@ -929,17 +924,19 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                         '',
                       );
 
-                      // 清除绑定变量后，根据当前模式决定显示的图片
+                      // 清除绑定变量后，保持在变量模式，显示默认占位图片
                       const updatedComponent = {
                         ...selectedComponent,
                       };
 
                       if (multiImageContentMode === 'variable') {
-                        // 在变量模式下清除绑定，显示指定图片列表（如果有的话）
+                        // 在变量模式下清除绑定，获取用户之前编辑的图片列表作为默认预览
                         const userEditedImageList =
                           multiImageComponentStateManager.getUserEditedImageList(
                             selectedComponent.id,
                           );
+
+                        // 如果有用户编辑的图片列表，显示它们；否则显示空数组
                         (updatedComponent as any).img_list =
                           userEditedImageList || [];
                       } else {

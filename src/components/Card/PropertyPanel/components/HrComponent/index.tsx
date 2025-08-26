@@ -49,7 +49,7 @@ const HrComponent: React.FC<BaseComponentProps> = ({
   // 处理边框样式变化 - 使用useCallback优化
   const handleBorderStyleChange = useCallback(
     (value: string) => {
-      handleValueChange('borderStyle', value);
+      handleValueChange('style.borderStyle', value);
     },
     [handleValueChange],
   );

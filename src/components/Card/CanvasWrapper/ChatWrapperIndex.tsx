@@ -1,5 +1,3 @@
-// card-designer-canvas-with-card.tsx - 集成会话卡片的画布组件
-
 import React, { useRef } from 'react';
 import { DEVICE_SIZES } from '../constants';
 import { CardDesignData, ComponentType, VariableItem } from '../type';

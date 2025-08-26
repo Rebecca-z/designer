@@ -2,3 +2,276 @@
   padding: 0;
   margin: 0;
 }
+
+/* 画布中输入框预览样式 - 覆盖Ant Design默认样式 */
+.canvas-input-preview.ant-input,
+input.canvas-input-preview.ant-input,
+.ant-input.canvas-input-preview {
+  width: 200px !important;
+  min-width: 200px !important;
+  max-width: 200px !important;
+  border: 1px solid #d9d9d9 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  flex: none !important;
+
+  &:hover {
+    border-color: #d9d9d9 !important;
+    box-shadow: none !important;
+    width: 200px !important;
+  }
+
+  &:focus {
+    border-color: #d9d9d9 !important;
+    box-shadow: none !important;
+    outline: none !important;
+    width: 200px !important;
+  }
+
+  &:focus-within {
+    border-color: #d9d9d9 !important;
+    box-shadow: none !important;
+    width: 200px !important;
+  }
+}
+
+/* 画布中按钮预览样式 - 强制保持原有边框颜色，彻底移除hover/focus时的蓝色边框，防止闪烁 */
+.canvas-button-preview.ant-btn,
+button.canvas-button-preview.ant-btn,
+.ant-btn.canvas-button-preview {
+  /* 防止布局偏移的基础样式 */
+  box-sizing: border-box !important; /* 确保边框不影响布局 */
+  transform: none !important; /* 防止transform导致的位置偏移 */
+
+  /* 全局移除所有hover/focus/active时的蓝色效果 */
+  &:hover,
+  &:focus,
+  &:focus-visible,
+  &:active,
+  &:focus-within {
+    box-shadow: none !important; /* 移除蓝色阴影 */
+    outline: none !important; /* 移除outline */
+    transition: none !important; /* 移除过渡效果 */
+    transform: none !important; /* 防止hover时的位置变化 */
+    position: relative !important; /* 确保定位稳定 */
+  }
+
+  /* 黑色按钮样式 - 黑色文案、白色背景色、灰色边框 */
+  &[data-button-color='black'],
+  &.button-color-black {
+    color: #000 !important;
+    background-color: #fff !important;
+    border-color: #d9d9d9 !important;
+
+    &:hover,
+    &:focus,
+    &:focus-visible,
+    &:active,
+    &:focus-within {
+      color: #000 !important; /* 保持黑色文字 */
+      background-color: #fff !important; /* 保持白色背景 */
+      border-color: #d9d9d9 !important; /* 保持灰色边框 */
+      box-shadow: none !important;
+      outline: none !important;
+      transition: none !important;
+      transform: none !important; /* 防止位置偏移 */
+      position: relative !important; /* 确保定位稳定 */
+    }
+  }
+
+  /* 蓝色按钮样式 - 白色文案、蓝色背景色、蓝色边框 */
+  &[data-button-color='blue'],
+  &.button-color-blue {
+    color: #fff !important;
+    background-color: #1677ff !important;
+    border-color: #1677ff !important;
+
+    &:hover,
+    &:focus,
+    &:focus-visible,
+    &:active,
+    &:focus-within {
+      color: #fff !important; /* 保持白色文字 */
+      background-color: #1677ff !important; /* 保持蓝色背景 */
+      border-color: #1677ff !important; /* 保持蓝色边框 */
+      box-shadow: none !important;
+      outline: none !important;
+      transition: none !important;
+      transform: none !important; /* 防止位置偏移 */
+      position: relative !important; /* 确保定位稳定 */
+    }
+  }
+
+  /* 红色按钮样式 - 白色文案、红色背景色、红色边框 */
+  &[data-button-color='red'],
+  &.button-color-red {
+    color: #fff !important;
+    background-color: #ff4d4f !important;
+    border-color: #ff4d4f !important;
+
+    &:hover,
+    &:focus,
+    &:focus-visible,
+    &:active,
+    &:focus-within {
+      color: #fff !important; /* 保持白色文字 */
+      background-color: #ff4d4f !important; /* 保持红色背景 */
+      border-color: #ff4d4f !important; /* 保持红色边框 */
+      box-shadow: none !important;
+      outline: none !important;
+      transition: none !important;
+      transform: none !important; /* 防止位置偏移 */
+      position: relative !important; /* 确保定位稳定 */
+    }
+  }
+
+  /* 兼容旧版本的样式 */
+
+  /* 默认按钮 - 强制保持灰色边框 */
+  &.ant-btn-default,
+  &[class*='ant-btn-default'] {
+    &:hover,
+    &:focus,
+    &:focus-visible,
+    &:active,
+    &:focus-within {
+      box-shadow: none !important; /* 移除任何阴影 */
+      outline: none !important; /* 移除outline */
+      transition: none !important; /* 移除过渡效果 */
+    }
+  }
+
+  /* 主要按钮 - 强制保持蓝色边框和背景 */
+  &.ant-btn-primary,
+  &[class*='ant-btn-primary'] {
+    &:hover,
+    &:focus,
+    &:focus-visible,
+    &:active,
+    &:focus-within {
+      box-shadow: none !important; /* 移除任何阴影 */
+      outline: none !important; /* 移除outline */
+      transition: none !important; /* 移除过渡效果 */
+    }
+  }
+
+  /* 危险按钮 - 强制保持红色边框和背景 */
+  &.ant-btn-primary.ant-btn-dangerous,
+  &.ant-btn-dangerous,
+  &[class*='ant-btn-dangerous'] {
+    &:hover,
+    &:focus,
+    &:focus-visible,
+    &:active,
+    &:focus-within {
+      box-shadow: none !important; /* 移除任何阴影 */
+      outline: none !important; /* 移除outline */
+      transition: none !important; /* 移除过渡效果 */
+    }
+  }
+}
+
+/* 进一步强化 - 针对所有可能的Ant Design按钮状态类 */
+.canvas-button-preview.ant-btn:not([disabled]):hover,
+.canvas-button-preview.ant-btn:not([disabled]):focus,
+.canvas-button-preview.ant-btn:not([disabled]):active,
+button.canvas-button-preview.ant-btn:not([disabled]):hover,
+button.canvas-button-preview.ant-btn:not([disabled]):focus,
+button.canvas-button-preview.ant-btn:not([disabled]):active {
+  border-color: inherit !important;
+  box-shadow: none !important;
+  outline: none !important;
+  transition: none !important;
+}
+
+/* 画布中下拉组件的选项样式 - 完全阻止选项交互 */
+.canvas-select-preview {
+  /* 强制隐藏任何选中项的显示 */
+  &.ant-select {
+    .ant-select-selector {
+      .ant-select-selection-item {
+        display: none !important; /* 隐藏选中项显示 */
+      }
+
+      .ant-select-selection-overflow {
+        display: none !important; /* 隐藏多选溢出项 */
+      }
+
+      .ant-select-selection-search {
+        display: none !important; /* 隐藏搜索框 */
+      }
+    }
+  }
+
+  .ant-select-item {
+    &.ant-select-item-option {
+      cursor: default !important;
+      pointer-events: none !important; /* 完全禁用指针事件 */
+      user-select: none !important; /* 禁用文本选择 */
+
+      &:hover {
+        background-color: transparent !important;
+        color: inherit !important;
+      }
+
+      &:active {
+        background-color: transparent !important;
+        color: inherit !important;
+      }
+
+      &:focus {
+        background-color: transparent !important;
+        color: inherit !important;
+      }
+
+      &.ant-select-item-option-active {
+        background-color: transparent !important;
+        color: inherit !important;
+      }
+
+      &.ant-select-item-option-selected {
+        background-color: transparent !important;
+        color: inherit !important;
+        font-weight: normal !important;
+
+        &::after {
+          display: none !important;
+        }
+      }
+
+      &.ant-select-item-option-disabled {
+        background-color: transparent !important;
+        color: inherit !important;
+        cursor: default !important;
+      }
+    }
+  }
+
+  /* 完全禁用下拉框的所有交互 */
+  .ant-select-dropdown {
+    pointer-events: none !important;
+
+    * {
+      pointer-events: none !important;
+      user-select: none !important;
+    }
+  }
+
+  /* 强制阻止所有可能的选择行为 */
+  &.ant-select-open {
+    .ant-select-dropdown {
+      pointer-events: none !important;
+    }
+  }
+}
+
+/* 强制所有画布中的表单组件宽度限制 */
+[data-component-wrapper='true'] .ant-input,
+[data-component-wrapper='true'] .ant-select,
+[data-component-id] .ant-input,
+[data-component-id] .ant-select {
+  width: 200px !important;
+  min-width: 200px !important;
+  max-width: 200px !important;
+  flex: none !important;
+}

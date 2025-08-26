@@ -3,7 +3,7 @@
 import { CopyOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons';
 import { Button, Dropdown, message } from 'antd';
 import React from 'react';
-import ComponentRendererCore from '../card-designer-renderer-core';
+import ComponentRendererCore from '../ComponentRenderers';
 import { ComponentType, DesignData, DragItem, VariableItem } from '../type';
 import ErrorBoundary from './ErrorBoundary';
 
@@ -142,7 +142,6 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
       e.stopPropagation();
     }
     onCopy(component);
-    message.success('组件已复制');
   };
 
   // 检查是否为表单容器下的分栏容器（包含提交和取消按钮的父容器）
@@ -182,16 +181,6 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
     ],
   };
 
-  // 统一的选中样式配置
-  const getSelectedStyle = (isSelected: boolean) => ({
-    border:
-      isSelected && !isPreview ? '2px solid #1890ff' : '2px solid #d9d9d9',
-    boxShadow:
-      isSelected && !isPreview
-        ? '0 0 8px rgba(24, 144, 255, 0.3)'
-        : '0 2px 4px rgba(0,0,0,0.1)',
-  });
-
   // 如果是容器组件，直接使用 ComponentRendererCore 渲染
   if (component.tag === 'form' || component.tag === 'column_set') {
     return (
@@ -218,7 +207,10 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
       >
         <div
           style={{
-            ...getSelectedStyle(isCurrentSelected),
+            // 容器组件不应用外层选中样式，避免双重边框
+            // border: '2px solid transparent',
+            backgroundColor: 'transparent',
+            boxShadow: 'none',
             borderRadius: '8px',
             padding: '0',
             margin: '0',
@@ -230,38 +222,41 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
           data-component-wrapper="true"
           data-component-id={component.id}
         >
-          {/* 操作按钮 - 表单容器下的分栏容器不显示 */}
-          {isCurrentSelected && !isPreview && !isFormColumnSet && (
-            <div
-              style={{
-                position: 'absolute',
-                top: '-2px',
-                right: '-2px',
-                zIndex: 10,
-              }}
-            >
-              <Dropdown
-                menu={contextMenu}
-                trigger={['click']}
-                placement="bottomRight"
+          {/* 操作按钮 - 表单容器下的分栏容器不显示，所有分栏容器都由自己的渲染器处理 */}
+          {isCurrentSelected &&
+            !isPreview &&
+            !isFormColumnSet &&
+            component.tag !== 'column_set' && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '-2px',
+                  right: '-2px',
+                  zIndex: 10,
+                }}
               >
-                <Button
-                  size="small"
-                  type="primary"
-                  icon={<MoreOutlined />}
-                  style={{
-                    borderRadius: '50%',
-                    width: '24px',
-                    height: '24px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </Dropdown>
-            </div>
-          )}
+                <Dropdown
+                  menu={contextMenu}
+                  trigger={['click']}
+                  placement="bottomRight"
+                >
+                  <Button
+                    size="small"
+                    type="primary"
+                    icon={<MoreOutlined />}
+                    style={{
+                      borderRadius: '50%',
+                      width: '24px',
+                      height: '24px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </Dropdown>
+              </div>
+            )}
           {/* 选中状态指示器 */}
           {isCurrentSelected && !isPreview && (
             <div
@@ -308,25 +303,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             variables={variables}
             verticalSpacing={verticalSpacing}
           />
-          {/* 选中状态标签 */}
-          {isCurrentSelected && !isPreview && (
-            <div
-              style={{
-                position: 'absolute',
-                bottom: '-20px',
-                left: '0',
-                backgroundColor: '#1890ff',
-                color: 'white',
-                padding: '2px 6px',
-                borderRadius: '4px',
-                fontSize: '10px',
-                whiteSpace: 'nowrap',
-                zIndex: 10,
-              }}
-            >
-              {component.tag} {component.name && `(${component.name})`}
-            </div>
-          )}
+          {/* 选中状态标签 - 已移除调试信息显示 */}
         </div>
       </ErrorBoundary>
     );
@@ -338,6 +315,12 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
     cursor: isPreview ? 'default' : 'pointer',
     position: 'relative',
     transition: 'all 0.2s ease',
+    // 选中状态的边框和背景
+    border: isCurrentSelected ? '2px solid #1890ff' : '2px solid transparent',
+    backgroundColor: isCurrentSelected
+      ? 'rgba(24, 144, 255, 0.02)'
+      : 'transparent',
+    boxShadow: isCurrentSelected ? '0 0 8px rgba(24, 144, 255, 0.3)' : 'none',
   };
 
   return (
@@ -368,38 +351,41 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
         data-component-wrapper="true"
         data-component-id={component.id}
       >
-        {/* 组件操作按钮 - 表单容器下的分栏容器不显示 */}
-        {isCurrentSelected && !isPreview && !isFormColumnSet && (
-          <div
-            style={{
-              position: 'absolute',
-              top: '-2px',
-              right: '-2px',
-              zIndex: 10,
-            }}
-          >
-            <Dropdown
-              menu={contextMenu}
-              trigger={['click']}
-              placement="bottomRight"
+        {/* 组件操作按钮 - 表单容器下的分栏容器和按钮组件不显示（按钮组件有自己的操作菜单） */}
+        {isCurrentSelected &&
+          !isPreview &&
+          !isFormColumnSet &&
+          component.tag !== 'button' && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '-2px',
+                right: '-2px',
+                zIndex: 10,
+              }}
             >
-              <Button
-                size="small"
-                type="primary"
-                icon={<MoreOutlined />}
-                style={{
-                  borderRadius: '50%',
-                  width: '24px',
-                  height: '24px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-                onClick={(e) => e.stopPropagation()}
-              />
-            </Dropdown>
-          </div>
-        )}
+              <Dropdown
+                menu={contextMenu}
+                trigger={['click']}
+                placement="bottomRight"
+              >
+                <Button
+                  size="small"
+                  type="primary"
+                  icon={<MoreOutlined />}
+                  style={{
+                    borderRadius: '50%',
+                    width: '24px',
+                    height: '24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </Dropdown>
+            </div>
+          )}
         {/* 选中状态指示器 */}
         {isCurrentSelected && !isPreview && (
           <div
@@ -415,7 +401,6 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             }}
           />
         )}
-        {/* 组件内容渲染 - 使用 ComponentRendererCore */}
         <ComponentRendererCore
           component={component}
           isPreview={isPreview}
@@ -431,7 +416,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
               path[1] === 'body' &&
               path[2] === 'elements'
             )
-          } // 根级别组件禁用内部拖拽，让DragSortableItem处理
+          }
           enableSort={!isPreview}
           onSelect={onSelect}
           selectedPath={selectedPath}
@@ -442,25 +427,6 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
           variables={variables}
           verticalSpacing={verticalSpacing}
         />
-        {/* 组件标签 */}
-        {isCurrentSelected && !isPreview && (
-          <div
-            style={{
-              position: 'absolute',
-              bottom: '-20px',
-              left: '0',
-              backgroundColor: '#1890ff',
-              color: 'white',
-              padding: '2px 6px',
-              borderRadius: '4px',
-              fontSize: '10px',
-              whiteSpace: 'nowrap',
-              zIndex: 10,
-            }}
-          >
-            {component.tag} {component.name && `(${component.name})`}
-          </div>
-        )}
       </div>
     </ErrorBoundary>
   );

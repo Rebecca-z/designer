@@ -837,13 +837,23 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
                       const variableName = boundVariable || rememberedVariable;
 
                       if (variableName) {
+                        // 设置状态管理器中的绑定变量名
+                        multiSelectComponentStateManager.setBoundVariableName(
+                          selectedComponent.id,
+                          variableName,
+                        );
                         handleValueChange('options', `\${${variableName}}`);
                       }
                     } else if (newMode === 'specify') {
+                      // 清除绑定的变量名
+                      multiSelectComponentStateManager.setBoundVariableName(
+                        selectedComponent.id,
+                        '',
+                      );
+
                       // 切换到指定模式，恢复之前保存的选项内容
                       if (typeof currentOptions === 'string') {
                         // 如果当前是变量绑定格式，恢复保存的指定模式选项
-
                         handleValueChange('options', savedSpecifyOptions);
                       }
                     }

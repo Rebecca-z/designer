@@ -356,7 +356,6 @@ export const useClipboard = () => {
   const copyComponent = useCallback((component: ComponentType) => {
     const copied = { ...component, id: generateId() };
     setClipboard(copied);
-    message.success('组件已复制到剪贴板');
   }, []);
 
   const pasteComponent = useCallback(
@@ -368,7 +367,6 @@ export const useClipboard = () => {
           elements: [...data.elements, newClipboard],
         };
         updateData(newData);
-        message.success('组件已粘贴');
       }
     },
     [clipboard],
