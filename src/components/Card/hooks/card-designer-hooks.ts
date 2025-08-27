@@ -225,7 +225,6 @@ export const useHistory = (initialData: DesignData) => {
     if (historyIndex > 0) {
       setHistoryIndex(historyIndex - 1);
       setData(history[historyIndex - 1]);
-      message.success('撤销成功');
       return true;
     }
     return false;
@@ -265,7 +264,6 @@ export const useComponentSelection = () => {
 
   const selectComponent = useCallback(
     (component: ComponentType | null, path?: (string | number)[]) => {
-      // 直接更新状态，不使用防抖
       setSelectedComponent(component);
       setSelectedPath(path || null);
     },

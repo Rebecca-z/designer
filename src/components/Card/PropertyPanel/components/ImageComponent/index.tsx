@@ -73,33 +73,10 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
   // 处理模式切换 - 使用useCallback优化
   const handleModeChange = useCallback(
     (value: 'specify' | 'variable') => {
-      const updatedComponent = { ...selectedComponent };
-
-      // 在切换模式之前，先缓存当前模式的数据
-      if (imageContentMode === 'specify') {
-        // 从指定模式切换出去：缓存当前的图片URL
-        const currentUrl = (selectedComponent as any).img_url || '';
-        if (currentUrl && currentUrl.trim() !== '') {
-          imageComponentStateManager.setUserEditedUrl(
-            selectedComponent.id,
-            currentUrl,
-          );
-        }
-      } else if (imageContentMode === 'variable') {
-        // 从变量模式切换出去：记住当前绑定的变量
-        const boundVariable = imageComponentStateManager.getBoundVariableName(
-          selectedComponent.id,
-        );
-        if (boundVariable) {
-          setLastBoundVariables((prev) => ({
-            ...prev,
-            [selectedComponent.id]: boundVariable,
-          }));
-        }
-      }
-
       // 切换模式
       setImageContentMode(value);
+
+      const updatedComponent = { ...selectedComponent };
 
       if (value === 'specify') {
         // 切换到指定模式：恢复缓存的图片URL或使用默认值
@@ -113,6 +90,7 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
         );
         const finalUrl = userEditedUrl || 'demo.png';
 
+        console.warn('finalUrl', finalUrl);
         (updatedComponent as any).img_url = finalUrl;
         (updatedComponent as any).i18n_img_url = {
           'en-US': finalUrl,

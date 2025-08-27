@@ -56,6 +56,7 @@ export const HrRenderer: React.FC<BaseRendererProps> = (props) => {
         padding: '8px 0',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
+        minWidth: '200px',
         ...selectedStyles,
       }}
       onClick={handleClick}

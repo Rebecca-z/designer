@@ -207,8 +207,6 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
       >
         <div
           style={{
-            // 容器组件不应用外层选中样式，避免双重边框
-            // border: '2px solid transparent',
             backgroundColor: 'transparent',
             boxShadow: 'none',
             borderRadius: '8px',
@@ -272,7 +270,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
               }}
             />
           )}
-          {/* 使用 ComponentRendererCore 渲染容器组件 */}
+          {/* 使用 ComponentRendererCore 渲染内容器组件 */}
           <ComponentRendererCore
             component={component}
             isPreview={isPreview}
@@ -292,7 +290,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
                 // 只有非容器组件才禁用内部拖拽
                 !(component.tag === 'form' || component.tag === 'column_set')
               )
-            } // 根级别非容器组件禁用内部拖拽，让DragSortableItem处理
+            }
             enableSort={!isPreview}
             onSelect={onSelect}
             selectedPath={selectedPath}
@@ -303,7 +301,6 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             variables={variables}
             verticalSpacing={verticalSpacing}
           />
-          {/* 选中状态标签 - 已移除调试信息显示 */}
         </div>
       </ErrorBoundary>
     );
@@ -401,6 +398,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             }}
           />
         )}
+        {/* 画布中组件 */}
         <ComponentRendererCore
           component={component}
           isPreview={isPreview}

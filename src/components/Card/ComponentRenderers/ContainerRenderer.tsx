@@ -888,6 +888,9 @@ export const ColumnSetRenderer: React.FC<BaseRendererProps> = (props) => {
       selectedPath={props.selectedPath}
       onCanvasFocus={props.onCanvasFocus}
       onClearSelection={props.onClearSelection}
+      isPreview={isPreview}
+      onDelete={props.onDelete}
+      onCopy={props.onCopy}
     >
       {columnContent}
     </DraggableWrapper>

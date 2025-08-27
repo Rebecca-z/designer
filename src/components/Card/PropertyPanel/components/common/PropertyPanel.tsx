@@ -120,18 +120,6 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
   // 合并自定义Tabs
   const allTabs = customTabs ? [...defaultTabs, ...customTabs] : defaultTabs;
 
-  console.log('🔍 PropertyPanel 模态框状态:', {
-    isVariableModalVisible,
-    hasHandleVariableModalOk: !!handleVariableModalOk,
-    hasHandleVariableModalCancel: !!handleVariableModalCancel,
-    modalComponentType,
-    selectedComponentTag,
-    isVariableModalFromVariablesTab,
-    editingVariable,
-    activeTab,
-    timestamp: new Date().toISOString(),
-  });
-
   return (
     <>
       <div style={STYLES.container}>

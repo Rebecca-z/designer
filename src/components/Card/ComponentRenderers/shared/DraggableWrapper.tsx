@@ -1,4 +1,6 @@
 // 可拖拽的组件包装器
+import { CopyOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons';
+import { Button, Dropdown, message } from 'antd';
 import React, { useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { ComponentType, DragItem } from '../../type';
@@ -31,6 +33,9 @@ interface DraggableWrapperProps {
   selectedPath?: (string | number)[] | null;
   onCanvasFocus?: () => void;
   onClearSelection?: () => void;
+  isPreview?: boolean;
+  onDelete?: (path: (string | number)[]) => void;
+  onCopy?: (component: ComponentType) => void;
 }
 
 const DraggableWrapper: React.FC<DraggableWrapperProps> = ({
@@ -46,6 +51,9 @@ const DraggableWrapper: React.FC<DraggableWrapperProps> = ({
   selectedPath,
   onCanvasFocus,
   onClearSelection,
+  onDelete,
+  onCopy,
+  isPreview = false,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const [indicatorPosition, setIndicatorPosition] = React.useState<
@@ -327,22 +335,6 @@ const DraggableWrapper: React.FC<DraggableWrapperProps> = ({
 
   // 处理组件点击选中
   const handleWrapperClick = (e: React.MouseEvent) => {
-    // 检查点击的是否是包装器本身，而不是子组件
-    const target = e.target as HTMLElement;
-    const currentTarget = e.currentTarget as HTMLElement;
-
-    // 对于按钮组件，允许点击选中，即使有子组件的 data-component-wrapper 属性
-    const isButtonComponent = component.tag === 'button';
-
-    // 如果点击的是子组件（有 data-component-wrapper 属性），且不是按钮组件，不处理包装器的选中
-    if (
-      !isButtonComponent &&
-      target.closest('[data-component-wrapper]') &&
-      target !== currentTarget
-    ) {
-      return;
-    }
-
     // 阻止事件冒泡，防止触发父级选中
     e.stopPropagation();
     e.preventDefault();
@@ -360,16 +352,14 @@ const DraggableWrapper: React.FC<DraggableWrapperProps> = ({
     position: 'relative',
     borderRadius: '4px',
     padding: '0',
-    // margin: '1px 0',
-    // 使用单独的边框属性，避免与borderColor冲突
     borderWidth: '2px',
     borderStyle: 'solid',
-    borderColor: 'transparent', // 默认透明边框
+    borderColor: 'transparent',
     backgroundColor: isCurrentSelected
       ? 'rgba(24, 144, 255, 0.02)'
       : 'transparent',
     cursor: 'pointer',
-    transition: 'background-color 0.2s ease, box-shadow 0.2s ease', // 只对背景色和阴影做过渡
+    transition: 'background-color 0.2s ease, box-shadow 0.2s ease',
     opacity,
   };
 
@@ -378,41 +368,29 @@ const DraggableWrapper: React.FC<DraggableWrapperProps> = ({
     component.tag === 'form' || component.tag === 'column_set';
 
   if (isCurrentSelected && !isContainerComponent) {
-    // 只有非容器组件才在 DraggableWrapper 中显示选中边框
-    // 容器组件的选中样式由各自的渲染器处理，避免双重边框
-    wrapperStyle.borderColor = '#1890ff'; // 只改变边框颜色，不改变边框宽度
+    wrapperStyle.borderColor = '#1890ff';
     wrapperStyle.boxShadow = '0 0 8px rgba(24, 144, 255, 0.3)';
   } else {
-    // 当作为分栏列或表单容器的子组件时，禁用 hover 效果
     const isInColumnContainer = containerPath.some(
       (segment) => segment === 'columns',
     );
     const isInFormContainer =
       containerPath.some((segment) => segment === 'elements') &&
-      containerPath.length > 4; // 确保是在表单的 elements 数组中
+      containerPath.length > 4;
     if (isInColumnContainer || isInFormContainer) {
-      // 在分栏列或表单容器中，子组件在非选中状态下不显示 hover 边框效果
-      // 但是选中状态的边框和阴影应该保持
       if (!isCurrentSelected) {
-        // 保持透明边框，不移除边框，避免布局偏移
         wrapperStyle.borderColor = 'transparent';
         wrapperStyle.boxShadow = 'none';
       }
     } else {
-      // 普通组件在任何情况下都不显示 hover 边框（待激活态）
       if (!isContainerComponent && !isCurrentSelected) {
-        // 普通组件在非选中状态下不显示 hover 边框效果
-        // 但是选中状态的边框和阴影应该保持
-        // 保持透明边框，不移除边框，避免布局偏移
         wrapperStyle.borderColor = 'transparent';
         wrapperStyle.boxShadow = 'none';
       }
     }
   }
 
-  // 拖拽悬停时显示蓝色线条指示线
   if (isOver && enableSort && !isCurrentSelected) {
-    // 只在非选中状态下显示拖拽悬停效果，避免覆盖选中状态
     wrapperStyle.boxShadow = '0 0 8px rgba(24, 144, 255, 0.4)';
   }
 
@@ -420,6 +398,41 @@ const DraggableWrapper: React.FC<DraggableWrapperProps> = ({
   if (isDragging) {
     wrapperStyle.zIndex = 1000;
   }
+
+  const handleDelete = (e: any) => {
+    if (isPreview) return;
+    if (e?.stopPropagation && typeof e.stopPropagation === 'function') {
+      e.stopPropagation();
+    }
+    onDelete?.(path);
+    message.success('组件已删除');
+  };
+
+  const handleCopy = (e: any) => {
+    if (isPreview) return;
+    if (e?.stopPropagation && typeof e.stopPropagation === 'function') {
+      e.stopPropagation();
+    }
+    onCopy?.(component);
+  };
+
+  const contextMenu = {
+    items: [
+      {
+        key: 'copy',
+        icon: <CopyOutlined />,
+        label: '复制组件',
+        onClick: handleCopy,
+      },
+      {
+        key: 'delete',
+        icon: <DeleteOutlined />,
+        label: '删除组件',
+        onClick: handleDelete,
+        danger: true,
+      },
+    ],
+  };
 
   return (
     <div
@@ -454,6 +467,33 @@ const DraggableWrapper: React.FC<DraggableWrapperProps> = ({
           }}
         />
       )}
+
+      {isCurrentSelected && (
+        <Dropdown
+          menu={contextMenu}
+          trigger={['click']}
+          placement="bottomRight"
+        >
+          <Button
+            size="small"
+            type="primary"
+            icon={<MoreOutlined />}
+            style={{
+              position: 'absolute',
+              borderRadius: '50%',
+              width: '24px',
+              height: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              right: '0',
+              top: '0',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </Dropdown>
+      )}
+
       {children}
     </div>
   );

@@ -334,21 +334,6 @@ const Modals: React.FC<ModalsProps> = ({
             }}
           >
             {(() => {
-              console.log('🔍 预览模态框 - 变量数据检查:', {
-                variablesCount: variables.length,
-                variables: variables,
-                variablesType: typeof variables,
-                isArray: Array.isArray(variables),
-                variableNames: variables.map((v: any) => {
-                  if (typeof v === 'object' && v !== null) {
-                    return Object.keys(v).filter(
-                      (key) => !key.startsWith('__'),
-                    );
-                  }
-                  return v?.name || 'unknown';
-                }),
-                timestamp: new Date().toISOString(),
-              });
               return null;
             })()}
             {(() => {
