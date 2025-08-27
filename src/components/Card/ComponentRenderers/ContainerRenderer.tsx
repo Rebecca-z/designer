@@ -707,29 +707,11 @@ export const ColumnSetRenderer: React.FC<BaseRendererProps> = (props) => {
               (_: any, index: number) => index !== columnIndex,
             );
 
-            // // 计算删除前的总权重
-            // const totalOriginalFlex = columns.reduce(
-            //   (sum: number, col: any) => sum + (col.style?.flex || 1),
-            //   0,
-            // );
-
-            // // 计算剩余列的原始权重总和
-            // const totalRemainingFlex = newColumns.reduce(
-            //   (sum: number, col: any) => sum + (col.style?.flex || 1),
-            //   0,
-            // );
-
             const redistributedColumns = newColumns.map((col: any) => {
-              // const originalFlex = col.style?.flex || 1;
-              // 按比例重新分配：(原权重 / 剩余权重总和) * 删除前总权重
-              // const newFlex =
-              //   ~~(originalFlex / totalRemainingFlex) * totalOriginalFlex;
-
               return {
                 ...col,
                 style: {
                   ...col.style,
-                  // flex: Math.round(newFlex * 100) / 100,
                 },
               };
             });
