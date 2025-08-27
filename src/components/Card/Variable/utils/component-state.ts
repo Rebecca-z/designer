@@ -765,7 +765,7 @@ export class MultiSelectComponentStateManager {
 
     // 如果变量名为空，清除绑定状态
     if (!variableName) {
-      delete newState.boundVariableName;
+      delete newState?.boundVariableName;
     }
 
     this.stateMap.set(componentId, newState);

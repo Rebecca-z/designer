@@ -1,5 +1,4 @@
-// card-designer-chat-interface.tsx - 会话界面组件
-
+//  会话界面组件
 import { Avatar, Typography } from 'antd';
 import React from 'react';
 import { ComponentType, VariableItem } from '../type';

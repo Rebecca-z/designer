@@ -1,5 +1,4 @@
-// 弹窗
-
+// 弹窗组件
 import {
   CodeOutlined,
   EyeOutlined,
@@ -74,41 +73,6 @@ const Modals: React.FC<ModalsProps> = ({
       document.body.removeChild(textArea);
     }
   };
-
-  // 导出HTML预览
-  // const exportHTMLPreview = () => {
-  //   try {
-  //     // 将变量数据合并到data中
-  //     const dataWithVariables = {
-  //       ...data,
-  //       variables: variables.reduce((acc: any, variable: any) => {
-  //         if (typeof variable === 'object' && variable !== null) {
-  //           const keys = Object.keys(variable);
-  //           keys.forEach((key) => {
-  //             if (!key.startsWith('__')) {
-  //               acc[key] = variable[key];
-  //             }
-  //           });
-  //         }
-  //         return acc;
-  //       }, {}),
-  //     };
-  //     const html = generatePreviewHTML(dataWithVariables);
-  //     const blob = new Blob([html], { type: 'text/html' });
-  //     const url = URL.createObjectURL(blob);
-  //     const a = document.createElement('a');
-  //     a.href = url;
-  //     a.download = `card-preview-${
-  //       new Date().toISOString().split('T')[0]
-  //     }.html`;
-  //     a.click();
-  //     URL.revokeObjectURL(url);
-  //     message.success('预览HTML已导出');
-  //   } catch (error) {
-  //     message.error('导出HTML失败');
-  //     console.error('Export HTML error:', error);
-  //   }
-  // };
 
   return (
     <>

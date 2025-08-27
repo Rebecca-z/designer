@@ -1,4 +1,4 @@
-// card-designer-card-wrapper.tsx - 会话卡片包装器组件
+// 会话卡片包装器组件
 
 import { DeleteOutlined, MoreOutlined } from '@ant-design/icons';
 import { Button, Dropdown, message } from 'antd';

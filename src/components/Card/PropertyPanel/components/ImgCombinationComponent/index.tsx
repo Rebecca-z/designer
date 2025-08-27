@@ -863,7 +863,7 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                         style={{ borderRadius: '0 6px 6px 0' }}
                         buttonProps={{
                           type: 'primary',
-                          children: '上传',
+                          // children: '上传',
                           title: '上传图片',
                         }}
                       />

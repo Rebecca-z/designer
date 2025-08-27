@@ -1,4 +1,4 @@
-// card-designer-components.tsx - 修复表单容器嵌套显示的组件渲染器
+//  修复表单容器嵌套显示的组件渲染器
 
 import { CopyOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons';
 import { Button, Dropdown, message } from 'antd';

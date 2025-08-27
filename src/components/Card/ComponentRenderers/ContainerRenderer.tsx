@@ -729,7 +729,7 @@ export const ColumnSetRenderer: React.FC<BaseRendererProps> = (props) => {
                 ...col,
                 style: {
                   ...col.style,
-                  flex: Math.round(newFlex * 100) / 100, // 保留两位小数
+                  flex: Math.round(newFlex * 100) / 100,
                 },
               };
             });

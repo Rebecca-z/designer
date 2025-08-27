@@ -1,4 +1,4 @@
-// ErrorBoundary.tsx - 错误边界组件
+// 错误边界组件
 
 import { Button, Result } from 'antd';
 import { Component, ReactNode } from 'react';

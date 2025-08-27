@@ -1,7 +1,7 @@
 // 右侧属性面板 - 优化版本
 
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, Card, Typography } from 'antd';
+import { Button, Card, Tooltip, Typography } from 'antd';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ComponentType as ImportedComponentType, Variable } from '../../type';
 
@@ -547,19 +547,23 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
                       </Text>
                     </div>
                     <div>
-                      <Button
-                        type="text"
-                        size="small"
-                        icon={<EditOutlined />}
-                        onClick={handleEditVariable(variable, index)}
-                      />
-                      <Button
-                        type="text"
-                        size="small"
-                        danger
-                        icon={<DeleteOutlined />}
-                        onClick={handleDeleteVariable(index)}
-                      />
+                      <Tooltip title="编辑">
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<EditOutlined />}
+                          onClick={handleEditVariable(variable, index)}
+                        />
+                      </Tooltip>
+                      <Tooltip title="删除">
+                        <Button
+                          type="text"
+                          size="small"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={handleDeleteVariable(index)}
+                        />
+                      </Tooltip>
                     </div>
                   </div>
                 </Card>

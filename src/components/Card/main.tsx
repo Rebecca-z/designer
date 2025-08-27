@@ -435,7 +435,6 @@ const CardDesigner: React.FC = () => {
       );
       if (component && component.id === selection.selectedComponent?.id) {
         // 组件仍然存在且匹配
-        // console.log('✅ 组件选择状态有效');
       } else {
         console.log('❌ 组件选择状态无效，清除选择');
         selection.clearSelection();

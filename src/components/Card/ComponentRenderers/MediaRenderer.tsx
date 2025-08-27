@@ -157,8 +157,19 @@ export const ImageRenderer: React.FC<BaseRendererProps> = (props) => {
         padding: `${verticalSpacing / 2}px 0`,
       }}
     >
-      <div style={{ maxWidth: '100%' }}>
-        <ImgRenderer item={{ img_url: imageUrl, alt: comp.alt }} />
+      <div
+        style={{
+          maxWidth: '100%',
+          aspectRatio: comp.style.crop_mode === 'default' ? 'auto' : '4/2',
+        }}
+      >
+        <ImgRenderer
+          item={{ img_url: imageUrl, alt: comp.alt }}
+          style={{
+            objectFit: comp.style.crop_mode === 'default' ? 'contain' : 'cover',
+            objectPosition: comp.style.crop_mode === 'top' ? 'top' : 'center',
+          }}
+        />
       </div>
     </div>
   );

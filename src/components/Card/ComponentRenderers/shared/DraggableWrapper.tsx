@@ -404,7 +404,6 @@ const DraggableWrapper: React.FC<DraggableWrapperProps> = ({
     if (e?.stopPropagation && typeof e.stopPropagation === 'function') {
       e.stopPropagation();
     }
-    console.warn('Deleting component at path:', path);
     onDelete?.(path);
     message.success('组件已删除');
   };

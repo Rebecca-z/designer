@@ -1,3 +1,4 @@
+// 会话卡片包装器组件
 import React, { useRef } from 'react';
 import { DEVICE_SIZES } from '../constants';
 import { CardDesignData, ComponentType, VariableItem } from '../type';

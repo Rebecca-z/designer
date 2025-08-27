@@ -1,6 +1,7 @@
+// 设备提示组件
 import React from 'react';
 import { DEVICE_SIZES } from '../constants';
-// 设备提示组件
+
 export const DeviceIndicator: React.FC<{
   device: keyof typeof DEVICE_SIZES;
   canvasWidth: string;
