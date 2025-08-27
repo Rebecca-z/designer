@@ -21,10 +21,7 @@ import {
   TextComponent,
   TitleComponent,
 } from '../components';
-import {
-  PropertyPanel as CommonPropertyPanel,
-  ComponentContent,
-} from '../components/common';
+import { PropertyPanel as CommonPropertyPanel } from '../components/common';
 import { getComponentRealPath, getVariableKeys } from '../utils';
 
 const { Text } = Typography;
@@ -68,28 +65,6 @@ const STYLE_FIELDS = [
   'size',
   'crop_mode',
 ] as const;
-
-const PANEL_STYLES = {
-  container: {
-    width: '300px',
-    height: 'calc(100vh - 60px)',
-    backgroundColor: '#fafafa',
-    borderLeft: '1px solid #d9d9d9',
-    padding: '16px',
-    overflow: 'auto',
-  },
-  tabBarStyle: {
-    padding: '0 16px',
-    backgroundColor: '#fff',
-    margin: 0,
-    borderBottom: '1px solid #d9d9d9',
-  },
-  emptyState: {
-    padding: '20px',
-    textAlign: 'center' as const,
-    color: '#999',
-  },
-} as const;
 
 interface PropertyPanelProps {
   selectedPath: (string | number)[] | null;
@@ -829,16 +804,6 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
     setMultiSelectOptionsMode,
   ]);
 
-  // 默认组件内容 - 必须在条件语句之前定义
-  const defaultComponentContent = useMemo(
-    () => (
-      <div style={PANEL_STYLES.emptyState}>
-        <Text>请选择一个组件来编辑其属性</Text>
-      </div>
-    ),
-    [],
-  );
-
   // 渲染组件编辑器
   const componentEditor = renderComponentEditor();
   if (componentEditor) {
@@ -850,9 +815,27 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
       activeTab={topLevelTab}
       onTabChange={handleTabChange}
       componentContent={
-        <ComponentContent componentName="属性面板">
-          {defaultComponentContent}
-        </ComponentContent>
+        <>
+          {
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
+              <Text
+                style={{
+                  color: '#8f959e',
+                  fontSize: '14px',
+                  marginTop: '100px',
+                }}
+              >
+                请先选中任意节点
+              </Text>
+            </div>
+          }
+        </>
       }
       showEventTab={false}
       variableManagementComponent={<VariableManagementPanel />}

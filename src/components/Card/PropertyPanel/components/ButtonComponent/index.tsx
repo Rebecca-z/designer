@@ -1,6 +1,15 @@
 // ButtonComponent 编辑界面 - 按钮组件
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, Form, Input, Popover, Select, Switch, Typography } from 'antd';
+import {
+  Button,
+  Form,
+  Input,
+  Popover,
+  Select,
+  Switch,
+  Tooltip,
+  Typography,
+} from 'antd';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ComponentContent,
@@ -717,30 +726,36 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
                 {event.actionText}
               </Button>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <EditOutlined
-                  style={{
-                    fontSize: '14px',
-                    color: '#1890ff',
-                    cursor: 'pointer',
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setCurrentEventId(event.id);
-                    loadEventData(event); // 使用公共函数回显数据
-                    setPopoverVisible(true);
-                  }}
-                />
-                <DeleteOutlined
-                  style={{
-                    fontSize: '14px',
-                    color: '#ff4d4f',
-                    cursor: 'pointer',
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteEvent(event.id);
-                  }}
-                />
+                <Tooltip title="编辑事件">
+                  {' '}
+                  <EditOutlined
+                    style={{
+                      fontSize: '14px',
+                      color: '#1890ff',
+                      cursor: 'pointer',
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurrentEventId(event.id);
+                      loadEventData(event); // 使用公共函数回显数据
+                      setPopoverVisible(true);
+                    }}
+                  />
+                </Tooltip>
+
+                <Tooltip title="删除事件">
+                  <DeleteOutlined
+                    style={{
+                      fontSize: '14px',
+                      color: '#ff4d4f',
+                      cursor: 'pointer',
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteEvent(event.id);
+                    }}
+                  />
+                </Tooltip>
               </div>
             </div>
           );

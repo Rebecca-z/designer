@@ -1,4 +1,5 @@
 //  会话界面组件
+import { SendOutlined } from '@ant-design/icons';
 import { Avatar, Typography } from 'antd';
 import React from 'react';
 import { ComponentType, VariableItem } from '../type';
@@ -23,19 +24,6 @@ interface ChatInterfaceProps {
   onCardSelect: () => void;
   username?: string;
   avatar?: string;
-  // 新增：卡片样式
-  cardStyles?: {
-    backgroundColor?: string;
-    backgroundImage?: string;
-    borderWidth?: string;
-    borderStyle?: string;
-    borderColor?: string;
-    borderRadius?: string;
-    boxShadow?: string;
-    customCSS?: string;
-    [key: string]: any;
-  };
-  // 新增：标题数据
   headerData?: {
     title?: { content: string };
     subtitle?: { content: string };
@@ -47,7 +35,6 @@ interface ChatInterfaceProps {
     subtitle?: { content: string };
     style?: string;
   }) => void;
-  // 新增：布局方式
   layoutMode?: 'vertical' | 'flow';
   // 新增：变量数据
   variables?: VariableItem[];
@@ -67,24 +54,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onCardSelect,
   username = '用户名',
   avatar,
-  cardStyles = {},
   headerData,
   onHeaderDataChange,
   layoutMode = 'vertical',
   variables = [],
 }) => {
-  // 合并卡片样式
-  const mergedCardStyles: React.CSSProperties = {
-    backgroundColor: cardStyles.backgroundColor || '#fff',
-    backgroundImage: cardStyles.backgroundImage || 'none',
-    borderWidth: cardStyles.borderWidth || '1px',
-    borderStyle: cardStyles.borderStyle || 'solid',
-    borderColor: cardStyles.borderColor || '#e8e8e8',
-    borderRadius: cardStyles.borderRadius || '13px',
-    boxShadow: cardStyles.boxShadow || '0 2px 8px rgba(0,0,0,0.1)',
-    ...cardStyles,
-  };
-
   return (
     <div
       style={{
@@ -127,11 +101,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           </Text>
         </div>
         {/* 卡片容器 */}
-        <div
-          style={mergedCardStyles}
-          data-card-container="true"
-          onClick={onCardSelect}
-        >
+        <div data-card-container="true" onClick={onCardSelect}>
           <CardWrapper
             elements={elements}
             verticalSpacing={verticalSpacing}
@@ -149,6 +119,25 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             layoutMode={layoutMode}
             variables={variables}
           />
+        </div>
+        {/* ui发送界面 */}
+        <div
+          style={{
+            width: '100%',
+            border: '1px solid #ccc',
+            borderRadius: '12px',
+            marginTop: '16px',
+            padding: '16px',
+            boxSizing: 'border-box',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            color: '#999',
+            userSelect: 'none',
+          }}
+        >
+          <span>Send Message</span>
+          <SendOutlined style={{ fontSize: '20px' }} />
         </div>
       </div>
     </div>

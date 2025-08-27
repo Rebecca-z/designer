@@ -4,23 +4,10 @@ import {
   CopyOutlined,
   EyeOutlined,
   ImportOutlined,
-  PlusOutlined,
-  QuestionCircleOutlined,
-  RedoOutlined,
-  UndoOutlined,
+  MoreOutlined,
 } from '@ant-design/icons';
-import {
-  Button,
-  Divider,
-  Modal,
-  Space,
-  Tooltip,
-  Typography,
-  message,
-} from 'antd';
+import { Button, Dropdown, Space, Tooltip, Typography, message } from 'antd';
 import React from 'react';
-import { DEVICE_SIZES } from '../constants';
-import { ComponentType } from '../type';
 
 const { Text } = Typography;
 
@@ -28,56 +15,18 @@ interface ToolbarProps {
   // 卡片ID
   cardId: string;
 
-  // 设备相关
-  device: keyof typeof DEVICE_SIZES;
-  onDeviceChange: (device: keyof typeof DEVICE_SIZES) => void;
-
-  // 历史操作
-  canUndo: boolean;
-  canRedo: boolean;
-  onUndo: () => void;
-  onRedo: () => void;
-
-  // 编辑操作
-  selectedComponent: ComponentType | null;
-  clipboard: ComponentType | null;
-  onCopy: () => void;
-  onPaste: () => void;
-
   // 文件操作
   onSave: () => void;
   onImport: () => void;
   onExport: () => void;
   onPreview: () => void;
-
-  // 统计信息
-  elementsCount: number;
-  variablesCount: number;
-  canvasFocused: boolean;
-
-  // 卡片设置
-  verticalSpacing?: number;
 }
 
 const Toolbar: React.FC<ToolbarProps> = ({
   cardId,
-  device,
-  onDeviceChange,
-  canUndo,
-  canRedo,
-  onUndo,
-  onRedo,
-  selectedComponent,
-  clipboard,
-  onCopy,
-  onPaste,
   onImport,
   onExport,
   onPreview,
-  elementsCount,
-  variablesCount,
-  canvasFocused,
-  verticalSpacing,
 }) => {
   // 复制卡片ID
   const copyCardId = async () => {
@@ -100,56 +49,36 @@ const Toolbar: React.FC<ToolbarProps> = ({
     }
   };
 
-  const showShortcutsHelp = () => {
-    Modal.info({
-      title: '快捷键说明',
-      content: (
-        <div>
-          <p>
-            <strong>Ctrl+Z:</strong> 撤销
-          </p>
-          <p>
-            <strong>Ctrl+C:</strong> 复制选中组件
-          </p>
-          <p>
-            <strong>Ctrl+V:</strong> 粘贴组件
-          </p>
-          <p>
-            <strong>Delete/Backspace:</strong> 智能删除选中组件
-          </p>
-          <div
-            style={{
-              marginTop: '12px',
-              padding: '8px',
-              backgroundColor: '#f6ffed',
-              border: '1px solid #b7eb8f',
-              borderRadius: '4px',
-            }}
-          >
-            <strong>智能删除说明：</strong>
-            <br />• 只有在画布获得焦点且选中组件时才能删除
-            <br />• 在属性面板输入框编辑时不会误删组件
-            <br />• 确保删除操作的安全性和准确性
-            <br />• 卡片容器本身不可删除
-          </div>
-          <div
-            style={{
-              marginTop: '12px',
-              padding: '8px',
-              backgroundColor: '#e6f7ff',
-              border: '1px solid #91d5ff',
-              borderRadius: '4px',
-            }}
-          >
-            <strong>会话卡片功能：</strong>
-            <br />• 所有组件都会添加到卡片容器内
-            <br />• 卡片容器模拟真实的会话界面
-            <br />• 支持内边距和垂直间距配置
-            <br />• 卡片ID可以复制用于外部引用
-          </div>
-        </div>
-      ),
-    });
+  const handleSave = () => {
+    // onSave();
+  };
+
+  const handlePublish = () => {
+    // 发布逻辑
+    // message.success('发布成功');
+  };
+
+  const contextMenu = {
+    items: [
+      {
+        key: 'import',
+        label: '导入配置',
+        icon: <ImportOutlined />,
+        onClick: onImport,
+      },
+      {
+        key: 'preview',
+        label: '在线预览',
+        icon: <EyeOutlined />,
+        onClick: onPreview,
+      },
+      {
+        key: 'export',
+        label: '导出配置',
+        icon: <CodeOutlined />,
+        onClick: onExport,
+      },
+    ],
   };
 
   return (
@@ -189,106 +118,37 @@ const Toolbar: React.FC<ToolbarProps> = ({
             </>
           </Tooltip>
         </div>
-
-        <Divider type="vertical" />
-
-        {/* 设备切换 */}
-        <Space>
-          <Text type="secondary" style={{ fontSize: '12px' }}>
-            设备:
-          </Text>
-          {Object.entries(DEVICE_SIZES).map(([key, config]) => (
-            <Tooltip key={key} title={config.name}>
-              <Button
-                type={device === key ? 'primary' : 'default'}
-                icon={<config.icon />}
-                onClick={() => onDeviceChange(key as keyof typeof DEVICE_SIZES)}
-                size="small"
-              />
-            </Tooltip>
-          ))}
-        </Space>
-
-        <Divider type="vertical" />
-
-        {/* 历史操作 */}
-        <Space>
-          <Tooltip title="撤销 (Ctrl+Z)">
-            <Button
-              icon={<UndoOutlined />}
-              onClick={onUndo}
-              disabled={!canUndo}
-              size="small"
-            />
-          </Tooltip>
-          <Tooltip title="重做 (Ctrl+Y)">
-            <Button
-              icon={<RedoOutlined />}
-              onClick={onRedo}
-              disabled={!canRedo}
-              size="small"
-            />
-          </Tooltip>
-        </Space>
-
-        <Divider type="vertical" />
-
-        {/* 编辑操作 */}
-        <Space>
-          <Tooltip title="复制 (Ctrl+C)">
-            <Button
-              icon={<CopyOutlined />}
-              onClick={onCopy}
-              disabled={!selectedComponent}
-              size="small"
-            />
-          </Tooltip>
-          <Tooltip title="粘贴 (Ctrl+V)">
-            <Button
-              icon={<PlusOutlined />}
-              onClick={onPaste}
-              disabled={!clipboard}
-              size="small"
-            />
-          </Tooltip>
-        </Space>
       </Space>
 
+      {/* 更多操作 */}
       <Space>
-        <Text type="secondary" style={{ fontSize: '12px' }}>
-          组件数量: {elementsCount} | 变量数量: {variablesCount}
-          {canvasFocused && (
-            <span style={{ color: '#52c41a' }}> | 画布已聚焦</span>
-          )}
-        </Text>
-
-        <Divider type="vertical" />
-
-        {/* 导入导出按钮 */}
-        <Button icon={<ImportOutlined />} onClick={onImport} size="small">
-          导入
-        </Button>
-
-        <Button icon={<EyeOutlined />} onClick={onPreview} size="small">
-          在线预览
-        </Button>
-
-        <Tooltip title={`当前间距: ${verticalSpacing || 8}px`}>
-          <Button
-            type="primary"
-            icon={<CodeOutlined />}
-            onClick={onExport}
-            size="small"
+        <Dropdown
+          menu={contextMenu}
+          trigger={['click']}
+          placement="bottomRight"
+        >
+          <div
+            style={{
+              borderRadius: '5px',
+              width: '28px',
+              height: '28px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              backgroundColor: '#fff',
+              border: '1px solid #d9d9d9',
+              transition: 'background-color 0.3s',
+            }}
+            onClick={(e) => e.stopPropagation()}
           >
-            导出配置
-          </Button>
-        </Tooltip>
-
-        <Button
-          icon={<QuestionCircleOutlined />}
-          onClick={showShortcutsHelp}
-          size="small"
-        />
+            <MoreOutlined />
+          </div>
+        </Dropdown>
+        <Button onClick={handleSave}>保存</Button>
+        <Button type="primary" onClick={handlePublish}>
+          发布
+        </Button>
       </Space>
     </div>
   );

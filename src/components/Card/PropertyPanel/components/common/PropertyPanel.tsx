@@ -9,6 +9,7 @@ import VariablesPanel from './VariablesPanel';
 const STYLES = {
   container: {
     width: '300px',
+    flexShrink: '0',
     height: 'calc(100vh - 60px)',
     backgroundColor: '#f8f9fa',
     borderLeft: '1px solid #e9ecef',

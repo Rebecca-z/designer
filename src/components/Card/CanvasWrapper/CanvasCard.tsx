@@ -2555,9 +2555,7 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
               backgroundColor: '#fafafa',
             }}
           >
-            <div style={{ fontSize: '16px', marginBottom: '8px' }}>
-              拖拽组件到这里
-            </div>
+            <div style={{ fontSize: '16px' }}>拖拽组件到这里</div>
           </div>
         )}
       </div>

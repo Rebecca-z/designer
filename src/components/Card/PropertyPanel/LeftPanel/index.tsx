@@ -1,6 +1,4 @@
 // 左侧组件面板
-
-import { BarsOutlined, PlusOutlined } from '@ant-design/icons';
 import { Tabs, Typography } from 'antd';
 import React from 'react';
 import { useDrag } from 'react-dnd';
@@ -102,14 +100,6 @@ const ComponentLibrary: React.FC = () => {
               borderRadius: '6px',
             }}
           >
-            <div
-              style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: category.color,
-              }}
-            />
             <Text strong style={{ fontSize: '14px', color: '#333' }}>
               {category.title}
             </Text>
@@ -144,6 +134,7 @@ export const ComponentPanel: React.FC<ComponentPanelProps> = ({
     <div
       style={{
         width: '300px',
+        flexShrink: '0',
         height: 'calc(100vh - 60px)',
         backgroundColor: '#fafafa',
         borderRight: '1px solid #d9d9d9',
@@ -168,7 +159,6 @@ export const ComponentPanel: React.FC<ComponentPanelProps> = ({
               <span
                 style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
               >
-                <PlusOutlined />
                 组件库
               </span>
             ),
@@ -184,7 +174,6 @@ export const ComponentPanel: React.FC<ComponentPanelProps> = ({
               <span
                 style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
               >
-                <BarsOutlined />
                 大纲树
               </span>
             ),

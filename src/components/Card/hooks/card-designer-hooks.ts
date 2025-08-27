@@ -234,7 +234,6 @@ export const useHistory = (initialData: DesignData) => {
     if (historyIndex < history.length - 1) {
       setHistoryIndex(historyIndex + 1);
       setData(history[historyIndex + 1]);
-      message.success('重做成功');
       return true;
     }
     return false;

@@ -1,11 +1,15 @@
 // 会话卡片包装器组件
+import {
+  CopyOutlined,
+  PlusOutlined,
+  RedoOutlined,
+  UndoOutlined,
+} from '@ant-design/icons';
+import { Button, Space, Tooltip } from 'antd';
 import React, { useRef } from 'react';
 import { DEVICE_SIZES } from '../constants';
 import { CardDesignData, ComponentType, VariableItem } from '../type';
-import { CanvasHeader } from './CanvasHeaderTip';
 import ChatInterface from './ChatWrapper';
-import { DeviceIndicator } from './DeviceIndicator';
-
 interface CanvasProps {
   data: CardDesignData;
   onDataChange: (data: CardDesignData) => void;
@@ -19,6 +23,17 @@ interface CanvasProps {
   onCopyComponent: (component: ComponentType) => void;
   device: keyof typeof DEVICE_SIZES;
   onCanvasFocus?: () => void;
+  onDeviceChange: (device: keyof typeof DEVICE_SIZES) => void;
+  // 历史操作
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
+  // 编辑操作
+  selectedComponent: ComponentType | null;
+  clipboard: ComponentType | null;
+  onCopy: () => void;
+  onPaste: () => void;
   // 新增：标题数据更新回调
   onHeaderDataChange?: (headerData: {
     title?: { content: string };
@@ -31,7 +46,6 @@ interface CanvasProps {
 
 const Canvas: React.FC<CanvasProps> = ({
   data,
-  // onDataChange,
   selectedPath,
   hoveredPath,
   onSelectComponent,
@@ -41,6 +55,15 @@ const Canvas: React.FC<CanvasProps> = ({
   onCanvasFocus,
   onHeaderDataChange,
   onElementsChange,
+  onDeviceChange,
+  canUndo,
+  canRedo,
+  onRedo,
+  onUndo,
+  selectedComponent,
+  clipboard,
+  onCopy,
+  onPaste,
 }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -99,15 +122,79 @@ const Canvas: React.FC<CanvasProps> = ({
         width: '100%',
         height: 'calc(100vh - 60px)',
         overflow: 'auto',
-        backgroundColor: '#f5f5f5',
         position: 'relative',
         display: 'flex',
-        justifyContent: 'center',
-        padding: '20px',
+        flexDirection: 'column',
       }}
     >
-      {/* 设备切换提示 */}
-      <DeviceIndicator device={device} canvasWidth={canvasWidth} />
+      <div
+        style={{
+          width: '100%',
+          height: '38px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          backgroundColor: '#fff',
+          borderBottom: '1px solid #f0f0f0',
+          padding: '0 16px',
+          boxSizing: 'border-box',
+          flexShrink: '0',
+        }}
+      >
+        {/* 编辑操作 */}
+        <Space>
+          <Tooltip title="复制 (Ctrl+C)">
+            <Button
+              icon={<CopyOutlined />}
+              onClick={onCopy}
+              disabled={!selectedComponent}
+              size="small"
+            />
+          </Tooltip>
+          <Tooltip title="粘贴 (Ctrl+V)">
+            <Button
+              icon={<PlusOutlined />}
+              onClick={onPaste}
+              disabled={!clipboard}
+              size="small"
+            />
+          </Tooltip>
+        </Space>
+
+        {/* 设备切换 */}
+        <Space>
+          {Object.entries(DEVICE_SIZES).map(([key, config]) => (
+            <Tooltip key={key} title={config.name}>
+              <Button
+                type={device === key ? 'primary' : 'default'}
+                icon={<config.icon />}
+                onClick={() => onDeviceChange(key as keyof typeof DEVICE_SIZES)}
+                size="small"
+              />
+            </Tooltip>
+          ))}
+        </Space>
+
+        {/* 历史操作 */}
+        <Space>
+          <Tooltip title="撤销 (Ctrl+Z)">
+            <Button
+              icon={<UndoOutlined />}
+              onClick={onUndo}
+              disabled={!canUndo}
+              size="small"
+            />
+          </Tooltip>
+          <Tooltip title="重做 (Ctrl+Y)">
+            <Button
+              icon={<RedoOutlined />}
+              onClick={onRedo}
+              disabled={!canRedo}
+              size="small"
+            />
+          </Tooltip>
+        </Space>
+      </div>
 
       {/* 画布容器 */}
       <div
@@ -115,22 +202,18 @@ const Canvas: React.FC<CanvasProps> = ({
         style={{
           width: canvasWidth,
           minHeight: '400px',
-          backgroundColor: 'white',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          padding: '8px',
           borderRadius: '8px',
-          border: '1px solid #e8e8e8',
           position: 'relative',
           transition: 'all 0.3s ease',
           outline: 'none',
+          padding: '16px',
+          boxSizing: 'border-box',
+          margin: '0 auto',
         }}
         onClick={handleCanvasClick}
         onFocus={handleCanvasFocus}
         tabIndex={0}
       >
-        {/* 画布标题 */}
-        <CanvasHeader elementsCount={data.dsl.body.elements.length} />
-
         {/* 会话界面 */}
         <div
           style={{
@@ -154,10 +237,8 @@ const Canvas: React.FC<CanvasProps> = ({
             onCanvasFocus={onCanvasFocus || (() => {})}
             isCardSelected={!!isCardSelected}
             onCardSelect={handleCardSelect}
-            username="用户名"
-            cardStyles={data.dsl.body.styles}
+            username="user name"
             headerData={(() => {
-              // 检查header是否存在且有有效内容
               if (
                 !data.dsl.header ||
                 (!data.dsl.header.title?.content &&

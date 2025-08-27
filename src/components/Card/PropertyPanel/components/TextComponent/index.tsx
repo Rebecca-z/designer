@@ -2,6 +2,11 @@
 import { ColorPicker, Form, Input, InputNumber, Segmented, Select } from 'antd';
 import React, { useCallback, useMemo } from 'react';
 
+import {
+  AlignCenterOutlined,
+  AlignLeftOutlined,
+  AlignRightOutlined,
+} from '@ant-design/icons';
 import { textComponentStateManager } from '../../../Variable/utils/index';
 import VariableBinding from '../../../Variable/VariableList';
 import {
@@ -10,8 +15,9 @@ import {
   PropertyPanel,
   SettingSection,
 } from '../common';
+import LayoutItem from '../common/LayoutItem';
 import { useComponentName } from '../hooks/useComponentName';
-import { CONTENT_MODES, TEXT_ALIGN_OPTIONS } from './constans';
+import { CONTENT_MODES } from './constans';
 import type { TextComponentProps, TextData } from './type';
 
 const { TextArea } = Input;
@@ -163,15 +169,6 @@ const TextComponent: React.FC<TextComponentProps> = ({
     },
     [selectedComponent, textContentMode, onUpdateComponent],
   );
-
-  // 文本对齐选项 - 使用useMemo优化
-  const textAlignOptions = useMemo(() => {
-    return TEXT_ALIGN_OPTIONS.map(({ value, label }) => (
-      <Option key={value} value={value}>
-        {label}
-      </Option>
-    ));
-  }, []);
 
   // 组件内容 - 使用useMemo优化
   const componentTabContent = useMemo(
@@ -361,46 +358,71 @@ const TextComponent: React.FC<TextComponentProps> = ({
         </SettingSection>
 
         <SettingSection title="🎨 样式设置" form={form}>
-          <Form.Item label="字体大小">
-            <InputNumber
+          <LayoutItem title="文字大小" style={{ marginBottom: '14px' }}>
+            <Select
               value={textInfo.style.fontSize}
               onChange={(value) => handleValueChange('fontSize', value)}
-              min={12}
-              max={48}
-              style={{ width: '100%' }}
+              style={{ width: '150px' }}
               placeholder="设置字体大小"
-              addonAfter="px"
-            />
-          </Form.Item>
-          <Form.Item label="文字颜色">
+            >
+              {[12, 14, 16].map((size) => (
+                <Option key={size} value={size}>
+                  {size === 12 ? '辅助' : size === 14 ? '正文' : '标题'} ({size}
+                  px)
+                </Option>
+              ))}
+            </Select>
+          </LayoutItem>
+
+          <LayoutItem title="文字颜色" style={{ marginBottom: '14px' }}>
             <ColorPicker
               value={textInfo.style.color}
               onChange={(color) =>
                 handleValueChange('color', color.toHexString())
               }
               showText
-              style={{ width: '100%' }}
+              style={{ width: '150px' }}
             />
-          </Form.Item>
-          <Form.Item label="文字对齐">
-            <Select
+          </LayoutItem>
+
+          <LayoutItem title="文字对齐" style={{ marginBottom: '14px' }}>
+            <Segmented
               value={textInfo.style.textAlign}
-              onChange={(value) => handleValueChange('textAlign', value)}
-              style={{ width: '100%' }}
-            >
-              {textAlignOptions}
-            </Select>
-          </Form.Item>
-          <Form.Item label="最大行数">
+              size="large"
+              options={[
+                {
+                  value: 'left',
+                  label: <AlignLeftOutlined />,
+                },
+                {
+                  value: 'center',
+                  label: <AlignCenterOutlined />,
+                },
+                {
+                  value: 'right',
+                  label: <AlignRightOutlined />,
+                },
+              ]}
+              onChange={(value) =>
+                handleValueChange('textAlign', value as string)
+              }
+            />
+          </LayoutItem>
+
+          <LayoutItem title="最大行数">
             <InputNumber
               value={textInfo.style.numberOfLines}
-              onChange={(value) => handleValueChange('numberOfLines', value)}
+              onChange={(value) => {
+                if (value) {
+                  handleValueChange('numberOfLines', value);
+                }
+              }}
               min={1}
               max={10}
-              style={{ width: '100%' }}
-              placeholder="不限制"
+              style={{ width: '150px' }}
+              placeholder=""
             />
-          </Form.Item>
+          </LayoutItem>
         </SettingSection>
       </>
     ),
@@ -411,7 +433,6 @@ const TextComponent: React.FC<TextComponentProps> = ({
       updateTextContent,
       variableBindingValue,
       textInfo,
-      textAlignOptions,
       form,
       selectedComponent,
       getBoundVariableName,

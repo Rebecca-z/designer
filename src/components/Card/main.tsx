@@ -1018,30 +1018,20 @@ const CardDesigner: React.FC = () => {
   return (
     <DndProvider backend={HTML5Backend}>
       <div
-        style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}
+        style={{
+          height: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          background: '#e4e8ed',
+        }}
       >
         {/* 顶部工具栏 - 显示卡片ID */}
         <Toolbar
           cardId={safeCardData.id}
-          device={device}
-          onDeviceChange={setDevice}
-          canUndo={history.canUndo}
-          canRedo={history.canRedo}
-          onUndo={history.undo}
-          onRedo={history.redo}
-          selectedComponent={selection.selectedComponent}
-          clipboard={clipboard.clipboard}
-          onCopy={handleCopy}
-          onPaste={handlePaste}
           onSave={handleSaveConfig}
-          onLoad={handleLoadConfig}
           onImport={config.importConfig}
           onExport={() => config.exportConfig(safeCardData)}
           onPreview={() => setPreviewVisible(true)}
-          elementsCount={safeCardData.dsl.body.elements.length}
-          variablesCount={variables.length}
-          canvasFocused={focus.canvasFocused}
-          verticalSpacing={safeCardData.dsl.body.vertical_spacing}
         />
 
         {/* 主体区域 */}
@@ -1059,6 +1049,15 @@ const CardDesigner: React.FC = () => {
             <div data-canvas="true" style={{ height: '100%' }}>
               <Canvas
                 data={safeCardData}
+                onDeviceChange={setDevice}
+                canUndo={history.canUndo}
+                canRedo={history.canRedo}
+                onUndo={history.undo}
+                onRedo={history.redo}
+                selectedComponent={selection.selectedComponent}
+                clipboard={clipboard.clipboard}
+                onCopy={handleCopy}
+                onPaste={handlePaste}
                 onDataChange={(newData) => history.updateData(newData as any)}
                 selectedPath={selection.selectedPath}
                 hoveredPath={outline.hoveredPath}
