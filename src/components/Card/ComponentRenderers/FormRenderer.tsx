@@ -620,8 +620,8 @@ export const SelectRenderer: React.FC<BaseRendererProps> = (props) => {
         }}
         onSelect={() => {}}
         onChange={() => {}}
-        onDropdownVisibleChange={() => true}
-        dropdownRender={(menu) => (
+        onOpenChange={() => true}
+        popupRender={(menu) => (
           <div
             style={{ pointerEvents: 'none' }}
             onClick={(e) => {
@@ -790,8 +790,8 @@ export const MultiSelectRenderer: React.FC<BaseRendererProps> = (props) => {
         onSelect={() => {}}
         onChange={() => {}}
         onDeselect={() => {}}
-        onDropdownVisibleChange={() => true}
-        dropdownRender={(menu) => (
+        onOpenChange={() => true}
+        popupRender={(menu) => (
           <div
             style={{ pointerEvents: 'none' }}
             onClick={(e) => {

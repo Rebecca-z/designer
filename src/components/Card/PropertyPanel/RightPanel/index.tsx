@@ -518,7 +518,7 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
                       <Text strong>{getVariableDisplayName(variable)}</Text>
                       <br />
                       <Text type="secondary" style={{ fontSize: '12px' }}>
-                        {getVariableType(variable.type)}
+                        {getVariableType(variable.originalType)}
                       </Text>
                     </div>
                     <div>

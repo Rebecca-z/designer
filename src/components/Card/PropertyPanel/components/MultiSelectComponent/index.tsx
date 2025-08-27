@@ -512,7 +512,7 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
             {optionTextMode === 'variable' && (
               <VariableBinding
                 key={`text-${editingOptionIndex}-${popoverRefreshKey}`}
-                componentType="plain_text"
+                componentType="input"
                 variables={getTextAndNumberVariables()}
                 getFilteredVariables={() => getTextAndNumberVariables()}
                 value={
@@ -596,7 +596,7 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
                 onAddVariable={() => {
                   isVariableOperatingRef.current = true;
                   setIsAddingVariable(true);
-                  handleAddVariableFromComponent('multi_select_static_text');
+                  handleAddVariableFromComponent('input');
                   // 添加变量后重置状态
                   setTimeout(() => {
                     setIsAddingVariable(false);
@@ -670,7 +670,7 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
             {optionValueMode === 'variable' && (
               <VariableBinding
                 key={`value-${editingOptionIndex}-${popoverRefreshKey}`}
-                componentType="plain_text"
+                componentType="input"
                 variables={getTextAndNumberVariables()}
                 getFilteredVariables={() => getTextAndNumberVariables()}
                 value={
@@ -749,7 +749,7 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
                 onAddVariable={() => {
                   isVariableOperatingRef.current = true;
                   setIsAddingVariable(true);
-                  handleAddVariableFromComponent('multi_select_static_text');
+                  handleAddVariableFromComponent('input');
                   // 添加变量后重置状态
                   setTimeout(() => {
                     setIsAddingVariable(false);

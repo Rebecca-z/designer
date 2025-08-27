@@ -103,19 +103,19 @@ const VariableBinding: React.FC<VariableBindingProps> = ({
       case 'img_combination':
         return '图片数组';
       case 'input':
-        return '文本/整数'; // 输入框组件支持文本和整数类型
+        return '文本/整数';
       case 'select_static':
-        return '文本/整数'; // 下拉单选组件的选项文本和回传参数支持文本和整数类型
+        return '选项数组';
       case 'select_static_array':
         return '选项数组'; // 下拉单选组件的绑定变量模式支持选项数组类型
       case 'multi_select_static':
-        return '文本/整数'; // 下拉多选组件的选项文本和回传参数支持文本和整数类型
+        return '选项数组'; // 下拉多选组件的选项文本和回传参数支持文本和整数类型
       case 'multi_select_static_array':
         return '选项数组'; // 下拉多选组件的绑定变量模式支持选项数组类型
       case 'multi_select_static_text':
         return '文本/整数'; // 下拉多选组件的选项文本和回传参数支持文本和整数类型
       case 'button':
-        return '文本'; // 按钮组件使用文本类型
+        return '文本';
       default:
         return '变量';
     }
@@ -125,13 +125,6 @@ const VariableBinding: React.FC<VariableBindingProps> = ({
 
   // 处理变量选择改变
   const handleVariableChange = (selectedValue: string | undefined) => {
-    console.log('🔗 变量绑定组件 - 变量选择改变:', {
-      componentType,
-      selectedValue,
-      previousValue: value,
-      timestamp: new Date().toISOString(),
-    });
-
     if (onChange) {
       onChange(selectedValue);
     }
@@ -215,17 +208,6 @@ const VariableBinding: React.FC<VariableBindingProps> = ({
               }
 
               const displayName = getVariableDisplayName(variable);
-
-              console.log('🔗 VariableBinding 选项设置:', {
-                variable,
-                variableName,
-                displayName,
-                isStandardFormat: !!(
-                  variable.name &&
-                  (variable.type !== undefined || variable.value !== undefined)
-                ),
-                timestamp: new Date().toISOString(),
-              });
 
               return (
                 <Select.Option
