@@ -166,9 +166,7 @@ export const InputRenderer: React.FC<BaseRendererProps> = (props) => {
         disabled={isPreview}
         className="canvas-input-preview"
         style={{
-          width: '200px',
-          minWidth: '200px',
-          maxWidth: '200px',
+          width: '300px',
           border: '1px solid #d9d9d9',
           outline: 'none',
           boxShadow: 'none',
@@ -481,9 +479,7 @@ export const SelectRenderer: React.FC<BaseRendererProps> = (props) => {
         value={null}
         defaultValue={null}
         style={{
-          width: '200px',
-          minWidth: '200px',
-          maxWidth: '200px',
+          width: '300px',
           flex: 'none',
         }}
         onSelect={() => {}}
@@ -651,9 +647,7 @@ export const MultiSelectRenderer: React.FC<BaseRendererProps> = (props) => {
         value={[]}
         defaultValue={[]}
         style={{
-          width: '200px',
-          minWidth: '200px',
-          maxWidth: '200px',
+          width: '300px',
           flex: 'none',
         }}
         onSelect={() => {}}

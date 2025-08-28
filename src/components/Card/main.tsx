@@ -5,14 +5,6 @@ import { ComponentPanel, PropertyPanel } from './PropertyPanel';
 import Toolbar from './ToolBar';
 import { migrateTitleStyle } from './utils';
 
-// 验证所有导入都存在
-console.log('✅ ComponentPanel 导入成功:', typeof ComponentPanel);
-console.log('✅ PropertyPanel 导入成功:', typeof PropertyPanel);
-console.log('✅ Canvas 导入成功:', typeof Canvas);
-console.log('✅ DEFAULT_CARD_DATA 导入成功:', typeof DEFAULT_CARD_DATA);
-console.log('✅ Modals 导入成功:', typeof Modals);
-console.log('✅ Toolbar 导入成功:', typeof Toolbar);
-
 import { Modal } from 'antd';
 import React, { useEffect, useState } from 'react';
 import { DndProvider } from 'react-dnd';
@@ -152,7 +144,7 @@ const CardDesigner: React.FC = () => {
               : typeof variableValue === 'object'
               ? 'object'
               : 'text',
-          value: variableValue,
+          value: variableValue as string,
           originalType:
             cachedOriginalType ||
             (typeof variableValue === 'number' ? 'number' : 'text'),
@@ -751,22 +743,18 @@ const CardDesigner: React.FC = () => {
         style: titleComponent.style || 'blue',
       };
 
-      console.log('🔄 转换后的 header 数据格式:', headerData);
       newData.dsl.header = headerData;
 
       history.updateData(newData as any);
-      console.log('✅ Header 标题组件更新成功');
       return;
     }
 
     // 检查是否是卡片选中状态
     if (path && path.length === 2 && path[0] === 'dsl' && path[1] === 'body') {
-      console.log('🎯 卡片选中状态，不处理组件更新');
       return;
     }
 
     if (!path || path.length < 4) {
-      console.warn('无效的选中路径:', path);
       return;
     }
 
@@ -851,14 +839,6 @@ const CardDesigner: React.FC = () => {
               column.elements = [];
             }
             column.elements[componentIndex] = updatedComponent;
-            console.log('🎯 更新表单内分栏容器内的组件:', {
-              formIndex,
-              columnSetIndex,
-              columnIndex,
-              componentIndex,
-              componentTag: updatedComponent.tag,
-              componentId: updatedComponent.id,
-            });
           }
         }
       }
@@ -868,7 +848,10 @@ const CardDesigner: React.FC = () => {
     }
 
     history.updateData(newData as any);
-    selection.selectComponent(updatedComponent, selection.selectedPath);
+    selection.selectComponent(
+      updatedComponent,
+      selection?.selectedPath as (string | number)[],
+    );
   };
 
   // 处理卡片属性更新
@@ -966,7 +949,6 @@ const CardDesigner: React.FC = () => {
 
   const handleLoadConfig = () => {
     config.loadConfig(history.updateData, (newVariables: Variable[]) => {
-      // 将Variable[]转换为VariableItem[]
       const variableItems: VariableItem[] = newVariables.map((variable) => ({
         [variable.name]: variable.value,
       }));
@@ -1019,7 +1001,7 @@ const CardDesigner: React.FC = () => {
     <DndProvider backend={HTML5Backend}>
       <div
         style={{
-          height: '100vh',
+          height: '100%',
           display: 'flex',
           flexDirection: 'column',
           background: '#e4e8ed',
@@ -1078,7 +1060,7 @@ const CardDesigner: React.FC = () => {
               selectedPath={selection.selectedPath}
               onUpdateComponent={handleUpdateSelectedComponent}
               onUpdateCard={handleUpdateCard}
-              variables={variables as VariableItem[]}
+              variables={variables as any[]}
               onUpdateVariables={handleUpdateVariables}
               cardVerticalSpacing={safeCardData.dsl.body.vertical_spacing}
               headerData={safeCardData.dsl.header} // 只有当header存在时才传递

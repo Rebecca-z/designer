@@ -12,9 +12,6 @@ import { ImgCombinationComponentProps } from '../types';
 import styles from './index.less';
 
 const { Text } = Typography;
-
-// const DEFAULT_IMAGE_URL = 'demo.png';
-
 // 布局图标组件
 const LayoutIcon: React.FC<{
   type:
@@ -587,10 +584,6 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                             ? (latestComponent as any).img_list
                             : [];
 
-                          console.log(
-                            `🔄 布局切换 - 从 ${currentImageList.length} 张调整到 ${requiredImageCount} 张`,
-                          );
-
                           // 创建匹配布局要求数量的图片列表
                           const newImageList = [];
                           for (let i = 0; i < requiredImageCount; i++) {
@@ -614,8 +607,12 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                               } else {
                                 // 替换无效图片为默认图片
                                 const defaultImg = {
-                                  img_url: 'demo.png',
-                                  i18n_img_url: { 'en-US': 'demo.png' },
+                                  img_url:
+                                    'https://lyra2-dev.rongcloud.net:8443/fcs-file/rcbw/demo.png',
+                                  i18n_img_url: {
+                                    'en-US':
+                                      'https://lyra2-dev.rongcloud.net:8443/fcs-file/rcbw/demo.png',
+                                  },
                                 };
                                 newImageList.push(defaultImg);
                                 console.log(
@@ -625,8 +622,12 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                             } else {
                               // 添加新的默认图片
                               const defaultImg = {
-                                img_url: 'demo.png',
-                                i18n_img_url: { 'en-US': 'demo.png' },
+                                img_url:
+                                  'https://lyra2-dev.rongcloud.net:8443/fcs-file/rcbw/demo.png',
+                                i18n_img_url: {
+                                  'en-US':
+                                    'https://lyra2-dev.rongcloud.net:8443/fcs-file/rcbw/demo.png',
+                                },
                               };
                               newImageList.push(defaultImg);
                               console.log(`➕ 新增图片 ${i + 1} 为默认图片`);

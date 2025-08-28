@@ -220,42 +220,6 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
           data-component-wrapper="true"
           data-component-id={component.id}
         >
-          {/* 操作按钮 - 表单容器下的分栏容器不显示，所有分栏容器都由自己的渲染器处理 */}
-          {/* {isCurrentSelected &&
-            !isPreview &&
-            !isFormColumnSet &&
-            component.tag !== 'column_set' && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '-2px',
-                  right: '-2px',
-                  zIndex: 10,
-                }}
-              >
-                <Dropdown
-                  menu={contextMenu}
-                  trigger={['click']}
-                  placement="bottomRight"
-                >
-                  <Button
-                    size="small"
-                    type="primary"
-                    icon={<MoreOutlined />}
-                    style={{
-                      borderRadius: '50%',
-                      width: '24px',
-                      height: '24px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: 'red',
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </Dropdown>
-              </div>
-            )} */}
           {/* 选中状态指示器 */}
           {isCurrentSelected && !isPreview && (
             <div

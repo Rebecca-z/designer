@@ -157,16 +157,6 @@ export interface ImageCombinationComponent extends ComponentBase {
     | 'triple' // 三图模式（左1右2）
     | 'bisect' // 等分双列模式（根据图片数量自适应：2图、4图、6图）
     | 'trisect'; // 等分三列模式（根据图片数量自适应：3图、6图、9图）
-  // layoutType已废弃：不再保存到全局数据，改为基于combination_mode和img_list.length动态推断
-  // layoutType?:
-  //   | 'double' // 双图模式（左小右大）
-  //   | 'triple' // 三图模式（左1右2）
-  //   | 'bisect_2' // 双列一行（2图）
-  //   | 'bisect_4' // 双列两行（4图）
-  //   | 'bisect_6' // 双列三行（6图）
-  //   | 'trisect_3' // 三列一行（3图）
-  //   | 'trisect_6' // 三列两行（6图）
-  //   | 'trisect_9'; // 三列三行（9图）
   img_list:
     | Array<{
         img_url: string;

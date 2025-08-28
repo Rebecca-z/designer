@@ -79,18 +79,17 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
       const updatedComponent = { ...selectedComponent };
 
       if (value === 'specify') {
-        // 切换到指定模式：恢复缓存的图片URL或使用默认值
         imageComponentStateManager.setBoundVariableName(
           selectedComponent.id,
           undefined,
         );
-
         const userEditedUrl = imageComponentStateManager.getUserEditedUrl(
           selectedComponent.id,
         );
-        const finalUrl = userEditedUrl || 'demo.png';
+        const finalUrl =
+          userEditedUrl ||
+          'https://lyra2-dev.rongcloud.net:8443/fcs-file/rcbw/demo.png';
 
-        console.warn('finalUrl', finalUrl);
         (updatedComponent as any).img_url = finalUrl;
         (updatedComponent as any).i18n_img_url = {
           'en-US': finalUrl,
@@ -143,7 +142,8 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
       imageComponentStateManager.setUserEditedUrl(selectedComponent.id, url);
 
       const updatedComponent = { ...selectedComponent };
-      const finalUrl = url || 'demo.png';
+      const finalUrl =
+        url || 'https://lyra2-dev.rongcloud.net:8443/fcs-file/rcbw/demo.png';
       (updatedComponent as any).img_url = finalUrl;
       (updatedComponent as any).i18n_img_url = {
         'en-US': finalUrl,
@@ -154,58 +154,55 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
   );
 
   // 处理变量绑定变化 - 使用useCallback优化
-  const handleVariableBindingChange = useCallback(
-    (value: string | undefined) => {
-      if (!selectedComponent) return;
+  const handleVariableBindingChange = (value: string | undefined) => {
+    if (!selectedComponent) return;
 
-      if (value) {
-        // 绑定变量时
-        setLastBoundVariables((prev) => ({
-          ...prev,
-          [selectedComponent.id]: value,
-        }));
+    if (value) {
+      // 绑定变量时
+      setLastBoundVariables((prev) => ({
+        ...prev,
+        [selectedComponent.id]: value,
+      }));
 
-        imageComponentStateManager.setBoundVariableName(
-          selectedComponent.id,
-          value,
-        );
+      imageComponentStateManager.setBoundVariableName(
+        selectedComponent.id,
+        value,
+      );
 
-        const updatedComponent = { ...selectedComponent };
-        const variablePlaceholder = `\${${value}}`;
-        (updatedComponent as any).img_url = variablePlaceholder;
-        (updatedComponent as any).i18n_img_url = {
-          'en-US': variablePlaceholder,
-        };
-        onUpdateComponent(updatedComponent);
-      } else {
-        // 清除变量绑定时：恢复到指定模式的缓存内容
-        imageComponentStateManager.setBoundVariableName(
-          selectedComponent.id,
-          undefined,
-        );
+      const updatedComponent = { ...selectedComponent };
+      const variablePlaceholder = `\${${value}}`;
+      (updatedComponent as any).img_url = variablePlaceholder;
+      (updatedComponent as any).i18n_img_url = {
+        'en-US': variablePlaceholder,
+      };
+      onUpdateComponent(updatedComponent);
+    } else {
+      imageComponentStateManager.setBoundVariableName(
+        selectedComponent.id,
+        undefined,
+      );
+      const updatedComponent = { ...selectedComponent };
+      // 恢复缓存的指定模式内容
+      const userEditedUrl = imageComponentStateManager.getUserEditedUrl(
+        selectedComponent.id,
+      );
+      const finalUrl =
+        userEditedUrl ||
+        'https://lyra2-dev.rongcloud.net:8443/fcs-file/rcbw/demo.png';
 
-        const updatedComponent = { ...selectedComponent };
-        // 恢复缓存的指定模式内容
-        const userEditedUrl = imageComponentStateManager.getUserEditedUrl(
-          selectedComponent.id,
-        );
-        const finalUrl = userEditedUrl || 'demo.png';
+      (updatedComponent as any).img_url = finalUrl;
+      (updatedComponent as any).i18n_img_url = {
+        'en-US': finalUrl,
+      };
 
-        (updatedComponent as any).img_url = finalUrl;
-        (updatedComponent as any).i18n_img_url = {
-          'en-US': finalUrl,
-        };
-
-        onUpdateComponent(updatedComponent);
-      }
-    },
-    [
-      selectedComponent,
-      setLastBoundVariables,
-      imageContentMode,
-      onUpdateComponent,
-    ],
-  );
+      setLastBoundVariables((prev) => {
+        const newState = { ...prev };
+        delete newState[selectedComponent.id];
+        return newState;
+      });
+      onUpdateComponent(updatedComponent);
+    }
+  };
 
   // 渲染图片设置内容 - 使用useMemo优化
   const imageSettingsContent = useMemo(

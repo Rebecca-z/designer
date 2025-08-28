@@ -18,28 +18,6 @@ const ImgRenderer: React.FC<{ item: any; style?: React.CSSProperties }> = (
       {hasValidImage && !isPlaceholder ? (
         <img
           src={item.img_url}
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            const parent = target.parentElement;
-            if (parent) {
-              parent.innerHTML = `
-                <div style="
-                  width: 100%;
-                  height: 120px;
-                  background-color: #f5f5f5;
-                  border: 1px dashed #d9d9d9;
-                  border-radius: 6px;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  color: #999;
-                  font-size: 14px;
-                ">
-                  🖼️ 图片加载失败
-                </div>
-              `;
-            }
-          }}
           style={{
             width: '100%',
             height: '100%',
@@ -96,13 +74,9 @@ export const ImageRenderer: React.FC<BaseRendererProps> = (props) => {
         const userEditedUrl = imageComponentStateManager.getUserEditedUrl(
           comp.id,
         );
-        const fallbackUrl = userEditedUrl || 'demo.png';
-        console.log('🔄 图片URL为空，回退到指定模式:', {
-          componentId: comp.id,
-          rawUrl,
-          userEditedUrl,
-          fallbackUrl,
-        });
+        const fallbackUrl =
+          userEditedUrl ||
+          'https://lyra2-dev.rongcloud.net:8443/fcs-file/rcbw/demo.png';
         return fallbackUrl;
       }
 
@@ -111,17 +85,14 @@ export const ImageRenderer: React.FC<BaseRendererProps> = (props) => {
 
       // 如果变量替换后仍然是变量占位符格式（说明变量不存在或为空），回退到指定模式内容
       if (processedUrl === rawUrl && rawUrl.includes('${')) {
-        console.log('🔄 图片变量未找到，回退到指定模式:', {
-          componentId: comp.id,
-          rawUrl,
-          processedUrl,
-        });
         const userEditedUrl = imageComponentStateManager.getUserEditedUrl(
           comp.id,
         );
-        return userEditedUrl || 'demo.png';
+        return (
+          userEditedUrl ||
+          'https://lyra2-dev.rongcloud.net:8443/fcs-file/rcbw/demo.png'
+        );
       }
-
       return processedUrl;
     } catch (error) {
       console.error('获取图片URL时出错:', error);
@@ -129,7 +100,10 @@ export const ImageRenderer: React.FC<BaseRendererProps> = (props) => {
       const userEditedUrl = imageComponentStateManager.getUserEditedUrl(
         comp.id,
       );
-      return userEditedUrl || 'demo.png';
+      return (
+        userEditedUrl ||
+        'https://lyra2-dev.rongcloud.net:8443/fcs-file/rcbw/demo.png'
+      );
     }
   };
 
@@ -387,8 +361,12 @@ export const ImageCombinationRenderer: React.FC<BaseRendererProps> = (
             } else {
               // 添加默认图片
               finalImages.push({
-                img_url: 'demo.png',
-                i18n_img_url: { 'en-US': 'demo.png' },
+                img_url:
+                  'https://lyra2-dev.rongcloud.net:8443/fcs-file/rcbw/demo.png',
+                i18n_img_url: {
+                  'en-US':
+                    'https://lyra2-dev.rongcloud.net:8443/fcs-file/rcbw/demo.png',
+                },
                 isPlaceholder: false,
               });
               console.log(`➕ 指定模式添加默认图片 ${i + 1}`);
@@ -863,22 +841,6 @@ export const ImageCombinationRenderer: React.FC<BaseRendererProps> = (
           </div>
         );
     }
-
-    // 如果没有匹配的布局或图片数量不足，显示默认布局
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        {images
-          .slice(0, Math.min(imageCount, 3))
-          .map((img: any, index: number) => (
-            <div key={index}>
-              <ImgRenderer
-                item={img}
-                style={{ height: '200px', width: '100%' }}
-              />
-            </div>
-          ))}
-      </div>
-    );
   };
 
   const imageCombinationElement = (

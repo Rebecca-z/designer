@@ -4,10 +4,20 @@ import {
   CopyOutlined,
   EyeOutlined,
   ImportOutlined,
+  LeftOutlined,
   MoreOutlined,
 } from '@ant-design/icons';
-import { Button, Dropdown, Space, Tooltip, Typography, message } from 'antd';
+import {
+  Button,
+  Dropdown,
+  message,
+  Modal,
+  Space,
+  Tooltip,
+  Typography,
+} from 'antd';
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const { Text } = Typography;
 
@@ -28,6 +38,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
   onExport,
   onPreview,
 }) => {
+  const navigate = useNavigate();
+
   // 复制卡片ID
   const copyCardId = async () => {
     try {
@@ -51,11 +63,21 @@ const Toolbar: React.FC<ToolbarProps> = ({
 
   const handleSave = () => {
     // onSave();
+    message.success('保存成功');
   };
 
   const handlePublish = () => {
     // 发布逻辑
-    // message.success('发布成功');
+    Modal.confirm({
+      title: '确认发布吗?',
+      onOk: () => {
+        message.success('发布成功');
+      },
+    });
+  };
+
+  const handleBack = () => {
+    navigate(`/application/card`);
   };
 
   const contextMenu = {
@@ -95,6 +117,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
       }}
     >
       <Space>
+        <LeftOutlined style={{ cursor: 'pointer' }} onClick={handleBack} />
         {/* 卡片ID显示 */}
         <div
           style={{

@@ -935,9 +935,11 @@ export const createDefaultComponent = (type: string): ComponentType => {
         id: generateId(),
         tag: 'img',
         name: `Img_${generateId()}`,
-        img_url: '/demo.png',
+        img_url:
+          'https://open.feishu.cn/open-apis/block-kit/image/img_v2_9dd98485-2900-4d65-ada9-e31d1408dcfg',
         i18n_img_url: {
-          'en-US': '/demo.png',
+          'en-US':
+            'https://open.feishu.cn/open-apis/block-kit/image/img_v2_9dd98485-2900-4d65-ada9-e31d1408dcfg',
         },
         style: {
           crop_mode: 'default',
@@ -952,21 +954,27 @@ export const createDefaultComponent = (type: string): ComponentType => {
         combination_mode: 'triple',
         img_list: [
           {
-            img_url: 'demo.png',
+            img_url:
+              'https://lyra2-dev.rongcloud.net:8443/fcs-file/rcbw/demo.png',
             i18n_img_url: {
-              'en-US': 'demo.png',
+              'en-US':
+                'https://lyra2-dev.rongcloud.net:8443/fcs-file/rcbw/demo.png',
             },
           },
           {
-            img_url: 'demo.png',
+            img_url:
+              'https://lyra2-dev.rongcloud.net:8443/fcs-file/rcbw/demo.png',
             i18n_img_url: {
-              'en-US': 'demo.png',
+              'en-US':
+                'https://lyra2-dev.rongcloud.net:8443/fcs-file/rcbw/demo.png',
             },
           },
           {
-            img_url: 'demo.png',
+            img_url:
+              'https://lyra2-dev.rongcloud.net:8443/fcs-file/rcbw/demo.png',
             i18n_img_url: {
-              'en-US': 'demo.png',
+              'en-US':
+                'https://lyra2-dev.rongcloud.net:8443/fcs-file/rcbw/demo.png',
             },
           },
         ],
