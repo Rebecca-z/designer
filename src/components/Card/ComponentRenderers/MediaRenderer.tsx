@@ -186,6 +186,7 @@ export const ImageRenderer: React.FC<BaseRendererProps> = (props) => {
       selectedPath={props.selectedPath}
       onCanvasFocus={props.onCanvasFocus}
       onClearSelection={props.onClearSelection}
+      onDelete={props.onDelete}
     >
       {imageElement}
     </DraggableWrapper>

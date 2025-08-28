@@ -196,6 +196,7 @@ const ComponentRendererCore: React.FC<ComponentRendererCoreProps> = (props) => {
           selectedPath={selectedPath}
           onCanvasFocus={onCanvasFocus}
           onClearSelection={onClearSelection}
+          onDelete={props.onDelete}
         >
           {unknownContent}
         </DraggableWrapper>

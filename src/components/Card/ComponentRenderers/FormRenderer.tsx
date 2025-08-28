@@ -1,6 +1,5 @@
 // 表单组件渲染器 - Input, Button, Select, MultiSelect
-import { CopyOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons';
-import { Button, Dropdown, Input, Select } from 'antd';
+import { Button, Input, Select } from 'antd';
 import React from 'react';
 import { replaceVariables } from '../utils';
 import {
@@ -303,80 +302,6 @@ export const ButtonRenderer: React.FC<BaseRendererProps> = (props) => {
     }
   };
 
-  // 检查当前按钮是否被选中
-  const isCurrentSelected =
-    props.selectedPath &&
-    props.path &&
-    JSON.stringify(props.selectedPath) === JSON.stringify(props.path);
-
-  // 检查是否为提交按钮
-  const isSubmitButton = comp.form_action_type === 'submit';
-
-  // 检查按钮位置类型
-  const getButtonLocation = () => {
-    if (!props.path) return 'unknown';
-
-    const path = props.path;
-
-    // 根节点按钮: ['dsl', 'body', 'elements', buttonIndex]
-    if (
-      path.length === 4 &&
-      path[0] === 'dsl' &&
-      path[1] === 'body' &&
-      path[2] === 'elements'
-    ) {
-      return 'root';
-    }
-
-    // 表单容器下的按钮: ['dsl', 'body', 'elements', formIndex, 'elements', buttonIndex]
-    if (
-      path.length === 6 &&
-      path[0] === 'dsl' &&
-      path[1] === 'body' &&
-      path[2] === 'elements' &&
-      path[4] === 'elements'
-    ) {
-      return 'form';
-    }
-
-    // 表单容器分栏下的按钮: ['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', buttonIndex]
-    if (
-      path.length === 10 &&
-      path[0] === 'dsl' &&
-      path[1] === 'body' &&
-      path[2] === 'elements' &&
-      path[4] === 'elements' &&
-      path[6] === 'columns' &&
-      path[8] === 'elements'
-    ) {
-      return 'form-column';
-    }
-
-    return 'other';
-  };
-
-  const buttonLocation = getButtonLocation();
-
-  // 确定是否应该显示操作菜单
-  const shouldShowOperationMenu = () => {
-    // 提交按钮永远不显示操作菜单
-    if (isSubmitButton) {
-      return false;
-    }
-
-    // 根节点按钮显示操作菜单
-    if (buttonLocation === 'root') {
-      return true;
-    }
-
-    // 表单容器下的非提交按钮显示操作菜单
-    if (buttonLocation === 'form' || buttonLocation === 'form-column') {
-      return true;
-    }
-
-    return false;
-  };
-
   const buttonElement = (
     <div
       style={{
@@ -413,64 +338,6 @@ export const ButtonRenderer: React.FC<BaseRendererProps> = (props) => {
       >
         {buttonText}
       </Button>
-
-      {/* 操作菜单 - 根据位置和类型决定是否显示，样式与文本组件保持一致 */}
-      {isCurrentSelected && !isPreview && shouldShowOperationMenu() && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '-2px',
-            right: '-2px',
-            zIndex: 10,
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Dropdown
-            menu={{
-              items: [
-                {
-                  key: 'copy',
-                  icon: <CopyOutlined />,
-                  label: '复制组件',
-                  onClick: () => {
-                    if (props.onCopy) {
-                      props.onCopy(component);
-                    }
-                  },
-                },
-                {
-                  key: 'delete',
-                  icon: <DeleteOutlined />,
-                  label: '删除组件',
-                  onClick: () => {
-                    if (props.onDelete && props.path) {
-                      props.onDelete(props.path);
-                    }
-                  },
-                  danger: true,
-                },
-              ],
-            }}
-            trigger={['click']}
-            placement="bottomRight"
-          >
-            <Button
-              size="small"
-              type="primary"
-              icon={<MoreOutlined />}
-              style={{
-                borderRadius: '50%',
-                width: '24px',
-                height: '24px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              onClick={(e) => e.stopPropagation()}
-            />
-          </Dropdown>
-        </div>
-      )}
     </div>
   );
 
@@ -486,6 +353,7 @@ export const ButtonRenderer: React.FC<BaseRendererProps> = (props) => {
       selectedPath={props.selectedPath}
       onCanvasFocus={props.onCanvasFocus}
       onClearSelection={props.onClearSelection}
+      onDelete={props.onDelete}
     >
       {buttonElement}
     </DraggableWrapper>
@@ -654,6 +522,7 @@ export const SelectRenderer: React.FC<BaseRendererProps> = (props) => {
       selectedPath={props.selectedPath}
       onCanvasFocus={props.onCanvasFocus}
       onClearSelection={props.onClearSelection}
+      onDelete={props.onDelete}
     >
       {selectElement}
     </DraggableWrapper>
@@ -824,6 +693,7 @@ export const MultiSelectRenderer: React.FC<BaseRendererProps> = (props) => {
       selectedPath={props.selectedPath}
       onCanvasFocus={props.onCanvasFocus}
       onClearSelection={props.onClearSelection}
+      onDelete={props.onDelete}
     >
       {multiSelectElement}
     </DraggableWrapper>

@@ -727,7 +727,6 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
               </Button>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <Tooltip title="编辑事件">
-                  {' '}
                   <EditOutlined
                     style={{
                       fontSize: '14px',

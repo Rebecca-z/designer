@@ -67,6 +67,9 @@ const DraggableWrapper: React.FC<DraggableWrapperProps> = ({
     isSameContainer: boolean;
   } | null>(null);
 
+  const isSubmitButton =
+    component.tag === 'button' && component?.form_action_type === 'submit';
+
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 拖拽源配置
@@ -468,7 +471,7 @@ const DraggableWrapper: React.FC<DraggableWrapperProps> = ({
         />
       )}
 
-      {isCurrentSelected && (
+      {isCurrentSelected && !isSubmitButton && (
         <Dropdown
           menu={contextMenu}
           trigger={['click']}

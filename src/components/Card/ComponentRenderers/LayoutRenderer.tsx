@@ -89,6 +89,7 @@ export const HrRenderer: React.FC<BaseRendererProps> = (props) => {
       selectedPath={props.selectedPath}
       onCanvasFocus={props.onCanvasFocus}
       onClearSelection={props.onClearSelection}
+      onDelete={props.onDelete}
     >
       {hrElement}
     </DraggableWrapper>
@@ -219,6 +220,7 @@ export const TitleRenderer: React.FC<BaseRendererProps> = (props) => {
       selectedPath={props.selectedPath}
       onCanvasFocus={props.onCanvasFocus}
       onClearSelection={props.onClearSelection}
+      onDelete={props.onDelete}
     >
       {titleElement}
     </DraggableWrapper>

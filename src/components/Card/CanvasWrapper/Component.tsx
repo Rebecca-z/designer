@@ -221,7 +221,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
           data-component-id={component.id}
         >
           {/* 操作按钮 - 表单容器下的分栏容器不显示，所有分栏容器都由自己的渲染器处理 */}
-          {isCurrentSelected &&
+          {/* {isCurrentSelected &&
             !isPreview &&
             !isFormColumnSet &&
             component.tag !== 'column_set' && (
@@ -249,12 +249,13 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
+                      backgroundColor: 'red',
                     }}
                     onClick={(e) => e.stopPropagation()}
                   />
                 </Dropdown>
               </div>
-            )}
+            )} */}
           {/* 选中状态指示器 */}
           {isCurrentSelected && !isPreview && (
             <div
@@ -349,40 +350,37 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
         data-component-id={component.id}
       >
         {/* 组件操作按钮 - 表单容器下的分栏容器和按钮组件不显示（按钮组件有自己的操作菜单） */}
-        {isCurrentSelected &&
-          !isPreview &&
-          !isFormColumnSet &&
-          component.tag !== 'button' && (
-            <div
-              style={{
-                position: 'absolute',
-                top: '-2px',
-                right: '-2px',
-                zIndex: 10,
-              }}
+        {isCurrentSelected && !isPreview && !isFormColumnSet && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '-2px',
+              right: '-2px',
+              zIndex: 10,
+            }}
+          >
+            <Dropdown
+              menu={contextMenu}
+              trigger={['click']}
+              placement="bottomRight"
             >
-              <Dropdown
-                menu={contextMenu}
-                trigger={['click']}
-                placement="bottomRight"
-              >
-                <Button
-                  size="small"
-                  type="primary"
-                  icon={<MoreOutlined />}
-                  style={{
-                    borderRadius: '50%',
-                    width: '24px',
-                    height: '24px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </Dropdown>
-            </div>
-          )}
+              <Button
+                size="small"
+                type="primary"
+                icon={<MoreOutlined />}
+                style={{
+                  borderRadius: '50%',
+                  width: '24px',
+                  height: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </Dropdown>
+          </div>
+        )}
         {/* 选中状态指示器 */}
         {isCurrentSelected && !isPreview && (
           <div

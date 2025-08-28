@@ -212,14 +212,14 @@ export const PlainTextRenderer: React.FC<BaseRendererProps> = (props) => {
       color: style.color || '#333',
       textAlign: style.textAlign || 'left',
       padding: `${verticalSpacing / 2}px 0`,
-      wordWrap: 'break-word',
+      wordWrap: 'break-word' as const,
       whiteSpace: 'pre-wrap',
-      // 处理最大行数
+      // Handle maximum number of lines
       ...(style.numberOfLines && style.numberOfLines > 0
         ? {
             display: '-webkit-box',
             WebkitLineClamp: style.numberOfLines,
-            WebkitBoxOrient: 'vertical',
+            WebkitBoxOrient: 'vertical' as const,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
           }
@@ -241,6 +241,7 @@ export const PlainTextRenderer: React.FC<BaseRendererProps> = (props) => {
       selectedPath={props.selectedPath}
       onCanvasFocus={props.onCanvasFocus}
       onClearSelection={props.onClearSelection}
+      onDelete={props.onDelete}
     >
       {textElement}
     </DraggableWrapper>
@@ -405,7 +406,7 @@ export const RichTextRenderer: React.FC<BaseRendererProps> = (props) => {
 
     return {
       padding: `${verticalSpacing / 2}px 0`,
-      wordWrap: 'break-word',
+      wordWrap: 'break-word' as const,
       fontSize: style.fontSize ? `${style.fontSize}px` : '14px',
       color: style.color || '#333',
       textAlign: style.textAlign || 'left',
@@ -414,7 +415,7 @@ export const RichTextRenderer: React.FC<BaseRendererProps> = (props) => {
         ? {
             display: '-webkit-box',
             WebkitLineClamp: style.numberOfLines,
-            WebkitBoxOrient: 'vertical',
+            WebkitBoxOrient: 'vertical' as const,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
           }
@@ -445,6 +446,7 @@ export const RichTextRenderer: React.FC<BaseRendererProps> = (props) => {
       selectedPath={props.selectedPath}
       onCanvasFocus={props.onCanvasFocus}
       onClearSelection={props.onClearSelection}
+      onDelete={props.onDelete}
     >
       {richTextElement}
     </DraggableWrapper>
