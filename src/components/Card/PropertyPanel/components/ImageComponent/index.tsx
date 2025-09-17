@@ -1,10 +1,12 @@
 // ImageComponent 编辑界面 - 图片组件
 import { Form, Input, Segmented, Select, Space } from 'antd';
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import ImageUpload from '../../../ImageUpload';
+import { VariableItem } from '../../../type';
+import { resolveVariable } from '../../../utils';
 import { imageComponentStateManager } from '../../../Variable/utils/index';
 import VariableBinding from '../../../Variable/VariableList';
-import { ComponentContent, PropertyPanel, SettingSection } from '../common';
+import { PropertyPanel, SettingSection } from '../common';
 import ComponentNameInput from '../common/ComponentNameInput';
 import { useComponentName } from '../hooks/useComponentName';
 import { ImageComponentProps } from '../types';
@@ -73,40 +75,52 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
   // 处理模式切换 - 使用useCallback优化
   const handleModeChange = useCallback(
     (value: 'specify' | 'variable') => {
+      // 切换模式
       setImageContentMode(value);
 
       const updatedComponent = { ...selectedComponent };
 
       if (value === 'specify') {
-        // 切换到指定模式：显示用户编辑的图片
+        imageComponentStateManager.setBoundVariableName(
+          selectedComponent.id,
+          undefined,
+        );
         const userEditedUrl = imageComponentStateManager.getUserEditedUrl(
           selectedComponent.id,
         );
-        (updatedComponent as any).img_url = userEditedUrl || '';
+        const finalUrl =
+          userEditedUrl ||
+          'https://lyra2-dev.rongcloud.net:8443/fcs-file/rcbw/demo.png';
+
+        (updatedComponent as any).img_url = finalUrl;
         (updatedComponent as any).i18n_img_url = {
-          'en-US': userEditedUrl || '',
+          'en-US': finalUrl,
         };
       } else {
-        // 切换到变量模式：检查是否有绑定的变量
-        const boundVariable = imageComponentStateManager.getBoundVariableName(
-          selectedComponent.id,
-        );
+        // 切换到变量模式：恢复记住的变量或清空绑定
         const rememberedVariable = lastBoundVariables[selectedComponent.id];
 
-        if (boundVariable || rememberedVariable) {
-          const variableName = boundVariable || rememberedVariable;
-          const variablePlaceholder = `\${${variableName}}`;
+        if (rememberedVariable) {
+          // 恢复记住的变量绑定
+          imageComponentStateManager.setBoundVariableName(
+            selectedComponent.id,
+            rememberedVariable,
+          );
+          const variablePlaceholder = `\${${rememberedVariable}}`;
           (updatedComponent as any).img_url = variablePlaceholder;
           (updatedComponent as any).i18n_img_url = {
             'en-US': variablePlaceholder,
           };
         } else {
-          const userEditedUrl = imageComponentStateManager.getUserEditedUrl(
+          // 没有记住的变量，清空绑定，但保持在变量模式下显示指定内容作为预览
+          imageComponentStateManager.setBoundVariableName(
             selectedComponent.id,
+            undefined,
           );
-          (updatedComponent as any).img_url = userEditedUrl || '';
+          // 设置为空字符串，让渲染器回退到指定模式内容
+          (updatedComponent as any).img_url = '';
           (updatedComponent as any).i18n_img_url = {
-            'en-US': userEditedUrl || '',
+            'en-US': '',
           };
         }
       }
@@ -115,8 +129,10 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
     },
     [
       selectedComponent,
+      imageContentMode,
       setImageContentMode,
       lastBoundVariables,
+      setLastBoundVariables,
       onUpdateComponent,
     ],
   );
@@ -124,12 +140,15 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
   // 处理图片URL变化 - 使用useCallback优化
   const handleImageUrlChange = useCallback(
     (url: string) => {
+      // 缓存用户编辑的URL
       imageComponentStateManager.setUserEditedUrl(selectedComponent.id, url);
 
       const updatedComponent = { ...selectedComponent };
-      (updatedComponent as any).img_url = url;
+      const finalUrl =
+        url || 'https://lyra2-dev.rongcloud.net:8443/fcs-file/rcbw/demo.png';
+      (updatedComponent as any).img_url = finalUrl;
       (updatedComponent as any).i18n_img_url = {
-        'en-US': url,
+        'en-US': finalUrl,
       };
       onUpdateComponent(updatedComponent);
     },
@@ -137,68 +156,81 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
   );
 
   // 处理变量绑定变化 - 使用useCallback优化
-  const handleVariableBindingChange = useCallback(
-    (value: string | undefined) => {
-      if (!selectedComponent) return;
+  const handleVariableBindingChange = (value: string | undefined) => {
+    if (!selectedComponent) return;
 
-      if (value) {
-        // 绑定变量时
-        setLastBoundVariables((prev) => ({
-          ...prev,
-          [selectedComponent.id]: value,
-        }));
+    if (value) {
+      // 绑定变量时
+      setLastBoundVariables((prev) => ({
+        ...prev,
+        [selectedComponent.id]: value,
+      }));
 
-        imageComponentStateManager.setBoundVariableName(
-          selectedComponent.id,
-          value,
-        );
+      imageComponentStateManager.setBoundVariableName(
+        selectedComponent.id,
+        value,
+      );
 
-        const updatedComponent = { ...selectedComponent };
-        const variablePlaceholder = `\${${value}}`;
-        (updatedComponent as any).img_url = variablePlaceholder;
-        (updatedComponent as any).i18n_img_url = {
-          'en-US': variablePlaceholder,
-        };
-        onUpdateComponent(updatedComponent);
-      } else {
-        // 清除变量绑定时
-        setLastBoundVariables((prev) => {
-          const newState = { ...prev };
-          delete newState[selectedComponent.id];
-          return newState;
-        });
+      const updatedComponent = { ...selectedComponent };
+      const variablePlaceholder = `\${${value}}`;
+      (updatedComponent as any).img_url = variablePlaceholder;
+      (updatedComponent as any).i18n_img_url = {
+        'en-US': variablePlaceholder,
+      };
+      onUpdateComponent(updatedComponent);
+    } else {
+      imageComponentStateManager.setBoundVariableName(
+        selectedComponent.id,
+        undefined,
+      );
+      const updatedComponent = { ...selectedComponent };
+      // 恢复缓存的指定模式内容
+      const userEditedUrl = imageComponentStateManager.getUserEditedUrl(
+        selectedComponent.id,
+      );
+      const finalUrl =
+        userEditedUrl ||
+        'https://lyra2-dev.rongcloud.net:8443/fcs-file/rcbw/demo.png';
 
-        imageComponentStateManager.setBoundVariableName(
-          selectedComponent.id,
-          '',
-        );
+      (updatedComponent as any).img_url = finalUrl;
+      (updatedComponent as any).i18n_img_url = {
+        'en-US': finalUrl,
+      };
 
-        const updatedComponent = { ...selectedComponent };
-        if (imageContentMode === 'variable') {
-          const userEditedUrl = imageComponentStateManager.getUserEditedUrl(
-            selectedComponent.id,
-          );
-          (updatedComponent as any).img_url = userEditedUrl || '';
-          (updatedComponent as any).i18n_img_url = {
-            'en-US': userEditedUrl || '',
-          };
-        } else {
-          (updatedComponent as any).img_url = '';
-          (updatedComponent as any).i18n_img_url = {
-            'en-US': '',
-          };
-        }
+      setLastBoundVariables((prev) => {
+        const newState = { ...prev };
+        delete newState[selectedComponent.id];
+        return newState;
+      });
+      onUpdateComponent(updatedComponent);
+    }
+  };
 
-        onUpdateComponent(updatedComponent);
-      }
+  // 替换对象中的所有变量引用
+  const replaceVariablesInObject = (
+    obj: {
+      imgUrl: string;
+      cropMode: 'default' | 'top' | 'center';
+      userEditedUrl: string;
     },
-    [
-      selectedComponent,
-      setLastBoundVariables,
-      imageContentMode,
-      onUpdateComponent,
-    ],
-  );
+    variables: VariableItem[],
+  ) => {
+    let val = false;
+    for (const key in obj) {
+      if (typeof obj[key as keyof typeof obj] === 'string') {
+        const res = resolveVariable(obj[key as keyof typeof obj], variables);
+        if (res && res?.value) {
+          val = true;
+          handleModeChange('variable');
+          handleVariableBindingChange(res.name);
+        }
+      }
+    }
+    if (!val && obj?.imgUrl) {
+      handleModeChange('specify');
+      handleImageUrlChange(obj.imgUrl);
+    }
+  };
 
   // 渲染图片设置内容 - 使用useMemo优化
   const imageSettingsContent = useMemo(
@@ -226,7 +258,7 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
                   style={{ borderRadius: '0 6px 6px 0' }}
                   buttonProps={{
                     type: 'primary',
-                    children: '上传',
+                    // children: '上传',
                     title: '上传图片',
                   }}
                 />
@@ -247,7 +279,6 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
                 onAddVariable={() => handleAddVariableFromComponent('img')}
                 placeholder="请选择图片变量"
                 label="绑定变量"
-                addVariableText="新建图片变量"
               />
             </div>
           )}
@@ -273,7 +304,7 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
   // 渲染组件设置内容 - 使用useMemo优化
   const componentSettingsContent = useMemo(
     () => (
-      <SettingSection title="🏷️ 组件设置" useForm={false}>
+      <SettingSection title="🏷️ 组件设置" form={form}>
         <ComponentNameInput
           prefix="Img_"
           suffix={componentNameInfo.suffix}
@@ -318,15 +349,17 @@ const ImageComponent: React.FC<ImageComponentProps> = ({
     [componentSettingsContent, imageSettingsContent, styleSettingsContent],
   );
 
+  useEffect(() => {
+    // 初始化回显变量
+    replaceVariablesInObject(imageInfo, variables);
+  }, []);
+
   return (
     <PropertyPanel
       activeTab={topLevelTab}
       onTabChange={setTopLevelTab}
-      componentContent={
-        <ComponentContent componentName="图片">
-          {componentTabContent}
-        </ComponentContent>
-      }
+      componentContent={componentTabContent}
+      eventTabDisabled={true}
       variableManagementComponent={<VariableManagementPanel />}
       isVariableModalVisible={isVariableModalVisible}
       handleVariableModalOk={handleVariableModalOk || (() => {})}

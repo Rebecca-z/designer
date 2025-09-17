@@ -20,6 +20,8 @@ const RichTextStyles: React.FC<RichTextStylesProps> = ({
           font-size: 14px;
           line-height: 1.6;
           color: #333;
+          width: 100%;
+          word-break: break-word;
         }
         
         .rich-text-content h1 {
@@ -69,13 +71,43 @@ const RichTextStyles: React.FC<RichTextStylesProps> = ({
         }
         
         .rich-text-content ul,
-        .rich-text-content ol {
+        .rich-text-content ol,
+        .rich-text-content .rich-text-bullet-list,
+        .rich-text-content .rich-text-ordered-list {
           padding-left: 1.5em;
           margin: 0.5em 0;
+          list-style-position: outside;
         }
         
-        .rich-text-content li {
+        .rich-text-content ul,
+        .rich-text-content .rich-text-bullet-list {
+          list-style-type: disc;
+        }
+        
+        .rich-text-content ol,
+        .rich-text-content .rich-text-ordered-list {
+          list-style-type: decimal;
+        }
+        
+        .rich-text-content li,
+        .rich-text-content .rich-text-list-item {
           margin: 0.25em 0;
+          display: list-item;
+        }
+        
+        .rich-text-content li p,
+        .rich-text-content .rich-text-list-item p {
+          margin: 0;
+          display: inline;
+        }
+        
+        /* 确保列表项内的段落不会破坏列表结构 */
+        .rich-text-content .rich-text-list-item > p:first-child {
+          margin-top: 0;
+        }
+        
+        .rich-text-content .rich-text-list-item > p:last-child {
+          margin-bottom: 0;
         }
         
         /* 文本格式样式 */

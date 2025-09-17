@@ -4,7 +4,7 @@
 import { PlusOutlined } from '@ant-design/icons';
 import { Divider, Form, Select } from 'antd';
 import React from 'react';
-import { VariableItem } from '../../card-designer-types-updated';
+import { VariableItem } from '../../type';
 
 export interface VariableBindingProps {
   /** 当前绑定的变量名 */
@@ -64,34 +64,6 @@ const VariableBinding: React.FC<VariableBindingProps> = ({
   // 根据组件类型获取过滤后的变量列表
   const filteredVariables = getFilteredVariables(componentType);
 
-  // 根据组件类型生成默认的新建变量按钮文本
-  const getDefaultAddVariableText = () => {
-    switch (componentType) {
-      case 'plain_text':
-        return '新建变量';
-      case 'rich_text':
-        return '新建富文本变量';
-      case 'img':
-        return '新建变量';
-      case 'img_combination':
-        return '新建图片数组变量';
-      case 'input':
-        return '新建整数变量';
-      case 'select_static':
-        return '新建变量';
-      case 'select_static_array':
-      case 'multi_select_static':
-      case 'multi_select_static_array':
-        return '新建选项数组变量';
-      case 'multi_select_static_text':
-        return '新建变量';
-      case 'button':
-        return '新建变量';
-      default:
-        return '新建变量';
-    }
-  };
-
   const getTitleText = () => {
     switch (componentType) {
       case 'plain_text':
@@ -103,35 +75,28 @@ const VariableBinding: React.FC<VariableBindingProps> = ({
       case 'img_combination':
         return '图片数组';
       case 'input':
-        return '文本/整数'; // 输入框组件支持文本和整数类型
+        return '文本/整数';
       case 'select_static':
-        return '文本/整数'; // 下拉单选组件的选项文本和回传参数支持文本和整数类型
+        return '选项数组';
       case 'select_static_array':
         return '选项数组'; // 下拉单选组件的绑定变量模式支持选项数组类型
       case 'multi_select_static':
-        return '文本/整数'; // 下拉多选组件的选项文本和回传参数支持文本和整数类型
+        return '选项数组'; // 下拉多选组件的选项文本和回传参数支持文本和整数类型
       case 'multi_select_static_array':
         return '选项数组'; // 下拉多选组件的绑定变量模式支持选项数组类型
       case 'multi_select_static_text':
         return '文本/整数'; // 下拉多选组件的选项文本和回传参数支持文本和整数类型
       case 'button':
-        return '文本'; // 按钮组件使用文本类型
+        return '文本';
       default:
         return '变量';
     }
   };
 
-  const finalAddVariableText = addVariableText || getDefaultAddVariableText();
+  const finalAddVariableText = addVariableText || '新建变量';
 
   // 处理变量选择改变
   const handleVariableChange = (selectedValue: string | undefined) => {
-    console.log('🔗 变量绑定组件 - 变量选择改变:', {
-      componentType,
-      selectedValue,
-      previousValue: value,
-      timestamp: new Date().toISOString(),
-    });
-
     if (onChange) {
       onChange(selectedValue);
     }
@@ -215,17 +180,6 @@ const VariableBinding: React.FC<VariableBindingProps> = ({
               }
 
               const displayName = getVariableDisplayName(variable);
-
-              console.log('🔗 VariableBinding 选项设置:', {
-                variable,
-                variableName,
-                displayName,
-                isStandardFormat: !!(
-                  variable.name &&
-                  (variable.type !== undefined || variable.value !== undefined)
-                ),
-                timestamp: new Date().toISOString(),
-              });
 
               return (
                 <Select.Option

@@ -1,0 +1,51 @@
+export const THEME_CONFIG = {
+  blue: {
+    name: '蓝色主题',
+    backgroundColor: '#e6f7ff',
+    borderColor: '#91d5ff',
+    titleColor: '#1890ff',
+    subtitleColor: '#096dd9',
+  },
+  wathet: {
+    name: '浅蓝主题',
+    backgroundColor: '#f0f9ff',
+    borderColor: '#7dd3fc',
+    titleColor: '#0ea5e9',
+    subtitleColor: '#0284c7',
+  },
+  turquoise: {
+    name: '青绿主题',
+    backgroundColor: '#f0fdfa',
+    borderColor: '#5eead4',
+    titleColor: '#14b8a6',
+    subtitleColor: '#0f766e',
+  },
+  green: {
+    name: '绿色主题',
+    backgroundColor: '#f0fdf4',
+    borderColor: '#86efac',
+    titleColor: '#22c55e',
+    subtitleColor: '#15803d',
+  },
+  yellow: {
+    name: '黄色主题',
+    backgroundColor: '#fefce8',
+    borderColor: '#fde047',
+    titleColor: '#eab308',
+    subtitleColor: '#a16207',
+  },
+  orange: {
+    name: '橙色主题',
+    backgroundColor: '#fff7ed',
+    borderColor: '#fdba74',
+    titleColor: '#f97316',
+    subtitleColor: '#ea580c',
+  },
+  red: {
+    name: '红色主题',
+    backgroundColor: '#fef2f2',
+    borderColor: '#fca5a5',
+    titleColor: '#ef4444',
+    subtitleColor: '#dc2626',
+  },
+};

@@ -7,6 +7,7 @@ import {
   Popover,
   Segmented,
   Switch,
+  Tooltip,
   Typography,
 } from 'antd';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -15,12 +16,7 @@ import {
   multiSelectComponentStateManager,
   optionEditStateManager,
 } from '../../../Variable/utils/index';
-import {
-  ComponentContent,
-  ComponentNameInput,
-  PropertyPanel,
-  SettingSection,
-} from '../common';
+import { ComponentNameInput, PropertyPanel, SettingSection } from '../common';
 import { useComponentName } from '../hooks/useComponentName';
 import { MultiSelectComponentProps } from '../types';
 import { CONTENT_MODES, DEFAULT_OPTIONS } from './constans';
@@ -126,6 +122,40 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
     // 手动刷新机制：只在组件ID变化时刷新
     useEffect(() => {
       setRefreshKey((prev) => prev + 1);
+      // 初始化回显激活变量
+      const currentOptions = (selectedComponent as any).options;
+      if (
+        typeof currentOptions === 'string' &&
+        currentOptions?.startsWith('${') &&
+        currentOptions?.endsWith('}')
+      ) {
+        const variableName = currentOptions.slice(2, -1);
+        const currentBinding =
+          multiSelectComponentStateManager.getBoundVariableName(
+            selectedComponent.id,
+          );
+
+        if (currentBinding !== variableName) {
+          multiSelectComponentStateManager.setBoundVariableName(
+            selectedComponent.id,
+            variableName,
+          );
+
+          if (multiSelectOptionsMode !== 'variable') {
+            setMultiSelectOptionsMode('variable');
+          }
+        }
+      } else if (Array.isArray(currentOptions)) {
+        const content = multiSelectComponentStateManager.getUserEditedOptions(
+          selectedComponent.id,
+        );
+        // 只有在状态管理器中有保存的选项时才使用，否则保持组件的原始选项
+        if (content && content.length > 0) {
+          handleValueChange('options', content);
+        }
+        // 更新保存的选项内容，但不覆盖组件的原始选项
+        setSavedSpecifyOptions(currentOptions);
+      }
     }, [selectedComponent.id]);
 
     // 初始化时保存指定模式的选项内容
@@ -395,10 +425,6 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
       const variable = variables.find((v) => {
         if (typeof v === 'object' && v !== null) {
           const keys = Object.keys(v as Record<string, any>);
-
-          // 检查两种变量格式：
-          // 1. 画布格式: {var_123: '22222'}
-          // 2. 属性面板格式: {name: 'var_123', type: 'text', value: '22222', ...}
           const hasVariableName = keys.includes(variableName);
           const isStandardFormat =
             keys.includes('name') && (v as any).name === variableName;
@@ -512,7 +538,7 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
             {optionTextMode === 'variable' && (
               <VariableBinding
                 key={`text-${editingOptionIndex}-${popoverRefreshKey}`}
-                componentType="plain_text"
+                componentType="input"
                 variables={getTextAndNumberVariables()}
                 getFilteredVariables={() => getTextAndNumberVariables()}
                 value={
@@ -596,7 +622,7 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
                 onAddVariable={() => {
                   isVariableOperatingRef.current = true;
                   setIsAddingVariable(true);
-                  handleAddVariableFromComponent('multi_select_static_text');
+                  handleAddVariableFromComponent('input');
                   // 添加变量后重置状态
                   setTimeout(() => {
                     setIsAddingVariable(false);
@@ -670,7 +696,7 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
             {optionValueMode === 'variable' && (
               <VariableBinding
                 key={`value-${editingOptionIndex}-${popoverRefreshKey}`}
-                componentType="plain_text"
+                componentType="input"
                 variables={getTextAndNumberVariables()}
                 getFilteredVariables={() => getTextAndNumberVariables()}
                 value={
@@ -749,7 +775,7 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
                 onAddVariable={() => {
                   isVariableOperatingRef.current = true;
                   setIsAddingVariable(true);
-                  handleAddVariableFromComponent('multi_select_static_text');
+                  handleAddVariableFromComponent('input');
                   // 添加变量后重置状态
                   setTimeout(() => {
                     setIsAddingVariable(false);
@@ -774,6 +800,82 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
         </Form>
       </div>
     );
+
+    // 切换选项来源数据
+    const handleMultiSelectListChange = (newMode: 'specify' | 'variable') => {
+      setMultiSelectOptionsMode(newMode);
+      const currentOptions = (selectedComponent as any).options;
+
+      // 在切换模式前，保存当前模式的内容
+      if (
+        multiSelectOptionsMode === 'specify' &&
+        Array.isArray(currentOptions)
+      ) {
+        // 从指定模式切换出去时，保存当前的选项内容
+        setSavedSpecifyOptions(currentOptions);
+      }
+
+      // 记住当前状态
+      if (newMode === 'variable') {
+        const currentContent = (selectedComponent as any).options || [];
+        multiSelectComponentStateManager.setUserEditedOptions(
+          selectedComponent.id,
+          currentContent,
+        );
+      } else if (newMode === 'specify') {
+        const boundVariable =
+          multiSelectComponentStateManager.getBoundVariableName(
+            selectedComponent.id,
+          );
+        if (boundVariable) {
+          setLastBoundVariables((prev) => ({
+            ...prev,
+            [`${selectedComponent.id}_list`]: boundVariable,
+          }));
+        }
+      }
+
+      // 处理模式切换时的数据转换
+      if (newMode === 'variable') {
+        // 切换到绑定变量模式，检查是否有已绑定的变量
+        const boundVariable =
+          multiSelectComponentStateManager.getBoundVariableName(
+            selectedComponent.id,
+          );
+        const rememberedVariable =
+          lastBoundVariables[`${selectedComponent.id}_list`];
+        const variableName = boundVariable || rememberedVariable;
+
+        if (variableName) {
+          // 设置状态管理器中的绑定变量名
+          handleValueChange('options', `\${${variableName}}`);
+          multiSelectComponentStateManager.setBoundVariableName(
+            selectedComponent.id,
+            variableName,
+          );
+        }
+      } else if (newMode === 'specify') {
+        // 清除绑定的变量名
+        multiSelectComponentStateManager.setBoundVariableName(
+          selectedComponent.id,
+          '',
+        );
+
+        // 切换到指定模式，恢复之前保存的选项内容
+        if (typeof currentOptions === 'string') {
+          // 如果当前是变量绑定格式，恢复保存的指定模式选项
+          const content = multiSelectComponentStateManager.getUserEditedOptions(
+            selectedComponent.id,
+          );
+          handleValueChange('options', content || savedSpecifyOptions);
+        }
+      } else {
+        multiSelectComponentStateManager.setBoundVariableName(
+          selectedComponent.id,
+          '',
+        );
+      }
+    };
 
     // 组件属性内容
     const componentContent = useMemo(
@@ -809,46 +911,7 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
               <Segmented
                 value={multiSelectOptionsMode}
                 style={{ marginBottom: 16 }}
-                onChange={(value) => {
-                  const newMode = value as 'specify' | 'variable';
-                  const currentOptions = (selectedComponent as any).options;
-
-                  // 在切换模式前，保存当前模式的内容
-                  if (
-                    multiSelectOptionsMode === 'specify' &&
-                    Array.isArray(currentOptions)
-                  ) {
-                    // 从指定模式切换出去时，保存当前的选项内容
-                    setSavedSpecifyOptions(currentOptions);
-                  }
-
-                  setMultiSelectOptionsMode(newMode);
-
-                  // 处理模式切换时的数据转换
-                  if (selectedComponent) {
-                    if (newMode === 'variable') {
-                      // 切换到绑定变量模式，检查是否有已绑定的变量
-                      const boundVariable =
-                        multiSelectComponentStateManager.getBoundVariableName(
-                          selectedComponent.id,
-                        );
-                      const rememberedVariable =
-                        lastBoundVariables[selectedComponent.id];
-                      const variableName = boundVariable || rememberedVariable;
-
-                      if (variableName) {
-                        handleValueChange('options', `\${${variableName}}`);
-                      }
-                    } else if (newMode === 'specify') {
-                      // 切换到指定模式，恢复之前保存的选项内容
-                      if (typeof currentOptions === 'string') {
-                        // 如果当前是变量绑定格式，恢复保存的指定模式选项
-
-                        handleValueChange('options', savedSpecifyOptions);
-                      }
-                    }
-                  }
-                }}
+                onChange={handleMultiSelectListChange}
                 options={[...CONTENT_MODES]}
               />
 
@@ -917,36 +980,38 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
                           })()}
                         </Button>
                       </Popover>
-                      <Button
-                        type="text"
-                        size="small"
-                        danger
-                        icon={<DeleteOutlined />}
-                        onClick={() => {
-                          const newOptions = [
-                            ...(selectedComponent as any).options,
-                          ];
-                          newOptions.splice(index, 1);
-                          handleValueChange('options', newOptions);
+                      <Tooltip title="删除">
+                        <Button
+                          type="text"
+                          size="small"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={() => {
+                            const newOptions = [
+                              ...(selectedComponent as any).options,
+                            ];
+                            newOptions.splice(index, 1);
+                            handleValueChange('options', newOptions);
 
-                          // 如果当前是指定模式，更新保存的选项内容
-                          if (multiSelectOptionsMode === 'specify') {
-                            setSavedSpecifyOptions(newOptions);
+                            // 如果当前是指定模式，更新保存的选项内容
+                            if (multiSelectOptionsMode === 'specify') {
+                              setSavedSpecifyOptions(newOptions);
 
-                            // 同时保存到 multiSelectComponentStateManager
-                            const optionsForStateManager = newOptions.map(
-                              (option) => ({
-                                label: option.text?.content || '',
-                                value: option.value || '',
-                              }),
-                            );
-                            multiSelectComponentStateManager.setUserEditedOptions(
-                              selectedComponent.id,
-                              optionsForStateManager,
-                            );
-                          }
-                        }}
-                      />
+                              // 同时保存到 multiSelectComponentStateManager
+                              const optionsForStateManager = newOptions.map(
+                                (option) => ({
+                                  label: option.text?.content || '',
+                                  value: option.value || '',
+                                }),
+                              );
+                              multiSelectComponentStateManager.setUserEditedOptions(
+                                selectedComponent.id,
+                                optionsForStateManager,
+                              );
+                            }
+                          }}
+                        />
+                      </Tooltip>
                     </div>
                   ))}
                   <Button
@@ -1010,52 +1075,53 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
                     })()}
                     onChange={(value: string | undefined) => {
                       // 处理变量绑定逻辑
-                      if (selectedComponent) {
-                        if (value) {
-                          // 绑定变量
-                          multiSelectComponentStateManager.setBoundVariableName(
-                            selectedComponent.id,
-                            value,
-                          );
-                          setLastBoundVariables((prev) => ({
-                            ...prev,
-                            [selectedComponent.id]: value,
-                          }));
-                          handleValueChange('options', `\${${value}}`);
-                        } else {
-                          // 清空变量绑定，但保持在变量模式
-                          multiSelectComponentStateManager.setBoundVariableName(
-                            selectedComponent.id,
-                            '',
-                          );
+                      if (value) {
+                        // 绑定变量
+                        multiSelectComponentStateManager.setBoundVariableName(
+                          selectedComponent.id,
+                          value,
+                        );
+                        setLastBoundVariables((prev) => ({
+                          ...prev,
+                          [selectedComponent.id]: value,
+                        }));
+                        handleValueChange('options', `\${${value}}`);
+                      } else {
+                        // 清空变量绑定，但保持在变量模式
+                        multiSelectComponentStateManager.setBoundVariableName(
+                          selectedComponent.id,
+                          '',
+                        );
 
-                          // 清除lastBoundVariables中的记录
-                          setLastBoundVariables((prev) => {
-                            const newState = { ...prev };
-                            delete newState[selectedComponent.id];
-                            return newState;
-                          });
+                        // 清除lastBoundVariables中的记录
+                        setLastBoundVariables((prev) => {
+                          const newState = { ...prev };
+                          delete newState[selectedComponent.id];
+                          return newState;
+                        });
 
-                          // 保持在变量模式，不切换Segmented
-                          // 清空变量绑定后，恢复默认选项以便预览
-                          const defaultOptions = [
-                            {
-                              text: {
-                                content: '选项1',
-                                i18n_content: { 'en-US': 'Option 1' },
-                              },
-                              value: 'option1',
+                        // 保持在变量模式，不切换Segmented
+                        // 清空变量绑定后，恢复默认选项以便预览
+                        const defaultOptions = [
+                          {
+                            text: {
+                              content: '选项1',
+                              i18n_content: { 'en-US': 'Option 1' },
                             },
-                            {
-                              text: {
-                                content: '选项2',
-                                i18n_content: { 'en-US': 'Option 2' },
-                              },
-                              value: 'option2',
+                            value: 'option1',
+                          },
+                          {
+                            text: {
+                              content: '选项2',
+                              i18n_content: { 'en-US': 'Option 2' },
                             },
-                          ];
-                          handleValueChange('options', defaultOptions);
-                        }
+                            value: 'option2',
+                          },
+                        ];
+                        handleValueChange(
+                          'options',
+                          savedSpecifyOptions || defaultOptions,
+                        );
                       }
                     }}
                     getVariableDisplayName={getVariableDisplayName}
@@ -1110,12 +1176,8 @@ const MultiSelectComponent: React.FC<MultiSelectComponentProps> = React.memo(
       <PropertyPanel
         activeTab={topLevelTab}
         onTabChange={setTopLevelTab}
-        componentContent={
-          <ComponentContent componentName="下拉多选组件">
-            {componentContent}
-          </ComponentContent>
-        }
-        showEventTab={true}
+        componentContent={componentContent}
+        eventTabDisabled={true}
         variableManagementComponent={<VariableManagementPanel />}
         isVariableModalVisible={isVariableModalVisible}
         handleVariableModalOk={handleVariableModalOk || (() => {})}

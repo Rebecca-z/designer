@@ -1,9 +1,5 @@
 // PropertyPanel 工具函数
-
-import {
-  CardDesignData,
-  ComponentType,
-} from '../../card-designer-types-updated';
+import { CardDesignData, ComponentType } from '../../type';
 
 // 获取组件在数据结构中的实际路径和组件
 export const getComponentRealPath = (
@@ -35,7 +31,7 @@ export const getComponentRealPath = (
   ) {
     // 创建一个虚拟的标题组件用于属性编辑，包含所有必要的属性
     const titleComponent: ComponentType = {
-      id: 'title-component',
+      id: data.dsl.header?.id || 'title-componen',
       tag: 'title',
       title: data.dsl.header?.title?.content || '主标题',
       subtitle: data.dsl.header?.subtitle?.content || '副标题',

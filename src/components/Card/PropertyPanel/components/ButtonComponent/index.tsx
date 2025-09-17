@@ -1,13 +1,28 @@
 // ButtonComponent 编辑界面 - 按钮组件
-import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, Form, Input, Popover, Select, Switch, Typography } from 'antd';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
-  ComponentContent,
-  ComponentNameInput,
-  PropertyPanel,
-  SettingSection,
-} from '../common';
+  CheckOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  PlusOutlined,
+} from '@ant-design/icons';
+import {
+  Button,
+  Form,
+  Input,
+  Popover,
+  Select,
+  Switch,
+  Tooltip,
+  Typography,
+} from 'antd';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { ComponentNameInput, PropertyPanel, SettingSection } from '../common';
 import { BaseComponentProps } from '../types';
 import {
   BUTTON_COLORS,
@@ -47,6 +62,53 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
   const [currentEventId, setCurrentEventId] = useState<number | null>(null);
   const [formData, setFormData] = useState<FormData>(DEFAULT_FORM_DATA);
   const popoverAnchorRef = useRef<HTMLDivElement>(null);
+
+  // 初始化事件数据 - 从selectedComponent.behaviors加载
+  useEffect(() => {
+    const behaviors = (selectedComponent as any)?.behaviors;
+    console.log('🔧 初始化事件数据:', {
+      behaviors,
+      componentId: selectedComponent.id,
+    });
+
+    if (behaviors && Array.isArray(behaviors) && behaviors.length > 0) {
+      // 将behaviors转换为EventItem格式
+      const initialEvents: EventItem[] = behaviors.map(
+        (behavior: any, index: number) => {
+          let actionText = '请选择动作';
+
+          if (behavior.type === 'open_url') {
+            const url =
+              behavior.open_url?.multi_url?.pc_url ||
+              behavior.open_url?.multi_url?.url ||
+              '';
+            actionText = `打开链接: ${url || '未设置'}`;
+          } else if (behavior.type === 'callback') {
+            const callbackParams = behavior.callback || {};
+            const paramString =
+              Object.entries(callbackParams)
+                .map(([key, value]) => `${key}=${value}`)
+                .join(', ') || '无参数';
+            actionText = `请求回调: ${paramString}`;
+          }
+
+          return {
+            id: Date.now() + index, // 使用时间戳 + 索引确保唯一性
+            actionType: behavior.type === 'open_url' ? 'link' : 'callback',
+            actionText,
+            behavior,
+          };
+        },
+      );
+
+      console.log('🔧 初始化事件列表:', initialEvents);
+      setEvents(initialEvents);
+    } else {
+      // 如果没有behaviors或behaviors为空，清空事件列表
+      console.log('🔧 没有behaviors数据，清空事件列表');
+      setEvents([]);
+    }
+  }, [selectedComponent.id, (selectedComponent as any)?.behaviors]);
 
   // 检查按钮是否在表单内
   const isInForm = useMemo(() => {
@@ -247,15 +309,16 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
       // 请求回调配置
       const paramString =
         parameters
-          .map((param) => `${param.param1}=${param.param2}`)
-          .filter((param) => param !== '=')
+          .filter((param) => param.param1 && param.param1.trim() !== '') // 只处理param1有内容的参数
+          .map((param) => `${param.param1}=${param.param2 || ''}`)
           .join(', ') || '无参数';
 
       // 构建callback对象，直接使用param1:value1的结构
       const callbackParams: Record<string, string> = {};
       parameters.forEach((param) => {
-        if (param.param1 && param.param2) {
-          callbackParams[param.param1] = param.param2;
+        // 只要param1有内容就保存，param2可以为空
+        if (param.param1 && param.param1.trim() !== '') {
+          callbackParams[param.param1] = param.param2 || ''; // param2为空时使用空字符串
         }
       });
 
@@ -333,6 +396,7 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
             <>
               <Form.Item label="桌面端链接">
                 <Input
+                  maxLength={1000}
                   placeholder="请输入桌面端链接"
                   style={{ width: '100%' }}
                   value={formData.pcUrl}
@@ -343,6 +407,7 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
               </Form.Item>
               <Form.Item label="移动端链接">
                 <Input
+                  maxLength={1000}
                   placeholder="请输入移动端链接"
                   style={{ width: '100%' }}
                   value={formData.mobileUrl}
@@ -509,29 +574,105 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
               value={(selectedComponent as any).style?.color || 'blue'}
               onChange={(value) => handleValueChange('style.color', value)}
               style={{ width: '100%' }}
-            >
-              {BUTTON_COLORS.map(({ value, label, color }) => (
-                <Select.Option key={value} value={value}>
+              optionRender={(option) => {
+                const { value, label } = option;
+                const getButtonType = (colorValue: string) => {
+                  switch (colorValue) {
+                    case 'black':
+                      return '';
+                    case 'blue':
+                      return 'primary';
+                    case 'red':
+                      return 'primary';
+                    default:
+                      return 'default';
+                  }
+                };
+
+                const buttonType = getButtonType(value);
+                const isSelected =
+                  (selectedComponent as any).style?.color === value ||
+                  ((selectedComponent as any).style?.color === undefined &&
+                    value === 'blue');
+
+                return (
                   <div
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px',
+                      justifyContent: 'space-between',
+                      width: '100%',
                     }}
                   >
+                    <Button
+                      type={buttonType as any}
+                      danger={value === 'red'}
+                      style={{
+                        width: '80px',
+                        height: '28px',
+                        fontSize: '12px',
+                        pointerEvents: 'none',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {label}
+                    </Button>
+                    {isSelected && (
+                      <CheckOutlined
+                        style={{
+                          color: '#1890ff',
+                          fontSize: '14px',
+                          marginLeft: '8px',
+                        }}
+                      />
+                    )}
+                  </div>
+                );
+              }}
+            >
+              {BUTTON_COLORS.map(({ value, label }) => {
+                // 根据颜色值确定按钮类型
+                const getButtonType = (colorValue: string) => {
+                  switch (colorValue) {
+                    case 'black':
+                      return 'default'; // Antd默认按钮
+                    case 'blue':
+                      return 'primary'; // Antd主题按钮
+                    case 'red':
+                      return 'primary'; // 红色按钮，但会设置danger
+                    default:
+                      return 'default';
+                  }
+                };
+                const buttonType = getButtonType(value);
+                return (
+                  <Select.Option key={value} value={value}>
                     <div
                       style={{
-                        width: '16px',
-                        height: '16px',
-                        backgroundColor: color,
-                        border: '1px solid #d9d9d9',
-                        borderRadius: '2px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        width: '100%',
                       }}
-                    />
-                    {label}
-                  </div>
-                </Select.Option>
-              ))}
+                    >
+                      <Button
+                        type={buttonType as any}
+                        danger={value === 'red'}
+                        size="small"
+                        style={{
+                          width: '80px',
+                          height: '28px',
+                          fontSize: '12px',
+                          pointerEvents: 'none',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {label}
+                      </Button>
+                    </div>
+                  </Select.Option>
+                );
+              })}
             </Select>
           </Form.Item>
         </SettingSection>
@@ -717,30 +858,35 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
                 {event.actionText}
               </Button>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <EditOutlined
-                  style={{
-                    fontSize: '14px',
-                    color: '#1890ff',
-                    cursor: 'pointer',
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setCurrentEventId(event.id);
-                    loadEventData(event); // 使用公共函数回显数据
-                    setPopoverVisible(true);
-                  }}
-                />
-                <DeleteOutlined
-                  style={{
-                    fontSize: '14px',
-                    color: '#ff4d4f',
-                    cursor: 'pointer',
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteEvent(event.id);
-                  }}
-                />
+                <Tooltip title="编辑事件">
+                  <EditOutlined
+                    style={{
+                      fontSize: '14px',
+                      color: '#1890ff',
+                      cursor: 'pointer',
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurrentEventId(event.id);
+                      loadEventData(event); // 使用公共函数回显数据
+                      setPopoverVisible(true);
+                    }}
+                  />
+                </Tooltip>
+
+                <Tooltip title="删除事件">
+                  <DeleteOutlined
+                    style={{
+                      fontSize: '14px',
+                      color: '#ff4d4f',
+                      cursor: 'pointer',
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteEvent(event.id);
+                    }}
+                  />
+                </Tooltip>
               </div>
             </div>
           );
@@ -794,13 +940,9 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
     <PropertyPanel
       activeTab={topLevelTab}
       onTabChange={setTopLevelTab}
-      componentContent={
-        <ComponentContent componentName="按钮组件">
-          {componentContent}
-        </ComponentContent>
-      }
+      componentContent={componentContent}
       eventContent={eventContent}
-      showEventTab={true}
+      eventTabDisabled={false}
       variableManagementComponent={<VariableManagementPanel />}
       isVariableModalVisible={isVariableModalVisible}
       handleVariableModalOk={handleVariableModalOk || (() => {})}

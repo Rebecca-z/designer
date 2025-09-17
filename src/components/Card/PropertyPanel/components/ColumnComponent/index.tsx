@@ -24,6 +24,7 @@ const ColumnComponent: React.FC<BaseComponentProps> = ({
           <></>
         </ComponentContent>
       }
+      eventTabDisabled={true}
       variableManagementComponent={<VariableManagementPanel />}
       isVariableModalVisible={isVariableModalVisible}
       handleVariableModalOk={handleVariableModalOk || (() => {})}

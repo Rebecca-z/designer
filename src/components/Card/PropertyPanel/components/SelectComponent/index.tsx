@@ -7,6 +7,7 @@ import {
   Popover,
   Segmented,
   Switch,
+  Tooltip,
   Typography,
 } from 'antd';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -15,12 +16,7 @@ import {
   optionEditStateManager,
   selectComponentStateManager,
 } from '../../../Variable/utils/index';
-import {
-  ComponentContent,
-  ComponentNameInput,
-  PropertyPanel,
-  SettingSection,
-} from '../common';
+import { ComponentNameInput, PropertyPanel, SettingSection } from '../common';
 import { useComponentName } from '../hooks/useComponentName';
 import { SelectComponentProps } from '../types';
 
@@ -122,9 +118,41 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
       setRefreshKeyInternal(updater);
     };
 
-    // 手动刷新机制：只在组件ID变化时刷新
     useEffect(() => {
       setRefreshKey((prev) => prev + 1);
+      // 初始化回显激活变量
+      const currentOptions = (selectedComponent as any).options;
+      if (
+        typeof currentOptions === 'string' &&
+        currentOptions?.startsWith('${') &&
+        currentOptions?.endsWith('}')
+      ) {
+        const variableName = currentOptions.slice(2, -1);
+        const currentBinding = selectComponentStateManager.getBoundVariableName(
+          selectedComponent.id,
+        );
+
+        if (currentBinding !== variableName) {
+          selectComponentStateManager.setBoundVariableName(
+            selectedComponent.id,
+            variableName,
+          );
+
+          if (selectOptionsMode !== 'variable') {
+            setSelectOptionsMode('variable');
+          }
+        }
+      } else if (Array.isArray(currentOptions)) {
+        const content = selectComponentStateManager.getUserEditedOptions(
+          selectedComponent.id,
+        );
+        // 只有在状态管理器中有保存的选项时才使用，否则保持组件的原始选项
+        if (content && content.length > 0) {
+          handleValueChange('options', content);
+        }
+        // 更新保存的选项内容，但不覆盖组件的原始选项
+        setSavedSpecifyOptions(currentOptions);
+      }
     }, [selectedComponent.id]);
 
     // 初始化时保存指定模式的选项内容
@@ -158,6 +186,38 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
           selectedComponent.id,
           index,
         );
+
+      // 选项文本 初始化时做回显
+      if (
+        typeof textContent === 'string' &&
+        textContent?.startsWith('${') &&
+        textContent?.endsWith('}')
+      ) {
+        const variableName = textContent.slice(2, -1);
+        if (boundTextVariable !== variableName) {
+          optionEditStateManager.setBoundTextVariableName(
+            selectedComponent.id,
+            index,
+            variableName,
+          );
+        }
+      }
+
+      // 回传参数 初始化时做回显
+      if (
+        typeof valueContent === 'string' &&
+        valueContent?.startsWith('${') &&
+        valueContent?.endsWith('}')
+      ) {
+        const variableName = valueContent.slice(2, -1);
+        if (boundValueVariable !== variableName) {
+          optionEditStateManager.setBoundValueVariableName(
+            selectedComponent.id,
+            index,
+            variableName,
+          );
+        }
+      }
 
       // 获取用户编辑的内容
       const userEditedTextContent =
@@ -511,7 +571,7 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
             {optionTextMode === 'variable' && (
               <VariableBinding
                 key={`text-${editingOptionIndex}-${popoverRefreshKey}`}
-                componentType="plain_text"
+                componentType="input"
                 variables={getTextAndNumberVariables()}
                 getFilteredVariables={() => getTextAndNumberVariables()}
                 value={
@@ -596,7 +656,7 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
                 onAddVariable={() => {
                   isVariableOperatingRef.current = true;
                   setIsAddingVariable(true);
-                  handleAddVariableFromComponent('select_static_text');
+                  handleAddVariableFromComponent('input');
                   // 添加变量后重置状态
                   setTimeout(() => {
                     setIsAddingVariable(false);
@@ -670,7 +730,7 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
             {optionValueMode === 'variable' && (
               <VariableBinding
                 key={`value-${editingOptionIndex}-${popoverRefreshKey}`}
-                componentType="plain_text"
+                componentType="input"
                 variables={getTextAndNumberVariables()}
                 getFilteredVariables={() => getTextAndNumberVariables()}
                 value={
@@ -749,7 +809,7 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
                 onAddVariable={() => {
                   isVariableOperatingRef.current = true;
                   setIsAddingVariable(true);
-                  handleAddVariableFromComponent('select_static_text');
+                  handleAddVariableFromComponent('input');
                   // 添加变量后重置状态
                   setTimeout(() => {
                     setIsAddingVariable(false);
@@ -774,6 +834,76 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
         </Form>
       </div>
     );
+
+    // 列表数据切换
+    const handleSelectListChange = (newMode: 'specify' | 'variable') => {
+      setSelectOptionsMode(newMode);
+      const currentOptions = (selectedComponent as any).options;
+
+      // 在切换模式前，保存当前模式的内容
+      if (selectOptionsMode === 'specify' && Array.isArray(currentOptions)) {
+        // 从指定模式切换出去时，保存当前的选项内容
+        setSavedSpecifyOptions(currentOptions);
+      }
+
+      // 记住当前状态
+      if (newMode === 'variable') {
+        const currentContent = (selectedComponent as any).options || [];
+        selectComponentStateManager.setUserEditedOptions(
+          selectedComponent.id,
+          currentContent,
+        );
+      } else if (newMode === 'specify') {
+        const boundVariable = selectComponentStateManager.getBoundVariableName(
+          selectedComponent.id,
+        );
+        if (boundVariable) {
+          setLastBoundVariables((prev) => ({
+            ...prev,
+            [`${selectedComponent.id}_list`]: boundVariable,
+          }));
+        }
+      }
+
+      // 处理模式切换时的数据转换
+      if (newMode === 'variable') {
+        // 切换到绑定变量模式，检查是否有已绑定的变量
+        const boundVariable = selectComponentStateManager.getBoundVariableName(
+          selectedComponent.id,
+        );
+        const rememberedVariable =
+          lastBoundVariables[`${selectedComponent.id}_list`];
+        const variableName = boundVariable || rememberedVariable;
+
+        if (variableName) {
+          // 设置状态管理器中的绑定变量名
+          handleValueChange('options', `\${${variableName}}`);
+          selectComponentStateManager.setBoundVariableName(
+            selectedComponent.id,
+            variableName,
+          );
+        }
+      } else if (newMode === 'specify') {
+        // 清除绑定的变量名
+        selectComponentStateManager.setBoundVariableName(
+          selectedComponent.id,
+          '',
+        );
+
+        // 切换到指定模式，恢复之前保存的选项内容
+        if (typeof currentOptions === 'string') {
+          const content = selectComponentStateManager.getUserEditedOptions(
+            selectedComponent.id,
+          );
+          handleValueChange('options', savedSpecifyOptions || content);
+        }
+      } else {
+        selectComponentStateManager.setBoundVariableName(
+          selectedComponent.id,
+          '',
+        );
+      }
+    };
 
     // 组件属性内容
     const componentContent = useMemo(
@@ -809,44 +939,7 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
               <Segmented
                 value={selectOptionsMode}
                 style={{ marginBottom: 16 }}
-                onChange={(value) => {
-                  const newMode = value as 'specify' | 'variable';
-                  const currentOptions = (selectedComponent as any).options;
-
-                  // 在切换模式前，保存当前模式的内容
-                  if (
-                    selectOptionsMode === 'specify' &&
-                    Array.isArray(currentOptions)
-                  ) {
-                    // 从指定模式切换出去时，保存当前的选项内容
-                    setSavedSpecifyOptions(currentOptions);
-                  }
-
-                  setSelectOptionsMode(newMode);
-
-                  // 处理模式切换时的数据转换
-                  if (selectedComponent) {
-                    if (newMode === 'variable') {
-                      // 切换到绑定变量模式，检查是否有已绑定的变量
-                      const boundVariable =
-                        selectComponentStateManager.getBoundVariableName(
-                          selectedComponent.id,
-                        );
-                      const rememberedVariable =
-                        lastBoundVariables[selectedComponent.id];
-                      const variableName = boundVariable || rememberedVariable;
-
-                      if (variableName) {
-                        handleValueChange('options', `\${${variableName}}`);
-                      }
-                    } else if (newMode === 'specify') {
-                      // 切换到指定模式，恢复之前保存的选项内容
-                      if (typeof currentOptions === 'string') {
-                        handleValueChange('options', savedSpecifyOptions);
-                      }
-                    }
-                  }
-                }}
+                onChange={handleSelectListChange}
                 options={[
                   { label: '指定', value: 'specify' },
                   { label: '绑定变量', value: 'variable' },
@@ -918,36 +1011,38 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
                           })()}
                         </Button>
                       </Popover>
-                      <Button
-                        type="text"
-                        size="small"
-                        danger
-                        icon={<DeleteOutlined />}
-                        onClick={() => {
-                          const newOptions = [
-                            ...(selectedComponent as any).options,
-                          ];
-                          newOptions.splice(index, 1);
-                          handleValueChange('options', newOptions);
+                      <Tooltip title="删除">
+                        <Button
+                          type="text"
+                          size="small"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={() => {
+                            const newOptions = [
+                              ...(selectedComponent as any).options,
+                            ];
+                            newOptions.splice(index, 1);
+                            handleValueChange('options', newOptions);
 
-                          // 如果当前是指定模式，更新保存的选项内容
-                          if (selectOptionsMode === 'specify') {
-                            setSavedSpecifyOptions(newOptions);
+                            // 如果当前是指定模式，更新保存的选项内容
+                            if (selectOptionsMode === 'specify') {
+                              setSavedSpecifyOptions(newOptions);
 
-                            // 同时保存到 selectComponentStateManager
-                            const optionsForStateManager = newOptions.map(
-                              (option) => ({
-                                label: option.text?.content || '',
-                                value: option.value || '',
-                              }),
-                            );
-                            selectComponentStateManager.setUserEditedOptions(
-                              selectedComponent.id,
-                              optionsForStateManager,
-                            );
-                          }
-                        }}
-                      />
+                              // 同时保存到 selectComponentStateManager
+                              const optionsForStateManager = newOptions.map(
+                                (option) => ({
+                                  label: option.text?.content || '',
+                                  value: option.value || '',
+                                }),
+                              );
+                              selectComponentStateManager.setUserEditedOptions(
+                                selectedComponent.id,
+                                optionsForStateManager,
+                              );
+                            }
+                          }}
+                        />
+                      </Tooltip>
                     </div>
                   ))}
                   <Button
@@ -1010,53 +1105,47 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
                       return rememberedVariable || currentBoundVariable;
                     })()}
                     onChange={(value: string | undefined) => {
-                      // 处理变量绑定逻辑
-                      if (selectedComponent) {
-                        if (value) {
-                          // 绑定变量
-                          selectComponentStateManager.setBoundVariableName(
-                            selectedComponent.id,
-                            value,
-                          );
-                          setLastBoundVariables((prev) => ({
-                            ...prev,
-                            [selectedComponent.id]: value,
-                          }));
-                          handleValueChange('options', `\${${value}}`);
-                        } else {
-                          // 清空变量绑定，但保持在变量模式
-                          selectComponentStateManager.setBoundVariableName(
-                            selectedComponent.id,
-                            undefined,
-                          );
+                      if (value) {
+                        selectComponentStateManager.setBoundVariableName(
+                          selectedComponent.id,
+                          value,
+                        );
+                        setLastBoundVariables((prev) => ({
+                          ...prev,
+                          [selectedComponent.id]: value,
+                        }));
+                        handleValueChange('options', `\${${value}}`);
+                      } else {
+                        selectComponentStateManager.setBoundVariableName(
+                          selectedComponent.id,
+                          '',
+                        );
+                        setLastBoundVariables((prev) => {
+                          const newState = { ...prev };
+                          delete newState[selectedComponent.id];
+                          return newState;
+                        });
 
-                          // 清除lastBoundVariables中的记录
-                          setLastBoundVariables((prev) => {
-                            const newState = { ...prev };
-                            delete newState[selectedComponent.id];
-                            return newState;
-                          });
-
-                          // 保持在变量模式，不切换Segmented
-                          // 清空变量绑定后，恢复默认选项以便预览
-                          const defaultOptions = [
-                            {
-                              text: {
-                                content: '选项1',
-                                i18n_content: { 'en-US': 'Option 1' },
-                              },
-                              value: 'option1',
+                        const defaultOptions = [
+                          {
+                            text: {
+                              content: '选项1',
+                              i18n_content: { 'en-US': 'Option 1' },
                             },
-                            {
-                              text: {
-                                content: '选项2',
-                                i18n_content: { 'en-US': 'Option 2' },
-                              },
-                              value: 'option2',
+                            value: 'option1',
+                          },
+                          {
+                            text: {
+                              content: '选项2',
+                              i18n_content: { 'en-US': 'Option 2' },
                             },
-                          ];
-                          handleValueChange('options', defaultOptions);
-                        }
+                            value: 'option2',
+                          },
+                        ];
+                        handleValueChange(
+                          'options',
+                          savedSpecifyOptions || defaultOptions,
+                        );
                       }
                     }}
                     getVariableDisplayName={getVariableDisplayName}
@@ -1109,12 +1198,8 @@ const SelectComponent: React.FC<SelectComponentProps> = React.memo(
       <PropertyPanel
         activeTab={topLevelTab}
         onTabChange={setTopLevelTab}
-        componentContent={
-          <ComponentContent componentName="下拉单选组件">
-            {componentContent}
-          </ComponentContent>
-        }
-        showEventTab={true}
+        componentContent={componentContent}
+        eventTabDisabled={true}
         variableManagementComponent={<VariableManagementPanel />}
         isVariableModalVisible={isVariableModalVisible}
         handleVariableModalOk={handleVariableModalOk || (() => {})}

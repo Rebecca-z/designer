@@ -3,7 +3,7 @@
 import { BarsOutlined } from '@ant-design/icons';
 import { Space, Tree, Typography } from 'antd';
 import React, { useMemo } from 'react';
-import { COMPONENT_TYPES } from '../../card-designer-constants';
+import { COMPONENT_TYPES } from '../../constants';
 import { OutlineTreeProps } from '../types';
 
 const { Text } = Typography;
@@ -30,7 +30,6 @@ const OutlineTree: React.FC<OutlineTreeProps> = ({
 
     // 确保 elements 数组存在，如果不存在则初始化为空数组
     if (!data.dsl.body.elements) {
-      console.log('⚠️ OutlineTree: elements 不存在，初始化为空数组');
       data.dsl.body.elements = [];
     }
 
@@ -41,7 +40,6 @@ const OutlineTree: React.FC<OutlineTreeProps> = ({
     ): any => {
       const path = [...basePath, index];
       const config = COMPONENT_TYPES[component.tag];
-
       const node: any = {
         title: (
           <Space size={4}>
@@ -121,7 +119,7 @@ const OutlineTree: React.FC<OutlineTreeProps> = ({
         key: 'dsl-header',
         path: ['dsl', 'header'],
         component: {
-          id: 'title-component',
+          id: data.dsl.header?.id || 'title-componen',
           tag: 'title',
           style: data.dsl.header?.style || 'blue',
         },
@@ -213,27 +211,8 @@ const OutlineTree: React.FC<OutlineTreeProps> = ({
   return (
     <div style={{ padding: '16px' }}>
       <>
-        <div
-          style={{
-            marginBottom: '12px',
-            padding: '8px 12px',
-            backgroundColor: '#e6f7ff',
-            border: '1px solid #91d5ff',
-            borderRadius: '6px',
-          }}
-        >
-          <Text style={{ fontSize: '12px', color: '#0958d9' }}>
-            📊 卡片包含 {data?.dsl?.body?.elements?.length || 0} 个组件
-          </Text>
-        </div>
-
         {treeData.length > 0 ? (
           <>
-            <div
-              style={{ marginBottom: '8px', fontSize: '11px', color: '#666' }}
-            >
-              调试信息: 找到 {treeData.length} 个节点
-            </div>
             <Tree
               treeData={treeData}
               selectedKeys={selectedKeys}

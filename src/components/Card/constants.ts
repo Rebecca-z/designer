@@ -14,18 +14,13 @@ import {
   LineOutlined,
   MobileOutlined,
   SelectOutlined,
-  TabletOutlined,
 } from '@ant-design/icons';
-import {
-  CardDesignData,
-  ComponentConfig,
-  DeviceConfig,
-} from './card-designer-types-updated';
+import { CardDesignData, ComponentConfig, DeviceConfig } from './type';
+import { generateId } from './utils';
 
 // 设备尺寸配置
 export const DEVICE_SIZES: Record<string, DeviceConfig> = {
-  desktop: { width: '100%', icon: DesktopOutlined, name: '桌面端' },
-  tablet: { width: '768px', icon: TabletOutlined, name: '平板端' },
+  desktop: { width: '800px', icon: DesktopOutlined, name: '桌面端' },
   mobile: { width: '375px', icon: MobileOutlined, name: '移动端' },
 };
 
@@ -68,15 +63,10 @@ export const COMPONENT_TYPES: Record<string, ComponentConfig> = {
 
 // 组件分类配置
 export const COMPONENT_CATEGORIES = [
-  { key: 'container', title: '容器区块', color: '#52c41a' },
-  { key: 'display', title: '展示区块', color: '#1890ff' },
-  { key: 'interactive', title: '交互区块', color: '#722ed1' },
+  { key: 'container', title: '容器区块' },
+  { key: 'display', title: '展示区块' },
+  { key: 'interactive', title: '交互区块' },
 ];
-
-// 生成唯一ID
-const generateId = (): string => {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2);
-};
 
 // 默认卡片配置
 export const DEFAULT_CARD_DATA: CardDesignData = {
@@ -93,7 +83,6 @@ export const DEFAULT_CARD_DATA: CardDesignData = {
         pc_url: '',
       },
     },
-    // 移除默认的header，只有当用户添加标题组件时才创建
     body: {
       direction: 'vertical',
       vertical_spacing: 8,

@@ -9,6 +9,7 @@ import VariablesPanel from './VariablesPanel';
 const STYLES = {
   container: {
     width: '300px',
+    flexShrink: '0',
     height: 'calc(100vh - 60px)',
     backgroundColor: '#f8f9fa',
     borderLeft: '1px solid #e9ecef',
@@ -54,8 +55,8 @@ export interface PropertyPanelProps {
     children: React.ReactNode;
   }>;
 
-  // 是否显示事件Tab
-  showEventTab?: boolean;
+  // 事件Tab是否可点击（用于置灰状态）
+  eventTabDisabled?: boolean;
 }
 
 const PropertyPanel: React.FC<PropertyPanelProps> = ({
@@ -72,7 +73,7 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
   modalComponentType,
   selectedComponentTag,
   customTabs,
-  showEventTab = false,
+  eventTabDisabled = false,
 }) => {
   // 构建默认Tabs
   const defaultTabs = [
@@ -89,17 +90,23 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
   ];
 
   // 如果显示事件Tab，添加事件Tab
-  if (showEventTab && eventContent) {
-    defaultTabs.push({
-      key: 'events',
-      label: (
-        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          ⚡ 事件
-        </span>
-      ),
-      children: eventContent,
-    });
-  }
+  defaultTabs.push({
+    key: 'events',
+    label: (
+      <span
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          color: eventTabDisabled ? 'rgba(0,0,0,0.25)' : 'inherit',
+          cursor: eventTabDisabled ? 'not-allowed' : 'pointer',
+        }}
+      >
+        ⚡ 事件
+      </span>
+    ),
+    children: eventTabDisabled ? null : eventContent,
+  });
 
   // 添加变量Tab - 使用内置的VariablesPanel（不传递模态框props，因为在顶层统一管理）
   defaultTabs.push({
@@ -120,24 +127,21 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
   // 合并自定义Tabs
   const allTabs = customTabs ? [...defaultTabs, ...customTabs] : defaultTabs;
 
-  console.log('🔍 PropertyPanel 模态框状态:', {
-    isVariableModalVisible,
-    hasHandleVariableModalOk: !!handleVariableModalOk,
-    hasHandleVariableModalCancel: !!handleVariableModalCancel,
-    modalComponentType,
-    selectedComponentTag,
-    isVariableModalFromVariablesTab,
-    editingVariable,
-    activeTab,
-    timestamp: new Date().toISOString(),
-  });
+  // 处理Tab切换，检查是否被禁用
+  const handleTabChange = (key: string) => {
+    // 如果是事件标签页且被禁用，则不切换
+    if (key === 'events' && eventTabDisabled) {
+      return;
+    }
+    onTabChange(key);
+  };
 
   return (
     <>
       <div style={STYLES.container}>
         <Tabs
           activeKey={activeTab}
-          onChange={onTabChange}
+          onChange={handleTabChange}
           style={{ height: '100%' }}
           tabBarStyle={STYLES.tabBarStyle}
           size="small"

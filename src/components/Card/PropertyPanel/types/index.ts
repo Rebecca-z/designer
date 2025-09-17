@@ -1,10 +1,6 @@
 // PropertyPanel 相关类型定义
 
-import {
-  CardDesignData,
-  ComponentType,
-  Variable,
-} from '../../card-designer-types-updated';
+import { CardDesignData, ComponentType, Variable } from '../../type';
 
 // 事件管理相关类型定义
 export interface EventAction {
@@ -20,12 +16,12 @@ export interface EventAction {
 export interface DraggableComponentProps {
   type: string;
   config: any;
+  onComponentClick?: (type: string) => void;
 }
 
 // 组件库面板的 Props
 export interface ComponentLibraryProps {
-  // 预留属性，暂时为空
-  [key: string]: any;
+  onComponentClick?: (type: string) => void;
 }
 
 // 大纲树的 Props
@@ -48,6 +44,7 @@ export interface ComponentPanelProps {
     component: ComponentType | null,
     path: (string | number)[],
   ) => void;
+  onComponentClick?: (type: string) => void;
 }
 
 // 右侧属性面板的 Props

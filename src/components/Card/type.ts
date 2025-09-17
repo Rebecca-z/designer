@@ -1,5 +1,16 @@
-// card-designer-types-updated.ts - 更新的类型定义
+import type { HeaderDataInterface } from '../Card/CanvasWrapper/type';
 
+// 卡片接口
+export interface CardInfoInterface {
+  card_content: string;
+  card_id: string;
+  card_name: string;
+  card_status: 0 | 1 | 2;
+  create_time: Date;
+  operator_id: string;
+  update_time: Date;
+  variable_content: string;
+}
 export interface ComponentBase {
   id: string;
   tag: string;
@@ -9,27 +20,27 @@ export interface ComponentBase {
   };
 }
 
-export interface TitleComponent extends ComponentBase {
+export interface TitleComponent {
+  id: string;
   tag: 'title';
-  // title和subtitle属性已移到CardHeader中
-  // title: string;
-  // subtitle: string;
-  style:
+  title: { content: string };
+  subtitle: { content: string };
+  style?:
     | 'blue'
-    | 'wathet'
-    | 'turquoise'
     | 'green'
-    | 'yellow'
     | 'orange'
-    | 'red';
+    | 'red'
+    | 'turquoise'
+    | 'yellow'
+    | 'wathet';
 }
 
 export interface TextComponent extends ComponentBase {
   tag: 'plain_text' | 'rich_text';
   content: string | any;
   i18n_content?: { [key: string]: string | any };
-  fontSize?: 12 | 14 | 16; // 新增：字体大小
-  numberOfLines?: number; // 新增：最大显示行数
+  fontSize?: 12 | 14 | 16;
+  numberOfLines?: number;
 }
 
 export interface PlainTextComponent extends ComponentBase {
@@ -158,16 +169,6 @@ export interface ImageCombinationComponent extends ComponentBase {
     | 'triple' // 三图模式（左1右2）
     | 'bisect' // 等分双列模式（根据图片数量自适应：2图、4图、6图）
     | 'trisect'; // 等分三列模式（根据图片数量自适应：3图、6图、9图）
-  // layoutType已废弃：不再保存到全局数据，改为基于combination_mode和img_list.length动态推断
-  // layoutType?:
-  //   | 'double' // 双图模式（左小右大）
-  //   | 'triple' // 三图模式（左1右2）
-  //   | 'bisect_2' // 双列一行（2图）
-  //   | 'bisect_4' // 双列两行（4图）
-  //   | 'bisect_6' // 双列三行（6图）
-  //   | 'trisect_3' // 三列一行（3图）
-  //   | 'trisect_6' // 三列两行（6图）
-  //   | 'trisect_9'; // 三列三行（9图）
   img_list:
     | Array<{
         img_url: string;
@@ -193,61 +194,9 @@ export interface CardBody {
   direction: 'vertical' | 'flow'; // 修改：支持垂直和流式布局
   vertical_spacing: number;
   elements: ComponentType[];
-  styles?: {
-    // 布局样式
-    display?: string;
-    position?: string;
-    width?: string;
-    height?: string;
-    minWidth?: string;
-    minHeight?: string;
-
-    // 间距样式
-    margin?: string;
-    padding?: string;
-
-    // 字体样式
-    fontSize?: string;
-    fontWeight?: string;
-    color?: string;
-    lineHeight?: string;
-    textAlign?: string;
-    textDecoration?: string;
-
-    // 背景样式
-    backgroundColor?: string;
-    backgroundImage?: string;
-    backgroundRepeat?: string;
-    backgroundPosition?: string;
-
-    // 边框样式
-    borderWidth?: string;
-    borderStyle?: string;
-    borderColor?: string;
-    borderRadius?: string;
-
-    // 阴影效果
-    boxShadow?: string;
-    textShadow?: string;
-
-    // 自定义CSS
-    customCSS?: string;
-
-    // 其他样式属性
-    [key: string]: any;
-  };
 }
 
-export interface CardHeader {
-  style?: string; // 改为字符串类型，直接存储主题样式
-  title: {
-    content: string;
-    i18n_content?: { [key: string]: string };
-  };
-  subtitle: {
-    content: string;
-    i18n_content?: { [key: string]: string };
-  };
+export interface CardHeader extends HeaderDataInterface {
   // 索引签名
   [key: string]: any;
 }
@@ -265,12 +214,12 @@ export interface CardDSL {
   schema: number;
   config: { [key: string]: any };
   card_link: CardLink;
-  header?: CardHeader; // 改为可选，只有当存在标题组件时才创建
+  header?: CardHeader;
   body: CardBody;
 }
 
 export interface CardDesignData {
-  id?: string; // 可选，因为可能从外部传入
+  id: string;
   name: string;
   dsl: CardDSL;
   variables: { [key: string]: any };
@@ -294,7 +243,7 @@ export interface Variable {
     | 'array'
     | 'richtext'
     | 'imageArray'; // 更新：添加richtext和imageArray类型支持
-  description?: string; // 新增：变量描述
+  description?: string;
 }
 
 // 新的变量格式：{变量名: 模拟数据值}

@@ -51,7 +51,7 @@ const ComponentContent: React.FC<ComponentContentProps> = ({
       {showInfoBox && (
         <div style={STYLES.infoBox}>
           <Text style={{ fontSize: '12px', color: '#0369a1' }}>
-            🎯 当前选中：{componentName}
+            当前选中：{componentName}
           </Text>
         </div>
       )}

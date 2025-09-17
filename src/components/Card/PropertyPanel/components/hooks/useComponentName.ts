@@ -26,12 +26,12 @@ export const useComponentName = ({
       ? fullName.substring(prefix.length)
       : fullName;
 
-    console.log(`🔍 ${prefix}组件名称解析:`, {
-      fullName,
-      suffix,
-      componentId: selectedComponent?.id,
-      prefix,
-    });
+    // console.log(`🔍 ${prefix}组件名称解析:`, {
+    //   fullName,
+    //   suffix,
+    //   componentId: selectedComponent?.id,
+    //   prefix,
+    // });
 
     return {
       name: fullName,

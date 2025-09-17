@@ -16,7 +16,7 @@ const ComponentNameInput: React.FC<ComponentNameInputProps> = ({
   placeholder = '请输入标识符后缀',
 }) => {
   return (
-    <Form.Item label="组件标识符">
+    <Form.Item label="组件ID">
       <Input
         value={suffix}
         onChange={onChange}

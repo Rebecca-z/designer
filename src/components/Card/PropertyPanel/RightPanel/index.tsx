@@ -1,12 +1,8 @@
-// 右侧属性面板 - 优化版本
-
+// 右侧属性面板
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, Card, Typography } from 'antd';
+import { Button, Card, Tooltip, Typography } from 'antd';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  ComponentType as ImportedComponentType,
-  Variable,
-} from '../../card-designer-types-updated';
+import { ComponentType as ImportedComponentType, Variable } from '../../type';
 
 import {
   ButtonComponent,
@@ -24,10 +20,7 @@ import {
   TextComponent,
   TitleComponent,
 } from '../components';
-import {
-  PropertyPanel as CommonPropertyPanel,
-  ComponentContent,
-} from '../components/common';
+import { PropertyPanel as CommonPropertyPanel } from '../components/common';
 import { getComponentRealPath, getVariableKeys } from '../utils';
 
 const { Text } = Typography;
@@ -71,28 +64,6 @@ const STYLE_FIELDS = [
   'size',
   'crop_mode',
 ] as const;
-
-const PANEL_STYLES = {
-  container: {
-    width: '300px',
-    height: 'calc(100vh - 60px)',
-    backgroundColor: '#fafafa',
-    borderLeft: '1px solid #d9d9d9',
-    padding: '16px',
-    overflow: 'auto',
-  },
-  tabBarStyle: {
-    padding: '0 16px',
-    backgroundColor: '#fff',
-    margin: 0,
-    borderBottom: '1px solid #d9d9d9',
-  },
-  emptyState: {
-    padding: '20px',
-    textAlign: 'center' as const,
-    color: '#999',
-  },
-} as const;
 
 interface PropertyPanelProps {
   selectedPath: (string | number)[] | null;
@@ -248,6 +219,24 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
     undefined,
   );
   const [editingVariableIndex, setEditingVariableIndex] = useState<number>(-1);
+
+  const getVariableType = (type: string) => {
+    const displayName =
+      type === 'text'
+        ? '文本'
+        : type === 'number'
+        ? '整数'
+        : type === 'image'
+        ? '图片'
+        : type === 'imageArray'
+        ? '图片数组'
+        : type === 'array'
+        ? '选项数组'
+        : type === 'richtext'
+        ? '富文本'
+        : type;
+    return displayName;
+  };
 
   // 处理组件值变化
   const handleValueChange = useCallback(
@@ -411,10 +400,13 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
   const handleVariableModalOk = useCallback(
     (variable: VariableItem) => {
       if (editingVariable !== null && editingVariable !== undefined) {
-        const newVariables = [...variables];
-        newVariables[editingVariableIndex] = variable;
+        // 编辑模式：创建新的数组，确保引用发生变化
+        const newVariables = variables.map((v, index) =>
+          index === editingVariableIndex ? variable : v,
+        );
         onUpdateVariables(newVariables);
       } else {
+        // 新增模式：创建新的数组
         const newVariables = [...variables, variable];
         onUpdateVariables(newVariables);
       }
@@ -472,6 +464,7 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
     (index: number) => (e: React.MouseEvent) => {
       e.stopPropagation();
       e.preventDefault();
+      // 创建新的数组，确保引用发生变化
       const newVariables = variables.filter((_: any, i: number) => i !== index);
       onUpdateVariables(newVariables);
     },
@@ -528,23 +521,27 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
                       <Text strong>{getVariableDisplayName(variable)}</Text>
                       <br />
                       <Text type="secondary" style={{ fontSize: '12px' }}>
-                        {variable.type}
+                        {getVariableType(variable.originalType)}
                       </Text>
                     </div>
                     <div>
-                      <Button
-                        type="text"
-                        size="small"
-                        icon={<EditOutlined />}
-                        onClick={handleEditVariable(variable, index)}
-                      />
-                      <Button
-                        type="text"
-                        size="small"
-                        danger
-                        icon={<DeleteOutlined />}
-                        onClick={handleDeleteVariable(index)}
-                      />
+                      <Tooltip title="编辑">
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<EditOutlined />}
+                          onClick={handleEditVariable(variable, index)}
+                        />
+                      </Tooltip>
+                      <Tooltip title="删除">
+                        <Button
+                          type="text"
+                          size="small"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={handleDeleteVariable(index)}
+                        />
+                      </Tooltip>
                     </div>
                   </div>
                 </Card>
@@ -810,16 +807,6 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
     setMultiSelectOptionsMode,
   ]);
 
-  // 默认组件内容 - 必须在条件语句之前定义
-  const defaultComponentContent = useMemo(
-    () => (
-      <div style={PANEL_STYLES.emptyState}>
-        <Text>请选择一个组件来编辑其属性</Text>
-      </div>
-    ),
-    [],
-  );
-
   // 渲染组件编辑器
   const componentEditor = renderComponentEditor();
   if (componentEditor) {
@@ -831,11 +818,48 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
       activeTab={topLevelTab}
       onTabChange={handleTabChange}
       componentContent={
-        <ComponentContent componentName="属性面板">
-          {defaultComponentContent}
-        </ComponentContent>
+        <>
+          {
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
+              <Text
+                style={{
+                  color: '#8f959e',
+                  fontSize: '14px',
+                  marginTop: '100px',
+                }}
+              >
+                请先选中任意节点
+              </Text>
+            </div>
+          }
+        </>
       }
-      showEventTab={false}
+      eventContent={
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '200px',
+          }}
+        >
+          <Text
+            style={{
+              color: '#8f959e',
+              fontSize: '14px',
+            }}
+          >
+            请先选中任意节点
+          </Text>
+        </div>
+      }
+      eventTabDisabled={true}
       variableManagementComponent={<VariableManagementPanel />}
       isVariableModalVisible={isVariableModalVisible}
       handleVariableModalOk={handleVariableModalOk}

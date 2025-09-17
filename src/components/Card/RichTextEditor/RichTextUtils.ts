@@ -10,9 +10,25 @@ import FontSize from './FontSize';
 // 配置和编辑器一致的扩展
 const extensions = [
   StarterKit.configure({
-    // 禁用StarterKit中可能冲突的扩展
+    // 禁用StarterKit中可能冲突的扩展，但保留列表功能
     link: false,
     underline: false,
+    // 确保列表功能启用，并配置为基于选区
+    bulletList: {
+      HTMLAttributes: {
+        class: 'rich-text-bullet-list',
+      },
+    },
+    orderedList: {
+      HTMLAttributes: {
+        class: 'rich-text-ordered-list',
+      },
+    },
+    listItem: {
+      HTMLAttributes: {
+        class: 'rich-text-list-item',
+      },
+    },
   }),
   Underline,
   Link.configure({
@@ -109,6 +125,72 @@ export const getDefaultRichTextJSON = () => ({
         {
           type: 'text',
           text: '等格式。',
+        },
+      ],
+    },
+    {
+      type: 'bulletList',
+      content: [
+        {
+          type: 'listItem',
+          content: [
+            {
+              type: 'paragraph',
+              content: [
+                {
+                  type: 'text',
+                  text: '无序列表项 1',
+                },
+              ],
+            },
+          ],
+        },
+        {
+          type: 'listItem',
+          content: [
+            {
+              type: 'paragraph',
+              content: [
+                {
+                  type: 'text',
+                  text: '无序列表项 2',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      type: 'orderedList',
+      content: [
+        {
+          type: 'listItem',
+          content: [
+            {
+              type: 'paragraph',
+              content: [
+                {
+                  type: 'text',
+                  text: '有序列表项 1',
+                },
+              ],
+            },
+          ],
+        },
+        {
+          type: 'listItem',
+          content: [
+            {
+              type: 'paragraph',
+              content: [
+                {
+                  type: 'text',
+                  text: '有序列表项 2',
+                },
+              ],
+            },
+          ],
         },
       ],
     },

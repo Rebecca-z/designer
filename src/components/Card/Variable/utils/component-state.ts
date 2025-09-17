@@ -34,12 +34,6 @@ class TextComponentStateManager {
       ...currentState,
       userEditedContent: content,
     });
-
-    console.log('📝 设置用户编辑内容:', {
-      componentId,
-      content,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取用户编辑的内容
@@ -61,14 +55,7 @@ class TextComponentStateManager {
     } else {
       delete newState.boundVariableName;
     }
-
     this.stateMap.set(componentId, newState);
-
-    console.log('🔗 设置绑定变量名:', {
-      componentId,
-      variableName,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取绑定的变量名
@@ -80,10 +67,6 @@ class TextComponentStateManager {
   // 清除组件状态
   public clearComponentState(componentId: string): void {
     this.stateMap.delete(componentId);
-    console.log('🗑️ 清除组件状态:', {
-      componentId,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取所有状态
@@ -157,12 +140,6 @@ class ImageComponentStateManager {
       ...currentState,
       userEditedUrl: url,
     });
-
-    console.log('📝 设置用户编辑图片URL:', {
-      componentId,
-      url,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取用户编辑的URL
@@ -186,12 +163,6 @@ class ImageComponentStateManager {
     }
 
     this.stateMap.set(componentId, newState);
-
-    console.log('🔗 设置图片绑定变量名:', {
-      componentId,
-      variableName,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取绑定的变量名
@@ -203,10 +174,6 @@ class ImageComponentStateManager {
   // 清除组件状态
   public clearComponentState(componentId: string): void {
     this.stateMap.delete(componentId);
-    console.log('🗑️ 清除图片组件状态:', {
-      componentId,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取所有状态
@@ -290,12 +257,6 @@ class MultiImageComponentStateManager {
       ...currentState,
       userEditedImageList: imageList,
     });
-
-    console.log('📝 设置用户编辑多图列表:', {
-      componentId,
-      imageListLength: imageList.length,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取用户编辑的图片列表
@@ -323,12 +284,6 @@ class MultiImageComponentStateManager {
     }
 
     this.stateMap.set(componentId, newState);
-
-    console.log('🔗 设置多图混排绑定变量名:', {
-      componentId,
-      variableName,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取绑定的变量名
@@ -340,10 +295,6 @@ class MultiImageComponentStateManager {
   // 清除组件状态
   public clearComponentState(componentId: string): void {
     this.stateMap.delete(componentId);
-    console.log('🗑️ 清除多图混排组件状态:', {
-      componentId,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取所有状态
@@ -422,12 +373,6 @@ class InputComponentStateManager {
       ...currentState,
       userEditedPlaceholder: placeholder,
     });
-
-    console.log('📝 设置用户编辑占位文本:', {
-      componentId,
-      placeholder,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取用户编辑的占位文本
@@ -451,12 +396,6 @@ class InputComponentStateManager {
     }
 
     this.stateMap.set(componentId, newState);
-
-    console.log('🔗 设置输入框占位文本绑定变量名:', {
-      componentId,
-      variableName,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取绑定的占位文本变量名
@@ -476,12 +415,6 @@ class InputComponentStateManager {
     this.stateMap.set(componentId, {
       ...currentState,
       userEditedDefaultValue: defaultValue,
-    });
-
-    console.log('📝 设置用户编辑默认值:', {
-      componentId,
-      defaultValue,
-      timestamp: new Date().toISOString(),
     });
   }
 
@@ -506,12 +439,6 @@ class InputComponentStateManager {
     }
 
     this.stateMap.set(componentId, newState);
-
-    console.log('🔗 设置输入框默认值绑定变量名:', {
-      componentId,
-      variableName,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取绑定的默认值变量名
@@ -525,10 +452,6 @@ class InputComponentStateManager {
   // 清除组件状态
   public clearComponentState(componentId: string): void {
     this.stateMap.delete(componentId);
-    console.log('🗑️ 清除输入框组件状态:', {
-      componentId,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取所有状态
@@ -614,16 +537,11 @@ export class SelectComponentStateManager {
     componentId: string,
     options: Array<{ label: string; value: string }>,
   ): void {
+    console.warn('setUserEditedOptions', options);
     const currentState = this.getComponentState(componentId);
     this.stateMap.set(componentId, {
       ...currentState,
       userEditedOptions: options,
-    });
-
-    console.log('📝 设置用户编辑选项列表:', {
-      componentId,
-      options,
-      timestamp: new Date().toISOString(),
     });
   }
 
@@ -650,12 +568,6 @@ export class SelectComponentStateManager {
     }
 
     this.stateMap.set(componentId, newState);
-
-    console.log('🔗 设置下拉单选组件绑定变量名:', {
-      componentId,
-      variableName,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取绑定的变量名
@@ -667,10 +579,6 @@ export class SelectComponentStateManager {
   // 清除组件状态
   public clearComponentState(componentId: string): void {
     this.stateMap.delete(componentId);
-    console.log('🗑️ 清除下拉单选组件状态:', {
-      componentId,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取所有状态（调试用）
@@ -698,9 +606,6 @@ export class SelectComponentStateManager {
 // 导出下拉单选组件状态管理器实例
 export const selectComponentStateManager =
   SelectComponentStateManager.getInstance();
-
-// 导出下拉单选组件状态类型
-export type { SelectComponentState };
 
 // 下拉多选组件状态接口
 interface MultiSelectComponentState {
@@ -739,12 +644,6 @@ export class MultiSelectComponentStateManager {
       ...currentState,
       userEditedOptions: options,
     });
-
-    console.log('📝 设置用户编辑选项列表 (多选):', {
-      componentId,
-      options,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取用户编辑的选项列表
@@ -765,16 +664,10 @@ export class MultiSelectComponentStateManager {
 
     // 如果变量名为空，清除绑定状态
     if (!variableName) {
-      delete newState.boundVariableName;
+      delete newState?.boundVariableName;
     }
 
     this.stateMap.set(componentId, newState);
-
-    console.log('🔗 设置下拉多选组件绑定变量名:', {
-      componentId,
-      variableName,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取绑定的变量名
@@ -786,10 +679,6 @@ export class MultiSelectComponentStateManager {
   // 清除组件状态
   public clearComponentState(componentId: string): void {
     this.stateMap.delete(componentId);
-    console.log('🗑️ 清除下拉多选组件状态:', {
-      componentId,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取所有组件状态（调试用）
@@ -856,13 +745,6 @@ export class OptionEditStateManager {
       ...currentState,
       userEditedTextContent: content,
     });
-
-    console.log('📝 设置选项文本内容:', {
-      componentId,
-      optionIndex,
-      content,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取用户编辑的文本内容
@@ -891,13 +773,6 @@ export class OptionEditStateManager {
     }
 
     this.stateMap.set(key, newState);
-
-    console.log('🔗 设置选项文本绑定变量名:', {
-      componentId,
-      optionIndex,
-      variableName,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取绑定的文本变量名
@@ -920,13 +795,6 @@ export class OptionEditStateManager {
     this.stateMap.set(key, {
       ...currentState,
       userEditedValue: value,
-    });
-
-    console.log('📝 设置选项回传参数:', {
-      componentId,
-      optionIndex,
-      value,
-      timestamp: new Date().toISOString(),
     });
   }
 
@@ -956,13 +824,6 @@ export class OptionEditStateManager {
     }
 
     this.stateMap.set(key, newState);
-
-    console.log('🔗 设置选项回传参数绑定变量名:', {
-      componentId,
-      optionIndex,
-      variableName,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取绑定的回传参数变量名
@@ -978,11 +839,6 @@ export class OptionEditStateManager {
   public clearOptionState(componentId: string, optionIndex: number): void {
     const key = this.getOptionKey(componentId, optionIndex);
     this.stateMap.delete(key);
-    console.log('🗑️ 清除选项状态:', {
-      componentId,
-      optionIndex,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 清除组件的所有选项状态
@@ -991,11 +847,6 @@ export class OptionEditStateManager {
       key.startsWith(`${componentId}_option_`),
     );
     keysToDelete.forEach((key) => this.stateMap.delete(key));
-    console.log('🗑️ 清除组件所有选项状态:', {
-      componentId,
-      deletedCount: keysToDelete.length,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取所有状态
@@ -1009,3 +860,190 @@ export const optionEditStateManager = OptionEditStateManager.getInstance();
 
 // 导出选项编辑状态类型
 export type { OptionEditState };
+
+// 标题组件状态接口
+interface TitleComponentState {
+  userEditedTitle?: string;
+  boundTitleVariableName?: string;
+  userEditedSubtitle?: string;
+  boundSubtitleVariableName?: string;
+}
+
+// 标题组件状态管理器类
+class TitleComponentStateManager {
+  private static instance: TitleComponentStateManager;
+  private stateMap: Map<string, TitleComponentState> = new Map();
+
+  private constructor() {}
+
+  // 单例模式获取实例
+  public static getInstance(): TitleComponentStateManager {
+    if (!TitleComponentStateManager.instance) {
+      TitleComponentStateManager.instance = new TitleComponentStateManager();
+    }
+    return TitleComponentStateManager.instance;
+  }
+
+  // 获取组件状态
+  public getComponentState(componentId: string): TitleComponentState {
+    return this.stateMap.get(componentId) || {};
+  }
+
+  // 设置用户编辑的标题
+  public setUserEditedTitle(componentId: string, title: string): void {
+    const currentState = this.getComponentState(componentId);
+    this.stateMap.set(componentId, {
+      ...currentState,
+      userEditedTitle: title,
+    });
+
+    console.log('📝 设置用户编辑标题:', {
+      componentId,
+      title,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取用户编辑的标题
+  public getUserEditedTitle(componentId: string): string | undefined {
+    const state = this.getComponentState(componentId);
+    return state.userEditedTitle;
+  }
+
+  // 设置绑定的标题变量名
+  public setBoundTitleVariableName(
+    componentId: string,
+    variableName: string | undefined,
+  ): void {
+    const currentState = this.getComponentState(componentId);
+    const newState = { ...currentState };
+
+    if (variableName) {
+      newState.boundTitleVariableName = variableName;
+    } else {
+      delete newState.boundTitleVariableName;
+    }
+
+    this.stateMap.set(componentId, newState);
+
+    console.log('🔗 设置标题绑定变量名:', {
+      componentId,
+      variableName,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取绑定的标题变量名
+  public getBoundTitleVariableName(componentId: string): string | undefined {
+    const state = this.getComponentState(componentId);
+    return state.boundTitleVariableName;
+  }
+
+  // 设置用户编辑的副标题
+  public setUserEditedSubtitle(componentId: string, subtitle: string): void {
+    const currentState = this.getComponentState(componentId);
+    this.stateMap.set(componentId, {
+      ...currentState,
+      userEditedSubtitle: subtitle,
+    });
+
+    console.log('📝 设置用户编辑副标题:', {
+      componentId,
+      subtitle,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取用户编辑的副标题
+  public getUserEditedSubtitle(componentId: string): string | undefined {
+    const state = this.getComponentState(componentId);
+    return state.userEditedSubtitle;
+  }
+
+  // 设置绑定的副标题变量名
+  public setBoundSubtitleVariableName(
+    componentId: string,
+    variableName: string | undefined,
+  ): void {
+    const currentState = this.getComponentState(componentId);
+    const newState = { ...currentState };
+
+    if (variableName) {
+      newState.boundSubtitleVariableName = variableName;
+    } else {
+      delete newState.boundSubtitleVariableName;
+    }
+
+    this.stateMap.set(componentId, newState);
+
+    console.log('🔗 设置副标题绑定变量名:', {
+      componentId,
+      variableName,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取绑定的副标题变量名
+  public getBoundSubtitleVariableName(componentId: string): string | undefined {
+    const state = this.getComponentState(componentId);
+    return state.boundSubtitleVariableName;
+  }
+
+  // 清除组件状态
+  public clearComponentState(componentId: string): void {
+    this.stateMap.delete(componentId);
+    console.log('🗑️ 清除标题组件状态:', {
+      componentId,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 获取所有状态
+  public getAllStates(): Map<string, TitleComponentState> {
+    return new Map(this.stateMap);
+  }
+
+  // 获取状态统计信息
+  public getStateStats(): {
+    totalComponents: number;
+    componentsWithUserTitle: number;
+    componentsWithBoundTitle: number;
+    componentsWithUserSubtitle: number;
+    componentsWithBoundSubtitle: number;
+  } {
+    let componentsWithUserTitle = 0;
+    let componentsWithBoundTitle = 0;
+    let componentsWithUserSubtitle = 0;
+    let componentsWithBoundSubtitle = 0;
+
+    this.stateMap.forEach((state) => {
+      if (state.userEditedTitle !== undefined) {
+        componentsWithUserTitle++;
+      }
+      if (state.boundTitleVariableName) {
+        componentsWithBoundTitle++;
+      }
+      if (state.userEditedSubtitle !== undefined) {
+        componentsWithUserSubtitle++;
+      }
+      if (state.boundSubtitleVariableName) {
+        componentsWithBoundSubtitle++;
+      }
+    });
+
+    return {
+      totalComponents: this.stateMap.size,
+      componentsWithUserTitle,
+      componentsWithBoundTitle,
+      componentsWithUserSubtitle,
+      componentsWithBoundSubtitle,
+    };
+  }
+}
+
+// 导出标题组件状态管理器单例实例
+export const titleComponentStateManager =
+  TitleComponentStateManager.getInstance();
+
+// 导出标题组件状态类型
+export type { TitleComponentState };

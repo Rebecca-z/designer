@@ -7,14 +7,17 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Variable } from '../../card-designer-types-updated';
+import { getDefaultRichTextJSON } from '../../../Card/RichTextEditor/RichTextUtils';
 import JSONEditor, { JSONEditorRef } from '../../JSONEditor';
 import RichTextEditor from '../../RichTextEditor/RichTextEditor';
+import { Variable } from '../../type';
+import { defaultImg } from '../../utils';
 import type {
   AddVariableModalProps,
   VariableFormData,
   VariableType,
 } from './type';
+
 const { Option } = Select;
 
 const AddVariableModal: React.FC<AddVariableModalProps> = ({
@@ -93,7 +96,6 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         return 'imageArray';
       case 'input':
         return 'text';
-
       case 'select_static':
       case 'multi_select_static':
       case 'multi_select_static_text':
@@ -158,44 +160,9 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
           2,
         );
       case 'richtext':
-        return JSON.stringify({
-          type: 'doc',
-          content: [
-            {
-              type: 'paragraph',
-              attrs: { textAlign: 'left' },
-              content: [
-                {
-                  type: 'text',
-                  text: '请输入富文本内容...',
-                },
-              ],
-            },
-          ],
-        });
+        return JSON.stringify(getDefaultRichTextJSON());
       case 'imageArray':
-        return JSON.stringify(
-          [
-            {
-              img_url:
-                'https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png',
-              i18n_img_url: {
-                'en-US':
-                  'https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png',
-              },
-            },
-            {
-              img_url:
-                'https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png',
-              i18n_img_url: {
-                'en-US':
-                  'https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png',
-              },
-            },
-          ],
-          null,
-          2,
-        );
+        return JSON.stringify([{ ...defaultImg }, { ...defaultImg }], null, 2);
       default:
         return '';
     }
@@ -727,7 +694,8 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
         >
           <Input
             placeholder="变量名称应以字母开头、仅支持字母、数字下划线的组合"
-            maxLength={50}
+            maxLength={64}
+            showCount
           />
         </Form.Item>
 

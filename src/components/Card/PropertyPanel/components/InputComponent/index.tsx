@@ -3,7 +3,7 @@ import { Form, Input, Segmented, Switch } from 'antd';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import VariableBinding from '../../../Variable/VariableList';
 import { inputComponentStateManager } from '../../../Variable/utils';
-import { ComponentContent, PropertyPanel, SettingSection } from '../common';
+import { PropertyPanel, SettingSection } from '../common';
 import ComponentNameInput from '../common/ComponentNameInput';
 import { useComponentName } from '../hooks/useComponentName';
 import { InputComponentProps } from '../types';
@@ -33,6 +33,8 @@ const InputComponent: React.FC<InputComponentProps> = ({
   isVariableModalFromVariablesTab,
   modalComponentType,
   VariableManagementPanel,
+  lastBoundVariables,
+  setLastBoundVariables,
 }) => {
   // 使用通用的组件名称编辑Hook
   const { componentNameInfo, handleNameChange } = useComponentName({
@@ -94,6 +96,10 @@ const InputComponent: React.FC<InputComponentProps> = ({
           selectedComponent.id,
           variableName,
         );
+
+        if (inputPlaceholderMode !== 'variable') {
+          setInputPlaceholderMode('variable');
+        }
       }
     }
 
@@ -113,6 +119,10 @@ const InputComponent: React.FC<InputComponentProps> = ({
           selectedComponent.id,
           variableName,
         );
+
+        if (inputDefaultValueMode !== 'variable') {
+          setInputDefaultValueMode('variable');
+        }
       }
     }
   }, [selectedComponent.id, selectedComponent]);
@@ -149,9 +159,31 @@ const InputComponent: React.FC<InputComponentProps> = ({
     (value: 'specify' | 'variable') => {
       setInputPlaceholderMode(value);
 
-      const updatedComponent = { ...selectedComponent };
+      // 记住当前状态
+      if (value === 'variable') {
+        const currentContent =
+          (selectedComponent as any).placeholder?.content || '';
+        inputComponentStateManager.setUserEditedPlaceholder(
+          selectedComponent.id,
+          currentContent,
+        );
+      } else if (value === 'specify') {
+        const boundVariable =
+          inputComponentStateManager.getBoundPlaceholderVariableName(
+            selectedComponent.id,
+          );
+        if (boundVariable) {
+          setLastBoundVariables((prev) => ({
+            ...prev,
+            [`${selectedComponent.id}_placeholder`]: boundVariable,
+          }));
+        }
+      }
 
+      const updatedComponent = { ...selectedComponent };
+      // 更新最新状态
       if (value === 'specify') {
+        // 清除绑定的变量名
         const userEditedPlaceholder =
           inputComponentStateManager.getUserEditedPlaceholder(
             selectedComponent.id,
@@ -161,11 +193,13 @@ const InputComponent: React.FC<InputComponentProps> = ({
           content: content,
           i18n_content: { 'en-US': content },
         };
-      } else {
+        inputComponentStateManager.setBoundPlaceholderVariableName(
+          selectedComponent.id,
+          undefined,
+        );
+      } else if (value === 'variable') {
         const boundVariable =
-          inputComponentStateManager.getBoundPlaceholderVariableName(
-            selectedComponent.id,
-          );
+          lastBoundVariables[`${selectedComponent.id}_placeholder`];
         if (boundVariable) {
           const variablePlaceholder = `\${${boundVariable}}`;
           (updatedComponent as any).placeholder = {
@@ -173,6 +207,15 @@ const InputComponent: React.FC<InputComponentProps> = ({
             i18n_content: { 'en-US': variablePlaceholder },
           };
         }
+        inputComponentStateManager.setBoundPlaceholderVariableName(
+          selectedComponent.id,
+          boundVariable,
+        );
+      } else {
+        inputComponentStateManager.setBoundPlaceholderVariableName(
+          selectedComponent.id,
+          undefined,
+        );
       }
 
       onUpdateComponent(updatedComponent);
@@ -185,9 +228,32 @@ const InputComponent: React.FC<InputComponentProps> = ({
     (value: 'specify' | 'variable') => {
       setInputDefaultValueMode(value);
 
-      const updatedComponent = { ...selectedComponent };
+      // 记住当前状态
+      if (value === 'variable') {
+        const currentContent =
+          (selectedComponent as any).default_value?.content || '';
+        inputComponentStateManager.setUserEditedDefaultValue(
+          selectedComponent.id,
+          currentContent,
+        );
+      } else if (value === 'specify') {
+        const boundVariable =
+          inputComponentStateManager.getBoundDefaultValueVariableName(
+            selectedComponent.id,
+          );
+        console.warn('boundVariable', boundVariable);
+        if (boundVariable) {
+          setLastBoundVariables((prev) => ({
+            ...prev,
+            [`${selectedComponent.id}_default`]: boundVariable,
+          }));
+        }
+      }
 
+      const updatedComponent = { ...selectedComponent };
+      // 更新最新状态
       if (value === 'specify') {
+        // 清除绑定的变量名
         const userEditedDefaultValue =
           inputComponentStateManager.getUserEditedDefaultValue(
             selectedComponent.id,
@@ -197,11 +263,13 @@ const InputComponent: React.FC<InputComponentProps> = ({
           content: content,
           i18n_content: { content: content },
         };
+        inputComponentStateManager.setBoundDefaultValueVariableName(
+          selectedComponent.id,
+          undefined,
+        );
       } else {
         const boundVariable =
-          inputComponentStateManager.getBoundDefaultValueVariableName(
-            selectedComponent.id,
-          );
+          lastBoundVariables[`${selectedComponent.id}_default`];
         if (boundVariable) {
           const variablePlaceholder = `\${${boundVariable}}`;
           (updatedComponent as any).default_value = {
@@ -222,7 +290,7 @@ const InputComponent: React.FC<InputComponentProps> = ({
       // 先更新状态管理器
       inputComponentStateManager.setBoundPlaceholderVariableName(
         selectedComponent.id,
-        variableName,
+        variableName || '',
       );
 
       const updatedComponent = { ...selectedComponent };
@@ -243,6 +311,7 @@ const InputComponent: React.FC<InputComponentProps> = ({
           i18n_content: { 'en-US': variablePlaceholder },
         };
       } else {
+        // 清除
         const userEditedPlaceholder =
           inputComponentStateManager.getUserEditedPlaceholder(
             selectedComponent.id,
@@ -414,7 +483,7 @@ const InputComponent: React.FC<InputComponentProps> = ({
               onAddVariable={() => handleAddVariableFromComponent('input')}
               placeholder="请选择占位符变量"
               label="绑定变量"
-              addVariableText="+新建文本变量"
+              addVariableText="新建变量"
             />
           )}
         </Form.Item>
@@ -493,12 +562,12 @@ const InputComponent: React.FC<InputComponentProps> = ({
   // 组合组件内容
   const componentContent = useMemo(
     () => (
-      <ComponentContent componentName="输入框组件">
+      <>
         {componentSettingsContent}
         {isNestedInForm && basicSettingsContent}
         {placeholderSettingsContent}
         {defaultValueSettingsContent}
-      </ComponentContent>
+      </>
     ),
     [
       componentSettingsContent,
@@ -519,6 +588,7 @@ const InputComponent: React.FC<InputComponentProps> = ({
       activeTab={topLevelTab}
       onTabChange={setTopLevelTab}
       componentContent={componentContent}
+      eventTabDisabled={true}
       variableManagementComponent={<VariableManagementComponent />}
       isVariableModalVisible={isVariableModalVisible}
       handleVariableModalOk={handleVariableModalOk}

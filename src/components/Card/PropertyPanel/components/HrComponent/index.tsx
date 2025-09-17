@@ -1,7 +1,7 @@
 // HrComponent 编辑界面 - 分割线组件
 import { Form, Select } from 'antd';
 import React, { useCallback, useMemo } from 'react';
-import { ComponentContent, PropertyPanel, SettingSection } from '../common';
+import { PropertyPanel, SettingSection } from '../common';
 import ComponentNameInput from '../common/ComponentNameInput';
 import { useComponentName } from '../hooks/useComponentName';
 import { BaseComponentProps } from '../types';
@@ -49,7 +49,7 @@ const HrComponent: React.FC<BaseComponentProps> = ({
   // 处理边框样式变化 - 使用useCallback优化
   const handleBorderStyleChange = useCallback(
     (value: string) => {
-      handleValueChange('borderStyle', value);
+      handleValueChange('style.borderStyle', value);
     },
     [handleValueChange],
   );
@@ -57,7 +57,7 @@ const HrComponent: React.FC<BaseComponentProps> = ({
   // 渲染组件设置内容 - 使用useMemo优化
   const componentSettingsContent = useMemo(
     () => (
-      <SettingSection title="🏷️ 组件设置" useForm={false}>
+      <SettingSection title="🏷️ 组件设置" form={form}>
         <ComponentNameInput
           prefix="Hr_"
           suffix={componentNameInfo.suffix}
@@ -120,11 +120,8 @@ const HrComponent: React.FC<BaseComponentProps> = ({
     <PropertyPanel
       activeTab={topLevelTab}
       onTabChange={setTopLevelTab}
-      componentContent={
-        <ComponentContent componentName="分割线">
-          {componentTabContent}
-        </ComponentContent>
-      }
+      componentContent={componentTabContent}
+      eventTabDisabled={true}
       variableManagementComponent={<VariableManagementPanel />}
       isVariableModalVisible={isVariableModalVisible}
       handleVariableModalOk={handleVariableModalOk || (() => {})}

@@ -32,6 +32,7 @@
     "@tiptap/starter-kit": "^3.0.7",
     "@umijs/max": "^4.4.11",
     "antd": "^5.4.0",
+    "lodash": "^4.17.21",
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
     "react-simple-code-editor": "^0.14.1",

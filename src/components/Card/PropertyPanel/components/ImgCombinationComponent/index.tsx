@@ -4,17 +4,15 @@ import React, { useEffect } from 'react';
 import ImageUpload from '../../../ImageUpload';
 import VariableBinding from '../../../Variable/VariableList';
 import { multiImageComponentStateManager } from '../../../Variable/utils/index';
+import { defaultImg } from '../../../utils';
 import { getComponentRealPath } from '../../utils';
-import { ComponentContent, PropertyPanel, SettingSection } from '../common';
+import { PropertyPanel, SettingSection } from '../common';
 import ComponentNameInput from '../common/ComponentNameInput';
 import { useComponentName } from '../hooks/useComponentName';
 import { ImgCombinationComponentProps } from '../types';
 import styles from './index.less';
 
 const { Text } = Typography;
-
-const DEFAULT_IMAGE_URL = 'demo.png';
-
 // 布局图标组件
 const LayoutIcon: React.FC<{
   type:
@@ -340,6 +338,11 @@ class LayoutChoiceManager {
 
 const layoutChoiceManager = LayoutChoiceManager.getInstance();
 
+// 将layoutChoiceManager暴露到全局，供MediaRenderer使用
+if (typeof window !== 'undefined') {
+  (window as any).layoutChoiceManager = layoutChoiceManager;
+}
+
 // 导出函数供渲染器使用
 export const getComponentLayoutChoice = (
   componentId: string,
@@ -407,6 +410,139 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
     }
   };
 
+  const toggleMode = (type: string) => {
+    const newCombinationMode = layoutToCombinationMode(type);
+    const requiredImageCount = getImageCountForLayout(type);
+    const latestComponent = getLatestSelectedComponent();
+    layoutChoiceManager.setChoice(selectedComponent.id, type);
+
+    let updatedComponent = {
+      ...latestComponent,
+      combination_mode: newCombinationMode,
+    };
+
+    // 根据当前模式处理图片列表
+    if (multiImageContentMode === 'specify') {
+      // 指定模式：调整图片列表数量来匹配布局要求，并填充空缺位置
+      const currentImageList = Array.isArray((latestComponent as any).img_list)
+        ? (latestComponent as any).img_list
+        : [];
+
+      // 创建匹配布局要求数量的图片列表
+      const newImageList = [];
+      for (let i = 0; i < requiredImageCount; i++) {
+        if (i < currentImageList.length && currentImageList[i]) {
+          // 检查现有图片是否有效
+          const existingImg = currentImageList[i];
+          const hasValidUrl =
+            existingImg.img_url && existingImg.img_url.trim() !== '';
+          newImageList.push(hasValidUrl ? existingImg : defaultImg);
+        } else {
+          newImageList.push(defaultImg);
+        }
+      }
+
+      // 保存到状态管理器
+      multiImageComponentStateManager.setUserEditedImageList(
+        selectedComponent.id,
+        newImageList,
+      );
+
+      updatedComponent = {
+        ...updatedComponent,
+        img_list: newImageList,
+      };
+    }
+    // 一次性调用组件更新
+    onUpdateComponent(updatedComponent);
+
+    // 强制重新渲染以确保UI更新
+    setTimeout(() => {
+      forceUpdate();
+    }, 50);
+  };
+
+  const handleMutiImageChange = (newMode: 'specify' | 'variable') => {
+    setMultiImageContentMode(newMode);
+    // 处理模式切换时的图片显示逻辑
+    const updatedComponent = { ...selectedComponent };
+    if (newMode === 'specify') {
+      // 切换到指定模式：恢复用户编辑的图片列表
+      let userEditedImageList =
+        multiImageComponentStateManager.getUserEditedImageList(
+          selectedComponent.id,
+        );
+
+      // 如果没有缓存的图片列表，根据当前布局设置生成对应数量的图片输入框
+      if (!userEditedImageList || userEditedImageList.length === 0) {
+        const userChosenLayout = layoutChoiceManager.getChoice(
+          selectedComponent.id,
+        );
+        let requiredImageCount = 0;
+
+        if (userChosenLayout) {
+          requiredImageCount = getImageCountForLayout(userChosenLayout);
+        } else {
+          // 根据当前的combination_mode推断
+          const currentCombinationMode =
+            (selectedComponent as any).combination_mode || 'double';
+          const layoutType = getLayoutTypeFromModeAndCount(
+            currentCombinationMode,
+            0,
+          );
+          requiredImageCount = getImageCountForLayout(layoutType);
+
+          // 记录推断的布局选择
+          layoutChoiceManager.setChoice(selectedComponent.id, layoutType);
+        }
+
+        if (requiredImageCount > 0) {
+          userEditedImageList = Array.from(
+            { length: requiredImageCount },
+            () => defaultImg,
+          );
+          multiImageComponentStateManager.setUserEditedImageList(
+            selectedComponent.id,
+            userEditedImageList,
+          );
+        }
+      }
+
+      // 使用生成的图片列表
+      (updatedComponent as any).img_list = userEditedImageList || [];
+    } else {
+      // 切换到变量模式：先保存当前的指定图片列表，然后检查是否有绑定的变量
+      const currentImageList = Array.isArray(
+        (selectedComponent as any).img_list,
+      )
+        ? (selectedComponent as any).img_list
+        : [];
+      // 保存当前图片列表到状态管理器（缓存策略）
+      if (currentImageList.length > 0) {
+        multiImageComponentStateManager.setUserEditedImageList(
+          selectedComponent.id,
+          currentImageList,
+        );
+      }
+      const boundVariable =
+        multiImageComponentStateManager.getBoundVariableName(
+          selectedComponent.id,
+        );
+      const rememberedVariable = lastBoundVariables[selectedComponent.id];
+
+      if (boundVariable || rememberedVariable) {
+        // 如果有绑定变量，显示变量占位符
+        const variableName = boundVariable || rememberedVariable;
+        (updatedComponent as any).img_list = `\${${variableName}}`;
+      } else {
+        // 如果没有绑定变量，显示当前的图片列表作为预览
+        (updatedComponent as any).img_list = currentImageList;
+      }
+    }
+
+    onUpdateComponent(updatedComponent);
+  };
+
   // 多图混排组件模式同步 - 根据组件状态初始化模式
   useEffect(() => {
     if (selectedComponent && selectedComponent.tag === 'img_combination') {
@@ -423,6 +559,37 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
             selectedComponent.id,
             selectedComponent.img_list,
           );
+        } else if (hasVariableBinding) {
+          // 初始化为变量时，需要根据布局设置生成对应数量的图片输入框
+          const userChosenLayout = layoutChoiceManager.getChoice(
+            selectedComponent.id,
+          );
+          let requiredImageCount = 0;
+
+          if (userChosenLayout) {
+            // 如果用户已经选择了布局，使用该布局的图片数量
+            requiredImageCount = getImageCountForLayout(userChosenLayout);
+          } else {
+            // 如果用户没有选择布局，根据当前的combination_mode推断
+            const currentCombinationMode =
+              (selectedComponent as any).combination_mode || 'double';
+            const layoutType = getLayoutTypeFromModeAndCount(
+              currentCombinationMode,
+              0,
+            );
+            requiredImageCount = getImageCountForLayout(layoutType);
+
+            // 记录推断的布局选择
+            layoutChoiceManager.setChoice(selectedComponent.id, layoutType);
+          }
+
+          // 生成对应数量的默认图片用于指定模式预览
+          if (requiredImageCount > 0) {
+            multiImageComponentStateManager.setUserEditedImageList(
+              selectedComponent.id,
+              Array.from({ length: requiredImageCount }, () => defaultImg),
+            );
+          }
         }
 
         // 默认显示"指定"模式，除非当前组件有绑定变量
@@ -434,11 +601,9 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
       }
 
       // 如果当前组件有绑定变量，记住它（但不覆盖已有的记忆）
-      if (
-        hasVariableBinding &&
-        typeof selectedComponent.img_list === 'string'
-      ) {
-        const variableMatch = selectedComponent.img_list.match(/\$\{([^}]+)\}/);
+      if (hasVariableBinding) {
+        const variableMatch =
+          selectedComponent?.img_list.match(/\$\{([^}]+)\}/);
         if (variableMatch && variableMatch[1]) {
           const variableName = variableMatch[1];
           if (!lastBoundVariables[selectedComponent.id]) {
@@ -452,76 +617,10 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
     }
   }, [selectedComponent]);
 
-  // 监听布局模式变化，自动调整图片数量（仅在指定模式下）
-  useEffect(() => {
-    if (
-      selectedComponent &&
-      selectedComponent.tag === 'img_combination' &&
-      multiImageContentMode === 'specify'
-    ) {
-      // 获取最新组件数据
-      const latestComponent = getLatestSelectedComponent();
-
-      // 安全检查：确保获取到了有效的组件数据
-      if (!latestComponent) {
-        console.warn('⚠️ useEffect中无法获取最新组件数据，跳过处理');
-        return;
-      }
-
-      const currentCombinationMode =
-        (latestComponent as any).combination_mode || 'double';
-
-      const currentImageList = Array.isArray(
-        (selectedComponent as any).img_list,
-      )
-        ? (selectedComponent as any).img_list
-        : [];
-
-      // 根据 combination_mode 和图片数量推断当前布局类型（不再使用保存的layoutType）
-      const currentLayoutType = getLayoutTypeFromModeAndCount(
-        currentCombinationMode,
-        currentImageList.length,
-      );
-      const requiredImageCount = getImageCountForLayout(currentLayoutType);
-
-      // 只有当图片数量不匹配时才调整
-      if (currentImageList.length !== requiredImageCount) {
-        // 切换布局时不保留之前的图片，统一使用默认值 demo.png
-        const newImageList = [];
-        for (let i = 0; i < requiredImageCount; i++) {
-          newImageList.push({
-            img_url: 'demo.png',
-            i18n_img_url: { 'en-US': 'demo.png' },
-          });
-        }
-
-        // 保存到状态管理器
-        multiImageComponentStateManager.setUserEditedImageList(
-          selectedComponent.id,
-          newImageList,
-        );
-
-        // 更新组件数据
-        const updatedComponent = { ...selectedComponent };
-        (updatedComponent as any).img_list = newImageList;
-
-        // 延迟更新避免状态冲突
-        setTimeout(() => {
-          onUpdateComponent(updatedComponent);
-        }, 0);
-      }
-    }
-  }, [
-    selectedComponent?.id,
-    (selectedComponent as any)?.combination_mode,
-    (selectedComponent as any)?.layoutType,
-    multiImageContentMode,
-  ]);
-
   // 渲染组件设置内容
   const componentSettingsContent = React.useMemo(
     () => (
-      <SettingSection title="🏷️ 组件设置" useForm={false}>
+      <SettingSection title="🏷️ 组件设置" form={form}>
         <ComponentNameInput
           prefix="ImgCombination_"
           suffix={componentNameInfo.suffix}
@@ -616,59 +715,7 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                   {availableLayouts.map((layout) => (
                     <div
                       key={layout.key}
-                      onClick={() => {
-                        const newCombinationMode = layoutToCombinationMode(
-                          layout.type,
-                        );
-                        const requiredImageCount = getImageCountForLayout(
-                          layout.type,
-                        );
-
-                        // 记录用户选择的具体布局类型（仅用于UI显示）
-                        layoutChoiceManager.setChoice(
-                          selectedComponent.id,
-                          layout.type,
-                        );
-
-                        // 创建更新后的组件数据
-                        let updatedComponent = {
-                          ...latestComponent,
-                          combination_mode: newCombinationMode,
-                        };
-
-                        // 根据当前模式处理图片列表
-                        if (multiImageContentMode === 'specify') {
-                          // 指定模式：清除缓存并创建匹配布局的图片列表
-                          multiImageComponentStateManager.setUserEditedImageList(
-                            selectedComponent.id,
-                            [], // 清空缓存
-                          );
-
-                          // 创建匹配布局的图片列表
-                          const newImageList = [];
-                          for (let i = 0; i < requiredImageCount; i++) {
-                            newImageList.push({
-                              img_url: DEFAULT_IMAGE_URL,
-                              i18n_img_url: {
-                                'en-US': DEFAULT_IMAGE_URL,
-                              },
-                            });
-                          }
-
-                          updatedComponent = {
-                            ...updatedComponent,
-                            img_list: newImageList,
-                          };
-                        }
-
-                        // 一次性调用组件更新
-                        onUpdateComponent(updatedComponent);
-
-                        // 强制重新渲染以确保UI更新
-                        setTimeout(() => {
-                          forceUpdate();
-                        }, 50);
-                      }}
+                      onClick={() => toggleMode(layout.type)}
                       className={styles.layoutItem}
                     >
                       <LayoutIcon
@@ -699,6 +746,11 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                                 currentCombinationMode,
                                 imageCount,
                               );
+
+                            layoutChoiceManager.setChoice(
+                              selectedComponent.id,
+                              inferredLayoutType,
+                            );
                             return inferredLayoutType === layout.type;
                           }
                           return false;
@@ -746,57 +798,12 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
           <Segmented
             value={multiImageContentMode}
             style={{ marginBottom: 16 }}
-            onChange={(value) => {
-              const newMode = value as 'specify' | 'variable';
-              setMultiImageContentMode(newMode);
-
-              // 处理模式切换时的图片显示逻辑
-              const updatedComponent = { ...selectedComponent };
-
-              if (newMode === 'specify') {
-                // 切换到指定模式：恢复用户编辑的图片列表
-                const userEditedImageList =
-                  multiImageComponentStateManager.getUserEditedImageList(
-                    selectedComponent.id,
-                  );
-                (updatedComponent as any).img_list = userEditedImageList || [];
-              } else {
-                // 切换到变量模式：检查是否有绑定的变量
-                const boundVariable =
-                  multiImageComponentStateManager.getBoundVariableName(
-                    selectedComponent.id,
-                  );
-                const rememberedVariable =
-                  lastBoundVariables[selectedComponent.id];
-
-                if (boundVariable || rememberedVariable) {
-                  // 如果有绑定变量，显示变量占位符
-                  const variableName = boundVariable || rememberedVariable;
-                  (updatedComponent as any).img_list = `\${${variableName}}`;
-                } else {
-                  // 如果没有绑定变量，保持当前指定的图片列表
-                  const currentImageList = Array.isArray(
-                    (selectedComponent as any).img_list,
-                  )
-                    ? (selectedComponent as any).img_list
-                    : [];
-
-                  // 保存当前图片列表到状态管理器
-                  multiImageComponentStateManager.setUserEditedImageList(
-                    selectedComponent.id,
-                    currentImageList,
-                  );
-                }
-              }
-
-              onUpdateComponent(updatedComponent);
-            }}
+            onChange={handleMutiImageChange}
             options={[
               { label: '指定', value: 'specify' },
               { label: '绑定变量', value: 'variable' },
             ]}
           />
-
           {multiImageContentMode === 'specify' && (
             <div style={{ marginBottom: 16 }}>
               {(() => {
@@ -868,7 +875,7 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                         style={{ borderRadius: '0 6px 6px 0' }}
                         buttonProps={{
                           type: 'primary',
-                          children: '上传',
+                          // children: '上传',
                           title: '上传图片',
                         }}
                       />
@@ -878,7 +885,6 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
               })()}
             </div>
           )}
-
           {multiImageContentMode === 'variable' && (
             <div>
               <VariableBinding
@@ -929,17 +935,19 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                         '',
                       );
 
-                      // 清除绑定变量后，根据当前模式决定显示的图片
+                      // 清除绑定变量后，保持在变量模式，显示默认占位图片
                       const updatedComponent = {
                         ...selectedComponent,
                       };
 
                       if (multiImageContentMode === 'variable') {
-                        // 在变量模式下清除绑定，显示指定图片列表（如果有的话）
+                        // 在变量模式下清除绑定，获取用户之前编辑的图片列表作为默认预览
                         const userEditedImageList =
                           multiImageComponentStateManager.getUserEditedImageList(
                             selectedComponent.id,
                           );
+
+                        // 如果有用户编辑的图片列表，显示它们；否则显示空数组
                         (updatedComponent as any).img_list =
                           userEditedImageList || [];
                       } else {
@@ -958,7 +966,6 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                 }
                 placeholder="请选择要绑定的变量"
                 label="绑定变量"
-                addVariableText="新建图片数组变量"
               />
             </div>
           )}
@@ -984,11 +991,11 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
   // 组合组件内容
   const componentContent = React.useMemo(
     () => (
-      <ComponentContent componentName="多图混排组件">
+      <>
         {componentSettingsContent}
         {layoutSettingsContent}
         {imageSettingsContent}
-      </ComponentContent>
+      </>
     ),
     [componentSettingsContent, layoutSettingsContent, imageSettingsContent],
   );
@@ -1003,6 +1010,7 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
       activeTab={topLevelTab}
       onTabChange={setTopLevelTab}
       componentContent={componentContent}
+      eventTabDisabled={true}
       variableManagementComponent={<VariableManagementComponent />}
       isVariableModalVisible={isVariableModalVisible}
       handleVariableModalOk={handleVariableModalOk}

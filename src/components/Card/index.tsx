@@ -1,29 +1,9 @@
-// 验证导出 - 模拟 card-designer-main-final.tsx 的导入语句
-
-// 从合并的文件中导入组件
-import { ComponentPanel, PropertyPanel } from './PropertyPanel';
-
-// 其他导入
-import Canvas from './card-designer-canvas-with-card';
-import { DEFAULT_CARD_DATA, DEVICE_SIZES } from './card-designer-constants';
-import Modals from './card-designer-modals';
-import Toolbar from './card-designer-toolbar-with-id';
-import { migrateTitleStyle } from './card-designer-utils';
-
-// 验证所有导入都存在
-console.log('✅ ComponentPanel 导入成功:', typeof ComponentPanel);
-console.log('✅ PropertyPanel 导入成功:', typeof PropertyPanel);
-console.log('✅ Canvas 导入成功:', typeof Canvas);
-console.log('✅ DEFAULT_CARD_DATA 导入成功:', typeof DEFAULT_CARD_DATA);
-console.log('✅ Modals 导入成功:', typeof Modals);
-console.log('✅ Toolbar 导入成功:', typeof Toolbar);
-
-// 现在 card-designer-main-final.tsx 应该能正常工作
-
-import { Modal } from 'antd';
+import { App, message, Modal } from 'antd';
 import React, { useEffect, useState } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import Canvas from './CanvasWrapper/ChatWrapperIndex';
+import { DEFAULT_CARD_DATA, DEVICE_SIZES } from './constants';
 import {
   useClipboard,
   useComponentSelection,
@@ -32,13 +12,18 @@ import {
   useHistory,
   useKeyboardShortcuts,
   useOutlineTree,
-} from './card-designer-hooks';
+} from './hooks/index';
+import { ExportModal, ImportModal, PreviewModal } from './Modals/index';
+import { ComponentPanel, PropertyPanel } from './PropertyPanel';
+import Toolbar from './ToolBar';
 import {
   CardDesignData,
   ComponentType,
+  TitleComponent,
   Variable,
   VariableItem,
-} from './card-designer-types-updated';
+} from './type';
+import { createDefaultComponent, generateId } from './utils';
 import { variableCacheManager } from './Variable/utils/index';
 
 const CardDesigner: React.FC = () => {
@@ -59,72 +44,34 @@ const CardDesigner: React.FC = () => {
   const safeCardData = React.useMemo(() => {
     const data = history.data as unknown as CardDesignData;
     if (!data || !data.dsl || !data.dsl.body) {
-      console.warn('⚠️ 卡片数据结构不完整，使用默认数据');
       return DEFAULT_CARD_DATA;
     }
-
-    // 进行数据迁移
-    const migratedData = migrateTitleStyle(data);
-
-    console.log('🔄 safeCardData 更新:', {
-      historyDataId: data.id,
-      elementsCount: data.dsl.body.elements.length,
-      variablesCount: Object.keys(data.variables || {}).length,
-      elements: data.dsl.body.elements.map((el, index) => ({
-        index,
-        id: el.id,
-        tag: el.tag,
-        img_url: (el as any).img_url,
-        content: (el as any).content,
-        boundVariableName: (el as any).boundVariableName,
-        hasBoundVariable: !!(el as any).boundVariableName,
-        // 检查是否有不应该存在的字段
-        hasVariableName: !!(el as any).variable_name,
-        hasOriginalImgUrl: !!(el as any).original_img_url,
-      })),
-      timestamp: new Date().toISOString(),
-    });
-
-    return migratedData;
+    return data;
   }, [history.data]);
 
   // 处理变量更新 - 同时更新本地状态、缓存和卡片数据结构
   const handleUpdateVariables = (newVariables: VariableItem[]) => {
-    console.log('🔄 处理变量更新:', {
-      oldVariablesCount: variables.length,
-      newVariablesCount: newVariables.length,
-      newVariables: newVariables,
-      timestamp: new Date().toISOString(),
-    });
+    // 创建新的变量数组，确保引用发生变化
+    const updatedVariables =
+      newVariables?.map((variable) => ({
+        ...variable,
+        _lastUpdated: Date.now(), // 添加时间戳确保引用变化
+      })) || [];
 
     // 立即更新本地状态
-    setVariables(newVariables);
+    setVariables(updatedVariables);
 
     // 更新变量缓存
-    variableCacheManager.setVariables(newVariables);
-
-    console.log('📦 变量缓存更新完成:', {
-      variablesCount: newVariables.length,
-      cacheStats: variableCacheManager.getCacheStats(),
-    });
+    variableCacheManager.setVariables(updatedVariables);
 
     // 将变量转换为卡片数据结构格式并更新
     const cardVariables: { [key: string]: any } = {};
 
-    newVariables.forEach((variable) => {
+    updatedVariables?.forEach((variable) => {
       if (typeof variable === 'object' && variable !== null) {
         // 检查是否是标准的Variable对象格式 {name, type, value, originalType, description}
         const varRecord = variable as any;
         if (varRecord.name && varRecord.value !== undefined) {
-          // 标准Variable对象格式
-          console.log('🔧 处理标准Variable对象:', {
-            name: varRecord.name,
-            type: varRecord.type,
-            value: varRecord.value,
-            originalType: varRecord.originalType,
-            description: varRecord.description,
-          });
-
           // 保存变量名和值到全局数据
           cardVariables[varRecord.name] = varRecord.value;
 
@@ -135,12 +82,6 @@ const CardDesigner: React.FC = () => {
               originalTypeKey,
               varRecord.originalType,
             );
-            console.log('💾 保存 originalType 到缓存:', {
-              variableName: varRecord.name,
-              originalType: varRecord.originalType,
-              originalTypeKey,
-              timestamp: new Date().toISOString(),
-            });
           }
         } else {
           // 自定义格式：{变量名: 模拟数据值, __变量名_originalType: 原始类型}
@@ -151,25 +92,13 @@ const CardDesigner: React.FC = () => {
           const actualVariableNames = keys.filter(
             (key) => !key.startsWith('__'),
           );
-          const internalKeys = keys.filter((key) => key.startsWith('__'));
 
           // 只保存实际变量到全局数据，不保存内部属性
           actualVariableNames.forEach((variableName) => {
             cardVariables[variableName] = variableRecord[variableName];
           });
-
-          // 内部属性（如 originalType）不保存到全局数据中
-          // 这些信息将通过内存缓存和组件状态维护
-          if (internalKeys.length > 0) {
-            console.log('🔧 内部属性不保存到全局数据:', {
-              internalKeys,
-              message: 'originalType信息通过内存缓存维护',
-              timestamp: new Date().toISOString(),
-            });
-          }
         }
       } else {
-        // 兼容旧的Variable格式（向后兼容）
         const varAsVariable = variable as Variable;
         if (varAsVariable.name) {
           cardVariables[varAsVariable.name] = varAsVariable.value;
@@ -184,130 +113,8 @@ const CardDesigner: React.FC = () => {
       variables: cardVariables,
     };
 
-    console.log('📝 更新卡片数据结构:', {
-      currentVariablesCount: Object.keys(currentData.variables || {}).length,
-      newCardVariablesCount: Object.keys(cardVariables).length,
-      cardVariables: cardVariables,
-      updatedCardData: updatedCardData,
-      timestamp: new Date().toISOString(),
-    });
-
     // 立即更新历史数据，这会触发画布重新渲染
-    console.log('🔄 调用 history.updateData');
     history.updateData(updatedCardData as any);
-
-    console.log('✅ 变量更新完成，画布将实时刷新显示新的变量模拟数据');
-  };
-
-  // 从卡片数据结构初始化变量
-  React.useEffect(() => {
-    if (
-      safeCardData.variables &&
-      Object.keys(safeCardData.variables).length > 0
-    ) {
-      const cardVariables = safeCardData.variables;
-      const variableItems: VariableItem[] = [];
-
-      // 处理变量名和值，同时保留内部属性（如originalType）
-      const actualVariableEntries = Object.entries(cardVariables).filter(
-        ([key]) =>
-          // 过滤出实际变量（排除旧格式后缀和内部属性）
-          !key.endsWith('_type') &&
-          !key.endsWith('_description') &&
-          !key.startsWith('__'),
-      );
-
-      actualVariableEntries.forEach(([variableName, variableValue]) => {
-        // 尝试从缓存中获取originalType信息
-        const originalTypeKey = `__${variableName}_originalType`;
-        const cachedOriginalType =
-          variableCacheManager.getVariable(originalTypeKey);
-
-        // 构建标准Variable对象格式
-        const variableItem: Variable = {
-          name: variableName,
-          type:
-            typeof variableValue === 'number'
-              ? 'number'
-              : typeof variableValue === 'object'
-              ? 'object'
-              : 'text',
-          value: variableValue,
-          originalType:
-            cachedOriginalType ||
-            (typeof variableValue === 'number' ? 'number' : 'text'),
-          description: '',
-        };
-
-        if (cachedOriginalType) {
-          console.log('🔄 重建变量时从缓存恢复originalType:', {
-            variableName,
-            originalTypeKey,
-            originalType: cachedOriginalType,
-            source: 'cache',
-          });
-        } else {
-          console.log('🔍 重建变量时未找到originalType缓存:', {
-            variableName,
-            originalTypeKey,
-            inferredType: variableItem.originalType,
-            message: '使用类型推断',
-          });
-        }
-
-        variableItems.push(variableItem);
-      });
-
-      console.log('🔄 从卡片数据结构初始化变量:', {
-        cardVariables: cardVariables,
-        cardVariableKeys: Object.keys(cardVariables),
-        actualVariableEntries: actualVariableEntries,
-        variableItems: variableItems,
-        timestamp: new Date().toISOString(),
-      });
-
-      setVariables(variableItems);
-    }
-  }, [safeCardData.variables]);
-
-  // 将VariableItem[]转换为Variable[]用于config函数
-  const convertToVariableArray = (
-    variableItems: VariableItem[],
-  ): Variable[] => {
-    return variableItems.map((item) => {
-      if (typeof item === 'object' && item !== null) {
-        // 新的格式：{变量名: 模拟数据值}
-        const keys = Object.keys(item as { [key: string]: any });
-        if (keys.length > 0) {
-          const variableName = keys[0];
-          const variableValue = (item as { [key: string]: any })[variableName];
-
-          // 推断类型
-          let variableType: 'text' | 'number' | 'boolean' | 'object';
-          if (typeof variableValue === 'string') {
-            variableType = 'text';
-          } else if (typeof variableValue === 'number') {
-            variableType = 'number';
-          } else if (typeof variableValue === 'boolean') {
-            variableType = 'boolean';
-          } else {
-            variableType = 'object';
-          }
-
-          return {
-            name: variableName,
-            value:
-              typeof variableValue === 'object'
-                ? JSON.stringify(variableValue)
-                : String(variableValue),
-            type: variableType,
-          };
-        }
-      }
-
-      // 兼容旧的Variable格式
-      return item as Variable;
-    });
   };
 
   // 根据路径获取组件的辅助函数 - 支持嵌套组件
@@ -433,51 +240,79 @@ const CardDesigner: React.FC = () => {
     return null;
   };
 
-  // 处理组件更新的副作用
-  useEffect(() => {
-    if (selection.selectedPath) {
-      // 如果是卡片选择路径，不需要检查组件存在性
-      if (
-        selection.selectedPath.length === 2 &&
-        selection.selectedPath[0] === 'dsl' &&
-        selection.selectedPath[1] === 'body'
-      ) {
-        return; // 卡片选择路径不需要验证
-      }
+  // 添加组件到根节点
+  const addComponentToRoot = (component: ComponentType) => {
+    const newData = {
+      ...safeCardData,
+      dsl: {
+        ...safeCardData.dsl,
+        body: {
+          ...safeCardData.dsl.body,
+          elements: [...safeCardData.dsl.body.elements, component],
+        },
+      },
+    };
+    history.updateData(newData as any);
+  };
 
-      // 如果是标题组件选择路径，检查headerData是否存在
+  // 添加标题组件到画布最上方（dsl.header位置）
+  const addTitleComponentToHeader = (titleComponent: TitleComponent) => {
+    const newData = {
+      ...safeCardData,
+      dsl: {
+        ...safeCardData.dsl,
+        header: {
+          ...safeCardData.dsl.header,
+          title: { content: titleComponent.title.content },
+          subtitle: { content: titleComponent.subtitle.content },
+          style: titleComponent.style,
+        },
+        body: {
+          ...safeCardData.dsl.body,
+        },
+      },
+    };
+    history.updateData(newData as any);
+    message.success('已添加标题组件到画布最上方');
+  };
+
+  // 添加组件到指定路径
+  const addComponentToPath = (
+    path: (string | number)[],
+    component: ComponentType,
+  ) => {
+    let newData = JSON.parse(JSON.stringify(safeCardData));
+
+    try {
+      // 根据路径类型决定添加位置
       if (
-        selection.selectedPath.length === 2 &&
-        selection.selectedPath[0] === 'dsl' &&
-        selection.selectedPath[1] === 'header'
+        path.length === 4 &&
+        path[0] === 'dsl' &&
+        path[1] === 'body' &&
+        path[2] === 'elements'
       ) {
-        // 标题组件特殊处理：检查headerData是否存在
+        // 根级组件路径: ['dsl', 'body', 'elements', index]
+        const targetIndex = path[3] as number;
+        newData.dsl.body.elements.splice(targetIndex + 1, 0, component);
+      } else if (path.length === 6 && path[4] === 'elements') {
+        // 表单内组件路径: ['dsl', 'body', 'elements', formIndex, 'elements', componentIndex]
+        const formIndex = path[3] as number;
+        const componentIndex = path[5] as number;
+        const formComponent = newData.dsl.body.elements[formIndex];
+
         if (
-          safeCardData.dsl.header &&
-          (safeCardData.dsl.header.title?.content ||
-            safeCardData.dsl.header.subtitle?.content)
+          formComponent &&
+          formComponent.tag === 'form' &&
+          formComponent.elements
         ) {
-          console.log('✅ 标题组件选择状态有效，headerData存在');
-          return; // 标题组件选择状态有效
-        } else {
-          console.log('❌ 标题组件选择状态无效，headerData不存在');
-          selection.clearSelection();
-          return;
+          formComponent.elements.splice(componentIndex + 1, 0, component);
         }
-      }
-
-      // 特殊处理根级别分栏列选择：['dsl', 'body', 'elements', columnSetIndex, 'columns', columnIndex]
-      if (
-        selection.selectedPath.length === 6 &&
-        selection.selectedPath[0] === 'dsl' &&
-        selection.selectedPath[1] === 'body' &&
-        selection.selectedPath[2] === 'elements' &&
-        selection.selectedPath[4] === 'columns'
-      ) {
-        const columnSetIndex = selection.selectedPath[3] as number;
-        const columnIndex = selection.selectedPath[5] as number;
-        const columnSetComponent =
-          safeCardData.dsl.body.elements[columnSetIndex];
+      } else if (path.length === 8 && path[4] === 'columns') {
+        // 分栏列路径: ['dsl', 'body', 'elements', columnSetIndex, 'columns', columnIndex, 'elements', componentIndex]
+        const columnSetIndex = path[3] as number;
+        const columnIndex = path[5] as number;
+        const componentIndex = path[7] as number;
+        const columnSetComponent = newData.dsl.body.elements[columnSetIndex];
 
         if (
           columnSetComponent &&
@@ -485,27 +320,18 @@ const CardDesigner: React.FC = () => {
           columnSetComponent.columns &&
           columnSetComponent.columns[columnIndex]
         ) {
-          return; // 分栏列选择状态有效
-        } else {
-          console.log('❌ 根级别分栏列选择状态无效，清除选择');
-          selection.clearSelection();
-          return;
+          const targetColumn = columnSetComponent.columns[columnIndex];
+          if (targetColumn.elements) {
+            targetColumn.elements.splice(componentIndex + 1, 0, component);
+          }
         }
-      }
-
-      // 特殊处理表单内分栏列选择：['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex]
-      if (
-        selection.selectedPath.length === 8 &&
-        selection.selectedPath[0] === 'dsl' &&
-        selection.selectedPath[1] === 'body' &&
-        selection.selectedPath[2] === 'elements' &&
-        selection.selectedPath[4] === 'elements' &&
-        selection.selectedPath[6] === 'columns'
-      ) {
-        const formIndex = selection.selectedPath[3] as number;
-        const columnSetIndex = selection.selectedPath[5] as number;
-        const columnIndex = selection.selectedPath[7] as number;
-        const formComponent = safeCardData.dsl.body.elements[formIndex];
+      } else if (path.length === 10 && path[6] === 'columns') {
+        // 表单内分栏列路径: ['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', componentIndex]
+        const formIndex = path[3] as number;
+        const columnSetIndex = path[5] as number;
+        const columnIndex = path[7] as number;
+        const componentIndex = path[9] as number;
+        const formComponent = newData.dsl.body.elements[formIndex];
 
         if (
           formComponent &&
@@ -519,33 +345,64 @@ const CardDesigner: React.FC = () => {
             columnSetComponent.columns &&
             columnSetComponent.columns[columnIndex]
           ) {
-            return; // 表单内分栏列选择状态有效
-          } else {
-            console.log('❌ 表单内分栏列选择状态无效，清除选择');
-            selection.clearSelection();
-            return;
+            const targetColumn = columnSetComponent.columns[columnIndex];
+            if (targetColumn.elements) {
+              targetColumn.elements.splice(componentIndex + 1, 0, component);
+            }
           }
-        } else {
-          console.log('❌ 表单内分栏列选择状态无效，表单组件不存在');
-          selection.clearSelection();
-          return;
         }
+      } else {
+        // 其他情况，添加到根节点
+        newData.dsl.body.elements.push(component);
       }
 
-      // 对于其他组件选择路径，需要调整路径查找逻辑
-      const component = getComponentByPath(
-        safeCardData,
-        selection.selectedPath,
-      );
-      if (component && component.id === selection.selectedComponent?.id) {
-        // 组件仍然存在且匹配
-        // console.log('✅ 组件选择状态有效');
-      } else {
-        console.log('❌ 组件选择状态无效，清除选择');
-        selection.clearSelection();
+      history.updateData(newData as any);
+    } catch (error) {
+      console.error('❌ 添加组件失败:', error);
+    }
+  };
+
+  // 处理组件库点击事件 - 添加组件到画布
+  const handleComponentClick = (componentType: string) => {
+    const newComponent: ComponentType = createDefaultComponent(componentType);
+
+    if (!newComponent) {
+      console.error('❌ 无法创建组件:', componentType);
+      return;
+    }
+
+    // 特殊处理标题组件
+    if (componentType === 'title') {
+      if (safeCardData?.dsl?.header) {
+        message.warning('画布中已存在标题组件，无法重复添加');
+        return;
+      }
+
+      // 标题组件始终添加到画布最上方（dsl.header位置）
+      addTitleComponentToHeader(newComponent as TitleComponent);
+      return;
+    }
+
+    // 特殊处理表单容器组件
+    if (componentType === 'form') {
+      const hasForm = safeCardData.dsl.body.elements.some((item) => {
+        return item.tag === 'form';
+      });
+      // 检查画布中是否已存在表单容器
+      if (hasForm) {
+        return;
       }
     }
-  }, [safeCardData, selection.selectedPath, selection.selectedComponent?.id]);
+
+    // 其他组件的正常逻辑
+    if (selection.selectedPath && selection.selectedPath.length > 0) {
+      // 有激活的组件，在其下方添加
+      addComponentToPath(selection.selectedPath, newComponent);
+    } else {
+      // 没有激活的组件，添加到根节点
+      addComponentToRoot(newComponent);
+    }
+  };
 
   // 组合操作函数
   const handleCopy = () => {
@@ -554,12 +411,13 @@ const CardDesigner: React.FC = () => {
     }
   };
 
+  // 对于卡片结构，粘贴到卡片内
   const handlePaste = () => {
-    // 对于卡片结构，粘贴到卡片内
     if (clipboard.clipboard) {
+      if (['title', 'form'].includes(clipboard.clipboard.tag)) return;
       const newComponent = {
         ...clipboard.clipboard,
-        id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+        id: generateId(),
       };
       const newData = {
         ...safeCardData,
@@ -576,12 +434,7 @@ const CardDesigner: React.FC = () => {
   };
 
   const handleDelete = (path: (string | number)[]) => {
-    if (
-      path.length < 4 ||
-      path[0] !== 'dsl' ||
-      path[1] !== 'body' ||
-      path[2] !== 'elements'
-    ) {
+    if (path[0] !== 'dsl' || path.length === 1) {
       console.warn('无效的删除路径:', path);
       return;
     }
@@ -596,32 +449,21 @@ const CardDesigner: React.FC = () => {
       // 表单内分栏列中组件: ['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', componentIndex]
       console.log('🗑️ 检测到表单内分栏列中组件删除路径:', path);
     }
-
     let newData = JSON.parse(JSON.stringify(safeCardData));
-
-    // 检查是否删除的是标题组件
-    let isDeletingTitle = false;
     if (path.length === 4) {
       // 根级组件: ['dsl', 'body', 'elements', index]
       const index = path[3] as number;
-      const componentToDelete = newData.dsl.body.elements[index];
-      isDeletingTitle = componentToDelete && componentToDelete.tag === 'title';
       newData.dsl.body.elements.splice(index, 1);
-      // console.log('🗑️ 删除根级组件:', { index, isTitle: isDeletingTitle });
     } else if (path.length === 6 && path[4] === 'elements') {
       // 表单内组件: ['dsl', 'body', 'elements', formIndex, 'elements', componentIndex]
       const formIndex = path[3] as number;
       const componentIndex = path[5] as number;
       const formComponent = newData.dsl.body.elements[formIndex];
-
       if (
         formComponent &&
         formComponent.tag === 'form' &&
         formComponent.elements
       ) {
-        const componentToDelete = formComponent.elements[componentIndex];
-        isDeletingTitle =
-          componentToDelete && componentToDelete.tag === 'title';
         formComponent.elements.splice(componentIndex, 1);
       }
     } else if (path.length === 6 && path[4] === 'columns') {
@@ -653,7 +495,6 @@ const CardDesigner: React.FC = () => {
         // 如果删除后没有列了，删除整个分栏组件
         if (columnSetComponent.columns.length === 0) {
           newData.dsl.body.elements.splice(columnSetIndex, 1);
-          // console.log('🗑️ 分栏列全部删除，删除整个分栏组件');
         } else {
           // 重新计算剩余列的宽度 - 确保每列都有flex属性
           columnSetComponent.columns = columnSetComponent.columns.map(
@@ -661,7 +502,7 @@ const CardDesigner: React.FC = () => {
               ...col,
               style: {
                 ...col.style,
-                flex: col.style?.flex || col.flex || 1, // 兼容旧数据和新数据格式
+                flex: col.style?.flex || 1,
               },
             }),
           );
@@ -676,7 +517,6 @@ const CardDesigner: React.FC = () => {
           (selection.selectedPath[5] as number) >= columnIndex
         ) {
           selection.clearSelection();
-          // console.log('🔄 重置选中状态，因为删除了当前选中的列或其后的列');
         }
       }
     } else if (
@@ -719,7 +559,6 @@ const CardDesigner: React.FC = () => {
           // 如果删除后没有列了，删除整个分栏组件
           if (columnSetComponent.columns.length === 0) {
             formComponent.elements.splice(columnSetIndex, 1);
-            // console.log('🗑️ 表单内分栏列全部删除，删除整个分栏组件');
           } else {
             // 重新计算剩余列的宽度 - 确保每列都有flex属性
             columnSetComponent.columns = columnSetComponent.columns.map(
@@ -766,9 +605,6 @@ const CardDesigner: React.FC = () => {
       ) {
         const column = columnSetComponent.columns[columnIndex];
         if (column && column.elements) {
-          const componentToDelete = column.elements[componentIndex];
-          isDeletingTitle =
-            componentToDelete && componentToDelete.tag === 'title';
           column.elements.splice(componentIndex, 1);
         }
       }
@@ -798,26 +634,13 @@ const CardDesigner: React.FC = () => {
         ) {
           const column = columnSetComponent.columns[columnIndex];
           if (column && column.elements) {
-            const componentToDelete = column.elements[componentIndex];
-            isDeletingTitle =
-              componentToDelete && componentToDelete.tag === 'title';
             column.elements.splice(componentIndex, 1);
-            console.log('🗑️ 删除表单内分栏列中组件:', {
-              formIndex,
-              columnSetIndex,
-              columnIndex,
-              componentIndex,
-              isTitle: isDeletingTitle,
-            });
           }
         }
       }
-    } else {
-      console.warn('⚠️ 不支持的删除路径格式:', path);
-      return;
     }
 
-    if (isDeletingTitle) {
+    if (path.length === 2 && path[1] === 'header') {
       delete newData.dsl.header;
     }
 
@@ -828,7 +651,7 @@ const CardDesigner: React.FC = () => {
   const handleSmartDelete = (path: (string | number)[]) => {
     // 检查是否为卡片本身，卡片不可删除
     if (path.length === 2 && path[0] === 'dsl' && path[1] === 'body') {
-      return false; // 卡片本身不可删除
+      return false;
     }
     handleDelete(path);
     return true;
@@ -856,22 +679,17 @@ const CardDesigner: React.FC = () => {
         style: titleComponent.style || 'blue',
       };
 
-      console.log('🔄 转换后的 header 数据格式:', headerData);
       newData.dsl.header = headerData;
-
       history.updateData(newData as any);
-      console.log('✅ Header 标题组件更新成功');
       return;
     }
 
     // 检查是否是卡片选中状态
     if (path && path.length === 2 && path[0] === 'dsl' && path[1] === 'body') {
-      console.log('🎯 卡片选中状态，不处理组件更新');
       return;
     }
 
     if (!path || path.length < 4) {
-      console.warn('无效的选中路径:', path);
       return;
     }
 
@@ -880,17 +698,7 @@ const CardDesigner: React.FC = () => {
     if (path.length === 4) {
       // 根级组件: ['dsl', 'body', 'elements', index]
       const index = path[3] as number;
-      const oldComponent = newData.dsl.body.elements[index];
       newData.dsl.body.elements[index] = updatedComponent;
-
-      console.log('📝 根级组件更新详情:', {
-        index,
-        componentId: updatedComponent.id,
-        oldImgUrl: (oldComponent as any)?.img_url,
-        newImgUrl: (updatedComponent as any).img_url,
-        updateSuccess:
-          newData.dsl.body.elements[index].id === updatedComponent.id,
-      });
     } else if (path.length === 6 && path[4] === 'elements') {
       // 表单内组件（包括分栏容器）: ['dsl', 'body', 'elements', formIndex, 'elements', componentIndex]
       const formIndex = path[3] as number;
@@ -911,7 +719,7 @@ const CardDesigner: React.FC = () => {
             updatedComponentTag: updatedComponent.tag,
             expectedTag: oldComponent?.tag,
           });
-          return; // 不进行更新
+          return;
         }
 
         formComponent.elements[componentIndex] = updatedComponent;
@@ -966,14 +774,6 @@ const CardDesigner: React.FC = () => {
               column.elements = [];
             }
             column.elements[componentIndex] = updatedComponent;
-            console.log('🎯 更新表单内分栏容器内的组件:', {
-              formIndex,
-              columnSetIndex,
-              columnIndex,
-              componentIndex,
-              componentTag: updatedComponent.tag,
-              componentId: updatedComponent.id,
-            });
           }
         }
       }
@@ -983,7 +783,10 @@ const CardDesigner: React.FC = () => {
     }
 
     history.updateData(newData as any);
-    selection.selectComponent(updatedComponent, selection.selectedPath);
+    selection.selectComponent(
+      updatedComponent,
+      selection?.selectedPath as (string | number)[],
+    );
   };
 
   // 处理卡片属性更新
@@ -1075,24 +878,12 @@ const CardDesigner: React.FC = () => {
     focus.handleCanvasFocus();
   };
 
-  const handleSaveConfig = () => {
-    config.saveConfig(safeCardData, convertToVariableArray(variables));
-  };
-
-  const handleLoadConfig = () => {
-    config.loadConfig(history.updateData, (newVariables: Variable[]) => {
-      // 将Variable[]转换为VariableItem[]
-      const variableItems: VariableItem[] = newVariables.map((variable) => ({
-        [variable.name]: variable.value,
-      }));
-      setVariables(variableItems);
-    });
-  };
-
+  // 文件导入
   const handleFileUpload = (file: File) => {
     return config.handleFileUpload(file, history.updateData);
   };
 
+  // 清空画布
   const clearCanvas = () => {
     Modal.confirm({
       title: '确认清空',
@@ -1108,11 +899,27 @@ const CardDesigner: React.FC = () => {
             },
           },
         };
+        if (newData?.dsl?.header) {
+          delete newData.dsl.header;
+        }
         history.updateData(newData as any);
         selection.clearSelection();
-        setVariables([]);
       },
     });
+  };
+
+  // 保存
+  const saveHandle = () => {
+    message.success('保存成功');
+  };
+
+  // 发布
+  const publishHandle = () => {
+    console.warn('data===', {
+      card_content: JSON.stringify(safeCardData),
+      variable_content: variables ? JSON.stringify({ variables }) : '{}',
+    });
+    message.success('发布成功');
   };
 
   // 绑定快捷键
@@ -1121,8 +928,6 @@ const CardDesigner: React.FC = () => {
     redo: history.redo,
     copyComponent: clipboard.copyComponent,
     pasteComponent: handlePaste,
-    saveConfig: handleSaveConfig,
-    loadConfig: handleLoadConfig,
     smartDeleteComponent: handleSmartDelete,
     selectedComponent: selection.selectedComponent,
     selectedPath: selection.selectedPath,
@@ -1130,100 +935,292 @@ const CardDesigner: React.FC = () => {
     canvasRef: focus.canvasRef,
   });
 
-  return (
-    <DndProvider backend={HTML5Backend}>
-      <div
-        style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}
-      >
-        {/* 顶部工具栏 - 显示卡片ID */}
-        <Toolbar
-          cardId={safeCardData.id}
-          device={device}
-          onDeviceChange={setDevice}
-          canUndo={history.canUndo}
-          canRedo={history.canRedo}
-          onUndo={history.undo}
-          onRedo={history.redo}
-          selectedComponent={selection.selectedComponent}
-          clipboard={clipboard.clipboard}
-          onCopy={handleCopy}
-          onPaste={handlePaste}
-          onSave={handleSaveConfig}
-          onLoad={handleLoadConfig}
-          onImport={config.importConfig}
-          onExport={() => config.exportConfig(safeCardData)}
-          onPreview={() => setPreviewVisible(true)}
-          elementsCount={safeCardData.dsl.body.elements.length}
-          variablesCount={variables.length}
-          canvasFocused={focus.canvasFocused}
-          verticalSpacing={safeCardData.dsl.body.vertical_spacing}
-        />
+  // 从卡片数据结构初始化变量
+  useEffect(() => {
+    if (
+      safeCardData.variables &&
+      Object.keys(safeCardData.variables).length > 0
+    ) {
+      const cardVariables = safeCardData.variables;
+      const variableItems: VariableItem[] = [];
 
-        {/* 主体区域 */}
-        <div style={{ flex: 1, display: 'flex' }}>
-          {/* 左侧组件面板 - 包含组件库和大纲树的Tab */}
-          <ComponentPanel
+      // 处理变量名和值，同时保留内部属性（如originalType）
+      const actualVariableEntries = Object.entries(cardVariables).filter(
+        ([key]) =>
+          // 过滤出实际变量（排除旧格式后缀和内部属性）
+          !key.endsWith('_type') &&
+          !key.endsWith('_description') &&
+          !key.startsWith('__'),
+      );
+
+      actualVariableEntries.forEach(([variableName, variableValue]) => {
+        // 尝试从缓存中获取originalType信息
+        const originalTypeKey = `__${variableName}_originalType`;
+        const cachedOriginalType =
+          variableCacheManager.getVariable(originalTypeKey);
+
+        // 构建标准Variable对象格式
+        const variableItem: Variable = {
+          name: variableName,
+          type:
+            typeof variableValue === 'number'
+              ? 'number'
+              : typeof variableValue === 'object'
+              ? 'object'
+              : 'text',
+          value: variableValue as string,
+          originalType:
+            cachedOriginalType ||
+            (typeof variableValue === 'number' ? 'number' : 'text'),
+          description: '',
+        };
+
+        variableItems.push(variableItem);
+      });
+
+      setVariables(variableItems);
+    }
+  }, [safeCardData.variables]);
+
+  // 处理组件更新的副作用
+  useEffect(() => {
+    if (selection.selectedPath) {
+      // 如果是卡片选择路径，不需要检查组件存在性
+      if (
+        selection.selectedPath.length === 2 &&
+        selection.selectedPath[0] === 'dsl' &&
+        selection.selectedPath[1] === 'body'
+      ) {
+        return; // 卡片选择路径不需要验证
+      }
+
+      // 如果是标题组件选择路径，检查headerData是否存在
+      if (
+        selection.selectedPath.length === 2 &&
+        selection.selectedPath[0] === 'dsl' &&
+        selection.selectedPath[1] === 'header'
+      ) {
+        // 标题组件特殊处理：检查headerData是否存在
+        if (
+          safeCardData.dsl.header &&
+          (safeCardData.dsl.header.title?.content ||
+            safeCardData.dsl.header.subtitle?.content)
+        ) {
+          return;
+        } else {
+          selection.clearSelection();
+          return;
+        }
+      }
+
+      // 特殊处理根级别分栏列选择：['dsl', 'body', 'elements', columnSetIndex, 'columns', columnIndex]
+      if (
+        selection.selectedPath.length === 6 &&
+        selection.selectedPath[0] === 'dsl' &&
+        selection.selectedPath[1] === 'body' &&
+        selection.selectedPath[2] === 'elements' &&
+        selection.selectedPath[4] === 'columns'
+      ) {
+        const columnSetIndex = selection.selectedPath[3] as number;
+        const columnIndex = selection.selectedPath[5] as number;
+        const columnSetComponent =
+          safeCardData.dsl.body.elements[columnSetIndex];
+
+        if (
+          columnSetComponent &&
+          columnSetComponent.tag === 'column_set' &&
+          columnSetComponent.columns &&
+          columnSetComponent.columns[columnIndex]
+        ) {
+          return;
+        } else {
+          selection.clearSelection();
+          return;
+        }
+      }
+
+      // 特殊处理表单内分栏列选择：['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex]
+      if (
+        selection.selectedPath.length === 8 &&
+        selection.selectedPath[0] === 'dsl' &&
+        selection.selectedPath[1] === 'body' &&
+        selection.selectedPath[2] === 'elements' &&
+        selection.selectedPath[4] === 'elements' &&
+        selection.selectedPath[6] === 'columns'
+      ) {
+        const formIndex = selection.selectedPath[3] as number;
+        const columnSetIndex = selection.selectedPath[5] as number;
+        const columnIndex = selection.selectedPath[7] as number;
+        const formComponent = safeCardData.dsl.body.elements[formIndex];
+
+        if (
+          formComponent &&
+          formComponent.tag === 'form' &&
+          formComponent.elements
+        ) {
+          const columnSetComponent = formComponent.elements[columnSetIndex];
+          if (
+            columnSetComponent &&
+            columnSetComponent.tag === 'column_set' &&
+            columnSetComponent.columns &&
+            columnSetComponent.columns[columnIndex]
+          ) {
+            return;
+          } else {
+            selection.clearSelection();
+            return;
+          }
+        } else {
+          selection.clearSelection();
+          return;
+        }
+      }
+
+      // 对于其他组件选择路径，需要调整路径查找逻辑
+      const component = getComponentByPath(
+        safeCardData,
+        selection.selectedPath,
+      );
+      if (component && component.id === selection.selectedComponent?.id) {
+        // 组件仍然存在且匹配
+      } else {
+        selection.clearSelection();
+      }
+    }
+  }, [safeCardData, selection.selectedPath, selection.selectedComponent?.id]);
+
+  useEffect(() => {
+    // getApplicationDetail(cardId).then((res) => {
+    // 获取卡片信息
+    // if (res?.card_id) {
+    //   setCardInfo(res);
+    // }
+    // // 更新变量
+    // if (res?.variable_content) {
+    //   if (res?.variable_content === '{}') {
+    //     handleUpdateVariables([]);
+    //   } else {
+    //     const result = JSON.parse(res?.variable_content);
+    //     handleUpdateVariables(result.variables);
+    //   }
+    // }
+    // 更新画布
+    //   const data =
+    //     res?.card_content && res?.card_content !== '{}'
+    //       ? JSON.parse(res.card_content)
+    //       : {};
+    //   const newData = {
+    //     ...safeCardData,
+    //     name: res.card_name,
+    //     id: res.card_id,
+    //     ...data,
+    //   };
+    //   history.updateData(newData as any);
+    // });
+  }, []);
+
+  return (
+    <App>
+      <DndProvider backend={HTML5Backend}>
+        <div
+          style={{
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            background: '#e4e8ed',
+          }}
+        >
+          {/* 顶部工具栏 - 显示卡片ID */}
+          <Toolbar
             cardData={safeCardData}
-            selectedPath={selection.selectedPath}
-            onOutlineHover={outline.handleOutlineHover}
-            onOutlineSelect={handleOutlineSelect}
+            onImport={config.importConfig}
+            onExport={() => config.exportConfig(safeCardData)}
+            onPreview={() => setPreviewVisible(true)}
+            onSave={saveHandle}
+            onPublish={publishHandle}
           />
 
-          {/* 中间画布 - 会话卡片界面 */}
-          <div style={{ flex: 1 }}>
-            <div data-canvas="true" style={{ height: '100%' }}>
-              <Canvas
-                data={safeCardData}
-                onDataChange={(newData) => history.updateData(newData as any)}
+          {/* 主体区域 */}
+          <div style={{ flex: 1, display: 'flex' }}>
+            {/* 左侧组件面板 - 包含组件库和大纲树的Tab */}
+            <ComponentPanel
+              cardData={safeCardData}
+              selectedPath={selection.selectedPath}
+              onOutlineHover={outline.handleOutlineHover}
+              onOutlineSelect={handleOutlineSelect}
+              onComponentClick={handleComponentClick}
+            />
+
+            {/* 中间画布 - 会话卡片界面 */}
+            <div style={{ flex: 1 }}>
+              <div data-canvas="true" style={{ height: '100%' }}>
+                <Canvas
+                  data={safeCardData}
+                  variables={variables as any[]}
+                  onDeviceChange={setDevice}
+                  canUndo={history.canUndo}
+                  canRedo={history.canRedo}
+                  onUndo={history.undo}
+                  onRedo={history.redo}
+                  selectedComponent={selection.selectedComponent}
+                  clipboard={clipboard.clipboard}
+                  onCopy={handleCopy}
+                  onPaste={handlePaste}
+                  onDataChange={(newData) => history.updateData(newData as any)}
+                  selectedPath={selection.selectedPath}
+                  hoveredPath={outline.hoveredPath}
+                  onSelectComponent={selection.selectComponent}
+                  onDeleteComponent={handleDelete}
+                  onCopyComponent={clipboard.copyComponent}
+                  device={device}
+                  onCanvasFocus={focus.handleCanvasFocus}
+                  onHeaderDataChange={handleHeaderDataChange}
+                  onElementsChange={handleElementsChange}
+                />
+              </div>
+            </div>
+
+            {/* 右侧属性面板 - 支持卡片属性配置 */}
+            <div data-panel="property" style={{ width: '300px' }}>
+              <PropertyPanel
                 selectedPath={selection.selectedPath}
-                hoveredPath={outline.hoveredPath}
-                onSelectComponent={selection.selectComponent}
-                onDeleteComponent={handleDelete}
-                onCopyComponent={clipboard.copyComponent}
-                device={device}
-                onCanvasFocus={focus.handleCanvasFocus}
-                onHeaderDataChange={handleHeaderDataChange}
-                onElementsChange={handleElementsChange}
+                onUpdateComponent={handleUpdateSelectedComponent}
+                onUpdateCard={handleUpdateCard}
+                variables={variables as any[]}
+                onUpdateVariables={handleUpdateVariables}
+                cardVerticalSpacing={safeCardData.dsl.body.vertical_spacing}
+                headerData={safeCardData.dsl.header}
+                cardData={safeCardData}
               />
             </div>
           </div>
 
-          {/* 右侧属性面板 - 支持卡片属性配置 */}
-          <div data-panel="property" style={{ width: '300px' }}>
-            <PropertyPanel
-              selectedPath={selection.selectedPath}
-              onUpdateComponent={handleUpdateSelectedComponent}
-              onUpdateCard={handleUpdateCard}
-              variables={variables as VariableItem[]}
-              onUpdateVariables={handleUpdateVariables}
-              cardVerticalSpacing={safeCardData.dsl.body.vertical_spacing}
-              headerData={safeCardData.dsl.header} // 只有当header存在时才传递
-              cardData={safeCardData}
-            />
-          </div>
+          {/* 导入  */}
+          <ImportModal
+            importModalVisible={config.importModalVisible}
+            setImportModalVisible={config.setImportModalVisible}
+            onFileUpload={handleFileUpload}
+          />
+          {/* 导出  */}
+          <ExportModal
+            exportModalVisible={config.exportModalVisible}
+            setExportModalVisible={config.setExportModalVisible}
+            exportData={config.exportData}
+            onDownloadConfig={config.downloadConfig}
+          />
+          {/* 预览  */}
+          <PreviewModal
+            previewVisible={previewVisible}
+            setPreviewVisible={setPreviewVisible}
+            data={safeCardData}
+            device={device}
+            onClearCanvas={clearCanvas}
+            onImportConfig={config.importConfig}
+            variables={variables as any[]}
+          />
         </div>
-
-        {/* 模态框组件 */}
-        <Modals
-          exportModalVisible={config.exportModalVisible}
-          setExportModalVisible={config.setExportModalVisible}
-          exportData={config.exportData}
-          onDownloadConfig={config.downloadConfig}
-          importModalVisible={config.importModalVisible}
-          setImportModalVisible={config.setImportModalVisible}
-          onFileUpload={handleFileUpload}
-          previewVisible={previewVisible}
-          setPreviewVisible={setPreviewVisible}
-          data={safeCardData}
-          device={device}
-          variables={convertToVariableArray(variables)}
-          historyLength={history.historyLength}
-          canvasFocused={focus.canvasFocused}
-          onClearCanvas={clearCanvas}
-          onImportConfig={config.importConfig}
-        />
-      </div>
-    </DndProvider>
+      </DndProvider>
+    </App>
   );
 };
 

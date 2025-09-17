@@ -1,15 +1,11 @@
 // RichTextComponent 编辑界面 - 专门处理富文本组件
 import { Form, Segmented } from 'antd';
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import RichTextEditor from '../../../RichTextEditor/RichTextEditor';
+import { getDefaultRichTextJSON } from '../../../RichTextEditor/RichTextUtils';
 import { textComponentStateManager } from '../../../Variable/utils/index';
 import VariableBinding from '../../../Variable/VariableList';
-import {
-  ComponentContent,
-  ComponentNameInput,
-  PropertyPanel,
-  SettingSection,
-} from '../common';
+import { ComponentNameInput, PropertyPanel, SettingSection } from '../common';
 import { useComponentName } from '../hooks/useComponentName';
 import type { RichTextComponentProps, RichTextData } from './type';
 
@@ -46,23 +42,7 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
     handleValueChange,
   });
 
-  // 获取默认富文本内容 - 使用useCallback优化
-  const getDefaultRichTextContent = useCallback(() => {
-    return {
-      type: 'doc',
-      content: [
-        {
-          type: 'paragraph',
-          content: [
-            {
-              type: 'text',
-              text: '请输入富文本内容',
-            },
-          ],
-        },
-      ],
-    };
-  }, []);
+  const [richText, setRichText] = useState('');
 
   // 获取绑定的变量名 - 使用useCallback优化
   const getBoundVariableName = useCallback(() => {
@@ -71,134 +51,6 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
       '';
     return boundVariableName;
   }, [selectedComponent.id]);
-
-  // 获取富文本内容 - 根据当前模式显示不同内容
-  const getRichTextContent = () => {
-    if (!selectedComponent) return getDefaultRichTextContent();
-
-    if (textContentMode === 'specify') {
-      // 指定模式：显示用户编辑的内容
-      const userEditedContent = textComponentStateManager.getUserEditedContent(
-        selectedComponent.id,
-      );
-
-      if (userEditedContent !== undefined) {
-        return userEditedContent;
-      }
-
-      // 如果没有用户编辑的内容，使用组件原始内容
-      const content = (selectedComponent as any).content;
-      return content || getDefaultRichTextContent();
-    } else if (textContentMode === 'variable') {
-      // 绑定变量模式：显示变量的实际值
-      const boundVariableName = getBoundVariableName();
-      const rememberedVariable = lastBoundVariables[selectedComponent.id];
-      const variableName = rememberedVariable || boundVariableName;
-
-      if (variableName) {
-        // 查找变量并获取其值
-        const variable = variables.find((v: any) => {
-          if (typeof v === 'object' && v !== null) {
-            const keys = getVariableKeys(v);
-            return keys.length > 0 && keys[0] === variableName;
-          }
-          return false;
-        });
-
-        if (variable) {
-          const variableValue = (variable as any)[variableName];
-
-          // 富文本：如果变量值是字符串，转换为富文本格式
-          if (typeof variableValue === 'string') {
-            return {
-              type: 'doc',
-              content: [
-                {
-                  type: 'paragraph',
-                  content: [
-                    {
-                      type: 'text',
-                      text: variableValue,
-                    },
-                  ],
-                },
-              ],
-            };
-          } else if (typeof variableValue === 'object') {
-            return variableValue;
-          }
-        }
-      }
-
-      // 如果没有找到变量，显示提示信息
-      return {
-        type: 'doc',
-        content: [
-          {
-            type: 'paragraph',
-            content: [
-              {
-                type: 'text',
-                text: '请选择要绑定的变量',
-              },
-            ],
-          },
-        ],
-      };
-    }
-
-    return getDefaultRichTextContent();
-  };
-
-  // 初始化变量绑定状态 - 从组件数据中检测现有的变量占位符
-  useEffect(() => {
-    const component = selectedComponent as any as RichTextData;
-    const textContent = component.text?.content || '';
-
-    if (textContent.startsWith('${') && textContent.endsWith('}')) {
-      const variableName = textContent.slice(2, -1);
-      const currentBinding = textComponentStateManager.getBoundVariableName(
-        selectedComponent.id,
-      );
-      if (currentBinding !== variableName) {
-        textComponentStateManager.setBoundVariableName(
-          selectedComponent.id,
-          variableName,
-        );
-      }
-    }
-  }, [selectedComponent.id, selectedComponent]);
-
-  // 计算变量绑定值 - 使用useMemo优化
-  const variableBindingValue = useMemo(() => {
-    // 在绑定变量模式下，优先显示记住的变量
-    const rememberedVariable = selectedComponent
-      ? lastBoundVariables[selectedComponent.id]
-      : undefined;
-    const currentBoundVariable = getBoundVariableName();
-
-    // 如果有记住的变量，使用记住的变量；否则使用当前绑定的变量
-    const displayValue = rememberedVariable || currentBoundVariable;
-
-    return displayValue;
-  }, [selectedComponent, lastBoundVariables, getBoundVariableName]);
-
-  // 更新富文本内容 - 保存用户编辑的内容
-  const updateRichTextContent = (value: any) => {
-    // 保存用户编辑的内容到状态管理器
-    textComponentStateManager.setUserEditedContent(selectedComponent.id, value);
-
-    // 创建更新的组件对象
-    const updatedComponent = { ...selectedComponent };
-
-    // 在"指定"模式下，立即更新DSL数据以反映到画布
-    if (textContentMode === 'specify') {
-      (updatedComponent as any).content = value;
-    }
-
-    // 更新组件
-    onUpdateComponent(updatedComponent);
-  };
 
   // 更新绑定的变量名
   const updateBoundVariableName = (variableName: string) => {
@@ -219,7 +71,7 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
       // 如果用户还没有编辑过文本，将组件的原始内容保存为用户编辑内容
       if (currentUserEditedContent === undefined) {
         const originalContent =
-          (selectedComponent as any).content || getDefaultRichTextContent();
+          (selectedComponent as any).content || getDefaultRichTextJSON();
         textComponentStateManager.setUserEditedContent(
           selectedComponent.id,
           originalContent,
@@ -247,6 +99,12 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
         selectedComponent.id,
       );
 
+      setLastBoundVariables((prev) => {
+        const newState = { ...prev };
+        delete newState[selectedComponent.id];
+        return newState;
+      });
+
       if (userEditedContent !== undefined) {
         // 使用用户编辑的内容作为最终文本
         (updatedComponent as any).content = userEditedContent;
@@ -256,7 +114,7 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
         };
       } else {
         // 如果没有用户编辑的内容，使用默认内容
-        const defaultContent = getDefaultRichTextContent();
+        const defaultContent = getDefaultRichTextJSON();
         (updatedComponent as any).content = defaultContent;
         // 富文本组件：同步更新 i18n_content
         (updatedComponent as any).i18n_content = {
@@ -275,6 +133,254 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
     }
   };
 
+  // 选择一个变量
+  const handleVariableChange = (value: string | undefined) => {
+    // 立即更新DSL中的变量绑定
+    updateBoundVariableName(value || '');
+    // 同时记住这个选择，用于UI显示
+    if (selectedComponent) {
+      if (value) {
+        setLastBoundVariables((prev) => ({
+          ...prev,
+          [selectedComponent.id]: value,
+        }));
+
+        // 立即更新DSL数据为变量占位符，确保画布实时更新
+        const updatedComponent = { ...selectedComponent };
+        const variablePlaceholder = `\${${value}}`;
+        (updatedComponent as any).content = variablePlaceholder;
+        (updatedComponent as any).i18n_content = {
+          'en-US': variablePlaceholder,
+        };
+        onUpdateComponent(updatedComponent);
+      } else {
+        // 清除变量：回到指定模式，显示缓存的内容
+        textComponentStateManager.setBoundVariableName(
+          selectedComponent.id,
+          undefined,
+        );
+
+        // 获取缓存的指定模式内容
+        const cachedContent = textComponentStateManager.getUserEditedContent(
+          selectedComponent.id,
+        );
+
+        const contentToUse =
+          cachedContent !== undefined
+            ? cachedContent
+            : (selectedComponent as any).content || '';
+
+        const updatedComponent = { ...selectedComponent };
+        (updatedComponent as any).content = contentToUse;
+        (updatedComponent as any).i18n_content = {
+          'en-US': contentToUse,
+        };
+
+        onUpdateComponent(updatedComponent);
+      }
+    }
+  };
+
+  // 获取富文本内容 - 根据当前模式显示不同内容
+  const getRichTextContent = (mode: any) => {
+    if (!selectedComponent) return getDefaultRichTextJSON();
+    if (mode === 'specify') {
+      // 指定模式：显示用户编辑的内容
+      const userEditedContent = textComponentStateManager.getUserEditedContent(
+        selectedComponent.id,
+      );
+
+      console.warn('userEditedContent', userEditedContent);
+
+      if (userEditedContent !== undefined) {
+        return userEditedContent;
+      }
+
+      // 如果没有用户编辑的内容，使用组件原始内容
+      const content = (selectedComponent as any).content;
+      return content || getDefaultRichTextJSON();
+    } else if (mode === 'variable') {
+      // 绑定变量模式：显示变量的实际值
+      const boundVariableName = getBoundVariableName();
+      const rememberedVariable = lastBoundVariables[selectedComponent.id];
+      const variableName = rememberedVariable || boundVariableName;
+      if (variableName) {
+        // 查找变量并获取其值
+        const variable = variables.find((v: any) => {
+          if (typeof v === 'object' && v !== null) {
+            const keys = getVariableKeys(v);
+            return keys.length > 0 && keys[0] === variableName;
+          }
+          return false;
+        });
+
+        if (variable) {
+          const variableValue = (variable as any)[variableName];
+          console.warn('variableValue', variableValue);
+
+          // 富文本：如果变量值是字符串，转换为富文本格式
+          if (typeof variableValue === 'string') {
+            return getDefaultRichTextJSON();
+          } else if (typeof variableValue === 'object') {
+            return variableValue;
+          }
+        }
+      }
+    }
+    return getDefaultRichTextJSON();
+  };
+
+  // 计算变量绑定值 - 使用useMemo优化
+  const variableBindingValue = useMemo(() => {
+    // 在绑定变量模式下，优先显示记住的变量
+    const rememberedVariable = selectedComponent
+      ? lastBoundVariables[selectedComponent.id]
+      : undefined;
+    const currentBoundVariable = getBoundVariableName();
+
+    // 如果有记住的变量，使用记住的变量；否则使用当前绑定的变量
+    const displayValue = rememberedVariable || currentBoundVariable;
+
+    return displayValue;
+  }, [selectedComponent, lastBoundVariables, getBoundVariableName]);
+
+  // 更新富文本内容 - 保存用户编辑的内容
+  const updateRichTextContent = (value: any) => {
+    setRichText(() => value);
+    // 保存用户编辑的内容到状态管理器
+    textComponentStateManager.setUserEditedContent(selectedComponent.id, value);
+
+    // 创建更新的组件对象
+    const updatedComponent = { ...selectedComponent };
+
+    // 在"指定"模式下，立即更新DSL数据以反映到画布
+    if (textContentMode === 'specify') {
+      (updatedComponent as any).content = value;
+    }
+
+    // 更新组件
+    onUpdateComponent(updatedComponent);
+  };
+
+  const handleModeChange = (newMode: 'specify' | 'variable') => {
+    if (selectedComponent) {
+      // 在切换模式前，先缓存当前模式的内容
+      if (newMode === 'specify') {
+        // 从指定模式切换出去时，缓存当前的富文本内容
+        const currentContent = getRichTextContent(newMode);
+        textComponentStateManager.setUserEditedContent(
+          selectedComponent.id,
+          currentContent,
+        );
+      } else if (newMode === 'variable') {
+        // 从变量模式切换出去时，记住当前绑定的变量
+        const currentBoundVariable =
+          textComponentStateManager.getBoundVariableName(selectedComponent.id);
+        if (currentBoundVariable) {
+          setLastBoundVariables((prev) => ({
+            ...prev,
+            [selectedComponent.id]: currentBoundVariable,
+          }));
+        }
+      }
+
+      // 切换模式
+      setTextContentMode(newMode);
+
+      const updatedComponent = { ...selectedComponent };
+
+      if (newMode === 'specify') {
+        // 切换到指定模式：恢复之前缓存的内容
+        const cachedContent = textComponentStateManager.getUserEditedContent(
+          selectedComponent.id,
+        );
+
+        const contentToUse =
+          cachedContent !== undefined
+            ? cachedContent
+            : (selectedComponent as any).content || '';
+
+        (updatedComponent as any).content = contentToUse;
+        (updatedComponent as any).i18n_content = {
+          'en-US': contentToUse,
+        };
+
+        // 清除变量绑定
+        textComponentStateManager.setBoundVariableName(
+          selectedComponent.id,
+          undefined,
+        );
+      } else if (newMode === 'variable') {
+        // 切换到绑定变量模式：恢复之前记住的变量
+        const rememberedVariable = lastBoundVariables[selectedComponent.id];
+
+        if (rememberedVariable) {
+          // 恢复之前绑定的变量
+          const variablePlaceholder = `\${${rememberedVariable}}`;
+          (updatedComponent as any).content = variablePlaceholder;
+          (updatedComponent as any).i18n_content = {
+            'en-US': variablePlaceholder,
+          };
+
+          textComponentStateManager.setBoundVariableName(
+            selectedComponent.id,
+            rememberedVariable,
+          );
+        } else {
+          // 没有记住的变量，清除绑定
+          textComponentStateManager.setBoundVariableName(
+            selectedComponent.id,
+            undefined,
+          );
+        }
+      }
+
+      onUpdateComponent(updatedComponent);
+    }
+  };
+
+  const getState = () => {
+    const component = selectedComponent as any as RichTextData;
+    const textContent = component?.content || '';
+    if (
+      typeof textContent === 'string' &&
+      textContent.startsWith('${') &&
+      textContent.endsWith('}')
+    ) {
+      const variableName = textContent.slice(2, -1);
+      if (variableName) {
+        if (textContentMode !== 'variable') {
+          setTextContentMode('variable');
+        }
+        const updatedComponent = { ...selectedComponent };
+        const variablePlaceholder = `\${${variableName}}`;
+        (updatedComponent as any).content = variablePlaceholder;
+        (updatedComponent as any).i18n_content = {
+          'en-US': variablePlaceholder,
+        };
+        updateBoundVariableName(variableName || '');
+        setLastBoundVariables((prev) => ({
+          ...prev,
+          [selectedComponent.id]: variableName,
+        }));
+        onUpdateComponent(updatedComponent);
+        setRichText(() => getRichTextContent('variable'));
+      }
+      return;
+    }
+
+    if (textContent) {
+      updateRichTextContent(textContent);
+      setTextContentMode('specify');
+      setRichText(() => getRichTextContent('specify'));
+    }
+  };
+
+  // 初始化变量绑定状态 - 从组件数据中检测现有的变量占位符
+  useEffect(() => {
+    getState();
+  }, [selectedPath]);
+
   // 组件属性内容
   const componentContent = useMemo(
     () => (
@@ -291,61 +397,7 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
             <Segmented
               value={textContentMode}
               style={{ marginBottom: 16 }}
-              onChange={(value) => {
-                const newMode = value as 'specify' | 'variable';
-                setTextContentMode(newMode);
-
-                // 切换模式时，立即更新DSL数据以反映到画布
-                if (selectedComponent) {
-                  const updatedComponent = { ...selectedComponent };
-
-                  if (newMode === 'specify') {
-                    // 切换到指定模式：使用用户编辑的内容，并清除变量绑定
-                    const userEditedContent =
-                      textComponentStateManager.getUserEditedContent(
-                        selectedComponent.id,
-                      );
-
-                    if (userEditedContent !== undefined) {
-                      (updatedComponent as any).content = userEditedContent;
-                      // 富文本组件：同步更新 i18n_content
-                      (updatedComponent as any).i18n_content = {
-                        'en-US': userEditedContent,
-                      };
-                    }
-
-                    // 清除变量绑定状态，确保画布不再显示变量内容
-                    textComponentStateManager.setBoundVariableName(
-                      selectedComponent.id,
-                      '',
-                    );
-                  } else if (newMode === 'variable') {
-                    // 切换到绑定变量模式：使用变量占位符
-                    const boundVariableName = getBoundVariableName();
-                    const rememberedVariable =
-                      lastBoundVariables[selectedComponent.id];
-                    const variableName =
-                      rememberedVariable || boundVariableName;
-
-                    if (variableName) {
-                      const variablePlaceholder = `\${${variableName}}`;
-                      (updatedComponent as any).content = variablePlaceholder;
-                      (updatedComponent as any).i18n_content = {
-                        'en-US': variablePlaceholder,
-                      };
-
-                      // 设置变量绑定状态，确保画布显示变量内容
-                      textComponentStateManager.setBoundVariableName(
-                        selectedComponent.id,
-                        variableName,
-                      );
-                    }
-                  }
-
-                  // 立即更新组件，触发画布重新渲染
-                  onUpdateComponent(updatedComponent);
-                }
-              }}
+              onChange={handleModeChange}
               options={[
                 { label: '指定', value: 'specify' },
                 { label: '绑定变量', value: 'variable' },
@@ -359,7 +411,7 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
                   key={`rich-text-${selectedComponent?.id}-${selectedPath?.join(
                     '-',
                   )}-${textContentMode}`}
-                  value={getRichTextContent()}
+                  value={richText}
                   onChange={updateRichTextContent}
                   placeholder="请输入富文本内容..."
                   height={300}
@@ -376,43 +428,7 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
                   variables={variables}
                   getFilteredVariables={getFilteredVariables}
                   value={variableBindingValue}
-                  onChange={(value: string | undefined) => {
-                    // 立即更新DSL中的变量绑定
-                    updateBoundVariableName(value || '');
-
-                    // 同时记住这个选择，用于UI显示
-                    if (selectedComponent) {
-                      if (value) {
-                        setLastBoundVariables((prev) => ({
-                          ...prev,
-                          [selectedComponent.id]: value,
-                        }));
-
-                        // 立即更新DSL数据为变量占位符，确保画布实时更新
-                        const updatedComponent = { ...selectedComponent };
-                        const variablePlaceholder = `\${${value}}`;
-                        (updatedComponent as any).content = variablePlaceholder;
-                        (updatedComponent as any).i18n_content = {
-                          'en-US': variablePlaceholder,
-                        };
-                        onUpdateComponent(updatedComponent);
-                      } else {
-                        // 清除绑定时，恢复用户编辑的内容
-                        const userEditedContent =
-                          textComponentStateManager.getUserEditedContent(
-                            selectedComponent.id,
-                          );
-                        if (userEditedContent !== undefined) {
-                          const updatedComponent = { ...selectedComponent };
-                          (updatedComponent as any).content = userEditedContent;
-                          (updatedComponent as any).i18n_content = {
-                            'en-US': userEditedContent,
-                          };
-                          onUpdateComponent(updatedComponent);
-                        }
-                      }
-                    }
-                  }}
+                  onChange={handleVariableChange}
                   getVariableDisplayName={getVariableDisplayName}
                   getVariableKeys={getVariableKeys}
                   onAddVariable={() =>
@@ -456,12 +472,8 @@ const RichTextComponent: React.FC<RichTextComponentProps> = ({
     <PropertyPanel
       activeTab={topLevelTab}
       onTabChange={setTopLevelTab}
-      componentContent={
-        <ComponentContent componentName="富文本组件">
-          {componentContent}
-        </ComponentContent>
-      }
-      showEventTab={true}
+      componentContent={componentContent}
+      eventTabDisabled={true}
       variableManagementComponent={<VariableManagementPanel />}
       isVariableModalVisible={isVariableModalVisible}
       handleVariableModalOk={handleVariableModalOk || (() => {})}

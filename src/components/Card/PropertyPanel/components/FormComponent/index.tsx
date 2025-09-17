@@ -1,7 +1,7 @@
 // FormComponent 编辑界面 - 表单容器组件
 import { Form, Input } from 'antd';
 import React, { useCallback, useMemo } from 'react';
-import { ComponentContent, PropertyPanel, SettingSection } from '../common';
+import { PropertyPanel, SettingSection } from '../common';
 import { BaseComponentProps } from '../types';
 import type { FormData } from './type';
 
@@ -71,11 +71,8 @@ const FormComponent: React.FC<BaseComponentProps> = ({
     <PropertyPanel
       activeTab={topLevelTab}
       onTabChange={setTopLevelTab}
-      componentContent={
-        <ComponentContent componentName="表单容器">
-          {formSettingsContent}
-        </ComponentContent>
-      }
+      componentContent={formSettingsContent}
+      eventTabDisabled={true}
       variableManagementComponent={<VariableManagementPanel />}
       isVariableModalVisible={isVariableModalVisible}
       handleVariableModalOk={handleVariableModalOk || (() => {})}

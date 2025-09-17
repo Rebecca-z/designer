@@ -1,7 +1,7 @@
 // CardRootComponent - 卡片根节点属性配置组件
 import { Form, Input, InputNumber } from 'antd';
 import React, { useCallback, useMemo } from 'react';
-import { ComponentContent, PropertyPanel, SettingSection } from '../common';
+import { PropertyPanel, SettingSection } from '../common';
 import { URL_FIELDS, VERTICAL_SPACING_CONFIG } from './constans';
 import type { CardRootComponentProps, MultiUrl } from './type';
 
@@ -120,13 +120,9 @@ const CardRootComponent: React.FC<CardRootComponentProps> = ({
     <PropertyPanel
       activeTab={topLevelTab}
       onTabChange={setTopLevelTab}
-      componentContent={
-        <ComponentContent componentName="卡片">
-          {componentContent}
-        </ComponentContent>
-      }
+      componentContent={componentContent}
       eventContent={eventContent}
-      showEventTab={true}
+      eventTabDisabled={false}
       variableManagementComponent={<VariableManagementPanel />}
       isVariableModalVisible={isVariableModalVisible}
       handleVariableModalOk={handleVariableModalOk}

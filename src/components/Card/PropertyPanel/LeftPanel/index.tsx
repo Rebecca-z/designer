@@ -1,15 +1,14 @@
 // 左侧组件面板
-
-import { BarsOutlined, PlusOutlined } from '@ant-design/icons';
 import { Tabs, Typography } from 'antd';
 import React from 'react';
 import { useDrag } from 'react-dnd';
-import {
-  COMPONENT_CATEGORIES,
-  COMPONENT_TYPES,
-} from '../../card-designer-constants';
+import { COMPONENT_CATEGORIES, COMPONENT_TYPES } from '../../constants';
 import OutlineTree from '../OutlineTree';
-import { ComponentPanelProps, DraggableComponentProps } from '../types';
+import {
+  ComponentLibraryProps,
+  ComponentPanelProps,
+  DraggableComponentProps,
+} from '../types';
 
 const { Text } = Typography;
 
@@ -17,6 +16,7 @@ const { Text } = Typography;
 const DraggableComponent: React.FC<DraggableComponentProps> = ({
   type,
   config,
+  onComponentClick,
 }) => {
   const [{ isDragging }, drag] = useDrag({
     type: 'component',
@@ -25,6 +25,15 @@ const DraggableComponent: React.FC<DraggableComponentProps> = ({
       isDragging: monitor.isDragging(),
     }),
   });
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (onComponentClick) {
+      onComponentClick(type);
+    }
+  };
 
   return (
     <div
@@ -59,6 +68,7 @@ const DraggableComponent: React.FC<DraggableComponentProps> = ({
           e.currentTarget.style.transform = 'translateY(0)';
         }
       }}
+      onClick={handleClick}
     >
       <config.icon
         style={{
@@ -82,7 +92,9 @@ const DraggableComponent: React.FC<DraggableComponentProps> = ({
 };
 
 // 组件库面板
-const ComponentLibrary: React.FC = () => {
+const ComponentLibrary: React.FC<ComponentLibraryProps> = ({
+  onComponentClick,
+}) => {
   const categories = COMPONENT_CATEGORIES.map((category) => ({
     ...category,
     components: Object.entries(COMPONENT_TYPES).filter(
@@ -105,14 +117,6 @@ const ComponentLibrary: React.FC = () => {
               borderRadius: '6px',
             }}
           >
-            <div
-              style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: category.color,
-              }}
-            />
             <Text strong style={{ fontSize: '14px', color: '#333' }}>
               {category.title}
             </Text>
@@ -127,7 +131,12 @@ const ComponentLibrary: React.FC = () => {
             }}
           >
             {category.components.map(([type, config]) => (
-              <DraggableComponent key={type} type={type} config={config} />
+              <DraggableComponent
+                key={type}
+                type={type}
+                config={config}
+                onComponentClick={onComponentClick}
+              />
             ))}
           </div>
         </div>
@@ -142,11 +151,13 @@ export const ComponentPanel: React.FC<ComponentPanelProps> = ({
   selectedPath,
   onOutlineHover,
   onOutlineSelect,
+  onComponentClick,
 }) => {
   return (
     <div
       style={{
         width: '300px',
+        flexShrink: '0',
         height: 'calc(100vh - 60px)',
         backgroundColor: '#fafafa',
         borderRight: '1px solid #d9d9d9',
@@ -171,13 +182,12 @@ export const ComponentPanel: React.FC<ComponentPanelProps> = ({
               <span
                 style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
               >
-                <PlusOutlined />
                 组件库
               </span>
             ),
             children: (
               <div style={{ height: 'calc(100vh - 120px)', overflow: 'auto' }}>
-                <ComponentLibrary />
+                <ComponentLibrary onComponentClick={onComponentClick} />
               </div>
             ),
           },
@@ -187,7 +197,6 @@ export const ComponentPanel: React.FC<ComponentPanelProps> = ({
               <span
                 style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
               >
-                <BarsOutlined />
                 大纲树
               </span>
             ),

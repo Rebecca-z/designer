@@ -1,7 +1,7 @@
 // ColumnSetComponent 编辑界面 - 分栏组件
 import { Form, InputNumber } from 'antd';
 import React, { useCallback, useMemo } from 'react';
-import { ComponentContent, PropertyPanel, SettingSection } from '../common';
+import { PropertyPanel, SettingSection } from '../common';
 import { BaseComponentProps } from '../types';
 import { COLUMN_CONFIG } from './constans';
 import type { ColumnItem, ColumnSetData } from './type';
@@ -168,11 +168,8 @@ const ColumnSetComponent: React.FC<BaseComponentProps> = ({
     <PropertyPanel
       activeTab={topLevelTab}
       onTabChange={setTopLevelTab}
-      componentContent={
-        <ComponentContent componentName="分栏布局">
-          {componentTabContent}
-        </ComponentContent>
-      }
+      componentContent={componentTabContent}
+      eventTabDisabled={true}
       variableManagementComponent={<VariableManagementPanel />}
       isVariableModalVisible={isVariableModalVisible}
       handleVariableModalOk={handleVariableModalOk || (() => {})}

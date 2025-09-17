@@ -32,6 +32,7 @@ import {
   message,
 } from 'antd';
 import React, { useCallback } from 'react';
+import { getDefaultRichTextJSON } from '../RichTextEditor/RichTextUtils';
 import FontSize from './FontSize';
 import RichTextStyles from './RichTextStyles';
 
@@ -66,9 +67,25 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        // 禁用StarterKit中可能冲突的扩展
+        // 禁用StarterKit中可能冲突的扩展，但保留列表功能
         link: false,
         underline: false,
+        // 确保列表功能启用，并配置为基于选区
+        bulletList: {
+          HTMLAttributes: {
+            class: 'rich-text-bullet-list',
+          },
+        },
+        orderedList: {
+          HTMLAttributes: {
+            class: 'rich-text-ordered-list',
+          },
+        },
+        listItem: {
+          HTMLAttributes: {
+            class: 'rich-text-list-item',
+          },
+        },
       }),
       Underline,
       Link.configure({
@@ -125,6 +142,86 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     },
   });
 
+  // 处理列表切换逻辑
+  const handleListToggle = (listType: 'orderedList' | 'bulletList') => {
+    const { selection } = editor.state;
+    const { empty } = selection;
+
+    // 检查当前是否已经在列表中
+    const isInOrderedList = editor.isActive('orderedList');
+    const isInBulletList = editor.isActive('bulletList');
+    const isInAnyList = isInOrderedList || isInBulletList;
+
+    // 获取当前段落的位置信息
+    const $from = selection.$from;
+    const currentParagraph = $from.parent;
+    const isCurrentParagraphEmpty = currentParagraph.textContent.trim() === '';
+
+    if (empty) {
+      // 情况1: 鼠标focus在任意位置（最前方、中间、最后方）
+      if (isInAnyList) {
+        // 如果当前段落已经在列表中，切换列表类型
+        if (listType === 'orderedList' && isInBulletList) {
+          // 从无序列表切换到有序列表
+          editor.chain().focus().toggleBulletList().toggleOrderedList().run();
+        } else if (listType === 'bulletList' && isInOrderedList) {
+          // 从有序列表切换到无序列表
+          editor.chain().focus().toggleOrderedList().toggleBulletList().run();
+        } else {
+          // 相同类型，移除列表
+          editor.chain().focus().toggleOrderedList().toggleBulletList().run();
+        }
+      } else {
+        // 如果不在列表中，创建新列表
+        if (isCurrentParagraphEmpty) {
+          // 情况2: 空白段落，插入默认文本并创建列表
+          const defaultText = listType === 'orderedList' ? '列表项' : '列表项';
+          editor.chain().focus().insertContent(defaultText).run();
+          // 选中插入的文本并应用列表格式
+          setTimeout(() => {
+            const newSelection = editor.state.selection;
+            const textLength = defaultText.length;
+            const from = newSelection.from - textLength;
+            const to = newSelection.from;
+            editor.chain().setTextSelection({ from, to }).run();
+            // 应用列表格式
+            if (listType === 'orderedList') {
+              editor.chain().focus().toggleOrderedList().run();
+            } else {
+              editor.chain().focus().toggleBulletList().run();
+            }
+          }, 10);
+        } else {
+          // 有内容的段落，直接包装为列表
+          if (listType === 'orderedList') {
+            editor.chain().focus().toggleOrderedList().run();
+          } else {
+            editor.chain().focus().toggleBulletList().run();
+          }
+        }
+      }
+    } else {
+      // 情况3: 有选区的情况
+      if (isInAnyList) {
+        // 如果选区在列表中，切换列表类型
+        if (listType === 'orderedList' && isInBulletList) {
+          editor.chain().focus().toggleBulletList().toggleOrderedList().run();
+        } else if (listType === 'bulletList' && isInOrderedList) {
+          editor.chain().focus().toggleOrderedList().toggleBulletList().run();
+        } else {
+          editor.chain().focus().toggleOrderedList().toggleBulletList().run();
+        }
+      } else {
+        // 如果选区不在列表中，创建新列表
+        if (listType === 'orderedList') {
+          editor.chain().focus().toggleOrderedList().run();
+        } else {
+          editor.chain().focus().toggleBulletList().run();
+        }
+      }
+    }
+  };
+
   // ✅ 修复：监听value变化，更新编辑器内容
   React.useEffect(() => {
     if (editor && value !== undefined && value !== null) {
@@ -157,26 +254,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       const isSameContent =
         JSON.stringify(normalizedCurrent) === JSON.stringify(normalizedValue);
 
-      console.log('🔄 RichTextEditor value变化检查:', {
-        hasEditor: !!editor,
-        newValue: value,
-        currentContent,
-        isSameContent,
-        valueType: typeof value,
-        timestamp: new Date().toISOString(),
-      });
-
       if (!isSameContent && normalizedValue) {
-        console.log('✅ 更新富文本编辑器内容:', {
-          from: normalizedCurrent,
-          to: normalizedValue,
-        });
-
         // 标记为内部更新，避免触发onChange
         isInternalUpdateRef.current = true;
 
         // 使用setContent方法更新编辑器内容
-        editor.commands.setContent(normalizedValue, { emitUpdate: false }); // 不触发onUpdate事件
+        editor.commands.setContent(normalizedValue, false); // 不触发onUpdate事件
 
         // 重置内部更新标记
         setTimeout(() => {
@@ -190,17 +273,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   React.useEffect(() => {
     if (editor && !value) {
       // 如果没有内容，设置默认的段落结构
-      const defaultContent = {
-        type: 'doc',
-        content: [
-          {
-            type: 'paragraph',
-            attrs: { textAlign: 'left' },
-            content: [],
-          },
-        ],
-      };
-      editor.commands.setContent(defaultContent, { emitUpdate: false });
+      editor.commands.setContent(getDefaultRichTextJSON(), false);
     }
   }, [editor, value]);
 
@@ -479,14 +552,28 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
               size="small"
               icon={<OrderedListOutlined />}
               title="有序列表"
-              onClick={() => editor.chain().focus().toggleOrderedList().run()}
+              onClick={() => {
+                try {
+                  handleListToggle('orderedList');
+                } catch (error) {
+                  console.error('有序列表操作失败:', error);
+                  message.error('有序列表操作失败');
+                }
+              }}
               style={getButtonStyle(editor.isActive('orderedList'))}
             />
             <Button
               size="small"
               icon={<UnorderedListOutlined />}
               title="无序列表"
-              onClick={() => editor.chain().focus().toggleBulletList().run()}
+              onClick={() => {
+                try {
+                  handleListToggle('bulletList');
+                } catch (error) {
+                  console.error('无序列表操作失败:', error);
+                  message.error('无序列表操作失败');
+                }
+              }}
               style={getButtonStyle(editor.isActive('bulletList'))}
             />
           </Space.Compact>
@@ -526,6 +613,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           borderRadius: showToolbar ? '0 0 6px 6px' : '6px',
           backgroundColor: 'white',
           minHeight: height,
+          width: '100%',
         }}
       >
         <RichTextStyles style={{ padding: '12px' }}>

@@ -1,18 +1,8 @@
-// ErrorBoundary.tsx - 错误边界组件
+// 错误边界组件
 
 import { Button, Result } from 'antd';
-import { Component, ReactNode } from 'react';
-
-interface ErrorBoundaryState {
-  hasError: boolean;
-  error?: Error;
-  errorInfo?: any;
-}
-
-interface ErrorBoundaryProps {
-  children: ReactNode;
-  fallback?: ReactNode;
-}
+import { Component } from 'react';
+import { ErrorBoundaryProps, ErrorBoundaryState } from './type';
 
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {

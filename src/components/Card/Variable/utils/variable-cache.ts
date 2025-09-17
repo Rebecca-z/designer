@@ -1,6 +1,6 @@
 // 全局变量缓存 数据快速访问 跟随全局变量
 
-import { VariableItem } from '../../card-designer-types-updated';
+import { VariableItem } from '../../type';
 
 // 变量缓存接口
 interface VariableCache {
@@ -24,70 +24,63 @@ class VariableCacheManager {
 
   // 设置变量到缓存
   public setVariable(variableName: string, value: any): void {
-    console.log('📦 设置变量到缓存:', {
-      variableName,
-      value,
-      timestamp: new Date().toISOString(),
-    });
     this.cache[variableName] = value;
   }
 
   // 从缓存获取变量值
   public getVariable(variableName: string): any {
     const value = this.cache[variableName];
-    console.log('🔍 从缓存获取变量:', {
-      variableName,
-      value,
-      found: value !== undefined,
-      cacheKeys: Object.keys(this.cache),
-    });
     return value;
   }
 
   // 批量设置变量到缓存
   public setVariables(variables: VariableItem[]): void {
-    console.log('📦 批量设置变量到缓存:', {
-      variablesCount: variables.length,
-      variables: variables,
-    });
-
-    variables.forEach((variable) => {
+    variables?.forEach((variable) => {
       if (typeof variable === 'object' && variable !== null) {
-        const variableRecord = variable as Record<string, any>;
-        const keys = Object.keys(variableRecord);
+        // 检查是否是标准的Variable对象格式 {name, type, value, originalType, description}
+        const varRecord = variable as any;
+        if (varRecord.name && varRecord.value !== undefined) {
+          // 标准Variable对象：直接保存变量名和值
+          this.setVariable(varRecord.name, varRecord.value);
+          // 如果有 originalType，也需要保存到缓存中以便后续恢复
+          if (varRecord.originalType) {
+            const originalTypeKey = `__${varRecord.name}_originalType`;
+            this.setVariable(originalTypeKey, varRecord.originalType);
+          }
+        } else {
+          // 自定义格式：{变量名: 模拟数据值, __变量名_originalType: 原始类型}
+          const variableRecord = variable as Record<string, any>;
+          const keys = Object.keys(variableRecord);
 
-        // 分离实际变量名和内部属性
-        const actualVariableNames = keys.filter((key) => !key.startsWith('__'));
-        const internalKeys = keys.filter((key) => key.startsWith('__'));
+          // 分离实际变量名和内部属性
+          const actualVariableNames = keys.filter(
+            (key) => !key.startsWith('__'),
+          );
+          const internalKeys = keys.filter((key) => key.startsWith('__'));
 
-        // 保存实际变量
-        actualVariableNames.forEach((variableName) => {
-          const variableValue = variableRecord[variableName];
-          this.setVariable(variableName, variableValue);
-        });
-
-        // 保存内部属性（如 originalType）
-        internalKeys.forEach((internalKey) => {
-          const internalValue = variableRecord[internalKey];
-          this.setVariable(internalKey, internalValue);
-          console.log('📦 设置内部属性到缓存:', {
-            internalKey,
-            internalValue,
-            timestamp: new Date().toISOString(),
+          // 保存实际变量
+          actualVariableNames.forEach((variableName) => {
+            const variableValue = variableRecord[variableName];
+            this.setVariable(variableName, variableValue);
           });
-        });
+
+          // 保存内部属性（如 originalType）
+          internalKeys.forEach((internalKey) => {
+            const internalValue = variableRecord[internalKey];
+            this.setVariable(internalKey, internalValue);
+          });
+        }
       }
     });
   }
 
   // 获取所有缓存的变量
   public getAllVariables(): VariableCache {
-    return { ...this.cache };
+    return this.cache;
   }
 
   // 清除缓存
   public clearCache(): void {
-    console.log('🗑️ 清除变量缓存');
     this.cache = {};
   }
 
