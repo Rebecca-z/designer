@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
-import { THEME_CONFIG } from '../CanvasWrapper/constants';
-import { variableCacheManager } from '../Variable/utils/variable-cache';
+import { THEME_CONFIG } from '../../Card/CanvasWrapper/constants';
+import { variableCacheManager } from '../../Card/Variable/utils/variable-cache';
 import { BaseRendererProps } from './types';
 
 // 标题组件渲染器
@@ -164,6 +164,8 @@ const TitleRenderer: React.FC<BaseRendererProps> = (props) => {
               fontWeight: 'bold',
               marginBottom: displaySubtitle ? '8px' : '0',
               color: getThemeStyles()?.titleColor,
+              textOverflow: 'ellipsis',
+              overflow: 'hidden',
             }}
           >
             {(() => {
@@ -176,6 +178,8 @@ const TitleRenderer: React.FC<BaseRendererProps> = (props) => {
             style={{
               fontSize: '14px',
               color: getThemeStyles()?.subtitleColor,
+              textOverflow: 'ellipsis',
+              overflow: 'hidden',
             }}
           >
             {displaySubtitle}

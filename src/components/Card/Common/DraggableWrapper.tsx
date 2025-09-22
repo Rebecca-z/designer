@@ -329,11 +329,11 @@ const DraggableWrapper: React.FC<DraggableWrapperProps> = ({
 
   // 处理组件点击选中
   const handleWrapperClick = (e: React.MouseEvent) => {
-    // 阻止事件冒泡，防止触发父级选中
+    // 立即阻止事件冒泡，防止触发父级选中
     e.stopPropagation();
     e.preventDefault();
 
-    // 处理组件选中
+    // 处理组件选中 - 确保只选中当前组件
     onSelect?.(component, path);
     onCanvasFocus?.();
   };
@@ -424,7 +424,7 @@ const DraggableWrapper: React.FC<DraggableWrapperProps> = ({
       data-component-index={index}
     >
       {/* 选中状态指示器 */}
-      {isCurrentSelected && !isSubmitButton && (
+      {isCurrentSelected && (!isSubmitButton || path.length >= 14) && (
         <>
           {/* 组件工具栏 */}
           <div

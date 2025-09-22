@@ -1,7 +1,7 @@
 import { Select } from 'antd';
 import React from 'react';
+import { isVariable, resolveVariable } from '../../Card/utils';
 import { DraggableWrapper } from '../Common/index';
-import { isVariable, resolveVariable } from '../utils';
 import { selectComponentStateManager } from '../Variable/utils';
 import { BaseRendererProps } from './types';
 
@@ -86,14 +86,14 @@ const SelectRenderer: React.FC<BaseRendererProps> = (props) => {
       }
 
       // 最后从组件数据结构中获取
-      let options = comp.options || [];
+      let options = comp?.options || [];
 
       // 如果选项是字符串（变量引用
       if (typeof options === 'string') {
         const list = isVariable(options)
           ? resolveVariable(options, variables)?.value
           : options || [];
-        return list.map((opt: any) => {
+        return list?.map((opt: any) => {
           return {
             label: opt.text.content || '',
             value: opt.value,
@@ -148,7 +148,7 @@ const SelectRenderer: React.FC<BaseRendererProps> = (props) => {
         onChange={() => {}}
         onOpenChange={() => true}
       >
-        {options.map((option: any, index: number) => (
+        {options?.map((option: any, index: number) => (
           <Select.Option key={index} value={option.value}>
             {option.label}
           </Select.Option>

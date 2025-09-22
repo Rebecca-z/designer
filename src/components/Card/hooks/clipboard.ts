@@ -8,6 +8,15 @@ export const useClipboard = () => {
 
   const copyComponent = useCallback((component: ComponentType) => {
     const copied = { ...component, id: generateId() };
+
+    // 如果复制的是提交按钮，清除form_action_type属性
+    if (
+      copied.tag === 'button' &&
+      (copied as any).form_action_type === 'submit'
+    ) {
+      delete (copied as any).form_action_type;
+    }
+
     setClipboard(copied);
   }, []);
 

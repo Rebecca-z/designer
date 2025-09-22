@@ -44,7 +44,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       </div>
       <div className={styles.mobileItem}>
         <LeftOutlined className={styles.font20}></LeftOutlined>
-        <div className={styles.GroupName}>
+        <div className={styles.groupName}>
           <span className={styles.font20}>Group</span>
           <span style={{ fontSize: '14px', color: '#ccc' }}>38 Members</span>
         </div>
@@ -84,7 +84,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         {/* 右侧内容区域 */}
         <div
           className={styles.mainRight}
-          style={{ width: DEVICE_SIZES[device].width }}
+          style={{ width: `calc(${DEVICE_SIZES[device].width} - 66px)` }}
         >
           {/* 用户名 */}
           <div style={{ marginBottom: '8px' }}>

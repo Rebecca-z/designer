@@ -26,13 +26,6 @@ export const useComponentName = ({
       ? fullName.substring(prefix.length)
       : fullName;
 
-    // console.log(`🔍 ${prefix}组件名称解析:`, {
-    //   fullName,
-    //   suffix,
-    //   componentId: selectedComponent?.id,
-    //   prefix,
-    // });
-
     return {
       name: fullName,
       suffix: suffix,
@@ -45,13 +38,6 @@ export const useComponentName = ({
       const userInput = e.target.value;
       // 拼接前缀和用户输入的内容
       const fullName = `${prefix}${userInput}`;
-
-      console.log(`🔧 ${prefix}组件名称变更:`, {
-        userInput,
-        fullName,
-        componentId: selectedComponent?.id,
-        prefix,
-      });
 
       handleValueChange('name', fullName);
     },

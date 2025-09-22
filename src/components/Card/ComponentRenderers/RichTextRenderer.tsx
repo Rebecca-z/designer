@@ -1,8 +1,9 @@
 import React from 'react';
+import { resolveVariable } from '../../Card/utils';
 import { DraggableWrapper } from '../Common/index';
 import RichTextStyles from '../RichTextEditor/RichTextStyles';
 import { convertJSONToHTML } from '../RichTextEditor/RichTextUtils';
-import { replaceVariables, resolveVariable } from '../utils';
+import { replaceVariables } from '../utils';
 import {
   textComponentStateManager,
   variableCacheManager,
@@ -222,7 +223,6 @@ const RichTextRenderer: React.FC<BaseRendererProps> = (props) => {
 
     // 如果是JSON格式，转换为HTML
     try {
-      console.log('🔄 JSON模式 - 转换富文本内容:', richTextContent);
       const result = convertJSONToHTML(richTextContent);
 
       // 检查是否包含列表

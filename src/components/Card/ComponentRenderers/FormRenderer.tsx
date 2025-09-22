@@ -197,9 +197,14 @@ const SmartDropZone: React.FC<SmartDropZoneProps> = ({
     flex: containerType === 'column' ? flexValue || 1 : 'none',
     pointerEvents: 'auto',
     boxShadow: isOver && canDrop ? '0 0 8px rgba(24, 144, 255, 0.4)' : 'none',
+    width: '100%',
   };
 
   const handleContainerClick = (e: React.MouseEvent) => {
+    // 立即阻止事件冒泡，防止触发父级组件的选中
+    e.stopPropagation();
+    e.preventDefault();
+
     if (containerType === 'column') {
       if (onColumnSelect) {
         onColumnSelect();
@@ -207,8 +212,9 @@ const SmartDropZone: React.FC<SmartDropZoneProps> = ({
       return;
     }
 
+    // 对于其他容器类型，确保只在点击容器本身时处理
     if (e.target === e.currentTarget) {
-      e.stopPropagation();
+      // 事件冒泡已经在上面被阻止了
     }
   };
 
@@ -340,9 +346,12 @@ const FormRenderer: React.FC<BaseRendererProps> = (props) => {
             : '0 1px 3px rgba(0, 0, 0, 0.1)',
       }}
       onClick={(e) => {
+        // 立即阻止事件冒泡，防止触发父级组件的选中
+        e.stopPropagation();
+        e.preventDefault();
+
         // 点击表单容器本身时选中表单容器
         if (e.target === e.currentTarget && props.onSelect) {
-          e.stopPropagation();
           props.onSelect(component, path);
         }
       }}

@@ -97,6 +97,16 @@ const TitleComponent: React.FC<BaseComponentProps> = ({
           setTitleMode('variable');
         }
       }
+    } else {
+      // 如果标题内容不是变量格式，且当前是变量模式，切换到指定模式
+      if (titleMode === 'variable') {
+        setTitleMode('specify');
+        // 清除变量绑定
+        titleComponentStateManager.setBoundTitleVariableName(
+          selectedComponent.id,
+          undefined,
+        );
+      }
     }
 
     // 检测副标题中的变量绑定
@@ -116,6 +126,16 @@ const TitleComponent: React.FC<BaseComponentProps> = ({
         if (subtitleMode !== 'variable') {
           setSubtitleMode('variable');
         }
+      }
+    } else {
+      // 如果副标题内容不是变量格式，且当前是变量模式，切换到指定模式
+      if (subtitleMode === 'variable') {
+        setSubtitleMode('specify');
+        // 清除变量绑定
+        titleComponentStateManager.setBoundSubtitleVariableName(
+          selectedComponent.id,
+          undefined,
+        );
       }
     }
   }, [selectedComponent.id, selectedComponent, titleMode, subtitleMode]);
@@ -185,6 +205,12 @@ const TitleComponent: React.FC<BaseComponentProps> = ({
   // 处理模式切换 - 参考InputComponent的handlePlaceholderModeChange方法
   const handleTitleModeChange = useCallback(
     (value: 'specify' | 'variable') => {
+      console.log('🔄 标题模式切换:', {
+        from: titleMode,
+        to: value,
+        componentId: selectedComponent.id,
+      });
+
       setTitleMode(value);
 
       // 记住当前状态
@@ -213,47 +239,69 @@ const TitleComponent: React.FC<BaseComponentProps> = ({
       const updatedComponent = { ...selectedComponent };
       // 更新最新状态
       if (value === 'specify') {
-        // 清除绑定的变量名
+        // 切换到指定模式：清除变量绑定，恢复用户编辑的内容
         const userEditedTitle = titleComponentStateManager.getUserEditedTitle(
           selectedComponent.id,
         );
         const content = userEditedTitle || '主标题';
         (updatedComponent as any).title = content;
-        titleComponentStateManager.setBoundTitleVariableName(
-          selectedComponent.id,
-          undefined,
-        );
+
+        // 先更新组件，再清除变量绑定，避免useEffect中的冲突
+        onUpdateComponent(updatedComponent);
+
+        // 延迟清除变量绑定，确保组件更新完成
+        setTimeout(() => {
+          titleComponentStateManager.setBoundTitleVariableName(
+            selectedComponent.id,
+            undefined,
+          );
+        }, 0);
       } else if (value === 'variable') {
+        // 切换到变量模式：使用之前绑定的变量
         const boundVariable =
           lastBoundVariables[`${selectedComponent.id}_title`];
         if (boundVariable) {
           const variableTitle = `\${${boundVariable}}`;
           (updatedComponent as any).title = variableTitle;
+          titleComponentStateManager.setBoundTitleVariableName(
+            selectedComponent.id,
+            boundVariable,
+          );
+        } else {
+          // 如果没有之前绑定的变量，设置为空变量格式
+          (updatedComponent as any).title = '${}';
+          titleComponentStateManager.setBoundTitleVariableName(
+            selectedComponent.id,
+            undefined,
+          );
         }
-        titleComponentStateManager.setBoundTitleVariableName(
-          selectedComponent.id,
-          boundVariable,
-        );
+        onUpdateComponent(updatedComponent);
       } else {
         titleComponentStateManager.setBoundTitleVariableName(
           selectedComponent.id,
           undefined,
         );
+        onUpdateComponent(updatedComponent);
       }
-
-      onUpdateComponent(updatedComponent);
     },
     [
       selectedComponent,
       setLastBoundVariables,
       onUpdateComponent,
       lastBoundVariables,
+      titleMode,
     ],
   );
 
   // 处理副标题模式切换 - 参考主标题的实现
   const handleSubtitleModeChange = useCallback(
     (value: 'specify' | 'variable') => {
+      console.log('🔄 副标题模式切换:', {
+        from: subtitleMode,
+        to: value,
+        componentId: selectedComponent.id,
+      });
+
       setSubtitleMode(value);
 
       // 记住当前状态
@@ -279,50 +327,64 @@ const TitleComponent: React.FC<BaseComponentProps> = ({
       const updatedComponent = { ...selectedComponent };
       // 更新最新状态
       if (value === 'specify') {
-        // 清除绑定的变量名
+        // 切换到指定模式：清除变量绑定，恢复用户编辑的内容
         const userEditedSubtitle =
           titleComponentStateManager.getUserEditedSubtitle(
             selectedComponent.id,
           );
         const content = userEditedSubtitle || '副标题';
         (updatedComponent as any).subtitle = content;
-        titleComponentStateManager.setBoundSubtitleVariableName(
-          selectedComponent.id,
-          undefined,
-        );
+
+        // 先更新组件，再清除变量绑定，避免useEffect中的冲突
+        onUpdateComponent(updatedComponent);
+
+        // 延迟清除变量绑定，确保组件更新完成
+        setTimeout(() => {
+          titleComponentStateManager.setBoundSubtitleVariableName(
+            selectedComponent.id,
+            undefined,
+          );
+        }, 0);
       } else if (value === 'variable') {
+        // 切换到变量模式：使用之前绑定的变量
         const boundVariable =
           lastBoundVariables[`${selectedComponent.id}_subtitle`];
         if (boundVariable) {
           const variableSubtitle = `\${${boundVariable}}`;
           (updatedComponent as any).subtitle = variableSubtitle;
+          titleComponentStateManager.setBoundSubtitleVariableName(
+            selectedComponent.id,
+            boundVariable,
+          );
+        } else {
+          // 如果没有之前绑定的变量，设置为空变量格式
+          (updatedComponent as any).subtitle = '${}';
+          titleComponentStateManager.setBoundSubtitleVariableName(
+            selectedComponent.id,
+            undefined,
+          );
         }
-        titleComponentStateManager.setBoundSubtitleVariableName(
-          selectedComponent.id,
-          boundVariable,
-        );
+        onUpdateComponent(updatedComponent);
       } else {
         titleComponentStateManager.setBoundSubtitleVariableName(
           selectedComponent.id,
           undefined,
         );
+        onUpdateComponent(updatedComponent);
       }
-
-      onUpdateComponent(updatedComponent);
     },
     [
       selectedComponent,
       setLastBoundVariables,
       onUpdateComponent,
       lastBoundVariables,
+      subtitleMode,
     ],
   );
 
   // 处理变量绑定变化 - 参考InputComponent的模式
   const handleTitleVariableBindingChange = useCallback(
     (variableName: string | undefined) => {
-      // setTitleVariableBinding(variableName);
-
       if (variableName) {
         // 更新组件状态管理器
         titleComponentStateManager.setBoundTitleVariableName(

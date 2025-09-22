@@ -1,11 +1,12 @@
 // TextComponent 编辑界面 - 专门处理普通文本组件
+import { ColorPicker, Form, Input, InputNumber, Segmented, Select } from 'antd';
+import React, { useCallback, useEffect, useMemo } from 'react';
+
 import {
   AlignCenterOutlined,
   AlignLeftOutlined,
   AlignRightOutlined,
 } from '@ant-design/icons';
-import { ColorPicker, Form, Input, InputNumber, Segmented, Select } from 'antd';
-import React, { useCallback, useEffect, useMemo } from 'react';
 import { VariableItem } from '../../../type';
 import { resolveVariable } from '../../../utils';
 import { textComponentStateManager } from '../../../Variable/utils/index';

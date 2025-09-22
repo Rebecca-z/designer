@@ -761,7 +761,6 @@ export const importFromJSON = (jsonString: string): DesignData | null => {
       parsed.dsl.body &&
       Array.isArray(parsed.dsl.body.elements)
     ) {
-      console.log('✅ 检测到新格式卡片数据，转换为旧格式');
       // 新格式转换为旧格式，确保为组件添加ID
       const oldFormatData = {
         direction: parsed.dsl.body.direction || 'vertical',
@@ -782,7 +781,6 @@ export const importFromJSON = (jsonString: string): DesignData | null => {
       parsed.direction &&
       Array.isArray(parsed.elements)
     ) {
-      console.log('✅ 检测到旧格式数据，直接使用');
       // 先确保所有组件都有ID，然后处理combination_mode
       const dataWithIds = ensureComponentIds(parsed);
       const dataWithNormalizedModes = normalizeCombinationModes(dataWithIds);
@@ -802,7 +800,6 @@ export const replaceVariables = (
   text: string,
   variables: VariableItem[],
 ): string => {
-  // console.warn('replaceVariables', text, variables);
   if (!text || !variables || variables.length === 0) {
     return text;
   }
@@ -850,6 +847,5 @@ export const replaceVariables = (
     return replacement;
   });
 
-  // console.log('🔍 replaceVariables 最终结果:', { input: text, output: result });
   return result;
 };

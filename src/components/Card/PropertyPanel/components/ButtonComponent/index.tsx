@@ -66,10 +66,6 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
   // 初始化事件数据 - 从selectedComponent.behaviors加载
   useEffect(() => {
     const behaviors = (selectedComponent as any)?.behaviors;
-    console.log('🔧 初始化事件数据:', {
-      behaviors,
-      componentId: selectedComponent.id,
-    });
 
     if (behaviors && Array.isArray(behaviors) && behaviors.length > 0) {
       // 将behaviors转换为EventItem格式
@@ -101,11 +97,9 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
         },
       );
 
-      console.log('🔧 初始化事件列表:', initialEvents);
       setEvents(initialEvents);
     } else {
       // 如果没有behaviors或behaviors为空，清空事件列表
-      console.log('🔧 没有behaviors数据，清空事件列表');
       setEvents([]);
     }
   }, [selectedComponent.id, (selectedComponent as any)?.behaviors]);
@@ -576,20 +570,6 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
               style={{ width: '100%' }}
               optionRender={(option) => {
                 const { value, label } = option;
-                const getButtonType = (colorValue: string) => {
-                  switch (colorValue) {
-                    case 'black':
-                      return '';
-                    case 'blue':
-                      return 'primary';
-                    case 'red':
-                      return 'primary';
-                    default:
-                      return 'default';
-                  }
-                };
-
-                const buttonType = getButtonType(value);
                 const isSelected =
                   (selectedComponent as any).style?.color === value ||
                   ((selectedComponent as any).style?.color === undefined &&
@@ -604,19 +584,7 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
                       width: '100%',
                     }}
                   >
-                    <Button
-                      type={buttonType as any}
-                      danger={value === 'red'}
-                      style={{
-                        width: '80px',
-                        height: '28px',
-                        fontSize: '12px',
-                        pointerEvents: 'none',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {label}
-                    </Button>
+                    {label}
                     {isSelected && (
                       <CheckOutlined
                         style={{
@@ -652,13 +620,11 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        width: '100%',
                       }}
                     >
                       <Button
                         type={buttonType as any}
                         danger={value === 'red'}
-                        size="small"
                         style={{
                           width: '80px',
                           height: '28px',
@@ -701,13 +667,6 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
                     (selectedComponent as any)?.form_action_type === 'submit'
                   }
                   onChange={(checked) => {
-                    console.log('🔧 提交按钮开关变更:', {
-                      checked,
-                      currentActionType: (selectedComponent as any)
-                        .form_action_type,
-                      componentId: selectedComponent.id,
-                    });
-
                     if (checked) {
                       // 设置为提交按钮，需要初始化behaviors字段
                       const updatedComponent = {
@@ -719,12 +678,6 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
                       if (!(updatedComponent as any).behaviors) {
                         (updatedComponent as any).behaviors = [];
                       }
-
-                      console.log('🔧 设置提交按钮，初始化behaviors字段:', {
-                        componentId: selectedComponent.id,
-                        formActionType: 'submit',
-                        hasBehaviors: !!(updatedComponent as any).behaviors,
-                      });
 
                       onUpdateComponent(updatedComponent);
                     } else {
@@ -738,11 +691,6 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
                       if (!(updatedComponent as any).behaviors) {
                         (updatedComponent as any).behaviors = [];
                       }
-
-                      console.log('🔧 关闭提交按钮，转为普通按钮:', {
-                        componentId: selectedComponent.id,
-                        hasBehaviors: !!(updatedComponent as any).behaviors,
-                      });
 
                       onUpdateComponent(updatedComponent);
                     }
@@ -765,13 +713,6 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
                     (selectedComponent as any)?.form_action_type === 'reset'
                   }
                   onChange={(checked) => {
-                    console.log('🔧 重置按钮开关变更:', {
-                      checked,
-                      currentActionType: (selectedComponent as any)
-                        .form_action_type,
-                      componentId: selectedComponent.id,
-                    });
-
                     if (checked) {
                       // 重置按钮不需要behaviors字段，通过onUpdateComponent直接删除
                       const updatedComponent = {
@@ -821,17 +762,12 @@ const ButtonComponent: React.FC<BaseComponentProps> = ({
         </Button>
 
         {/* 事件列表 */}
-        {(() => {
-          console.log('🔧 事件数组长度:', events.length, '事件数组:', events);
-          return null;
-        })()}
         {events.length === 0 && (
           <div style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
             暂无事件，点击上方按钮创建
           </div>
         )}
         {events.map((event) => {
-          console.log('🔧 渲染事件:', event);
           return (
             <div
               key={event.id}

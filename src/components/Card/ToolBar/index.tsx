@@ -5,8 +5,9 @@ import {
   LeftOutlined,
   MoreOutlined,
 } from '@ant-design/icons';
-import { App, Avatar, Button, Dropdown, Space, Tooltip, message } from 'antd';
+import { App, Button, Dropdown, Space, Tooltip, message } from 'antd';
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CardDesignData } from '../type';
 import styles from './index.less';
 
@@ -33,6 +34,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
   onSave,
   onPublish,
 }) => {
+  const navigate = useNavigate();
   const { modal } = App.useApp();
 
   // 复制卡片ID
@@ -62,7 +64,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
 
   const handlePublish = () => {
     modal.confirm({
-      title: '确定要发布吗？',
+      title: '确定要发布吗',
       onOk: () => {
         onPublish();
       },
@@ -70,7 +72,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
   };
 
   const handleBack = () => {
-    console.warn('返回卡片列表');
+    navigate(`/application/card`);
   };
 
   const contextMenu = {
@@ -110,6 +112,10 @@ const Toolbar: React.FC<ToolbarProps> = ({
               </span>
             </Tooltip>
             <span style={{ padding: '0 4px' }}>|</span>
+            {/* <span>
+              最新修改:
+              {TimeDisplay(cardInfo?.update_time || cardInfo?.create_time)}
+            </span> */}
           </div>
         </div>
       </Space>
@@ -143,7 +149,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
         <Button type="primary" onClick={handlePublish}>
           发布
         </Button>
-        <Avatar size={35} />
       </Space>
     </div>
   );

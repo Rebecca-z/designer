@@ -451,7 +451,17 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
       setIsVariableModalFromVariablesTab(false);
       setModalComponentType(undefined);
       setTimeout(() => {
-        setEditingVariable(variable as Variable);
+        // 确保变量对象包含所有必要的字段，包括description
+        const editingVar: Variable = {
+          name: variable.name || '',
+          type:
+            (variable.type as 'text' | 'number' | 'boolean' | 'object') ||
+            'text',
+          value: variable.value || '',
+          originalType: variable.originalType || variable.type || 'text',
+          description: variable.description || '',
+        };
+        setEditingVariable(editingVar);
         setEditingVariableIndex(index);
         setIsVariableModalFromVariablesTab(true);
         setIsVariableModalVisible(true);
@@ -504,48 +514,50 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
 
           {variables.length > 0 ? (
             <div>
-              {variables.map((variable: any, index: number) => (
-                <Card
-                  key={variable.name || `variable-${index}`}
-                  size="small"
-                  style={{ marginBottom: 8 }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}
+              {variables.map((variable: any, index: number) => {
+                return (
+                  <Card
+                    key={variable.name || `variable-${index}`}
+                    size="small"
+                    style={{ marginBottom: 8 }}
                   >
-                    <div>
-                      <Text strong>{getVariableDisplayName(variable)}</Text>
-                      <br />
-                      <Text type="secondary" style={{ fontSize: '12px' }}>
-                        {getVariableType(variable.originalType)}
-                      </Text>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <div>
+                        <Text strong>{getVariableDisplayName(variable)}</Text>
+                        <br />
+                        <Text type="secondary" style={{ fontSize: '12px' }}>
+                          {getVariableType(variable.originalType)}
+                        </Text>
+                      </div>
+                      <div style={{ flexShrink: '0' }}>
+                        <Tooltip title="编辑">
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={<EditOutlined />}
+                            onClick={handleEditVariable(variable, index)}
+                          />
+                        </Tooltip>
+                        <Tooltip title="删除">
+                          <Button
+                            type="text"
+                            size="small"
+                            danger
+                            icon={<DeleteOutlined />}
+                            onClick={handleDeleteVariable(index)}
+                          />
+                        </Tooltip>
+                      </div>
                     </div>
-                    <div>
-                      <Tooltip title="编辑">
-                        <Button
-                          type="text"
-                          size="small"
-                          icon={<EditOutlined />}
-                          onClick={handleEditVariable(variable, index)}
-                        />
-                      </Tooltip>
-                      <Tooltip title="删除">
-                        <Button
-                          type="text"
-                          size="small"
-                          danger
-                          icon={<DeleteOutlined />}
-                          onClick={handleDeleteVariable(index)}
-                        />
-                      </Tooltip>
-                    </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
           ) : (
             <div
@@ -613,7 +625,6 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
       editingVariable,
       isVariableModalFromVariablesTab,
       modalComponentType,
-      VariableManagementPanel,
     }),
     [
       selectedComponent,
@@ -635,7 +646,6 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
       editingVariable,
       isVariableModalFromVariablesTab,
       modalComponentType,
-      VariableManagementPanel,
     ],
   );
 

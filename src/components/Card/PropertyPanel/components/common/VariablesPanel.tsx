@@ -24,11 +24,6 @@ const VariablesPanel: React.FC<VariablesPanelProps> = ({
   variableManagementComponent,
   style,
 }) => {
-  console.log('🔍 VariablesPanel 渲染: 变量管理面板被渲染', {
-    hasVariableManagementComponent: !!variableManagementComponent,
-    timestamp: new Date().toISOString(),
-  });
-
   return (
     <div style={{ ...STYLES.container, ...style }}>
       {variableManagementComponent}

@@ -38,8 +38,6 @@ const CardWrapper: React.FC<CardWrapperProps> = ({
     [],
   );
 
-  // const isSelectedHeader = isSamePath(selectedPath || null, ['dsl', 'header']);
-
   // 工具函数：检查画布中是否已存在标题组件
   const hasExistingTitle = useCallback((elements: ComponentType[]): boolean => {
     return elements.some((component) => component.tag === 'title');

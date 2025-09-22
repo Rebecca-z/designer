@@ -80,8 +80,6 @@ const HrRenderer: React.FC<BaseRendererProps> = (props) => {
   ) : (
     hrElement
   );
-
-  return hrElement;
 };
 
 export default HrRenderer;

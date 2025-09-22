@@ -27,6 +27,7 @@ import { createDefaultComponent, generateId } from './utils';
 import { variableCacheManager } from './Variable/utils/index';
 
 const CardDesigner: React.FC = () => {
+  // const { cardId } = useParams<{ cardId: any }>();
   // 基础状态
   const [device, setDevice] = useState<keyof typeof DEVICE_SIZES>('desktop');
   const [previewVisible, setPreviewVisible] = useState<boolean>(false);
@@ -81,6 +82,15 @@ const CardDesigner: React.FC = () => {
             variableCacheManager.setVariable(
               originalTypeKey,
               varRecord.originalType,
+            );
+          }
+
+          // 如果有 description，也需要保存到缓存中以便后续恢复
+          if (varRecord.description) {
+            const descriptionKey = `__${varRecord.name}_description`;
+            variableCacheManager.setVariable(
+              descriptionKey,
+              varRecord.description,
             );
           }
         } else {
@@ -351,6 +361,65 @@ const CardDesigner: React.FC = () => {
             }
           }
         }
+      } else if (
+        path.length === 16 &&
+        path[4] === 'elements' &&
+        path[6] === 'columns' &&
+        path[8] === 'elements' &&
+        path[10] === 'elements' &&
+        path[12] === 'columns' &&
+        path[14] === 'elements'
+      ) {
+        // 嵌套表单内分栏列路径: ['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', nestedFormIndex, 'elements', nestedColumnSetIndex, 'columns', nestedColumnIndex, 'elements', componentIndex]
+        const formIndex = path[3] as number;
+        const columnSetIndex = path[5] as number;
+        const columnIndex = path[7] as number;
+        const nestedFormIndex = path[9] as number;
+        const nestedColumnSetIndex = path[11] as number;
+        const nestedColumnIndex = path[13] as number;
+        const componentIndex = path[15] as number;
+
+        const formComponent = newData.dsl.body.elements[formIndex];
+        if (
+          formComponent &&
+          formComponent.tag === 'form' &&
+          formComponent.elements
+        ) {
+          const columnSetComponent = formComponent.elements[columnSetIndex];
+          if (
+            columnSetComponent &&
+            columnSetComponent.tag === 'column_set' &&
+            columnSetComponent.columns
+          ) {
+            const column = columnSetComponent.columns[columnIndex];
+            if (column && column.elements) {
+              const nestedFormComponent = column.elements[nestedFormIndex];
+              if (
+                nestedFormComponent &&
+                nestedFormComponent.tag === 'form' &&
+                nestedFormComponent.elements
+              ) {
+                const nestedColumnSetComponent =
+                  nestedFormComponent.elements[nestedColumnSetIndex];
+                if (
+                  nestedColumnSetComponent &&
+                  nestedColumnSetComponent.tag === 'column_set' &&
+                  nestedColumnSetComponent.columns
+                ) {
+                  const nestedColumn =
+                    nestedColumnSetComponent.columns[nestedColumnIndex];
+                  if (nestedColumn && nestedColumn.elements) {
+                    nestedColumn.elements.splice(
+                      componentIndex + 1,
+                      0,
+                      component,
+                    );
+                  }
+                }
+              }
+            }
+          }
+        }
       } else {
         // 其他情况，添加到根节点
         newData.dsl.body.elements.push(component);
@@ -583,7 +652,6 @@ const CardDesigner: React.FC = () => {
             (selection.selectedPath[7] as number) >= columnIndex
           ) {
             selection.clearSelection();
-            // console.log('🔄 重置选中状态，因为删除了当前选中的列或其后的列');
           }
         }
       }
@@ -638,6 +706,61 @@ const CardDesigner: React.FC = () => {
           }
         }
       }
+    } else if (
+      path.length === 16 &&
+      path[4] === 'elements' &&
+      path[6] === 'columns' &&
+      path[8] === 'elements' &&
+      path[10] === 'elements' &&
+      path[12] === 'columns' &&
+      path[14] === 'elements'
+    ) {
+      // 嵌套表单内分栏列中组件: ['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', nestedFormIndex, 'elements', nestedColumnSetIndex, 'columns', nestedColumnIndex, 'elements', componentIndex]
+      const formIndex = path[3] as number;
+      const columnSetIndex = path[5] as number;
+      const columnIndex = path[7] as number;
+      const nestedFormIndex = path[9] as number;
+      const nestedColumnSetIndex = path[11] as number;
+      const nestedColumnIndex = path[13] as number;
+      const componentIndex = path[15] as number;
+
+      const formComponent = newData.dsl.body.elements[formIndex];
+      if (
+        formComponent &&
+        formComponent.tag === 'form' &&
+        formComponent.elements
+      ) {
+        const columnSetComponent = formComponent.elements[columnSetIndex];
+        if (
+          columnSetComponent &&
+          columnSetComponent.tag === 'column_set' &&
+          columnSetComponent.columns
+        ) {
+          const column = columnSetComponent.columns[columnIndex];
+          if (column && column.elements) {
+            const nestedFormComponent = column.elements[nestedFormIndex];
+            if (
+              nestedFormComponent &&
+              nestedFormComponent.tag === 'form' &&
+              nestedFormComponent.elements
+            ) {
+              const nestedColumnSetComponent =
+                nestedFormComponent.elements[nestedColumnSetIndex];
+              if (
+                nestedColumnSetComponent &&
+                nestedColumnSetComponent.tag === 'column_set' &&
+                nestedColumnSetComponent.columns
+              ) {
+                const nestedColumn =
+                  nestedColumnSetComponent.columns[nestedColumnIndex];
+                if (nestedColumn && nestedColumn.elements) {
+                  nestedColumn.elements.splice(componentIndex, 1);
+                }
+              }
+            }
+          }
+        }
+      }
     }
 
     if (path.length === 2 && path[1] === 'header') {
@@ -653,6 +776,21 @@ const CardDesigner: React.FC = () => {
     if (path.length === 2 && path[0] === 'dsl' && path[1] === 'body') {
       return false;
     }
+
+    // 检查是否为表单中的提交按钮，表单中的提交按钮不可删除
+    const component = getComponentByPath(safeCardData, path);
+    if (
+      component &&
+      component.tag === 'button' &&
+      (component as any).form_action_type === 'submit'
+    ) {
+      // 只限制表单中的提交按钮（路径长度 <= 10），不限制深层嵌套的提交按钮
+      if (path.length <= 10) {
+        console.log('⚠️ 表单中的提交按钮不可删除');
+        return false;
+      }
+    }
+
     handleDelete(path);
     return true;
   };
@@ -668,7 +806,6 @@ const CardDesigner: React.FC = () => {
       path[1] === 'header' &&
       updatedComponent.tag === 'title'
     ) {
-      console.log('📝 更新 header 中的标题组件:', updatedComponent);
       let newData = JSON.parse(JSON.stringify(safeCardData));
 
       // 转换组件格式为正确的 header 格式
@@ -774,6 +911,62 @@ const CardDesigner: React.FC = () => {
               column.elements = [];
             }
             column.elements[componentIndex] = updatedComponent;
+          }
+        }
+      }
+    } else if (
+      path.length === 16 &&
+      path[4] === 'elements' &&
+      path[6] === 'columns' &&
+      path[8] === 'elements' &&
+      path[10] === 'elements' &&
+      path[12] === 'columns' &&
+      path[14] === 'elements'
+    ) {
+      // 嵌套表单内分栏内的组件: ['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', nestedFormIndex, 'elements', nestedColumnSetIndex, 'columns', nestedColumnIndex, 'elements', componentIndex]
+      const formIndex = path[3] as number;
+      const columnSetIndex = path[5] as number;
+      const columnIndex = path[7] as number;
+      const nestedFormIndex = path[9] as number;
+      const nestedColumnSetIndex = path[11] as number;
+      const nestedColumnIndex = path[13] as number;
+      const componentIndex = path[15] as number;
+
+      const formComponent = newData.dsl.body.elements[formIndex];
+      if (formComponent && formComponent.tag === 'form') {
+        const formElements = (formComponent as any).elements || [];
+        const columnSetComponent = formElements[columnSetIndex];
+
+        if (columnSetComponent && columnSetComponent.tag === 'column_set') {
+          if (!columnSetComponent.columns) {
+            columnSetComponent.columns = [];
+          }
+          const column = columnSetComponent.columns[columnIndex];
+          if (column && column.elements) {
+            const nestedFormComponent = column.elements[nestedFormIndex];
+            if (nestedFormComponent && nestedFormComponent.tag === 'form') {
+              const nestedFormElements =
+                (nestedFormComponent as any).elements || [];
+              const nestedColumnSetComponent =
+                nestedFormElements[nestedColumnSetIndex];
+
+              if (
+                nestedColumnSetComponent &&
+                nestedColumnSetComponent.tag === 'column_set'
+              ) {
+                if (!nestedColumnSetComponent.columns) {
+                  nestedColumnSetComponent.columns = [];
+                }
+                const nestedColumn =
+                  nestedColumnSetComponent.columns[nestedColumnIndex];
+                if (nestedColumn) {
+                  if (!nestedColumn.elements) {
+                    nestedColumn.elements = [];
+                  }
+                  nestedColumn.elements[componentIndex] = updatedComponent;
+                }
+              }
+            }
           }
         }
       }
@@ -910,16 +1103,14 @@ const CardDesigner: React.FC = () => {
 
   // 保存
   const saveHandle = () => {
+    // 保存接口API
     message.success('保存成功');
   };
 
   // 发布
   const publishHandle = () => {
-    console.warn('data===', {
-      card_content: JSON.stringify(safeCardData),
-      variable_content: variables ? JSON.stringify({ variables }) : '{}',
-    });
     message.success('发布成功');
+    // 发布接口API
   };
 
   // 绑定快捷键
@@ -959,6 +1150,11 @@ const CardDesigner: React.FC = () => {
         const cachedOriginalType =
           variableCacheManager.getVariable(originalTypeKey);
 
+        // 尝试从缓存中获取description信息
+        const descriptionKey = `__${variableName}_description`;
+        const cachedDescription =
+          variableCacheManager.getVariable(descriptionKey);
+
         // 构建标准Variable对象格式
         const variableItem: Variable = {
           name: variableName,
@@ -972,7 +1168,7 @@ const CardDesigner: React.FC = () => {
           originalType:
             cachedOriginalType ||
             (typeof variableValue === 'number' ? 'number' : 'text'),
-          description: '',
+          description: cachedDescription || '',
         };
 
         variableItems.push(variableItem);
@@ -1076,6 +1272,181 @@ const CardDesigner: React.FC = () => {
         }
       }
 
+      // 特殊处理嵌套表单内分栏容器选择：['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', nestedFormIndex, 'elements', nestedColumnSetIndex]
+      if (
+        selection.selectedPath.length === 12 &&
+        selection.selectedPath[0] === 'dsl' &&
+        selection.selectedPath[1] === 'body' &&
+        selection.selectedPath[2] === 'elements' &&
+        selection.selectedPath[4] === 'elements' &&
+        selection.selectedPath[6] === 'columns' &&
+        selection.selectedPath[8] === 'elements' &&
+        selection.selectedPath[10] === 'elements'
+      ) {
+        const formIndex = selection.selectedPath[3] as number;
+        const columnSetIndex = selection.selectedPath[5] as number;
+        const columnIndex = selection.selectedPath[7] as number;
+        const nestedFormIndex = selection.selectedPath[9] as number;
+        const nestedColumnSetIndex = selection.selectedPath[11] as number;
+
+        const formComponent = safeCardData.dsl.body.elements[formIndex];
+        if (
+          formComponent &&
+          formComponent.tag === 'form' &&
+          formComponent.elements
+        ) {
+          const columnSetComponent = formComponent.elements[columnSetIndex];
+          if (
+            columnSetComponent &&
+            columnSetComponent.tag === 'column_set' &&
+            columnSetComponent.columns
+          ) {
+            const column = columnSetComponent.columns[columnIndex];
+            if (column && column.elements) {
+              const nestedFormComponent = column.elements[nestedFormIndex];
+              if (
+                nestedFormComponent &&
+                nestedFormComponent.tag === 'form' &&
+                nestedFormComponent.elements
+              ) {
+                const nestedColumnSetComponent =
+                  nestedFormComponent.elements[nestedColumnSetIndex];
+                if (
+                  nestedColumnSetComponent &&
+                  nestedColumnSetComponent.tag === 'column_set'
+                ) {
+                  return;
+                }
+              }
+            }
+          }
+        }
+        selection.clearSelection();
+        return;
+      }
+
+      // 特殊处理嵌套表单内分栏列选择：['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', nestedFormIndex, 'elements', nestedColumnSetIndex, 'columns', nestedColumnIndex]
+      if (
+        selection.selectedPath.length === 14 &&
+        selection.selectedPath[0] === 'dsl' &&
+        selection.selectedPath[1] === 'body' &&
+        selection.selectedPath[2] === 'elements' &&
+        selection.selectedPath[4] === 'elements' &&
+        selection.selectedPath[6] === 'columns' &&
+        selection.selectedPath[8] === 'elements' &&
+        selection.selectedPath[10] === 'elements' &&
+        selection.selectedPath[12] === 'columns'
+      ) {
+        const formIndex = selection.selectedPath[3] as number;
+        const columnSetIndex = selection.selectedPath[5] as number;
+        const columnIndex = selection.selectedPath[7] as number;
+        const nestedFormIndex = selection.selectedPath[9] as number;
+        const nestedColumnSetIndex = selection.selectedPath[11] as number;
+        const nestedColumnIndex = selection.selectedPath[13] as number;
+
+        const formComponent = safeCardData.dsl.body.elements[formIndex];
+        if (
+          formComponent &&
+          formComponent.tag === 'form' &&
+          formComponent.elements
+        ) {
+          const columnSetComponent = formComponent.elements[columnSetIndex];
+          if (
+            columnSetComponent &&
+            columnSetComponent.tag === 'column_set' &&
+            columnSetComponent.columns
+          ) {
+            const column = columnSetComponent.columns[columnIndex];
+            if (column && column.elements) {
+              const nestedFormComponent = column.elements[nestedFormIndex];
+              if (
+                nestedFormComponent &&
+                nestedFormComponent.tag === 'form' &&
+                nestedFormComponent.elements
+              ) {
+                const nestedColumnSetComponent =
+                  nestedFormComponent.elements[nestedColumnSetIndex];
+                if (
+                  nestedColumnSetComponent &&
+                  nestedColumnSetComponent.tag === 'column_set' &&
+                  nestedColumnSetComponent.columns &&
+                  nestedColumnSetComponent.columns[nestedColumnIndex]
+                ) {
+                  return;
+                }
+              }
+            }
+          }
+        }
+        selection.clearSelection();
+        return;
+      }
+
+      // 特殊处理嵌套表单内分栏内的组件选择：['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', nestedFormIndex, 'elements', nestedColumnSetIndex, 'columns', nestedColumnIndex, 'elements', componentIndex]
+      if (
+        selection.selectedPath.length === 16 &&
+        selection.selectedPath[0] === 'dsl' &&
+        selection.selectedPath[1] === 'body' &&
+        selection.selectedPath[2] === 'elements' &&
+        selection.selectedPath[4] === 'elements' &&
+        selection.selectedPath[6] === 'columns' &&
+        selection.selectedPath[8] === 'elements' &&
+        selection.selectedPath[10] === 'elements' &&
+        selection.selectedPath[12] === 'columns' &&
+        selection.selectedPath[14] === 'elements'
+      ) {
+        const formIndex = selection.selectedPath[3] as number;
+        const columnSetIndex = selection.selectedPath[5] as number;
+        const columnIndex = selection.selectedPath[7] as number;
+        const nestedFormIndex = selection.selectedPath[9] as number;
+        const nestedColumnSetIndex = selection.selectedPath[11] as number;
+        const nestedColumnIndex = selection.selectedPath[13] as number;
+        const componentIndex = selection.selectedPath[15] as number;
+
+        const formComponent = safeCardData.dsl.body.elements[formIndex];
+        if (
+          formComponent &&
+          formComponent.tag === 'form' &&
+          formComponent.elements
+        ) {
+          const columnSetComponent = formComponent.elements[columnSetIndex];
+          if (
+            columnSetComponent &&
+            columnSetComponent.tag === 'column_set' &&
+            columnSetComponent.columns
+          ) {
+            const column = columnSetComponent.columns[columnIndex];
+            if (column && column.elements) {
+              const nestedFormComponent = column.elements[nestedFormIndex];
+              if (
+                nestedFormComponent &&
+                nestedFormComponent.tag === 'form' &&
+                nestedFormComponent.elements
+              ) {
+                const nestedColumnSetComponent =
+                  nestedFormComponent.elements[nestedColumnSetIndex];
+                if (
+                  nestedColumnSetComponent &&
+                  nestedColumnSetComponent.tag === 'column_set' &&
+                  nestedColumnSetComponent.columns
+                ) {
+                  const nestedColumn =
+                    nestedColumnSetComponent.columns[nestedColumnIndex];
+                  if (nestedColumn && nestedColumn.elements) {
+                    const component = nestedColumn.elements[componentIndex];
+                    if (component) {
+                      return;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        selection.clearSelection();
+        return;
+      }
+
       // 对于其他组件选择路径，需要调整路径查找逻辑
       const component = getComponentByPath(
         safeCardData,
@@ -1090,33 +1461,7 @@ const CardDesigner: React.FC = () => {
   }, [safeCardData, selection.selectedPath, selection.selectedComponent?.id]);
 
   useEffect(() => {
-    // getApplicationDetail(cardId).then((res) => {
-    // 获取卡片信息
-    // if (res?.card_id) {
-    //   setCardInfo(res);
-    // }
-    // // 更新变量
-    // if (res?.variable_content) {
-    //   if (res?.variable_content === '{}') {
-    //     handleUpdateVariables([]);
-    //   } else {
-    //     const result = JSON.parse(res?.variable_content);
-    //     handleUpdateVariables(result.variables);
-    //   }
-    // }
-    // 更新画布
-    //   const data =
-    //     res?.card_content && res?.card_content !== '{}'
-    //       ? JSON.parse(res.card_content)
-    //       : {};
-    //   const newData = {
-    //     ...safeCardData,
-    //     name: res.card_name,
-    //     id: res.card_id,
-    //     ...data,
-    //   };
-    //   history.updateData(newData as any);
-    // });
+    // 获取接口信息API
   }, []);
 
   return (

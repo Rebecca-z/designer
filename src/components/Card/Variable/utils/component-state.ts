@@ -537,7 +537,6 @@ export class SelectComponentStateManager {
     componentId: string,
     options: Array<{ label: string; value: string }>,
   ): void {
-    console.warn('setUserEditedOptions', options);
     const currentState = this.getComponentState(componentId);
     this.stateMap.set(componentId, {
       ...currentState,
@@ -664,7 +663,7 @@ export class MultiSelectComponentStateManager {
 
     // 如果变量名为空，清除绑定状态
     if (!variableName) {
-      delete newState?.boundVariableName;
+      delete (newState as Partial<typeof newState>).boundVariableName;
     }
 
     this.stateMap.set(componentId, newState);
@@ -896,12 +895,6 @@ class TitleComponentStateManager {
       ...currentState,
       userEditedTitle: title,
     });
-
-    console.log('📝 设置用户编辑标题:', {
-      componentId,
-      title,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取用户编辑的标题
@@ -917,20 +910,12 @@ class TitleComponentStateManager {
   ): void {
     const currentState = this.getComponentState(componentId);
     const newState = { ...currentState };
-
     if (variableName) {
       newState.boundTitleVariableName = variableName;
     } else {
       delete newState.boundTitleVariableName;
     }
-
     this.stateMap.set(componentId, newState);
-
-    console.log('🔗 设置标题绑定变量名:', {
-      componentId,
-      variableName,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取绑定的标题变量名
@@ -945,12 +930,6 @@ class TitleComponentStateManager {
     this.stateMap.set(componentId, {
       ...currentState,
       userEditedSubtitle: subtitle,
-    });
-
-    console.log('📝 设置用户编辑副标题:', {
-      componentId,
-      subtitle,
-      timestamp: new Date().toISOString(),
     });
   }
 
@@ -975,12 +954,6 @@ class TitleComponentStateManager {
     }
 
     this.stateMap.set(componentId, newState);
-
-    console.log('🔗 设置副标题绑定变量名:', {
-      componentId,
-      variableName,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取绑定的副标题变量名
@@ -992,10 +965,6 @@ class TitleComponentStateManager {
   // 清除组件状态
   public clearComponentState(componentId: string): void {
     this.stateMap.delete(componentId);
-    console.log('🗑️ 清除标题组件状态:', {
-      componentId,
-      timestamp: new Date().toISOString(),
-    });
   }
 
   // 获取所有状态

@@ -104,12 +104,6 @@ const VariableBinding: React.FC<VariableBindingProps> = ({
 
   // 处理添加变量
   const handleAddVariable = () => {
-    console.log('➕ 变量绑定组件 - 新建变量:', {
-      componentType,
-      availableVariablesCount: filteredVariables.length,
-      timestamp: new Date().toISOString(),
-    });
-
     if (onAddVariable) {
       onAddVariable();
     }

@@ -83,13 +83,6 @@ export const getComponentRealPath = (
       const component = formElements[componentIndex];
 
       if (component) {
-        console.log('📋 路径命中 - 表单内组件:', {
-          selectedPath,
-          componentTag: component.tag,
-          componentId: component.id,
-          formIndex,
-          componentIndex,
-        });
         return { component, realPath: selectedPath };
       } else {
         console.warn('⚠️ 表单内组件索引无效:', {
@@ -130,16 +123,6 @@ export const getComponentRealPath = (
           const component = column.elements[componentIndex];
 
           if (component) {
-            console.log('🎯 表单内分栏容器内的组件:', {
-              componentId: component.id,
-              componentTag: component.tag,
-              formIndex,
-              columnSetIndex,
-              columnIndex,
-              componentIndex,
-              selectedPath,
-              realPath: selectedPath,
-            });
             return { component, realPath: selectedPath };
           } else {
             console.warn('⚠️ 表单内分栏容器内的组件索引无效:', {
@@ -191,14 +174,6 @@ export const getComponentRealPath = (
           tag: 'column',
           ...column,
         };
-
-        console.log('📐 路径命中 - 根级别分栏列选中:', {
-          selectedPath,
-          componentTag: columnComponent.tag,
-          componentId: columnComponent.id,
-          columnSetIndex,
-          columnIndex,
-        });
         return { component: columnComponent, realPath: selectedPath };
       }
     }
@@ -233,15 +208,6 @@ export const getComponentRealPath = (
             tag: 'column',
             ...column,
           };
-
-          console.log('📐 路径命中 - 表单内分栏列选中:', {
-            selectedPath,
-            componentTag: columnComponent.tag,
-            componentId: columnComponent.id,
-            formIndex,
-            columnSetIndex,
-            columnIndex,
-          });
           return { component: columnComponent, realPath: selectedPath };
         }
       }
@@ -276,16 +242,234 @@ export const getComponentRealPath = (
           const component = column.elements[componentIndex];
 
           if (component) {
-            console.log('🎯 路径命中 - 表单内分栏内的组件:', {
-              selectedPath,
-              componentTag: component.tag,
-              componentId: component.id,
-              formIndex,
-              columnSetIndex,
-              columnIndex,
-              componentIndex,
-            });
             return { component, realPath: selectedPath };
+          }
+        }
+      }
+    }
+  }
+
+  // 检查是否是嵌套表单内分栏容器选中路径：['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', nestedFormIndex, 'elements', nestedColumnSetIndex]
+  if (
+    selectedPath.length === 12 &&
+    selectedPath[0] === 'dsl' &&
+    selectedPath[1] === 'body' &&
+    selectedPath[2] === 'elements' &&
+    selectedPath[4] === 'elements' &&
+    selectedPath[6] === 'columns' &&
+    selectedPath[8] === 'elements' &&
+    selectedPath[10] === 'elements'
+  ) {
+    const formIndex = selectedPath[3] as number;
+    const columnSetIndex = selectedPath[5] as number;
+    const columnIndex = selectedPath[7] as number;
+    const nestedFormIndex = selectedPath[9] as number;
+    const nestedColumnSetIndex = selectedPath[11] as number;
+
+    const formComponent = data.dsl.body.elements[formIndex];
+    if (formComponent && formComponent.tag === 'form') {
+      const formElements = (formComponent as any).elements || [];
+      const columnSetComponent = formElements[columnSetIndex];
+
+      if (columnSetComponent && columnSetComponent.tag === 'column_set') {
+        const columns = (columnSetComponent as any).columns || [];
+        const column = columns[columnIndex];
+
+        if (column && column.elements) {
+          const nestedFormComponent = column.elements[nestedFormIndex];
+
+          if (nestedFormComponent && nestedFormComponent.tag === 'form') {
+            const nestedFormElements =
+              (nestedFormComponent as any).elements || [];
+            const nestedColumnSetComponent =
+              nestedFormElements[nestedColumnSetIndex];
+
+            if (
+              nestedColumnSetComponent &&
+              nestedColumnSetComponent.tag === 'column_set'
+            ) {
+              return {
+                component: nestedColumnSetComponent,
+                realPath: selectedPath,
+              };
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 检查是否是嵌套表单内分栏列选中路径：['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', nestedFormIndex, 'elements', nestedColumnSetIndex, 'columns', nestedColumnIndex]
+  if (
+    selectedPath.length === 14 &&
+    selectedPath[0] === 'dsl' &&
+    selectedPath[1] === 'body' &&
+    selectedPath[2] === 'elements' &&
+    selectedPath[4] === 'elements' &&
+    selectedPath[6] === 'columns' &&
+    selectedPath[8] === 'elements' &&
+    selectedPath[10] === 'elements' &&
+    selectedPath[12] === 'columns'
+  ) {
+    const formIndex = selectedPath[3] as number;
+    const columnSetIndex = selectedPath[5] as number;
+    const columnIndex = selectedPath[7] as number;
+    const nestedFormIndex = selectedPath[9] as number;
+    const nestedColumnSetIndex = selectedPath[11] as number;
+    const nestedColumnIndex = selectedPath[13] as number;
+
+    const formComponent = data.dsl.body.elements[formIndex];
+    if (formComponent && formComponent.tag === 'form') {
+      const formElements = (formComponent as any).elements || [];
+      const columnSetComponent = formElements[columnSetIndex];
+
+      if (columnSetComponent && columnSetComponent.tag === 'column_set') {
+        const columns = (columnSetComponent as any).columns || [];
+        const column = columns[columnIndex];
+
+        if (column && column.elements) {
+          const nestedFormComponent = column.elements[nestedFormIndex];
+
+          if (nestedFormComponent && nestedFormComponent.tag === 'form') {
+            const nestedFormElements =
+              (nestedFormComponent as any).elements || [];
+            const nestedColumnSetComponent =
+              nestedFormElements[nestedColumnSetIndex];
+
+            if (
+              nestedColumnSetComponent &&
+              nestedColumnSetComponent.tag === 'column_set'
+            ) {
+              const nestedColumns =
+                (nestedColumnSetComponent as any).columns || [];
+              const nestedColumn = nestedColumns[nestedColumnIndex];
+
+              if (nestedColumn) {
+                // 创建一个虚拟的嵌套分栏列组件用于属性编辑
+                const nestedColumnComponent: ComponentType = {
+                  id: `${nestedColumnSetComponent.id}_column_${nestedColumnIndex}`,
+                  tag: 'column',
+                  ...nestedColumn,
+                };
+                return {
+                  component: nestedColumnComponent,
+                  realPath: selectedPath,
+                };
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 检查是否是嵌套表单内分栏内的组件路径：['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', nestedFormIndex, 'elements', nestedColumnSetIndex, 'columns', nestedColumnIndex, 'elements', componentIndex]
+  if (
+    selectedPath.length === 16 &&
+    selectedPath[0] === 'dsl' &&
+    selectedPath[1] === 'body' &&
+    selectedPath[2] === 'elements' &&
+    selectedPath[4] === 'elements' &&
+    selectedPath[6] === 'columns' &&
+    selectedPath[8] === 'elements' &&
+    selectedPath[10] === 'elements' &&
+    selectedPath[12] === 'columns' &&
+    selectedPath[14] === 'elements'
+  ) {
+    const formIndex = selectedPath[3] as number;
+    const columnSetIndex = selectedPath[5] as number;
+    const columnIndex = selectedPath[7] as number;
+    const nestedFormIndex = selectedPath[9] as number;
+    const nestedColumnSetIndex = selectedPath[11] as number;
+    const nestedColumnIndex = selectedPath[13] as number;
+    const componentIndex = selectedPath[15] as number;
+
+    const formComponent = data.dsl.body.elements[formIndex];
+    if (formComponent && formComponent.tag === 'form') {
+      const formElements = (formComponent as any).elements || [];
+      const columnSetComponent = formElements[columnSetIndex];
+
+      if (columnSetComponent && columnSetComponent.tag === 'column_set') {
+        const columns = (columnSetComponent as any).columns || [];
+        const column = columns[columnIndex];
+
+        if (column && column.elements) {
+          const nestedFormComponent = column.elements[nestedFormIndex];
+
+          if (nestedFormComponent && nestedFormComponent.tag === 'form') {
+            const nestedFormElements =
+              (nestedFormComponent as any).elements || [];
+            const nestedColumnSetComponent =
+              nestedFormElements[nestedColumnSetIndex];
+
+            if (
+              nestedColumnSetComponent &&
+              nestedColumnSetComponent.tag === 'column_set'
+            ) {
+              const nestedColumns =
+                (nestedColumnSetComponent as any).columns || [];
+              const nestedColumn = nestedColumns[nestedColumnIndex];
+
+              if (nestedColumn && nestedColumn.elements) {
+                const component = nestedColumn.elements[componentIndex];
+
+                if (component) {
+                  return { component, realPath: selectedPath };
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 检查是否是表单内分栏内的分栏组件路径：['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', componentIndex, 'columns', nestedColumnIndex, 'elements', nestedComponentIndex]
+  if (
+    selectedPath.length === 14 &&
+    selectedPath[0] === 'dsl' &&
+    selectedPath[1] === 'body' &&
+    selectedPath[2] === 'elements' &&
+    selectedPath[4] === 'elements' &&
+    selectedPath[6] === 'columns' &&
+    selectedPath[8] === 'elements' &&
+    selectedPath[10] === 'columns' &&
+    selectedPath[12] === 'elements'
+  ) {
+    const formIndex = selectedPath[3] as number;
+    const columnSetIndex = selectedPath[5] as number;
+    const columnIndex = selectedPath[7] as number;
+    const componentIndex = selectedPath[9] as number;
+    const nestedColumnIndex = selectedPath[11] as number;
+    const nestedComponentIndex = selectedPath[13] as number;
+
+    const formComponent = data.dsl.body.elements[formIndex];
+    if (formComponent && formComponent.tag === 'form') {
+      const formElements = (formComponent as any).elements || [];
+      const columnSetComponent = formElements[columnSetIndex];
+
+      if (columnSetComponent && columnSetComponent.tag === 'column_set') {
+        const columns = (columnSetComponent as any).columns || [];
+        const column = columns[columnIndex];
+
+        if (column && column.elements) {
+          const nestedColumnSetComponent = column.elements[componentIndex];
+
+          if (
+            nestedColumnSetComponent &&
+            nestedColumnSetComponent.tag === 'column_set'
+          ) {
+            const nestedColumns =
+              (nestedColumnSetComponent as any).columns || [];
+            const nestedColumn = nestedColumns[nestedColumnIndex];
+
+            if (nestedColumn && nestedColumn.elements) {
+              const component = nestedColumn.elements[nestedComponentIndex];
+
+              if (component) {
+                return { component, realPath: selectedPath };
+              }
+            }
           }
         }
       }

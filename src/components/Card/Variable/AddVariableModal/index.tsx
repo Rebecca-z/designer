@@ -7,9 +7,9 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { getDefaultRichTextJSON } from '../../../Card/RichTextEditor/RichTextUtils';
 import JSONEditor, { JSONEditorRef } from '../../JSONEditor';
 import RichTextEditor from '../../RichTextEditor/RichTextEditor';
+import { getDefaultRichTextJSON } from '../../RichTextEditor/RichTextUtils';
 import { Variable } from '../../type';
 import { defaultImg } from '../../utils';
 import type {
@@ -173,9 +173,9 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
     () => ({
       type: selectedType,
       mockData: getDefaultMockData(selectedType),
-      description: '',
+      description: editingVariable?.description || '',
     }),
-    [selectedType],
+    [selectedType, editingVariable?.description],
   );
 
   // 简化的类型映射：直接使用 originalType
@@ -502,7 +502,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
 
   // 当弹窗打开时重置表单或回显编辑数据
   useEffect(() => {
-    if (visible && !isUserEditing) {
+    if (visible) {
       if (editingVariable) {
         // 编辑模式：回显数据
         const formType = mapVariableTypeToFormType(editingVariable.type);
@@ -526,12 +526,14 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
           mockDataValue = editingVariable.value;
         }
 
-        form.setFieldsValue({
+        const formValues = {
           type: formType,
           name: editingVariable.name,
           description: editingVariable.description || '', // 回显描述信息
-          mockData: mockDataValue,
-        });
+          mockData: String(mockDataValue),
+        };
+
+        form.setFieldsValue(formValues);
 
         // 设置JSON编辑器数据（仅对非图片类型）
         if (formType !== 'image') {
@@ -550,7 +552,7 @@ const AddVariableModal: React.FC<AddVariableModalProps> = ({
             setJsonData(editingVariable.value);
           }
         }
-      } else {
+      } else if (!isUserEditing) {
         // 新增模式：智能选择类型
         let typeToUse = defaultType;
 

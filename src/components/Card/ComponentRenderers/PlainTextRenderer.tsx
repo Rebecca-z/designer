@@ -114,7 +114,6 @@ const PlainTextRenderer: React.FC<BaseRendererProps> = (props) => {
       lineHeight: '22px',
       color: style.color || '#333',
       textAlign: style.textAlign || 'left',
-      // padding: `${verticalSpacing / 2}px 0`,
       wordWrap: 'break-word' as const,
       whiteSpace: 'pre-wrap',
       minHeight: '25px',

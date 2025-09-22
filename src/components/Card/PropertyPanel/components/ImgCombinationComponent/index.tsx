@@ -67,7 +67,7 @@ const LayoutIcon: React.FC<{
       return (
         <div className={styles.iconLayout} style={iconStyle}>
           <div style={{ ...cellStyle, width: '49%', height: '100%' }} />
-          <div style={{ ...cellStyle, width: '50%', height: '100%' }} />
+          <div style={{ ...cellStyle, width: '49%', height: '100%' }} />
         </div>
       );
 
@@ -649,43 +649,56 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
                 : [];
               imageCount = currentImageList.length;
             } else if (multiImageContentMode === 'variable') {
-              // 变量模式：从 combination_mode 和变量图片数量动态推断布局类型
+              // 变量模式：优先使用用户选择的布局类型，如果没有则根据 combination_mode 推断
               const currentCombinationMode =
                 (selectedComponent as any).combination_mode || 'double';
 
-              // 获取变量中的实际图片数量
-              let actualImageCount = 0;
-              if (
-                typeof (selectedComponent as any).img_list === 'string' &&
-                (selectedComponent as any).img_list.includes('${')
-              ) {
-                const variableMatch = (selectedComponent as any).img_list.match(
-                  /\$\{([^}]+)\}/,
-                );
-                if (variableMatch && variableMatch[1]) {
-                  const variableName = variableMatch[1];
-                  const variable = variables.find((v) => {
-                    if (typeof v === 'object' && v !== null) {
-                      const keys = Object.keys(v as Record<string, any>);
-                      return keys.length > 0 && keys[0] === variableName;
-                    }
-                    return false;
-                  });
-                  if (variable) {
-                    const variableValue = (variable as Record<string, any>)[
-                      variableName
-                    ];
-                    if (Array.isArray(variableValue)) {
-                      actualImageCount = variableValue.length;
+              // 首先检查是否有用户选择的布局类型
+              const userChosenLayout = layoutChoiceManager.getChoice(
+                selectedComponent.id,
+              );
+              let currentLayoutType: string;
+
+              if (userChosenLayout) {
+                // 如果有用户选择的布局，直接使用
+                currentLayoutType = userChosenLayout;
+              } else {
+                // 如果没有用户选择，尝试从变量中获取图片数量进行推断
+                let actualImageCount = 0;
+                if (
+                  typeof (selectedComponent as any).img_list === 'string' &&
+                  (selectedComponent as any).img_list.includes('${')
+                ) {
+                  const variableMatch = (
+                    selectedComponent as any
+                  ).img_list.match(/\$\{([^}]+)\}/);
+                  if (variableMatch && variableMatch[1]) {
+                    const variableName = variableMatch[1];
+                    const variable = variables.find((v) => {
+                      if (typeof v === 'object' && v !== null) {
+                        const keys = Object.keys(v as Record<string, any>);
+                        return keys.length > 0 && keys[0] === variableName;
+                      }
+                      return false;
+                    });
+                    if (variable) {
+                      const variableValue = (variable as Record<string, any>)[
+                        variableName
+                      ];
+                      if (Array.isArray(variableValue)) {
+                        actualImageCount = variableValue.length;
+                      }
                     }
                   }
                 }
+
+                // 根据图片数量推断布局类型
+                currentLayoutType = getLayoutTypeFromModeAndCount(
+                  currentCombinationMode,
+                  actualImageCount,
+                );
               }
 
-              const currentLayoutType = getLayoutTypeFromModeAndCount(
-                currentCombinationMode,
-                actualImageCount,
-              );
               imageCount = getImageCountForLayout(currentLayoutType);
             }
 
@@ -704,74 +717,76 @@ const ImgCombinationComponent: React.FC<ImgCombinationComponentProps> = ({
               (latestComponent as any).combination_mode || 'double';
 
             // 推断当前布局类型
-            const currentLayoutType = getLayoutTypeFromModeAndCount(
-              currentCombinationMode,
-              imageCount,
+            let currentLayoutType: string;
+
+            // 优先使用用户选择的布局类型（两种模式都适用）
+            const userChosenLayout = layoutChoiceManager.getChoice(
+              selectedComponent.id,
             );
+            if (userChosenLayout) {
+              currentLayoutType = userChosenLayout;
+            } else {
+              // 如果没有用户选择，根据 combination_mode 和图片数量推断
+              currentLayoutType = getLayoutTypeFromModeAndCount(
+                currentCombinationMode,
+                imageCount,
+              );
+            }
 
             return (
               <div className={styles.layoutSettings}>
                 <div className={styles.layoutGrid}>
-                  {availableLayouts.map((layout) => (
-                    <div
-                      key={layout.key}
-                      onClick={() => toggleMode(layout.type)}
-                      className={styles.layoutItem}
-                    >
-                      <LayoutIcon
-                        type={layout.type}
-                        isSelected={(() => {
-                          const userChosenLayout =
-                            layoutChoiceManager.getChoice(selectedComponent.id);
+                  {availableLayouts.map((layout) => {
+                    // 提取 isSelected 逻辑，供图标和文字复用
+                    const isSelected = (() => {
+                      const userChosenLayout = layoutChoiceManager.getChoice(
+                        selectedComponent.id,
+                      );
 
-                          // 如果有用户选择的记录，优先使用
-                          if (userChosenLayout) {
-                            return userChosenLayout === layout.type;
-                          }
+                      // 如果有用户选择的记录，优先使用
+                      if (userChosenLayout) {
+                        return userChosenLayout === layout.type;
+                      }
 
-                          // 如果是精确匹配，直接选中
-                          if (currentCombinationMode === layout.type) {
-                            return true;
-                          }
+                      // 如果是精确匹配，直接选中
+                      if (currentCombinationMode === layout.type) {
+                        return true;
+                      }
 
-                          // 如果是简化模式，根据图片数量智能推断
-                          const layoutCombinationMode = layoutToCombinationMode(
-                            layout.type,
-                          );
-                          if (
-                            currentCombinationMode === layoutCombinationMode
-                          ) {
-                            const inferredLayoutType =
-                              getLayoutTypeFromModeAndCount(
-                                currentCombinationMode,
-                                imageCount,
-                              );
+                      // 如果是简化模式，根据当前布局类型智能推断
+                      const layoutCombinationMode = layoutToCombinationMode(
+                        layout.type,
+                      );
+                      if (currentCombinationMode === layoutCombinationMode) {
+                        // 使用已经计算好的 currentLayoutType 进行比较
+                        return currentLayoutType === layout.type;
+                      }
+                      return false;
+                    })();
 
-                            layoutChoiceManager.setChoice(
-                              selectedComponent.id,
-                              inferredLayoutType,
-                            );
-                            return inferredLayoutType === layout.type;
-                          }
-                          return false;
-                        })()}
-                      />
-                      <Text
-                        style={{
-                          fontSize: '11px',
-                          textAlign: 'center',
-                          color:
-                            currentLayoutType === layout.type
-                              ? '#1890ff'
-                              : '#666',
-                          fontWeight:
-                            currentLayoutType === layout.type ? 600 : 400,
-                        }}
+                    return (
+                      <div
+                        key={layout.key}
+                        onClick={() => toggleMode(layout.type)}
+                        className={styles.layoutItem}
                       >
-                        {layout.label}
-                      </Text>
-                    </div>
-                  ))}
+                        <LayoutIcon
+                          type={layout.type}
+                          isSelected={isSelected}
+                        />
+                        <Text
+                          style={{
+                            fontSize: '11px',
+                            textAlign: 'center',
+                            color: isSelected ? '#1890ff' : '#666',
+                            fontWeight: 500,
+                          }}
+                        >
+                          {layout.label}
+                        </Text>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );

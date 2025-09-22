@@ -32,7 +32,7 @@ import {
   message,
 } from 'antd';
 import React, { useCallback } from 'react';
-import { getDefaultRichTextJSON } from '../RichTextEditor/RichTextUtils';
+import { getDefaultRichTextJSON } from '../../Card/RichTextEditor/RichTextUtils';
 import FontSize from './FontSize';
 import RichTextStyles from './RichTextStyles';
 
@@ -144,6 +144,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
   // 处理列表切换逻辑
   const handleListToggle = (listType: 'orderedList' | 'bulletList') => {
+    if (!editor) {
+      return;
+    }
+
     const { selection } = editor.state;
     const { empty } = selection;
 
@@ -222,7 +226,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     }
   };
 
-  // ✅ 修复：监听value变化，更新编辑器内容
   React.useEffect(() => {
     if (editor && value !== undefined && value !== null) {
       // 获取当前编辑器的JSON内容

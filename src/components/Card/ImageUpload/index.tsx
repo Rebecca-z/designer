@@ -21,12 +21,13 @@ interface ImageUploadProps {
  * 支持图片尺寸、大小和比例校验
  */
 const ImageUpload: React.FC<ImageUploadProps> = ({
-  // onUploadSuccess,
+  onUploadSuccess,
   disabled = false,
   style,
   buttonProps = {},
 }) => {
-  // 上传逻辑
+  // TODO 上传API 成功后 onUploadSuccess(imageUrl);
+
   /**
    * 校验图片尺寸、大小和比例
    */
@@ -131,6 +132,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     validateImage(file)
       .then((imageUrl) => {
         console.log('📁 图片上传成功，调用回调:', imageUrl);
+        onUploadSuccess(imageUrl);
       })
       .catch((error) => {
         Modal.error({

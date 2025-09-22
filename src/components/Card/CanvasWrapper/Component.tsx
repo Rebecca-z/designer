@@ -86,7 +86,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
     e.stopPropagation();
     e.preventDefault();
 
-    // 直接处理组件选中
+    // 直接处理组件选中 - 确保只选中当前组件
     onSelect(component, path);
     onCanvasFocus?.(); // 通知画布获得焦点
   };

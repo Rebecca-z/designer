@@ -242,7 +242,7 @@ export interface Variable {
     | 'image'
     | 'array'
     | 'richtext'
-    | 'imageArray'; // 更新：添加richtext和imageArray类型支持
+    | 'imageArray';
   description?: string;
 }
 

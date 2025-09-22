@@ -189,7 +189,6 @@ const SmartDropZone: React.FC<SmartDropZoneProps> = ({
 
             // 跳过被拖拽的组件
             if (child.index === draggedComponentIndex) {
-              console.log('跳过被拖拽的组件:', child.index);
               continue;
             }
 
@@ -197,7 +196,6 @@ const SmartDropZone: React.FC<SmartDropZoneProps> = ({
             if (hoverClientY < child.top) {
               insertIndex = child.index;
               foundInsertionPoint = true;
-              console.log('鼠标在组件上方，插入到索引:', insertIndex);
               break;
             }
 
@@ -206,11 +204,9 @@ const SmartDropZone: React.FC<SmartDropZoneProps> = ({
               // 如果鼠标在组件上半部分，插入到当前组件之前
               if (hoverClientY < child.top + (child.bottom - child.top) / 2) {
                 insertIndex = child.index;
-                console.log('鼠标在组件上半部分，插入到索引:', insertIndex);
               } else {
                 // 如果鼠标在组件下半部分，插入到当前组件之后
                 insertIndex = child.index + 1;
-                console.log('鼠标在组件下半部分，插入到索引:', insertIndex);
               }
               foundInsertionPoint = true;
               break;
@@ -220,7 +216,6 @@ const SmartDropZone: React.FC<SmartDropZoneProps> = ({
           // 如果没有找到插入点，说明要插入到最后
           if (!foundInsertionPoint) {
             insertIndex = childElements.length;
-            console.log('没有找到插入点，插入到最后:', insertIndex);
           }
 
           // 如果拖拽的是现有组件，需要调整插入索引
@@ -231,7 +226,6 @@ const SmartDropZone: React.FC<SmartDropZoneProps> = ({
             }
             // 确保插入索引不小于0
             insertIndex = Math.max(insertIndex, 0);
-            console.log('调整拖拽组件插入索引:', insertIndex);
           }
 
           // 确保插入索引在有效范围内
@@ -295,9 +289,15 @@ const SmartDropZone: React.FC<SmartDropZoneProps> = ({
     flex: containerType === 'column' ? flexValue || 1 : 'none',
     pointerEvents: 'auto',
     boxShadow: isOver && canDrop ? '0 0 8px rgba(24, 144, 255, 0.4)' : 'none',
+    width: (flexValue || 1) * 100 + '%',
+    boxSizing: 'border-box',
   };
 
   const handleContainerClick = (e: React.MouseEvent) => {
+    // 立即阻止事件冒泡，防止触发父级组件的选中
+    e.stopPropagation();
+    e.preventDefault();
+
     if (containerType === 'column') {
       if (onColumnSelect) {
         onColumnSelect();
@@ -305,8 +305,9 @@ const SmartDropZone: React.FC<SmartDropZoneProps> = ({
       return;
     }
 
+    // 对于其他容器类型，确保只在点击容器本身时处理
     if (e.target === e.currentTarget) {
-      e.stopPropagation();
+      // 事件冒泡已经在上面被阻止了
     }
   };
 
@@ -381,7 +382,7 @@ const ColumnSetRenderer: React.FC<BaseRendererProps> = (props) => {
   // 检查是否有分栏列被选中
   let selectedColumnIndex = -1;
 
-  // 检查根级别分栏列选中
+  // 检查根级别分栏列选中 - 需要精确匹配路径
   if (
     selectedPath &&
     selectedPath.length === 6 &&
@@ -389,12 +390,14 @@ const ColumnSetRenderer: React.FC<BaseRendererProps> = (props) => {
     selectedPath[1] === 'body' &&
     selectedPath[2] === 'elements' &&
     selectedPath[4] === 'columns' &&
-    selectedPath[3] === path[3]
+    selectedPath[3] === path[3] &&
+    // 确保当前分栏容器就是被选中的分栏容器
+    isSamePath(selectedPath.slice(0, 4), path)
   ) {
     selectedColumnIndex = selectedPath[5] as number;
   }
 
-  // 检查表单内分栏列选中
+  // 检查表单内分栏列选中 - 需要精确匹配路径
   if (
     selectedPath &&
     selectedPath.length === 8 &&
@@ -404,9 +407,57 @@ const ColumnSetRenderer: React.FC<BaseRendererProps> = (props) => {
     selectedPath[4] === 'elements' &&
     selectedPath[6] === 'columns' &&
     selectedPath[3] === path[3] &&
-    selectedPath[5] === path[5]
+    selectedPath[5] === path[5] &&
+    // 确保当前分栏容器就是被选中的分栏容器
+    isSamePath(selectedPath.slice(0, 6), path)
   ) {
     selectedColumnIndex = selectedPath[7] as number;
+  }
+
+  // 检查嵌套表单内分栏容器选中 - 12层路径：['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', nestedFormIndex, 'elements', nestedColumnSetIndex]
+  if (
+    selectedPath &&
+    selectedPath.length === 12 &&
+    selectedPath[0] === 'dsl' &&
+    selectedPath[1] === 'body' &&
+    selectedPath[2] === 'elements' &&
+    selectedPath[4] === 'elements' &&
+    selectedPath[6] === 'columns' &&
+    selectedPath[8] === 'elements' &&
+    selectedPath[10] === 'elements' &&
+    selectedPath[3] === path[3] &&
+    selectedPath[5] === path[5] &&
+    selectedPath[7] === path[7] &&
+    selectedPath[9] === path[9] &&
+    selectedPath[11] === path[11] &&
+    // 确保当前分栏容器就是被选中的分栏容器
+    isSamePath(selectedPath.slice(0, 12), path)
+  ) {
+    // 这是分栏容器本身被选中，不是列被选中
+    selectedColumnIndex = -1;
+  }
+
+  // 检查嵌套表单内分栏列选中 - 14层路径：['dsl', 'body', 'elements', formIndex, 'elements', columnSetIndex, 'columns', columnIndex, 'elements', nestedFormIndex, 'elements', nestedColumnSetIndex, 'columns', nestedColumnIndex]
+  if (
+    selectedPath &&
+    selectedPath.length === 14 &&
+    selectedPath[0] === 'dsl' &&
+    selectedPath[1] === 'body' &&
+    selectedPath[2] === 'elements' &&
+    selectedPath[4] === 'elements' &&
+    selectedPath[6] === 'columns' &&
+    selectedPath[8] === 'elements' &&
+    selectedPath[10] === 'elements' &&
+    selectedPath[12] === 'columns' &&
+    selectedPath[3] === path[3] &&
+    selectedPath[5] === path[5] &&
+    selectedPath[7] === path[7] &&
+    selectedPath[9] === path[9] &&
+    selectedPath[11] === path[11] &&
+    // 确保当前分栏容器就是被选中的分栏容器
+    isSamePath(selectedPath.slice(0, 12), path)
+  ) {
+    selectedColumnIndex = selectedPath[13] as number;
   }
 
   const columnContent = (
@@ -582,7 +633,11 @@ const ColumnSetRenderer: React.FC<BaseRendererProps> = (props) => {
                     : 'none',
                 }}
                 onClick={(e) => {
+                  // 立即阻止事件冒泡，防止触发父级组件的选中
                   e.stopPropagation();
+                  e.preventDefault();
+
+                  // 只选中当前列，不选中其他组件
                   props.onSelect?.(component, columnSelectionPath);
                 }}
               >

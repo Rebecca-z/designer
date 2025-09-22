@@ -92,7 +92,7 @@ const MultiSelectRenderer: React.FC<BaseRendererProps> = (props) => {
         const list = isVariable(options)
           ? resolveVariable(options, variables)?.value
           : options || [];
-        return list.map((opt: any) => {
+        return list?.map((opt: any) => {
           return {
             label: opt.text.content || '',
             value: opt.value,
@@ -149,7 +149,7 @@ const MultiSelectRenderer: React.FC<BaseRendererProps> = (props) => {
         onDeselect={() => {}}
         onOpenChange={() => true}
       >
-        {options.map((option: any, index: number) => (
+        {options?.map((option: any, index: number) => (
           <Select.Option key={index} value={option.value}>
             {option.label}
           </Select.Option>
